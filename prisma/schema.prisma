@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Partner {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  businessName String? @map("business_name")
+  isMainJob Boolean  @default(false) @map("is_main_job")
+  emailPrimary String? @map("email_primary")
+  emailSecondary String? @map("email_secondary")
+  phone     String?
+  internalNotes String? @map("internal_notes")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sites Site[]
+
+  @@map("partners")
+}
+
+model Site {
+  id           String   @id @default(uuid())
+  partnerId    String   @map("partner_id")
+  name         String?  // Optional custom name override
+  domainName   String   @map("domain_name") @unique
+  gtmId        String?  @map("gtm_id")
+  googleAdsId  String?  @map("google_ads_id")
+  driveLink    String?  @map("drive_link")
+  
+  // Marketing Vault stored as JSON
+  // Structure: { headlines: string[], brandNotes: string, competitors: string[] }
+  marketingVault String? @map("marketing_vault") 
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  partner  Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  projects Project[]
+
+  @@map("sites")
+}
+
+model Service {
+  id            String   @id @default(uuid())
+  serviceName   String   @unique @map("service_name")
+  isRecurring   Boolean  @default(false) @map("is_recurring") // Recurring (PPC) vs One-time (GTM)
+  
+  // Stored as JSON string due to SQLite limitation on scalar arrays
+  standardTasks String   @map("standard_tasks") // JSON array of strings
+  sopLink       String?  @map("sop_link")
+  baseFee       Decimal? @map("base_fee")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  projects Project[]
+
+  @@map("service_library")
+}
+
+model Project {
+  id            String   @id @default(uuid())
+  siteId        String   @map("site_id")
+  name          String?  // Optional custom name override
+  
+  status        String   @default("Active") // Active, Paused, Completed
+  paymentStatus String   @default("Unpaid") @map("payment_status") // Paid, Unpaid
+  currentFee    Decimal? @map("current_fee")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  services  Service[]
+  tasks     Task[]
+  timeLogs  TimeLog[]
+
+  @@map("projects")
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  name        String
+  description String?
+  status      String    @default("Pending") // Pending, In Progress, Done
+  isCompleted Boolean   @default(false)     @map("is_completed")
+  deadline    DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  timeLogs    TimeLog[]
+
+  @@map("tasks")
+}
+
+model TimeLog {
+  id              String    @id @default(uuid())
+  projectId       String    @map("project_id")
+  taskId          String?   @map("task_id") // Optional: can log to project generally
+  
+  description     String?
+  startTime       DateTime  @map("start_time")
+  endTime         DateTime? @map("end_time")
+  durationSeconds Int?      @map("duration_seconds")
+
+  createdAt       DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task    Task?   @relation(fields: [taskId], references: [id])
+
+  @@map("time_logs")
+}
