@@ -53,7 +53,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         if (task) {
             setName(task.name || "")
             setDescription(task.description || "")
-            setStatus(task.status || "Pending")
+            setStatus(task.status || "Active")
             setUrgency(task.urgency || "Normal")
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
         }
@@ -108,7 +108,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             <SheetContent side="right" className="sm:max-w-[700px] w-full p-0 flex flex-col border-none shadow-2xl">
                 <SheetHeader className="p-8 border-b bg-muted/20 relative">
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground/60">
                             <div className="flex items-center gap-1">
                                 <Users className="h-3 w-3" />
                                 {task.project.site.partner.name}
@@ -133,7 +133,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                                 setName(task.name || "")
                                             }
                                         }}
-                                        className="text-5xl font-black italic tracking-tighter border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto pr-24"
+                                        className="text-3xl font-bold tracking-tight border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto pr-24"
                                         placeholder="Task Name"
                                     />
                                     <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -172,13 +172,17 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         </SheetTitle>
 
                         <div className="flex items-center gap-2">
-                            {task.isCompleted ? (
+                            {task.status === "Completed" ? (
                                 <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 text-[10px] font-black tracking-widest px-2 py-0.5">
                                     <CheckCircle2 className="h-3 w-3 mr-1" /> COMPLETED
                                 </Badge>
+                            ) : task.status === "Active" ? (
+                                <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20 text-[10px] font-black tracking-widest px-2 py-0.5">
+                                    <Clock className="h-3 w-3 mr-1" /> ACTIVE
+                                </Badge>
                             ) : (
                                 <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20 text-[10px] font-black tracking-widest px-2 py-0.5">
-                                    <Clock className="h-3 w-3 mr-1" /> IN PROGRESS
+                                    <AlertCircle className="h-3 w-3 mr-1" /> PAUSED
                                 </Badge>
                             )}
                             <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest opacity-40">
@@ -198,9 +202,9 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Pending" className="text-xs font-bold text-orange-500">PENDING</SelectItem>
-                                    <SelectItem value="In Progress" className="text-xs font-bold text-blue-500">IN PROGRESS</SelectItem>
-                                    <SelectItem value="Done" className="text-xs font-bold text-emerald-500">DONE</SelectItem>
+                                    <SelectItem value="Active" className="text-xs font-bold text-blue-500">ACTIVE</SelectItem>
+                                    <SelectItem value="Paused" className="text-xs font-bold text-orange-500">PAUSED</SelectItem>
+                                    <SelectItem value="Completed" className="text-xs font-bold text-emerald-500">COMPLETED</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

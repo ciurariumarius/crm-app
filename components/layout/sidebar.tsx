@@ -1,85 +1,61 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Database, Briefcase, CreditCard, Menu, BarChart3, CheckSquare } from "lucide-react"
+import {
+    LayoutDashboard,
+    Database,
+    Briefcase,
+    CreditCard,
+    Menu,
+    BarChart3,
+    CheckSquare,
+    ChevronDown,
+    ChevronRight,
+    Circle
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
-
-
-
-
-const navItems = [
-    { type: "link", name: "Overview", href: "/", icon: LayoutDashboard },
-    { type: "link", name: "Projects", href: "/projects", icon: Briefcase },
-    { type: "link", name: "Tasks", href: "/tasks", icon: CheckSquare },
-    { type: "separator" },
-    {
-        type: "section",
-        name: "The Vault",
-        icon: Database,
-        items: [
-            { name: "Partners", href: "/vault", icon: Briefcase },
-            { name: "Sites", href: "/vault/sites", icon: Database },
-            { name: "Services", href: "/services", icon: Briefcase },
-        ]
-    },
-    { type: "separator" },
-    { type: "link", name: "Analytics", href: "/analytics", icon: BarChart3 },
-]
 
 export function Sidebar() {
     const pathname = usePathname()
+    const [isVaultOpen, setIsVaultOpen] = useState(true)
 
-    const renderNavItem = (item: any) => {
-        if (item.type === "separator") {
-            return <Separator key={Math.random()} className="my-2" />
-        }
+    const navItems = [
+        { name: "Overview", href: "/", icon: LayoutDashboard },
+        { name: "Projects", href: "/projects", icon: Briefcase },
+        { name: "Tasks", href: "/tasks", icon: CheckSquare },
+    ]
 
-        if (item.type === "section") {
-            return (
-                <div key={item.name} className="space-y-1">
-                    <h4 className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground">
-                        {item.name}
-                    </h4>
-                    {item.items.map((subItem: any) => {
-                        const isActive = pathname === subItem.href
-                        return (
-                            <Link
-                                key={subItem.href}
-                                href={subItem.href}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ml-2 ${isActive
-                                    ? "bg-primary/10 text-primary"
-                                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                                    }`}
-                            >
-                                <subItem.icon className="h-4 w-4" />
-                                {subItem.name}
-                            </Link>
-                        )
-                    })}
-                </div>
-            )
-        }
+    const vaultItems = [
+        { name: "Partners", href: "/vault", icon: Briefcase },
+        { name: "Sites", href: "/vault/sites", icon: Database },
+        { name: "Services", href: "/services", icon: Briefcase },
+    ]
 
-
-
+    const renderLink = (item: any) => {
         const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
         return (
             <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
+                className={cn(
+                    "group relative flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-all duration-300",
+                    isActive
+                        ? "text-foreground bg-primary/5"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
             >
-                <item.icon className="h-4 w-4" />
-                {item.name}
+                {isActive && <div className="sidebar-active-indicator" />}
+                <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "opacity-40")} strokeWidth={1.5} />
+                <span className={cn("tracking-tight transition-all", isActive ? "font-bold" : "font-medium opacity-60")}>
+                    {item.name}
+                </span>
             </Link>
         )
     }
@@ -89,19 +65,31 @@ export function Sidebar() {
             {/* Mobile Sidebar */}
             <Sheet>
                 <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-40">
+                    <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-40 bg-card border border-border">
                         <Menu className="h-6 w-6" />
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[240px] sm:w-[300px]">
-                    <div className="flex flex-col h-full py-4">
-                        <div className="px-2 mb-8">
-                            <h1 className="text-xl font-bold tracking-tight">Pixelist</h1>
+                <SheetContent side="left" className="w-[240px] p-0 bg-background border-r border-border shadow-lg">
+                    <div className="flex flex-col h-full py-6">
+                        <div className="px-8 mb-10">
+                            <h1 className="text-xl font-bold uppercase tracking-tight text-foreground">
+                                Pixelist<span className="text-primary">.</span>
+                            </h1>
                         </div>
-                        <nav className="space-y-2 flex-1">
-                            {navItems.map(renderNavItem)}
+                        <nav className="flex-1 space-y-1">
+                            {navItems.map(renderLink)}
+                            <div className="mt-8 mb-2 px-6">
+                                <button
+                                    onClick={() => setIsVaultOpen(!isVaultOpen)}
+                                    className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                                >
+                                    The Vault
+                                    {isVaultOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                </button>
+                            </div>
+                            {isVaultOpen && vaultItems.map(renderLink)}
                         </nav>
-                        <div className="mt-auto space-y-2">
+                        <div className="p-6 border-t border-border">
                             <ThemeToggle />
                         </div>
                     </div>
@@ -109,26 +97,51 @@ export function Sidebar() {
             </Sheet>
 
             {/* Desktop Sidebar */}
-            <div className="hidden md:flex flex-col w-64 border-r bg-card h-screen fixed left-0 top-0 overflow-y-auto">
-                <div className="p-6">
-                    <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                        Pixelist
+            <div className="hidden md:flex flex-col w-60 bg-card border-r border-border h-screen fixed left-0 top-0 overflow-y-auto z-50">
+                <div className="py-10 px-8">
+                    <h1 className="text-2xl font-bold uppercase tracking-tight text-foreground flex items-center gap-2">
+                        Pixelist<span className="text-primary">.</span>
+                        <div className="h-1 w-1 rounded-full bg-primary" />
                     </h1>
                 </div>
-                <Separator />
-                <nav className="flex-1 p-4 space-y-2">
-                    {navItems.map(renderNavItem)}
+
+                <nav className="flex-1 space-y-1">
+                    {navItems.map(renderLink)}
+
+                    <div className="mt-10 mb-2 px-6">
+                        <button
+                            onClick={() => setIsVaultOpen(!isVaultOpen)}
+                            className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                        >
+                            THE VAULT
+                            <div className="h-4 w-4 flex items-center justify-center rounded-lg hover:bg-muted/50">
+                                {isVaultOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                            </div>
+                        </button>
+                    </div>
+
+                    {isVaultOpen && (
+                        <div className="animate-in slide-in-from-top-1 duration-300">
+                            {vaultItems.map(renderLink)}
+                        </div>
+                    )}
+
+                    <div className="mt-8">
+                        {renderLink({ name: "Analytics", href: "/analytics", icon: BarChart3 })}
+                    </div>
                 </nav>
-                <div className="p-4 space-y-3">
-                    <ThemeToggle />
-                    <div className="flex items-center gap-3 p-3 rounded-xl border bg-background">
-                        <Avatar>
-                            <AvatarImage src="/avatar.png" />
-                            <AvatarFallback>ML</AvatarFallback>
+
+                <div className="p-6">
+                    <div className="flex items-center gap-3 p-3 rounded-2xl border border-border bg-muted/30 group hover:bg-muted/50 transition-all">
+                        <Avatar className="h-8 w-8 border border-border ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
+                            <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold uppercase">ML</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col text-sm">
-                            <span className="font-semibold">Marius</span>
-                            <span className="text-xs text-muted-foreground">Pro Plan</span>
+                            <span className="font-bold text-xs tracking-tight text-foreground/80 group-hover:text-foreground transition-colors">Marius L.</span>
+                            <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">Ops Lead</span>
+                                <Circle className="h-1 w-1 fill-emerald-500/40 text-transparent" />
+                            </div>
                         </div>
                     </div>
                 </div>

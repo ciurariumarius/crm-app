@@ -58,11 +58,9 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
             ]} />
 
             <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">{partner.name}</h2>
-                    <p className="text-muted-foreground">
-                        {partner.isMainJob ? "Main Job" : "Freelance Client"} • {partner.sites.length} Sites
-                    </p>
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">{partner.name}</h1>
+
                 </div>
                 <div className="flex items-center gap-2">
                     <GlobalCreateProjectDialog

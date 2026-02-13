@@ -8,7 +8,9 @@ import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 import { formatDistanceToNow } from "date-fns"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { ProjectsTable } from "@/components/projects/projects-table"
-import { PartnerFilter } from "@/components/projects/partner-filter"
+import { ProjectsToolbar } from "@/components/projects/projects-toolbar"
+import { cn } from "@/lib/utils"
+
 
 export const dynamic = "force-dynamic"
 
@@ -102,110 +104,26 @@ export default async function MasterProjectsPage({
             ]} />
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <h2 className="text-3xl font-black uppercase italic tracking-tighter leading-none">
-                        Master <span className="text-primary">Projects</span>
-                    </h2>
-                    <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest opacity-60">Control Center / Global Audit</p>
+                <div className="space-y-2">
+                    <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
+                        Projects
+                    </h1>
+
                 </div>
                 <GlobalCreateProjectDialog partners={partnersFull as any} services={services as any} />
             </div>
 
-            {/* Filters & Search UI */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                    <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground opacity-50" />
-                    <form action="/projects" method="GET">
-                        <Input
-                            name="q"
-                            placeholder="Search keywords..."
-                            className="pl-10 h-11 border-none bg-card shadow-none text-sm font-medium"
-                            defaultValue={q}
-                        />
-                        <input type="hidden" name="status" value={queryStatus} />
-                        {partnerId && <input type="hidden" name="partnerId" value={partnerId} />}
-                        {payment !== "All" && <input type="hidden" name="payment" value={payment} />}
-                        {recurring !== "All" && <input type="hidden" name="recurring" value={recurring} />}
-                    </form>
-                </div>
-
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                    <PartnerFilter partners={partnersList} currentPartnerId={partnerId} />
-
-                    <div className="flex items-center gap-4">
-                        {/* Recurring/One-Time Filter */}
-                        <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-muted/50">
-                            {[
-                                { label: "ALL", value: "All" },
-                                { label: "RECURRING", value: "Recurring" },
-                                { label: "ONE-TIME", value: "OneTime" }
-                            ].map((r) => (
-                                <Link
-                                    key={r.value}
-                                    href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${r.value}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                                    className={cn(
-                                        "px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all flex items-center gap-1.5",
-                                        recurring === r.value
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "text-muted-foreground hover:bg-muted"
-                                    )}
-                                >
-                                    {r.label}
-                                </Link>
-                            ))}
-                        </div>
-
-                        {/* Payment Status Filter */}
-                        <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-muted/50">
-                            {[
-                                { label: "ALL", value: "All" },
-                                { label: "PAID", value: "Paid" },
-                                { label: "UNPAID", value: "Unpaid" }
-                            ].map((p) => (
-                                <Link
-                                    key={p.value}
-                                    href={`/projects?status=${queryStatus}&payment=${p.value}&recurring=${recurring}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                                    className={cn(
-                                        "px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all flex items-center gap-1.5",
-                                        payment === p.value
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "text-muted-foreground hover:bg-muted"
-                                    )}
-                                >
-                                    {p.label}
-                                </Link>
-                            ))}
-                        </div>
-
-                        {/* Lifecycle Status Filter */}
-                        <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-muted/50">
-                            {["Active", "Paused", "Completed", "All"].map((s) => (
-                                <Link
-                                    key={s}
-                                    href={`/projects?status=${s}&payment=${payment}&recurring=${recurring}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                                    className={cn(
-                                        "px-4 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all",
-                                        queryStatus === s
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "text-muted-foreground hover:bg-muted"
-                                    )}
-                                >
-                                    {s}
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {/* Unified Filter Toolbar */}
+            <ProjectsToolbar partners={partnersList} />
 
             {/* Active Filter Chips */}
             {(partnerId || q || payment !== "All" || recurring !== "All") && (
                 <div className="flex flex-wrap items-center gap-2 pt-2">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mr-2">Audit Active:</span>
+                    <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 mr-2">Filters Active:</span>
                     {partnerId && filteredPartner && (
                         <Link
                             href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}${q ? `&q=${q}` : ""}`}
-                            className="flex items-center gap-2 px-3 py-1 bg-primary/5 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 transition-colors"
+                            className="flex items-center gap-2 px-3 py-1 bg-primary/5 text-primary border border-primary/20 rounded-xl text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-primary/10 transition-colors"
                         >
                             Partner: {filteredPartner.name}
                             <X className="h-3 w-3" />
@@ -214,7 +132,7 @@ export default async function MasterProjectsPage({
                     {recurring !== "All" && (
                         <Link
                             href={`/projects?status=${queryStatus}&payment=${payment}&recurring=All${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                            className="flex items-center gap-2 px-3 py-1 bg-violet-500/5 text-violet-600 border border-violet-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-violet-500/10 transition-colors"
+                            className="flex items-center gap-2 px-3 py-1 bg-violet-500/5 text-violet-400 border border-violet-500/20 rounded-xl text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-violet-500/10 transition-colors"
                         >
                             Type: {recurring === "Recurring" ? "Recurring" : "One-Time"}
                             <X className="h-3 w-3" />
@@ -224,8 +142,8 @@ export default async function MasterProjectsPage({
                         <Link
                             href={`/projects?status=${queryStatus}&payment=All&recurring=${recurring}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}`}
                             className={cn(
-                                "flex items-center gap-2 px-3 py-1 border rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors",
-                                payment === "Paid" ? "bg-emerald-500/5 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/10" : "bg-rose-500/5 text-rose-600 border-rose-500/20 hover:bg-rose-500/10"
+                                "flex items-center gap-2 px-3 py-1 border rounded-xl text-[10px] font-bold uppercase tracking-[0.15em] transition-colors",
+                                payment === "Paid" ? "bg-emerald-500/5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10" : "bg-rose-500/5 text-rose-400 border-rose-500/20 hover:bg-rose-500/10"
                             )}
                         >
                             {payment === "Paid" ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
@@ -236,7 +154,7 @@ export default async function MasterProjectsPage({
                     {q && (
                         <Link
                             href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                            className="flex items-center gap-2 px-3 py-1 bg-muted text-muted-foreground border border-muted-foreground/10 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-muted/80 transition-colors"
+                            className="flex items-center gap-2 px-3 py-1 bg-white/[0.03] text-muted-foreground border border-white/[0.05] rounded-xl text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-white/[0.06] transition-colors"
                         >
                             Search: {q}
                             <X className="h-3 w-3" />
@@ -248,8 +166,4 @@ export default async function MasterProjectsPage({
             <ProjectsTable projects={projects} allServices={services} />
         </div>
     )
-}
-
-function cn(...inputs: any[]) {
-    return inputs.filter(Boolean).join(" ")
 }

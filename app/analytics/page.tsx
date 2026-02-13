@@ -86,13 +86,11 @@ export default async function AnalyticsPage() {
 
     return (
         <div className="space-y-8">
-            <div>
-                <h2 className="text-3xl font-black uppercase italic tracking-tighter leading-none">
-                    <span className="text-primary">Analytics</span>
-                </h2>
-                <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest opacity-60">
-                    Data Insights / Performance Metrics
-                </p>
+            <div className="flex flex-col gap-2">
+                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
+                    Analytics
+                </h1>
+
             </div>
 
             {/* Key Metrics */}
@@ -228,8 +226,8 @@ export default async function AnalyticsPage() {
                         <TrendingUp className="h-5 w-5" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black uppercase italic tracking-tight underline decoration-primary/30 decoration-2 underline-offset-4">Portfolio <span className="text-primary">Composition</span></h2>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 tracking-widest leading-none mt-1">Global revenue distribution by partner entity</p>
+                        <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">Portfolio Composition</h2>
+                        <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em] mt-1">Global revenue distribution by partner entity</p>
                     </div>
                 </div>
 

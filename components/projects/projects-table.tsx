@@ -106,22 +106,16 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
 
     const renderHeader = () => (
         <TableHeader>
-            <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[50px]">
-                    <Checkbox
-                        checked={selectedIds.length === projects.length && projects.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                        aria-label="Select all"
-                    />
-                </TableHead>
-                <TableHead className="w-[280px]">Project Name</TableHead>
-                <TableHead>Partner</TableHead>
-                <TableHead className="w-[120px]">Status</TableHead>
-                <TableHead className="w-[120px]">Payment</TableHead>
-                <TableHead className="w-[140px]">Fee (RON)</TableHead>
-                <TableHead>Tasks</TableHead>
-                <TableHead>Activity</TableHead>
-                <TableHead>Created</TableHead>
+            <TableRow className="hover:bg-transparent border-border">
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[280px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Project / Domain</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Partner</TableHead>
+                <TableHead className="w-[120px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 text-center">Status</TableHead>
+                <TableHead className="w-[120px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 text-center">Payment</TableHead>
+                <TableHead className="w-[140px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Fee (RON)</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Metrics</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Activity</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Created</TableHead>
             </TableRow>
         </TableHeader>
     )
@@ -129,83 +123,76 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
     const renderProjectRow = (project: any) => (
         <TableRow
             key={project.id}
-            className="transition-colors group cursor-pointer"
+            className="transition-all duration-200 group cursor-pointer hover:bg-muted/50 border-border"
         >
             <TableCell onClick={(e) => e.stopPropagation()}>
                 <Checkbox
                     checked={selectedIds.includes(project.id)}
                     onCheckedChange={() => toggleSelectProject(project.id)}
                     aria-label={`Select ${getProjectDisplayName(project)}`}
+                    className={cn(
+                        "rounded-[4px] border-border transition-all duration-200",
+                        selectedIds.includes(project.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    )}
                 />
             </TableCell>
             <TableCell onClick={() => setSelectedProject(project)}>
                 <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold text-sm group-hover:text-primary transition-colors">
+                    <span className="font-semibold text-[13px] tracking-tight group-hover:text-primary transition-colors">
                         {getProjectDisplayName(project)}
                     </span>
+                    <span className="text-[10px] text-muted-foreground/60 font-medium">{project.site.domainName}</span>
                 </div>
             </TableCell>
             <TableCell>
-                <div className="flex flex-col gap-1.5">
-                    <Link
-                        href={`/vault/${project.site.partner.id}`}
-                        className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-all group/partner"
-                    >
-                        <Users className="h-3 w-3 opacity-50 group-hover/partner:opacity-100" />
-                        {project.site.partner.name}
-                    </Link>
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedSite(project.site)
-                        }}
-                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-all group/site cursor-pointer"
-                    >
-                        <Globe className="h-3 w-3 opacity-50 group-hover/site:opacity-100" />
-                        Site Vault
-                    </div>
-                </div>
+                <Link
+                    href={`/vault/${project.site.partner.id}`}
+                    className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground/60 hover:text-primary transition-all group/partner"
+                >
+                    <Users className="h-3 w-3 opacity-40 group-hover/partner:opacity-100" />
+                    {project.site.partner.name}
+                </Link>
             </TableCell>
 
-            <TableCell>
+            <TableCell className="text-center">
                 <Select
                     defaultValue={project.status}
                     onValueChange={(val) => handleUpdate(project.id, { status: val })}
                     disabled={updatingId === project.id}
                 >
-                    <SelectTrigger className="h-8 text-xs border-none bg-transparent hover:bg-muted/50 p-1 w-[100px]">
+                    <SelectTrigger className="h-7 text-[10px] font-bold uppercase tracking-wider border-none bg-muted/50 hover:bg-muted px-2 py-0 mx-auto w-fit min-w-[80px] rounded-full">
                         <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Paused">Paused</SelectItem>
-                        <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectContent className="bg-popover border-border">
+                        <SelectItem value="Active" className="text-[10px] font-bold">Active</SelectItem>
+                        <SelectItem value="Paused" className="text-[10px] font-bold">Paused</SelectItem>
+                        <SelectItem value="Completed" className="text-[10px] font-bold">Completed</SelectItem>
                     </SelectContent>
                 </Select>
             </TableCell>
 
-            <TableCell>
+            <TableCell className="text-center">
                 <Select
                     defaultValue={project.paymentStatus}
                     onValueChange={(val) => handleUpdate(project.id, { paymentStatus: val })}
                     disabled={updatingId === project.id}
                 >
                     <SelectTrigger className={cn(
-                        "h-8 text-xs font-bold border-none w-[100px] p-1",
-                        project.paymentStatus === "Paid" ? "text-emerald-600" : "text-rose-600"
+                        "h-7 text-[10px] font-bold uppercase tracking-wider border-none px-2 py-0 mx-auto w-fit min-w-[80px] rounded-full",
+                        project.paymentStatus === "Paid" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                     )}>
                         <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Paid" className="text-emerald-600 font-bold">Paid</SelectItem>
-                        <SelectItem value="Unpaid" className="text-rose-600 font-bold">Unpaid</SelectItem>
+                    <SelectContent className="bg-popover border-border">
+                        <SelectItem value="Paid" className="text-[10px] font-bold text-emerald-600">Paid</SelectItem>
+                        <SelectItem value="Unpaid" className="text-[10px] font-bold text-rose-600">Unpaid</SelectItem>
                     </SelectContent>
                 </Select>
             </TableCell>
 
             <TableCell>
                 <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">RON</span>
+                    <span className="text-[10px] font-bold text-muted-foreground/60">RON</span>
                     <Input
                         type="number"
                         defaultValue={project.currentFee || 0}
@@ -215,23 +202,23 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                                 handleUpdate(project.id, { currentFee: val })
                             }
                         }}
-                        className="h-8 text-xs w-20 bg-transparent border-none focus-visible:ring-1 p-1 font-mono"
+                        className="h-7 text-xs w-20 bg-muted/30 border-border focus-visible:ring-primary/20 p-1 font-mono rounded-md"
                     />
                 </div>
             </TableCell>
 
-            <TableCell onClick={() => setSelectedProject(project)} className="text-xs">
-                <div className="flex items-center gap-1.5 font-medium">
-                    <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
-                    {project._count?.tasks || 0}
+            <TableCell onClick={() => setSelectedProject(project)} className="text-[11px]">
+                <div className="flex items-center gap-2 font-semibold text-muted-foreground/80">
+                    <CheckCircle2 className="h-3 w-3" strokeWidth={1.5} />
+                    {project._count?.tasks || 0} <span className="text-[10px] opacity-40 font-normal">Tasks</span>
                 </div>
             </TableCell>
 
-            <TableCell onClick={() => setSelectedProject(project)} className="text-[10px] text-muted-foreground italic">
+            <TableCell onClick={() => setSelectedProject(project)} className="text-[10px] text-muted-foreground/60 font-medium">
                 {formatDistanceToNow(new Date(project.updatedAt))} ago
             </TableCell>
 
-            <TableCell onClick={() => setSelectedProject(project)} className="text-[10px] text-muted-foreground">
+            <TableCell onClick={() => setSelectedProject(project)} className="text-[10px] text-muted-foreground/60">
                 {format(new Date(project.createdAt), "dd MMM yyyy")}
             </TableCell>
         </TableRow>
@@ -239,18 +226,18 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-xl border bg-card/50 overflow-hidden backdrop-blur-sm">
+            <div className="rounded-2xl border border-border bg-card overflow-hidden">
                 <Table>
                     {renderHeader()}
                     <TableBody>
                         {/* Recurring Group */}
                         {recurringProjects.length > 0 && (
                             <>
-                                <TableRow className="bg-muted/40 hover:bg-muted/40 pointer-events-none sticky top-0 z-10">
-                                    <TableCell colSpan={9} className="py-2 px-4">
-                                        <div className="flex items-center gap-2">
-                                            <Badge className="bg-primary/20 text-primary border-none text-[10px] h-4 flex items-center font-bold">MONTHLY</Badge>
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">Subscription Revenue</span>
+                                <TableRow className="bg-indigo-50/40 hover:bg-indigo-50/40 border-y border-indigo-100/50 pointer-events-none sticky top-0 z-10 backdrop-blur-sm">
+                                    <TableCell colSpan={9} className="py-3 px-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-sm" />
+                                            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-indigo-700">Monthly Projects</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -261,11 +248,11 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                         {/* One-Time Group */}
                         {oneTimeProjects.length > 0 && (
                             <>
-                                <TableRow className="bg-muted/40 hover:bg-muted/40 pointer-events-none sticky top-0 z-10">
-                                    <TableCell colSpan={9} className="py-2 px-4 border-t">
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="secondary" className="text-[10px] h-4 flex items-center font-bold">ONE-TIME</Badge>
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">Project Contracts</span>
+                                <TableRow className="bg-slate-50/40 hover:bg-slate-50/40 border-y border-slate-100/50 pointer-events-none sticky top-0 z-10 backdrop-blur-sm">
+                                    <TableCell colSpan={9} className="py-3 px-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-slate-500 shadow-sm" />
+                                            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-700">One Time Projects</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -282,7 +269,7 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                     setSelectedProject(null)
                 }
             }}>
-                <SheetContent side="right" className="sm:max-w-[800px] w-full p-0 flex flex-col border-none shadow-2xl">
+                <SheetContent side="right" className="sm:max-w-[800px] w-full p-0 flex flex-col border-none shadow-xl bg-background backdrop-blur-3xl overflow-hidden">
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}
@@ -296,13 +283,11 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
 
             {/* Site Detail Sheet */}
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent className="sm:max-w-xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl">
+                <SheetContent className="sm:max-w-xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background backdrop-blur-3xl shadow-xl">
                     {selectedSite && (
                         <SiteSheetContent
                             site={selectedSite}
                             onUpdate={(updated) => {
-                                // Since sites are nested in projects, updating local state here is tricky without refetching projects
-                                // But we can update the selectedSite local state at least
                                 setSelectedSite({ ...selectedSite, ...updated })
                             }}
                         />

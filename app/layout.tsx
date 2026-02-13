@@ -1,22 +1,25 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Using Inter as requested/standard
-import "./globals.css";
-import { Providers } from "@/components/providers/providers";
-import { Sidebar } from "@/components/layout/sidebar";
-import { GlobalTimer } from "@/components/layout/global-timer";
-import prisma from "@/lib/prisma";
+import type { Metadata } from "next"
+import { Plus_Jakarta_Sans } from "next/font/google"
+import "./globals.css"
+import { Providers } from "@/components/providers/providers"
+import { Sidebar } from "@/components/layout/sidebar"
+import { GlobalTimer } from "@/components/layout/global-timer"
+import prisma from "@/lib/prisma"
 
-const inter = Inter({ subsets: ["latin"] });
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+})
 
 export const metadata: Metadata = {
   title: "Pixelist",
   description: "Personal CRM & Time-Tracker",
   manifest: "/manifest.json", // Prepared for PWA
-};
+}
 
-import { Toaster } from "@/components/ui/sonner";
-import { TopBar } from "@/components/layout/top-bar";
-import { HeaderProvider } from "@/components/layout/header-context";
+import { Toaster } from "@/components/ui/sonner"
+import { TopBar } from "@/components/layout/top-bar"
+import { HeaderProvider } from "@/components/layout/header-context"
 
 export default async function RootLayout({
   children,
@@ -25,7 +28,7 @@ export default async function RootLayout({
 }>) {
 
   const [activeTasksCountData, partnersData, servicesData, projectsRaw] = await Promise.all([
-    prisma.task.count({ where: { status: { not: "Done" } } }),
+    prisma.task.count({ where: { status: { not: "Completed" } } }),
     prisma.partner.findMany({ include: { sites: { select: { id: true, domainName: true } } } }),
     prisma.service.findMany(),
     prisma.project.findMany({
@@ -50,7 +53,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${jakarta.variable} font-sans`}>
         <Providers>
           <HeaderProvider>
             <div className="flex h-screen overflow-hidden bg-background">

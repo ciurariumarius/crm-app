@@ -83,7 +83,7 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
     }
 
     return (
-        <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 md:px-8 gap-4 sticky top-0 z-30">
+        <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-8 gap-4 sticky top-0 z-30">
             {/* Left: Breadcrumbs */}
             <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-none md:w-1/3">
                 <div className="flex items-center text-sm font-medium text-muted-foreground/60 w-full overflow-hidden whitespace-nowrap mask-linear-fade">

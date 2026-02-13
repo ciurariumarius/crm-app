@@ -213,7 +213,7 @@ export async function createProject(data: {
                     data: uniqueTasks.map((taskName) => ({
                         projectId: project.id,
                         name: taskName,
-                        status: "Pending",
+                        status: "Active",
                     })),
                 })
             }
@@ -324,7 +324,7 @@ export async function updateProject(projectId: string, data: {
 export async function addTask(projectId: string, name: string) {
     try {
         const task = await prisma.task.create({
-            data: { projectId, name, status: "Pending", isCompleted: false },
+            data: { projectId, name, status: "Active", isCompleted: false },
             include: { project: { include: { site: true } } }
         })
         revalidatePath("/tasks")
@@ -341,9 +341,9 @@ export async function addTask(projectId: string, name: string) {
 
 export async function toggleTaskStatus(taskId: string, currentStatus: string, projectId: string) {
     try {
-        const isDone = currentStatus === "Done"
-        const newStatus = isDone ? "Pending" : "Done"
-        const newIsCompleted = !isDone
+        const isCompleted = currentStatus === "Completed"
+        const newStatus = isCompleted ? "Active" : "Completed"
+        const newIsCompleted = !isCompleted
 
         const task = await prisma.task.update({
             where: { id: taskId },
@@ -377,18 +377,18 @@ export async function updateTask(taskId: string, data: {
         // If status is updated to Done, or isCompleted is updated to true, sync them
         const updateData: any = { ...data }
 
-        if (data.status === "Done") {
+        if (data.status === "Completed") {
             updateData.isCompleted = true
-        } else if (data.status && data.status !== "Done") {
+        } else if (data.status && data.status !== "Completed") {
             updateData.isCompleted = false
         }
 
         if (data.isCompleted === true) {
-            updateData.status = "Done"
+            updateData.status = "Completed"
         } else if (data.isCompleted === false) {
-            // Only set to Pending if status isn't already something else like In Progress
+            // Only set to Active if status isn't already something else like Paused
             if (!data.status) {
-                updateData.status = "Pending"
+                updateData.status = "Active"
             }
         }
 
@@ -526,7 +526,7 @@ export async function deleteTasks(taskIds: string[]) {
 export async function updateTasksStatus(taskIds: string[], status: string) {
     try {
         if (taskIds.length === 0) return { success: true }
-        const isCompleted = status === "Done"
+        const isCompleted = status === "Completed"
         await prisma.task.updateMany({
             where: { id: { in: taskIds } },
             data: { status, isCompleted }

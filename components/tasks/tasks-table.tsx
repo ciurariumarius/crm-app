@@ -99,14 +99,14 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 </div>
                             </TableCell>
                             <TableCell onClick={() => setSelectedTask(task)}>
-                                <div className="flex flex-col gap-1">
+                                <div className="flex flex-col gap-1 max-w-[200px]">
                                     <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                                        <Users className="h-3 w-3 opacity-50" />
-                                        {task.project.site.partner.name}
+                                        <Users className="h-3 w-3 opacity-50 shrink-0" />
+                                        <span className="truncate">{task.project.site.partner.name}</span>
                                     </div>
                                     <div className="text-[10px] uppercase tracking-widest text-muted-foreground/40 font-black flex items-center gap-2">
-                                        <Globe className="h-3 w-3 opacity-30" />
-                                        {task.project.site.domainName}
+                                        <Globe className="h-3 w-3 opacity-30 shrink-0" />
+                                        <span className="truncate">{task.project.site.domainName}</span>
                                     </div>
                                 </div>
                             </TableCell>
@@ -118,15 +118,15 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 >
                                     <SelectTrigger className={cn(
                                         "h-8 text-[10px] font-black uppercase tracking-widest border-none bg-transparent hover:bg-muted/50 p-1 w-[120px]",
-                                        task.status === "Done" ? "text-emerald-500" :
-                                            task.status === "In Progress" ? "text-blue-500" : "text-orange-500"
+                                        task.status === "Completed" ? "text-emerald-500" :
+                                            task.status === "Active" ? "text-blue-500" : "text-orange-500"
                                     )}>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Pending" className="text-[10px] font-black uppercase tracking-widest text-orange-500">PENDING</SelectItem>
-                                        <SelectItem value="In Progress" className="text-[10px] font-black uppercase tracking-widest text-blue-500">IN PROGRESS</SelectItem>
-                                        <SelectItem value="Done" className="text-[10px] font-black uppercase tracking-widest text-emerald-500">DONE</SelectItem>
+                                        <SelectItem value="Active" className="text-[10px] font-black uppercase tracking-widest text-blue-500">ACTIVE</SelectItem>
+                                        <SelectItem value="Paused" className="text-[10px] font-black uppercase tracking-widest text-orange-500">PAUSED</SelectItem>
+                                        <SelectItem value="Completed" className="text-[10px] font-black uppercase tracking-widest text-emerald-500">COMPLETED</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </TableCell>

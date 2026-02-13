@@ -63,7 +63,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-semibold tracking-tight">Active Projects</h3>
+                    <h3 className="text-xl font-bold tracking-[-0.03em] text-foreground">Active Projects</h3>
                     <GlobalCreateProjectDialog
                         partners={partners as any}
                         services={services as any}

@@ -19,9 +19,8 @@ export default async function ServicesPage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Service Library</h2>
-                    <p className="text-muted-foreground">Manage templates for your services.</p>
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">Services</h1>
                 </div>
                 <CreateServiceDialog />
             </div>

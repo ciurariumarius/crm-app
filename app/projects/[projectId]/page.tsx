@@ -57,10 +57,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
             {/* Danger Zone */}
             <div className="pt-8">
-                <Card className="border-rose-200 bg-rose-50/30">
+                <Card className="border-rose-500/20 bg-rose-500/5">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-rose-900">Danger Zone</CardTitle>
-                        <CardDescription className="text-rose-700/60 text-xs">
+                        <CardTitle className="text-sm text-rose-400 font-bold">Danger Zone</CardTitle>
+                        <CardDescription className="text-rose-400/40 text-xs">
                             Irreversible actions for this project.
                         </CardDescription>
                     </CardHeader>

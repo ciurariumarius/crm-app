@@ -33,7 +33,7 @@ export function PartnerFilter({ partners, currentPartnerId }: PartnerFilterProps
     return (
         <div className="flex items-center gap-2">
             <Select value={currentPartnerId || "all"} onValueChange={handlePartnerChange}>
-                <SelectTrigger className="w-[200px] h-11 border-none bg-card shadow-none text-xs font-black uppercase tracking-widest italic">
+                <SelectTrigger className="w-[180px] h-9 border-none bg-muted/30 shadow-none text-[10px] font-bold uppercase tracking-[0.1em] focus:ring-0">
                     <div className="flex items-center gap-2">
                         <Users className="h-3.5 w-3.5 text-primary" />
                         <SelectValue placeholder="All Partners" />

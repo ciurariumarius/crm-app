@@ -51,9 +51,8 @@ export default async function LedgerPage() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h2 className="text-3xl font-bold tracking-tight">The Ledger</h2>
-                <p className="text-muted-foreground">Track payments and time reports.</p>
+            <div className="flex flex-col gap-2">
+                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">The Ledger</h1>
             </div>
 
             <Tabs defaultValue="payments" className="w-full">

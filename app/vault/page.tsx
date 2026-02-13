@@ -103,12 +103,10 @@ export default async function VaultPage({
         <div className="space-y-8 pb-20">
             {/* Header section */}
             <div className="flex flex-col gap-2">
-                <h1 className="text-4xl font-black tracking-tighter italic uppercase underline decoration-primary decoration-4 underline-offset-8">
-                    THE <span className="text-primary">VAULT</span>
+                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
+                    The Vault
                 </h1>
-                <p className="text-muted-foreground font-medium text-sm">
-                    Secure management of partner entities and digital assets.
-                </p>
+
             </div>
 
             <Tabs defaultValue={activeTab} className="space-y-8">
@@ -116,7 +114,7 @@ export default async function VaultPage({
                     <TabsList className="bg-transparent h-auto p-0 gap-8">
                         <TabsTrigger
                             value="partners"
-                            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-4 text-xs font-black uppercase tracking-widest transition-all"
+                            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-4 text-xs font-bold uppercase tracking-[0.15em] transition-all"
                             asChild
                         >
                             <Link href="/vault?tab=partners">
@@ -125,7 +123,7 @@ export default async function VaultPage({
                         </TabsTrigger>
                         <TabsTrigger
                             value="sites"
-                            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-4 text-xs font-black uppercase tracking-widest transition-all"
+                            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-4 text-xs font-bold uppercase tracking-[0.15em] transition-all"
                             asChild
                         >
                             <Link href="/vault?tab=sites">
@@ -141,8 +139,8 @@ export default async function VaultPage({
                     <div className="space-y-8">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
                             <div className="space-y-1">
-                                <h2 className="text-xl font-black uppercase italic tracking-tight">Partner Entities</h2>
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Directory of clients and billing profiles</p>
+                                <h2 className="text-xl font-bold tracking-[-0.03em] text-foreground">Partner Entities</h2>
+                                <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">Directory of clients and billing profiles</p>
                             </div>
 
                             <div className="flex items-center gap-4">
@@ -151,7 +149,7 @@ export default async function VaultPage({
                                     <Link
                                         href={getSortLink("name")}
                                         className={cn(
-                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all",
+                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-xl transition-all",
                                             sortBy === "name" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
                                         )}
                                     >
@@ -162,7 +160,7 @@ export default async function VaultPage({
                                     <Link
                                         href={getSortLink("revenue")}
                                         className={cn(
-                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all",
+                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-xl transition-all",
                                             sortBy === "revenue" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
                                         )}
                                     >
@@ -197,8 +195,8 @@ export default async function VaultPage({
                 <TabsContent value="sites" className="mt-0 space-y-8 outline-none animate-in fade-in-50 duration-500">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-xl font-black uppercase italic tracking-tight">Active Sites</h2>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 text-emerald-600/60">Deployed domains and tracking IDs</p>
+                            <h2 className="text-xl font-bold tracking-[-0.03em] text-foreground">Active Sites</h2>
+                            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">Deployed domains and tracking IDs</p>
                         </div>
                         <CreateSiteDialog partners={allPartners as any} />
                     </div>
@@ -208,7 +206,7 @@ export default async function VaultPage({
                     {/* Pagination Controls */}
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between pt-4">
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                            <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">
                                 Page {page} of {totalPages}
                             </p>
                             <div className="flex items-center gap-2">

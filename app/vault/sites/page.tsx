@@ -66,13 +66,10 @@ export default async function SitesPage({
             ]} />
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <h2 className="text-4xl font-black tracking-tight italic uppercase leading-none">
-                        ASSET <span className="text-primary">REGISTRY</span>
-                    </h2>
-                    <p className="text-muted-foreground font-medium text-sm">
-                        Central directory of deployed domains and partner entities.
-                    </p>
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
+                        Asset Registry
+                    </h1>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -101,7 +98,7 @@ export default async function SitesPage({
             {/* Pagination Controls */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-4">
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                    <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">
                         Showing page {page} of {totalPages}
                     </p>
                     <div className="flex items-center gap-2">

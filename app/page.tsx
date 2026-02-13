@@ -125,54 +125,59 @@ export default async function Home() {
   }))
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-black uppercase italic tracking-tighter leading-none">
-            <span className="text-primary">Overview</span>
-          </h2>
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest opacity-60">
-            Freelancer Dashboard
-          </p>
+    <div className="space-y-10 pb-10">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
+          Command Center
+        </h1>
+
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        {/* Metric Cards - Premium Highlight */}
+        <div className="md:col-span-2 lg:col-span-3">
+          <StatsCard
+            title="Projected Billing"
+            value={formattedRevenue}
+            description="Across all active engagements"
+            icon={CreditCard}
+            trend="+12% vs last month"
+          />
         </div>
-      </div>
+        <div className="md:col-span-2 lg:col-span-3">
+          <StatsCard
+            title="Operational Velocity"
+            value={`${totalHoursMonth}h`}
+            description="Total logged this billing cycle"
+            icon={Clock}
+            trend="Stable output"
+          />
+        </div>
 
-      {/* Top Row Metrics */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <StatsCard
-          title="Revenue This Month"
-          value={formattedRevenue}
-          description="Potential based on active projects"
-          icon={CreditCard}
-        />
-        <StatsCard
-          title="Hours Worked"
-          value={`${totalHoursMonth}h`}
-          description="Total logged this month"
-          icon={Clock}
-        />
-      </div>
+        {/* Quick Actions - Full Width Row */}
+        <div className="md:col-span-4 lg:col-span-6">
+          <QuickActions
+            partners={formattedPartners}
+            services={formattedServices}
+            projects={quickActionProjects}
+          />
+        </div>
 
-      {/* Quick Actions */}
-      <QuickActions
-        partners={formattedPartners}
-        services={formattedServices}
-        projects={quickActionProjects}
-      />
-
-      {/* Split Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 min-h-[500px] h-auto">
-        <div className="col-span-4">
+        {/* Project Lists - Parallel Columns */}
+        <div className="md:col-span-4 lg:col-span-4">
           <RecurringProjectsList projects={recurringProjects} />
         </div>
-        <div className="col-span-3">
+        <div className="md:col-span-4 lg:col-span-2">
           <OneTimeProjectsList projects={oneTimeProjects} />
         </div>
-      </div>
 
-      <div className="pt-8">
-        <h3 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-widest">Recent Activity</h3>
-        <QuickStart recentProjects={finalRecentProjects} />
+        {/* Recent Context */}
+        <div className="md:col-span-4 lg:col-span-6 pt-6 border-t border-white/[0.04]">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-[11px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">Asset Context</h3>
+          </div>
+          <QuickStart recentProjects={finalRecentProjects} />
+        </div>
       </div>
     </div>
   )
