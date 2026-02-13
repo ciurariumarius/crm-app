@@ -5,6 +5,7 @@ import { RecurringProjectsList } from "@/components/dashboard/recurring-projects
 import { OneTimeProjectsList } from "@/components/dashboard/one-time-projects-list"
 import prisma from "@/lib/prisma"
 import { CreditCard, Clock } from "lucide-react"
+import { GreetingHeader } from "@/components/dashboard/greeting-header"
 
 export const dynamic = "force-dynamic"
 
@@ -127,10 +128,7 @@ export default async function Home() {
   return (
     <div className="space-y-10 pb-10">
       <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
-          Command Center
-        </h1>
-
+        <GreetingHeader name="Marius" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">

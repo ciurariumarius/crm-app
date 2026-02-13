@@ -54,11 +54,22 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
 
     const updateFilter = (key: string, value: string | null) => {
         const params = new URLSearchParams(searchParams.toString())
-        if (value && value !== "All" && value !== "all") {
-            params.set(key, value)
-        } else {
+
+        // Detailed Logic:
+        // 1. If value is "All" (case-sensitive from status), we want to set it explicitly
+        //    because "Active" is the default when no param exists.
+        // 2. If value is "all" (lowercase, from partner/project), we want to DELETE the param (show all).
+        // 3. If value is null, delete.
+        // 4. Otherwise, set the value.
+
+        if (value === "All") {
+            params.set(key, "All")
+        } else if (!value || value === "all") {
             params.delete(key)
+        } else {
+            params.set(key, value)
         }
+
         router.push(`/tasks?${params.toString()}`)
     }
 
@@ -66,12 +77,20 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
     const currentProject = searchParams.get("projectId") || "all"
     const currentStatus = searchParams.get("status") || "Active"
 
-    const getActiveColor = (value: string) => {
-        if (value === 'Active') return "bg-primary text-primary-foreground shadow-md shadow-primary/20 ring-0"
-        if (value === 'Paused') return "bg-amber-500 text-white shadow-md shadow-amber-500/20 ring-0"
-        if (value === 'Completed') return "bg-slate-500 text-white shadow-md ring-0"
-        if (value === 'All') return "bg-slate-800 text-white shadow-md ring-0"
-        return "bg-primary text-primary-foreground"
+    const getButtonStyle = (value: string, isActive: boolean) => {
+        // Active States
+        if (isActive) {
+            if (value === 'Active') return "bg-emerald-500 text-white shadow-md shadow-emerald-500/20 ring-0 font-bold"
+            if (value === 'Paused') return "bg-amber-500 text-white shadow-md shadow-amber-500/20 ring-0 font-bold"
+            if (value === 'Completed') return "bg-blue-500 text-white shadow-md shadow-blue-500/20 ring-0 font-bold"
+            return "bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 shadow-md ring-0 font-bold"
+        }
+
+        // Inactive 'Hover' States
+        if (value === 'Active') return "text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400"
+        if (value === 'Paused') return "text-muted-foreground hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+        if (value === 'Completed') return "text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400"
+        return "text-muted-foreground hover:bg-zinc-500/10 hover:text-zinc-900 dark:hover:text-zinc-100"
     }
 
     const FilterGroup = ({
@@ -83,16 +102,14 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
         currentValue: string,
         onChange: (val: string) => void
     }) => (
-        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/40">
+        <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-background border border-border/50 shadow-sm">
             {options.map((opt) => (
                 <button
                     key={opt.value}
                     onClick={() => onChange(opt.value)}
                     className={cn(
-                        "px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] rounded-lg transition-all duration-200 whitespace-nowrap",
-                        currentValue === opt.value
-                            ? getActiveColor(opt.value)
-                            : "text-muted-foreground hover:text-foreground hover:bg-background/80"
+                        "px-4 py-2 text-[11px] font-semibold uppercase tracking-wider rounded-lg transition-all duration-300 ease-out whitespace-nowrap",
+                        getButtonStyle(opt.value, currentValue === opt.value)
                     )}
                 >
                     {opt.label}

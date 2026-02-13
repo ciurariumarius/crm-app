@@ -39,103 +39,71 @@ export function PartnerCard({ partner }: { partner: Partner }) {
         .reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0)
 
     return (
-        <Card className="h-full hover:bg-muted/30 transition-all group relative overflow-hidden border-muted/40 shadow-sm hover:shadow-md">
-            {/* Background Link for Card */}
+        <Card className="group relative overflow-hidden transition-all duration-300 hover:translate-y-[-4px] hover:shadow-lg hover:shadow-black/5 border-border bg-card hover:border-primary/20">
             <Link href={`/vault/${partner.id}`} className="absolute inset-0 z-0" />
 
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 z-10 relative border-b bg-muted/5">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-primary/10">
-                        <Users className="h-5 w-5" />
-                    </div>
-                    <div className="flex flex-col">
-                        <CardTitle className="text-xl font-black italic tracking-tight uppercase leading-none">
-                            {partner.name}
-                        </CardTitle>
-                        {partner.businessName && (
-                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em] truncate max-w-[150px] mt-1">
-                                {partner.businessName}
-                            </span>
-                        )}
-                    </div>
-                </div>
-                <div onClick={(e) => e.stopPropagation()} className="z-20 relative">
-                    <EditPartnerDialog partner={partner as any} />
-                </div>
-            </CardHeader>
-
-            <CardContent className="z-10 relative pt-6 space-y-6">
-                {/* Metrics Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
-                            <Briefcase className="h-3 w-3" /> Active Projects
+            <CardContent className="p-5 flex flex-col h-full gap-4">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4 z-10 relative">
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-[15px] leading-snug tracking-tight text-foreground group-hover:text-primary transition-colors truncate">
+                                {partner.name}
+                            </h3>
+                            {partner.businessName && (
+                                <Badge variant="secondary" className="text-[9px] font-bold uppercase tracking-wider px-1.5 h-5 flex items-center bg-muted/50 text-muted-foreground border-border/50 truncate max-w-[120px]">
+                                    {partner.businessName}
+                                </Badge>
+                            )}
                         </div>
-                        <div className="text-2xl font-black italic tabular-nums leading-none">
-                            {activeProjects}
-                        </div>
-                    </div>
-                    <div className="space-y-1 text-right">
-                        <div className="flex items-center justify-end gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
-                            <CircleDollarSign className="h-3 w-3" /> Total Revenue
-                        </div>
-                        <div className="text-2xl font-black italic tabular-nums leading-none">
-                            <span className="text-xs font-bold mr-1 italic text-muted-foreground/20">RON</span>
-                            {totalRevenue.toLocaleString()}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Second Metrics Row - Total Projects */}
-                <div className="flex items-center justify-between p-3 bg-muted/20 rounded-xl border border-transparent group-hover:border-primary/5 transition-colors">
-                    <div className="flex items-center gap-2">
-                        <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground/60" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Total Lifecycle Projects</span>
-                    </div>
-                    <span className="text-sm font-black italic text-primary">{totalProjects}</span>
-                </div>
-
-                {/* Status Indicators */}
-                <div className="flex flex-col gap-3">
-                    {unpaidRevenue > 0 ? (
-                        <Link
-                            href={`/projects?partnerId=${partner.id}&status=All&payment=Unpaid`}
-                            className="flex items-center justify-between p-3 bg-rose-500/5 border border-rose-500/10 rounded-xl hover:bg-rose-500/10 transition-all group/unpaid z-20 relative"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-rose-500" />
-                                <span className="text-[10px] font-black uppercase text-rose-600">UNPAID BALANCE</span>
+                        <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground/60">
+                            <div className="flex items-center gap-1.5">
+                                <Users className="h-3 w-3 opacity-60" />
+                                <span>{partner._count.sites} Sites</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-black tabular-nums text-rose-600 italic">
-                                    {unpaidRevenue.toLocaleString()} RON
-                                </span>
-                                <ArrowRight className="h-3 w-3 text-rose-500 opacity-0 group-hover/unpaid:opacity-100 transition-all translate-x-[-4px] group-hover/unpaid:translate-x-0" />
+                            <div className="flex items-center gap-1.5">
+                                <Briefcase className="h-3 w-3 opacity-60" />
+                                <span>{totalProjects} Projects</span>
                             </div>
-                        </Link>
-                    ) : (
-                        <div className="flex items-center justify-between p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                <span className="text-[10px] font-black uppercase text-emerald-600 tracking-tighter">All Paid</span>
-                            </div>
-                            <span className="text-[9px] font-black text-emerald-600/60 italic uppercase tracking-widest">OK</span>
                         </div>
-                    )}
+                    </div>
+
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <EditPartnerDialog partner={partner as any} />
+                    </div>
                 </div>
 
-                {/* Navigation Links */}
-                <div className="flex items-center gap-2 pt-4 border-t border-dashed">
-                    <Link
-                        href={`/projects?partnerId=${partner.id}`}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/5 hover:bg-primary text-primary hover:text-primary-foreground text-[10px] font-black uppercase tracking-widest transition-all z-20"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        View Projects
-                    </Link>
-                    <div className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-widest px-2">
-                        {partner._count.sites} SITES
+                {/* Divider */}
+                <div className="h-px bg-border/50 w-full" />
+
+                {/* Financials & Status */}
+                <div className="grid grid-cols-2 gap-2 z-10 relative mt-auto">
+                    <div className="space-y-1 p-2 rounded-lg bg-muted/20 border border-border/50 group-hover:border-border transition-colors">
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 flex items-center gap-1">
+                            <CircleDollarSign className="h-2.5 w-2.5" />
+                            Lifetime
+                        </div>
+                        <div className="text-xs font-bold text-foreground tabular-nums">
+                            {totalRevenue.toLocaleString()} <span className="text-[9px] text-muted-foreground font-normal">RON</span>
+                        </div>
+                    </div>
+
+                    <div className={cn(
+                        "space-y-1 p-2 rounded-lg border transition-colors",
+                        unpaidRevenue > 0
+                            ? "bg-rose-500/5 border-rose-500/10 text-rose-600"
+                            : "bg-emerald-500/5 border-emerald-500/10 text-emerald-600"
+                    )}>
+                        <div className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 opacity-80">
+                            {unpaidRevenue > 0 ? <AlertCircle className="h-2.5 w-2.5" /> : <CheckCircle2 className="h-2.5 w-2.5" />}
+                            {unpaidRevenue > 0 ? "Outstanding" : "Status"}
+                        </div>
+                        <div className="text-xs font-bold tabular-nums">
+                            {unpaidRevenue > 0
+                                ? `${unpaidRevenue.toLocaleString()} RON`
+                                : "All Paid"
+                            }
+                        </div>
                     </div>
                 </div>
             </CardContent>

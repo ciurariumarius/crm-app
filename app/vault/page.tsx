@@ -101,154 +101,60 @@ export default async function VaultPage({
 
     return (
         <div className="space-y-8 pb-20">
-            {/* Header section */}
-            <div className="flex flex-col gap-2">
+            {/* Header & Controls Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
-                    The Vault
+                    Partners
                 </h1>
 
+                <div className="flex items-center gap-4">
+                    {/* Sorting UI */}
+                    {/* Sorting UI */}
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href={`/vault?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
+                            className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-[0.1em]",
+                                sortBy === "name"
+                                    ? "bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
+                                    : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
+                            )}
+                        >
+                            {sortBy === "name" ? <Type className="h-3.5 w-3.5" /> : <BarChart3 className="h-3.5 w-3.5" />}
+                            {sortBy === "name" ? "Name" : "Revenue"}
+                        </Link>
+
+                        <Link
+                            href={`/vault?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
+                            className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-[10px] font-bold uppercase tracking-[0.1em]"
+                            )}
+                        >
+                            {order === "asc" ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
+                            {order === "asc" ? "Asc" : "Desc"}
+                        </Link>
+                    </div>
+                    <CreatePartnerDialog />
+                </div>
             </div>
 
-            <Tabs defaultValue={activeTab} className="space-y-8">
-                <div className="flex items-center justify-between border-b pb-1">
-                    <TabsList className="bg-transparent h-auto p-0 gap-8">
-                        <TabsTrigger
-                            value="partners"
-                            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-4 text-xs font-bold uppercase tracking-[0.15em] transition-all"
-                            asChild
-                        >
-                            <Link href="/vault?tab=partners">
-                                <Users className="h-3 w-3 mr-2" /> Partners
-                            </Link>
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="sites"
-                            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-4 text-xs font-bold uppercase tracking-[0.15em] transition-all"
-                            asChild
-                        >
-                            <Link href="/vault?tab=sites">
-                                <Globe className="h-3 w-3 mr-2" /> Sites
-                            </Link>
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
+            <div className="flex flex-col gap-6">
 
-                <TabsContent value="partners" className="mt-0 space-y-16 outline-none animate-in fade-in-50 duration-500">
-
-                    {/* PARTNER LIST SECTION */}
-                    <div className="space-y-8">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
-                            <div className="space-y-1">
-                                <h2 className="text-xl font-bold tracking-[-0.03em] text-foreground">Partner Entities</h2>
-                                <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">Directory of clients and billing profiles</p>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                {/* Sorting UI */}
-                                <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-muted/50">
-                                    <Link
-                                        href={getSortLink("name")}
-                                        className={cn(
-                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-xl transition-all",
-                                            sortBy === "name" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
-                                        )}
-                                    >
-                                        <Type className="h-3 w-3" />
-                                        Alpha
-                                        {sortBy === "name" && (order === "asc" ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />)}
-                                    </Link>
-                                    <Link
-                                        href={getSortLink("revenue")}
-                                        className={cn(
-                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-xl transition-all",
-                                            sortBy === "revenue" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
-                                        )}
-                                    >
-                                        <DollarSign className="h-3 w-3" />
-                                        Revenue
-                                        {sortBy === "revenue" && (order === "asc" ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />)}
-                                    </Link>
-                                </div>
-                                <CreatePartnerDialog />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {partnersSerialized.map((partner: any) => (
-                                <PartnerCard
-                                    key={partner.id}
-                                    partner={partner}
-                                />
-                            ))}
-                            {partnersSerialized.length === 0 && (
-                                <div className="col-span-full text-center py-20 bg-muted/20 border-2 border-dashed rounded-2xl">
-                                    <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
-                                    <p className="text-sm font-bold text-muted-foreground">No partners found.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* PORTFOLIO COMPOSITION MOVED TO ANALYTICS */}
-                </TabsContent>
-
-                <TabsContent value="sites" className="mt-0 space-y-8 outline-none animate-in fade-in-50 duration-500">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-xl font-bold tracking-[-0.03em] text-foreground">Active Sites</h2>
-                            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">Deployed domains and tracking IDs</p>
-                        </div>
-                        <CreateSiteDialog partners={allPartners as any} />
-                    </div>
-
-                    <SitesTable sites={sites} />
-
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between pt-4">
-                            <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">
-                                Page {page} of {totalPages}
-                            </p>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    asChild={page > 1}
-                                    disabled={page <= 1}
-                                    className="h-9 px-4 font-bold"
-                                >
-                                    {page > 1 ? (
-                                        <Link href={`/vault?tab=sites&page=${page - 1}`}>
-                                            <ChevronLeft className="h-4 w-4 mr-1" /> PREV
-                                        </Link>
-                                    ) : (
-                                        <span className="flex items-center">
-                                            <ChevronLeft className="h-4 w-4 mr-1" /> PREV
-                                        </span>
-                                    )}
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    asChild={page < totalPages}
-                                    disabled={page >= totalPages}
-                                    className="h-9 px-4 font-bold"
-                                >
-                                    {page < totalPages ? (
-                                        <Link href={`/vault?tab=sites&page=${page + 1}`}>
-                                            NEXT <ChevronRight className="h-4 w-4 ml-1" />
-                                        </Link>
-                                    ) : (
-                                        <span className="flex items-center">
-                                            NEXT <ChevronRight className="h-4 w-4 ml-1" />
-                                        </span>
-                                    )}
-                                </Button>
-                            </div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {partnersSerialized.map((partner: any) => (
+                        <PartnerCard
+                            key={partner.id}
+                            partner={partner}
+                        />
+                    ))}
+                    {partnersSerialized.length === 0 && (
+                        <div className="col-span-full text-center py-20 bg-muted/20 border-2 border-dashed rounded-2xl">
+                            <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+                            <p className="text-sm font-bold text-muted-foreground">No partners found.</p>
                         </div>
                     )}
-                </TabsContent>
-            </Tabs>
+                </div>
+            </div>
         </div>
     )
 }
