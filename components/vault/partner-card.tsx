@@ -129,7 +129,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                 <div className="flex items-center gap-2 pt-4 border-t border-dashed">
                     <Link
                         href={`/projects?partnerId=${partner.id}`}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-primary/5 hover:bg-primary text-primary hover:text-primary-foreground text-[10px] font-black uppercase tracking-widest transition-all z-20"
+                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-primary/5 hover:bg-primary text-primary hover:text-primary-foreground text-[10px] font-black uppercase tracking-widest transition-all z-20"
                         onClick={(e) => e.stopPropagation()}
                     >
                         View Projects

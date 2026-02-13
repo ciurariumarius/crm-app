@@ -79,7 +79,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
                                 <CardHeader className="pb-2">
                                     <div className="flex justify-between items-start">
                                         <CardTitle className="text-base">
-                                            {project.services.map((s: any) => s.serviceName).join(" & ")}
+                                            {project.name || `${site.domainName} - ${project.services.map((s: any) => s.serviceName).join(" & ")}`}
                                         </CardTitle>
                                         <Badge variant={project.status === "Active" ? "default" : "secondary"}>
                                             {project.status}

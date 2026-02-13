@@ -151,7 +151,7 @@ export default async function VaultPage({
                                     <Link
                                         href={getSortLink("name")}
                                         className={cn(
-                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all",
+                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all",
                                             sortBy === "name" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
                                         )}
                                     >
@@ -162,7 +162,7 @@ export default async function VaultPage({
                                     <Link
                                         href={getSortLink("revenue")}
                                         className={cn(
-                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all",
+                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all",
                                             sortBy === "revenue" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
                                         )}
                                     >
@@ -191,22 +191,7 @@ export default async function VaultPage({
                         </div>
                     </div>
 
-                    {/* PORTFOLIO COMPOSITION ANALYSIS - FULL WIDTH AT BOTTOM */}
-                    <section className="pt-12 border-t space-y-8">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
-                                <TrendingUp className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-black uppercase italic tracking-tight underline decoration-primary/30 decoration-2 underline-offset-4">Portfolio <span className="text-primary">Composition</span></h2>
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 tracking-widest leading-none mt-1">Global revenue distribution by partner entity</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-muted/10 rounded-[2.5rem] border border-muted/50 p-8 lg:p-12 overflow-hidden shadow-sm">
-                            <PartnerRevenueChart data={analysisData} />
-                        </div>
-                    </section>
+                    {/* PORTFOLIO COMPOSITION MOVED TO ANALYTICS */}
                 </TabsContent>
 
                 <TabsContent value="sites" className="mt-0 space-y-8 outline-none animate-in fade-in-50 duration-500">

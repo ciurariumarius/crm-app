@@ -1,20 +1,23 @@
 import prisma from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, TrendingUp, CheckSquare, Zap, Target } from "lucide-react"
-import { TasksTable } from "@/components/tasks/tasks-table"
+import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import { TasksFilters } from "@/components/tasks/tasks-filters"
+import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
 export default async function TasksPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; status?: string; partnerId?: string }>
+    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string }>
 }) {
     const params = await searchParams
     const q = params.q
     const statusFilter = params.status
     const partnerId = params.partnerId
+    const projectId = params.projectId
 
     // Fetch all tasks with project and partner info for metrics and filtering
     const allTasks = await prisma.task.findMany({
@@ -36,34 +39,31 @@ export default async function TasksPage({
     })
 
     // Calculate metrics based on ALL tasks
-    const incompleteTasksCount = allTasks.filter((t: any) => !t.isCompleted).length
+    const activeTasksCount = allTasks.filter((t: any) => !t.isCompleted && t.project.status === "Active").length
+    const pausedTasksCount = allTasks.filter((t: any) => t.project.status === "Paused").length
     const completedTasksCount = allTasks.filter((t: any) => t.isCompleted).length
-    const totalTasksCount = allTasks.length
-    const completionRate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0
-    const activeProjectsCount = new Set(allTasks.filter((t: any) => !t.isCompleted).map((t: any) => t.project.id)).size
 
-    // Apply filters to tasks for the table
+    // Apply filters to tasks for the display
     let filteredTasks = allTasks.filter((task: any) => {
-        // Search filter
-        if (q && !task.name.toLowerCase().includes(q.toLowerCase()) &&
-            !task.project.site.partner.name.toLowerCase().includes(q.toLowerCase())) {
-            return false
-        }
-
-        // Status filter
+        // Status filter (from Cards or Select)
         if (statusFilter === "Completed" && !task.isCompleted) return false
-        if (statusFilter === "Incomplete" && task.isCompleted) return false
-        if (statusFilter && statusFilter !== "All" && statusFilter !== "Completed" && statusFilter !== "Incomplete") {
+        if (statusFilter === "Active" && (task.isCompleted || task.project.status !== "Active")) return false
+        if (statusFilter === "Paused" && task.project.status !== "Paused") return false
+
+        if (statusFilter && statusFilter !== "All" && !["Active", "Paused", "Completed"].includes(statusFilter)) {
             if (task.status !== statusFilter) return false
         }
 
         // Partner filter
         if (partnerId && task.project.site.partner.id !== partnerId) return false
 
+        // Project filter
+        if (projectId && task.project.id !== projectId) return false
+
         return true
     })
 
-    // Serialize to plain object to handle Prisma Decimal serialization error in Server Components
+    // Serialize to plain object
     const serializedTasks = JSON.parse(JSON.stringify(filteredTasks))
 
     return (
@@ -79,75 +79,59 @@ export default async function TasksPage({
                 </div>
             </div>
 
-            {/* Productivity Metrics Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card className="bg-orange-500/5 border-orange-500/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest opacity-60">Open Tasks</CardTitle>
-                        <AlertCircle className="h-4 w-4 text-orange-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-black tracking-tighter italic">{incompleteTasksCount}</div>
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
-                            Across {activeProjectsCount} projects
-                        </p>
-                    </CardContent>
-                </Card>
+            {/* Status Filters */}
+            <div className="grid gap-4 md:grid-cols-3">
+                <Link href="/tasks?status=Active" className={cn("block transition-all hover:scale-[1.01] active:scale-[0.99]", statusFilter === 'Active' ? 'ring-2 ring-primary' : '')}>
+                    <Card className="bg-blue-500/5 border-blue-500/10 hover:bg-blue-500/10 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest opacity-60">Active Tasks</CardTitle>
+                            <Zap className="h-4 w-4 text-blue-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-black tracking-tighter italic">{activeTasksCount}</div>
+                        </CardContent>
+                    </Card>
+                </Link>
 
-                <Card className="bg-emerald-500/5 border-emerald-500/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest opacity-60">Completed</CardTitle>
-                        <CheckSquare className="h-4 w-4 text-emerald-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-black tracking-tighter italic">{completedTasksCount}</div>
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
-                            Total finished tasks
-                        </p>
-                    </CardContent>
-                </Card>
+                <Link href="/tasks?status=Paused" className={cn("block transition-all hover:scale-[1.01] active:scale-[0.99]", statusFilter === 'Paused' ? 'ring-2 ring-primary' : '')}>
+                    <Card className="bg-orange-500/5 border-orange-500/10 hover:bg-orange-500/10 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest opacity-60">Paused Tasks</CardTitle>
+                            <AlertCircle className="h-4 w-4 text-orange-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-black tracking-tighter italic">{pausedTasksCount}</div>
+                        </CardContent>
+                    </Card>
+                </Link>
 
-                <Card className="bg-primary/5 border-primary/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest opacity-60">Completion Rate</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-black tracking-tighter italic">{completionRate}%</div>
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
-                            Overall productivity
-                        </p>
-                    </CardContent>
-                </Card>
+                <Link href="/tasks?status=Completed" className={cn("block transition-all hover:scale-[1.01] active:scale-[0.99]", statusFilter === 'Completed' ? 'ring-2 ring-primary' : '')}>
+                    <Card className="bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10 transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest opacity-60">Completed Tasks</CardTitle>
+                            <CheckSquare className="h-4 w-4 text-emerald-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-black tracking-tighter italic">{completedTasksCount}</div>
+                        </CardContent>
+                    </Card>
+                </Link>
+            </div>
 
-                <Card className="bg-yellow-500/5 border-yellow-500/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest opacity-60">Focus Score</CardTitle>
-                        <Zap className="h-4 w-4 text-yellow-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-black tracking-tighter italic">
-                            {incompleteTasksCount > 0 ? Math.min(100, Math.round(100 / incompleteTasksCount * 10)) : 100}
+            {/* Extract unique partners and projects for filters */}
+            {(() => {
+                const partnersList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.site.partner.id, name: t.project.site.partner.name })))).map((s) => JSON.parse(s as string))
+                const projectsList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.id, name: t.project.name || t.project.site.domainName })))).map((s) => JSON.parse(s as string))
+
+                return (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <TasksFilters partners={partnersList} projects={projectsList} />
                         </div>
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
-                            Task distribution
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Tasks Table Section */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Target className="h-5 w-5 text-primary" />
-                        <h3 className="text-sm font-black uppercase tracking-widest italic">Operations Tasks</h3>
+                        <TasksCardView tasks={serializedTasks} />
                     </div>
-                </div>
-
-                <TasksFilters />
-                <TasksTable tasks={serializedTasks} />
-            </div>
+                )
+            })()}
         </div>
     )
 }

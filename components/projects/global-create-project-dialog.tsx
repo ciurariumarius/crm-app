@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { Plus, Globe, Users, Briefcase, Sparkles, Check, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -61,8 +62,9 @@ export function GlobalCreateProjectDialog({
 
     const [partnerId, setPartnerId] = useState(defaultPartnerId || "")
     const [siteId, setSiteId] = useState(defaultSiteId || "")
-    const [projectName, setProjectName] = useState("")
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
+    const [isCompleted, setIsCompleted] = useState(false)
+    const [isPaid, setIsPaid] = useState(false)
     const [fee, setFee] = useState("")
 
     // Quick Add Site state
@@ -161,7 +163,9 @@ export function GlobalCreateProjectDialog({
             await createProject({
                 siteId,
                 serviceIds: selectedServiceIds,
-                currentFee: fee ? parseFloat(fee) : undefined
+                currentFee: fee ? parseFloat(fee) : undefined,
+                status: isCompleted ? "Completed" : "Active",
+                paymentStatus: isPaid ? "Paid" : "Unpaid",
             })
 
             setOpen(false)
@@ -178,8 +182,11 @@ export function GlobalCreateProjectDialog({
     const resetForm = () => {
         if (!defaultPartnerId) setPartnerId("")
         if (!defaultSiteId) setSiteId("")
+        if (!defaultSiteId) setSiteId("")
         setSelectedServiceIds([])
         setFee("")
+        setIsCompleted(false)
+        setIsPaid(false)
         setShowQuickAddSite(false)
         setNewSiteDomain("")
     }
@@ -188,8 +195,8 @@ export function GlobalCreateProjectDialog({
         <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) resetForm(); }}>
             <DialogTrigger asChild>
                 {trigger || (
-                    <Button className="shadow-sm">
-                        <Plus className="mr-2 h-4 w-4" /> Add Project
+                    <Button className="shadow-sm font-black uppercase tracking-wider">
+                        <Plus className="mr-2 h-4 w-4" /> DEPLOY PROJECT
                     </Button>
                 )}
             </DialogTrigger>
@@ -284,20 +291,7 @@ export function GlobalCreateProjectDialog({
                             </div>
                         )}
 
-                        {/* 2.5 Project Name */}
-                        {(siteId || defaultSiteId) && (
-                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">
-                                    02.5 Project Nickname (Optional)
-                                </Label>
-                                <Input
-                                    placeholder="e.g. Meta Ads Account, Recovery Audit..."
-                                    value={projectName}
-                                    onChange={(e) => setProjectName(e.target.value)}
-                                    className="h-11 bg-muted/30 border-none shadow-none focus-visible:ring-1"
-                                />
-                            </div>
-                        )}
+                        {/* 2.5 Removed Nickname per request */}
 
                         {/* 3. Service Selection (Multi) */}
                         {(siteId || defaultSiteId) && (
@@ -359,26 +353,51 @@ export function GlobalCreateProjectDialog({
                                 </div>
 
                                 {selectedServiceIds.length > 0 && (
-                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-dashed animate-in zoom-in-95 duration-200">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="fee" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Total Fee (RON)</Label>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px] font-black">RON</span>
-                                                <Input
-                                                    id="fee"
-                                                    type="number"
-                                                    step="0.01"
-                                                    placeholder="0.00"
-                                                    className="pl-12 h-11 bg-primary/5 border-none font-bold italic"
-                                                    value={fee}
-                                                    onChange={(e) => setFee(e.target.value)}
-                                                />
+                                    <div className="space-y-4 pt-4 border-t border-dashed animate-in zoom-in-95 duration-200">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="fee" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Total Fee (RON)</Label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px] font-black">RON</span>
+                                                    <Input
+                                                        id="fee"
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="0.00"
+                                                        className="pl-12 h-11 bg-primary/5 border-none font-bold italic"
+                                                        value={fee}
+                                                        onChange={(e) => setFee(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-right block">Type</Label>
+                                                <div className="h-11 flex items-center justify-end px-4 bg-muted/20 rounded-xl text-xs font-black uppercase italic tracking-tighter text-primary">
+                                                    {allowedKind ? "RECURRING" : "ONE-TIME"}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-right block">Type</Label>
-                                            <div className="h-11 flex items-center justify-end px-4 bg-muted/20 rounded-xl text-xs font-black uppercase italic tracking-tighter text-primary">
-                                                {allowedKind ? "RECURRING" : "ONE-TIME"}
+
+                                        <div className="flex items-center justify-between gap-4 pt-2">
+                                            <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl flex-1 border border-transparent hover:border-primary/20 transition-colors">
+                                                <Switch
+                                                    checked={isCompleted}
+                                                    onCheckedChange={setIsCompleted}
+                                                    id="completed-mode"
+                                                />
+                                                <Label htmlFor="completed-mode" className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
+                                                    {isCompleted ? "Mark as COMPLETED" : "Mark as ACTIVE"}
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl flex-1 border border-transparent hover:border-primary/20 transition-colors">
+                                                <Switch
+                                                    checked={isPaid}
+                                                    onCheckedChange={setIsPaid}
+                                                    id="paid-mode"
+                                                />
+                                                <Label htmlFor="paid-mode" className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
+                                                    {isPaid ? "Mark as PAID" : "Mark as UNPAID"}
+                                                </Label>
                                             </div>
                                         </div>
                                     </div>

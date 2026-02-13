@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateSiteDetails } from "@/lib/actions"
+import { DeleteSiteButton } from "@/components/vault/delete-site-button"
 
 export function SiteDetail({ site }: { site: Site }) {
     const [loading, setLoading] = useState(false)
@@ -211,6 +212,15 @@ export function SiteDetail({ site }: { site: Site }) {
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            <Card className="border-rose-200 bg-rose-50/30">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-rose-900">Danger Zone</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <DeleteSiteButton siteId={site.id} partnerId={site.partnerId} />
+                </CardContent>
+            </Card>
         </div>
     )
 }

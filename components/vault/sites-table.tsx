@@ -24,12 +24,16 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 
 interface SitesTableProps {
     sites: any[]
 }
 
 export function SitesTable({ sites }: SitesTableProps) {
+    const [selectedSite, setSelectedSite] = React.useState<any>(null)
+
     return (
         <div className="rounded-xl border bg-card/50 overflow-hidden backdrop-blur-sm shadow-sm">
             <Table>
@@ -47,12 +51,10 @@ export function SitesTable({ sites }: SitesTableProps) {
                         <TableRow
                             key={site.id}
                             className="group transition-colors cursor-pointer border-muted/20"
+                            onClick={() => setSelectedSite(site)}
                         >
                             <TableCell className="py-4">
-                                <Link
-                                    href={`/vault/${site.partnerId}/${site.id}`}
-                                    className="flex items-center gap-3 group/link"
-                                >
+                                <div className="flex items-center gap-3 group/link">
                                     <div className="h-9 w-9 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
                                         <Globe className="h-4 w-4" />
                                     </div>
@@ -65,7 +67,7 @@ export function SitesTable({ sites }: SitesTableProps) {
                                             CLICK TO OPEN VAULT
                                         </div>
                                     </div>
-                                </Link>
+                                </div>
                             </TableCell>
 
                             <TableCell className="py-4">
@@ -132,6 +134,20 @@ export function SitesTable({ sites }: SitesTableProps) {
                     )}
                 </TableBody>
             </Table>
+
+            <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
+                <SheetContent className="sm:max-w-xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl">
+                    {selectedSite && (
+                        <SiteSheetContent
+                            site={selectedSite}
+                            onUpdate={(updated) => {
+                                // In a real app we'd mutate or revalidate. For now, we update local state if needed or let page refresh handle it.
+                                setSelectedSite((prev: any) => ({ ...prev, ...updated }))
+                            }}
+                        />
+                    )}
+                </SheetContent>
+            </Sheet>
         </div>
     )
 }

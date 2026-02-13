@@ -45,6 +45,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     const [name, setName] = React.useState("")
     const [description, setDescription] = React.useState("")
     const [status, setStatus] = React.useState("")
+    const [urgency, setUrgency] = React.useState("")
     const [deadline, setDeadline] = React.useState<Date | undefined>(undefined)
 
     // Sync form state with task
@@ -53,6 +54,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             setName(task.name || "")
             setDescription(task.description || "")
             setStatus(task.status || "Pending")
+            setUrgency(task.urgency || "Normal")
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
         }
     }, [task])
@@ -65,6 +67,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                 name,
                 description,
                 status,
+                urgency,
                 deadline,
             })
 
@@ -201,6 +204,23 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Urgency Level</label>
+                            <Select value={urgency} onValueChange={setUrgency}>
+                                <SelectTrigger className="h-12 text-sm font-bold bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20">
+                                    <SelectValue placeholder="Select urgency" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Low" className="text-xs font-bold">LOW</SelectItem>
+                                    <SelectItem value="Normal" className="text-xs font-bold">NORMAL</SelectItem>
+                                    <SelectItem value="High" className="text-xs font-bold text-amber-500">HIGH</SelectItem>
+                                    <SelectItem value="Urgent" className="text-xs font-bold text-rose-500">URGENT</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-3">
                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Deadline Tracking</label>
                             <Popover>

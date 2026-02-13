@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart3, TrendingUp, DollarSign, Clock, Briefcase, Users } from "lucide-react"
+import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
 
 export const dynamic = "force-dynamic"
 
@@ -21,20 +22,20 @@ export default async function AnalyticsPage() {
 
     // Calculate statistics
     const totalProjects = projects.length
-    const activeProjects = projects.filter(p => p.status === "Active").length
-    const completedProjects = projects.filter(p => p.status === "Completed").length
+    const activeProjects = projects.filter((p: any) => p.status === "Active").length
+    const completedProjects = projects.filter((p: any) => p.status === "Completed").length
 
-    const totalRevenue = projects.reduce((sum, p) => sum + (Number(p.fee) || 0), 0)
-    const paidRevenue = projects.filter(p => p.paymentStatus === "Paid").reduce((sum, p) => sum + (Number(p.fee) || 0), 0)
-    const unpaidRevenue = projects.filter(p => p.paymentStatus === "Unpaid").reduce((sum, p) => sum + (Number(p.fee) || 0), 0)
+    const totalRevenue = projects.reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
+    const paidRevenue = projects.filter((p: any) => p.paymentStatus === "Paid").reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
+    const unpaidRevenue = projects.filter((p: any) => p.paymentStatus === "Unpaid").reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
 
-    const totalTimeSeconds = projects.reduce((sum, p) =>
-        sum + p.timeLogs.reduce((logSum, log) => logSum + (log.durationSeconds || 0), 0), 0
+    const totalTimeSeconds = projects.reduce((sum: number, p: any) =>
+        sum + p.timeLogs.reduce((logSum: number, log: any) => logSum + (log.durationSeconds || 0), 0), 0
     )
     const totalHours = Math.round(totalTimeSeconds / 3600)
 
     // Partner statistics
-    const partnerStats = projects.reduce((acc, project) => {
+    const partnerStats = projects.reduce((acc: any, project: any) => {
         const partnerName = project.site.partner.name
         if (!acc[partnerName]) {
             acc[partnerName] = {
@@ -45,18 +46,18 @@ export default async function AnalyticsPage() {
             }
         }
         acc[partnerName].projects++
-        acc[partnerName].revenue += Number(project.fee) || 0
-        acc[partnerName].hours += project.timeLogs.reduce((sum, log) => sum + (log.durationSeconds || 0), 0) / 3600
+        acc[partnerName].revenue += Number(project.currentFee) || 0
+        acc[partnerName].hours += project.timeLogs.reduce((sum: number, log: any) => sum + (log.durationSeconds || 0), 0) / 3600
         return acc
     }, {} as Record<string, { name: string; projects: number; revenue: number; hours: number }>)
 
     const topPartners = Object.values(partnerStats)
-        .sort((a, b) => b.revenue - a.revenue)
+        .sort((a: any, b: any) => b.revenue - a.revenue)
         .slice(0, 5)
 
     // Service statistics
-    const serviceStats = projects.reduce((acc, project) => {
-        project.services.forEach(service => {
+    const serviceStats = projects.reduce((acc: any, project: any) => {
+        project.services.forEach((service: any) => {
             if (!acc[service.serviceName]) {
                 acc[service.serviceName] = {
                     name: service.serviceName,
@@ -65,14 +66,23 @@ export default async function AnalyticsPage() {
                 }
             }
             acc[service.serviceName].count++
-            acc[service.serviceName].revenue += Number(project.fee) || 0
+            acc[service.serviceName].revenue += Number(project.currentFee) || 0
         })
         return acc
     }, {} as Record<string, { name: string; count: number; revenue: number }>)
 
     const topServices = Object.values(serviceStats)
-        .sort((a, b) => b.count - a.count)
+        .sort((a: any, b: any) => b.count - a.count)
         .slice(0, 5)
+
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('ro-RO', {
+            style: 'currency',
+            currency: 'RON',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(value)
+    }
 
     return (
         <div className="space-y-8">
@@ -93,10 +103,10 @@ export default async function AnalyticsPage() {
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} RON</div>
+                        <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
                         <p className="text-xs text-muted-foreground">
-                            <span className="text-emerald-600 font-bold">{paidRevenue.toLocaleString()}</span> paid •
-                            <span className="text-rose-600 font-bold ml-1">{unpaidRevenue.toLocaleString()}</span> unpaid
+                            <span className="text-emerald-600 font-bold">{formatCurrency(paidRevenue)}</span> paid •
+                            <span className="text-rose-600 font-bold ml-1">{formatCurrency(unpaidRevenue)}</span> unpaid
                         </p>
                     </CardContent>
                 </Card>
@@ -134,7 +144,7 @@ export default async function AnalyticsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {totalProjects > 0 ? Math.round(totalRevenue / totalProjects).toLocaleString() : 0} RON
+                            {totalProjects > 0 ? formatCurrency(Math.round(totalRevenue / totalProjects)) : formatCurrency(0)}
                         </div>
                         <p className="text-xs text-muted-foreground">
                             Per project
@@ -155,7 +165,7 @@ export default async function AnalyticsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {topPartners.map((partner, index) => (
+                            {topPartners.map((partner: any, index: number) => (
                                 <div key={partner.name} className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
@@ -169,7 +179,7 @@ export default async function AnalyticsPage() {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-bold text-sm">{partner.revenue.toLocaleString()} RON</div>
+                                        <div className="font-bold text-sm">{formatCurrency(partner.revenue)}</div>
                                     </div>
                                 </div>
                             ))}
@@ -188,7 +198,7 @@ export default async function AnalyticsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {topServices.map((service, index) => (
+                            {topServices.map((service: any, index: number) => (
                                 <div key={service.name} className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
@@ -202,7 +212,7 @@ export default async function AnalyticsPage() {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-bold text-sm">{service.revenue.toLocaleString()} RON</div>
+                                        <div className="font-bold text-sm">{formatCurrency(service.revenue)}</div>
                                     </div>
                                 </div>
                             ))}
@@ -210,6 +220,23 @@ export default async function AnalyticsPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* PORTFOLIO COMPOSITION ANALYSIS */}
+            <section className="pt-8 border-t space-y-6">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
+                        <TrendingUp className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black uppercase italic tracking-tight underline decoration-primary/30 decoration-2 underline-offset-4">Portfolio <span className="text-primary">Composition</span></h2>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 tracking-widest leading-none mt-1">Global revenue distribution by partner entity</p>
+                    </div>
+                </div>
+
+                <div className="bg-muted/10 rounded-[2.5rem] border border-muted/50 p-8 lg:p-12 overflow-hidden shadow-sm">
+                    <PartnerRevenueChart data={Object.values(partnerStats).map((p: any) => ({ name: p.name, revenue: p.revenue }))} />
+                </div>
+            </section>
         </div>
     )
 }

@@ -92,6 +92,7 @@ model Task {
   name        String
   description String?
   status      String    @default("Pending") // Pending, In Progress, Done
+  urgency     String    @default("Normal")  // Low, Normal, High, Urgent
   isCompleted Boolean   @default(false)     @map("is_completed")
   deadline    DateTime?
 

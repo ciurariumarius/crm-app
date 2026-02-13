@@ -19,7 +19,7 @@ export default async function LedgerPage() {
         },
         include: {
             site: { include: { partner: true } },
-            service: true,
+            services: true,
         },
         orderBy: { updatedAt: "desc" },
     })
@@ -44,7 +44,7 @@ export default async function LedgerPage() {
 
     // Aggregate time by Partner
     const partnerStats: Record<string, number> = {}
-    timeLogs.forEach(log => {
+    timeLogs.forEach((log: any) => {
         const pName = log.project.site.partner.name
         partnerStats[pName] = (partnerStats[pName] || 0) + (log.durationSeconds || 0)
     })
@@ -64,11 +64,15 @@ export default async function LedgerPage() {
 
                 <TabsContent value="payments" className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {unpaidProjects.map((project) => (
+                        {unpaidProjects.map((project: any) => (
                             <Card key={project.id} className={project.paymentStatus === "Unpaid" ? "border-red-500/50" : ""}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <div className="space-y-1">
-                                        <CardTitle className="text-base">{project.service.serviceName}</CardTitle>
+                                        <CardTitle className="text-base">
+                                            {project.services.length > 0
+                                                ? project.services.map((s: any) => s.serviceName).join(", ")
+                                                : "No Service"}
+                                        </CardTitle>
                                         <CardDescription>{project.site.domainName}</CardDescription>
                                     </div>
                                     <Badge variant={project.paymentStatus === "Paid" ? "secondary" : "destructive"}>

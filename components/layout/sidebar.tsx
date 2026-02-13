@@ -10,17 +10,79 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 
+
+
+
 const navItems = [
-    { name: "Overview", href: "/", icon: LayoutDashboard },
-    { name: "Vault", href: "/vault", icon: Database },
-    { name: "Projects", href: "/projects", icon: Briefcase },
-    { name: "Tasks", href: "/tasks", icon: CheckSquare },
-    { name: "Services", href: "/services", icon: Briefcase },
-    { name: "Analytics", href: "/analytics", icon: BarChart3 },
+    { type: "link", name: "Overview", href: "/", icon: LayoutDashboard },
+    { type: "link", name: "Projects", href: "/projects", icon: Briefcase },
+    { type: "link", name: "Tasks", href: "/tasks", icon: CheckSquare },
+    { type: "separator" },
+    {
+        type: "section",
+        name: "The Vault",
+        icon: Database,
+        items: [
+            { name: "Partners", href: "/vault", icon: Briefcase },
+            { name: "Sites", href: "/vault/sites", icon: Database },
+            { name: "Services", href: "/services", icon: Briefcase },
+        ]
+    },
+    { type: "separator" },
+    { type: "link", name: "Analytics", href: "/analytics", icon: BarChart3 },
 ]
 
 export function Sidebar() {
     const pathname = usePathname()
+
+    const renderNavItem = (item: any) => {
+        if (item.type === "separator") {
+            return <Separator key={Math.random()} className="my-2" />
+        }
+
+        if (item.type === "section") {
+            return (
+                <div key={item.name} className="space-y-1">
+                    <h4 className="px-4 py-2 text-xs font-semibold uppercase text-muted-foreground">
+                        {item.name}
+                    </h4>
+                    {item.items.map((subItem: any) => {
+                        const isActive = pathname === subItem.href
+                        return (
+                            <Link
+                                key={subItem.href}
+                                href={subItem.href}
+                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors ml-2 ${isActive
+                                    ? "bg-primary/10 text-primary"
+                                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    }`}
+                            >
+                                <subItem.icon className="h-4 w-4" />
+                                {subItem.name}
+                            </Link>
+                        )
+                    })}
+                </div>
+            )
+        }
+
+
+
+        const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+        return (
+            <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                    }`}
+            >
+                <item.icon className="h-4 w-4" />
+                {item.name}
+            </Link>
+        )
+    }
 
     return (
         <>
@@ -34,22 +96,10 @@ export function Sidebar() {
                 <SheetContent side="left" className="w-[240px] sm:w-[300px]">
                     <div className="flex flex-col h-full py-4">
                         <div className="px-2 mb-8">
-                            <h1 className="text-xl font-bold tracking-tight">GTM/PPC CRM</h1>
+                            <h1 className="text-xl font-bold tracking-tight">Pixelist</h1>
                         </div>
                         <nav className="space-y-2 flex-1">
-                            {navItems.map((item) => (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${pathname === item.href
-                                        ? "bg-primary text-primary-foreground"
-                                        : "hover:bg-muted"
-                                        }`}
-                                >
-                                    <item.icon className="h-4 w-4" />
-                                    {item.name}
-                                </Link>
-                            ))}
+                            {navItems.map(renderNavItem)}
                         </nav>
                         <div className="mt-auto space-y-2">
                             <ThemeToggle />
@@ -62,33 +112,16 @@ export function Sidebar() {
             <div className="hidden md:flex flex-col w-64 border-r bg-card h-screen fixed left-0 top-0 overflow-y-auto">
                 <div className="p-6">
                     <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                        Limitless CRM
+                        Pixelist
                     </h1>
                 </div>
                 <Separator />
                 <nav className="flex-1 p-4 space-y-2">
-                    {navItems.map((item) => {
-                        const isGroupActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
-
-                        return (
-                            <div key={item.name} className="space-y-1">
-                                <Link
-                                    href={item.href}
-                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all ${isGroupActive
-                                        ? "bg-primary text-primary-foreground shadow-sm"
-                                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                                        }`}
-                                >
-                                    <item.icon className="h-4 w-4" />
-                                    {item.name}
-                                </Link>
-                            </div>
-                        )
-                    })}
+                    {navItems.map(renderNavItem)}
                 </nav>
                 <div className="p-4 space-y-3">
                     <ThemeToggle />
-                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-background">
+                    <div className="flex items-center gap-3 p-3 rounded-xl border bg-background">
                         <Avatar>
                             <AvatarImage src="/avatar.png" />
                             <AvatarFallback>ML</AvatarFallback>

@@ -1,92 +1,122 @@
-import { DailyStats } from "@/components/dashboard/daily-stats"
 import { QuickStart } from "@/components/dashboard/quick-start"
-import { ActiveProjectsQuickLook } from "@/components/dashboard/active-projects-quick-look"
 import { QuickActions } from "@/components/dashboard/quick-actions"
+import { StatsCard } from "@/components/dashboard/stats-card"
+import { RecurringProjectsList } from "@/components/dashboard/recurring-projects-list"
+import { OneTimeProjectsList } from "@/components/dashboard/one-time-projects-list"
 import prisma from "@/lib/prisma"
+import { CreditCard, Clock } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
 export default async function Home() {
-  // Fetch recent projects with correct relations
+  // Fetch active projects
+  const activeProjects = await prisma.project.findMany({
+    where: {
+      status: "Active"
+    },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      services: true,
+      site: {
+        include: {
+          partner: true,
+        },
+      },
+      timeLogs: {
+        where: {
+          startTime: {
+            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+          }
+        }
+      },
+      _count: {
+        select: {
+          tasks: { where: { isCompleted: true } },
+        }
+      },
+      tasks: {
+        select: { id: true }
+      }
+    },
+  })
+
+  // Split into Recurring and One-Time
+  const recurringProjects: any[] = []
+  const oneTimeProjects: any[] = []
+
+  activeProjects.forEach((project: any) => {
+    const isRecurring = project.services.some((s: any) => s.isRecurring)
+    const formattedProject = {
+      id: project.id,
+      siteName: project.site.domainName,
+      hoursLogged: project.timeLogs.reduce((sum: number, log: any) => sum + (log.durationSeconds || 0), 0) / 3600,
+      paymentStatus: project.paymentStatus,
+      completedTasks: project._count.tasks, // Count of completed tasks
+      totalTasks: project.tasks.length, // Total tasks count
+      services: project.services
+    }
+
+    if (isRecurring) {
+      recurringProjects.push(formattedProject)
+    } else {
+      oneTimeProjects.push(formattedProject)
+    }
+  })
+
+  // Calculate Month Metrics
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  const timeLogsThisMonth = await prisma.timeLog.aggregate({
+    _sum: {
+      durationSeconds: true
+    },
+    where: {
+      startTime: {
+        gte: startOfMonth
+      }
+    }
+  })
+
+  const totalSecondsMonth = timeLogsThisMonth._sum.durationSeconds || 0
+  const totalHoursMonth = (totalSecondsMonth / 3600).toFixed(1)
+
+  // Revenue: Sum of currentFee of all active projects (Simplification as per plan)
+  const totalRevenue = activeProjects.reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
+
+  // Format currency
+  const formattedRevenue = new Intl.NumberFormat('ro-RO', {
+    style: 'currency',
+    currency: 'RON',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(totalRevenue)
+
+
+  // Data for QuickActions
+  const partners = await prisma.partner.findMany({
+    include: { sites: { select: { id: true, domainName: true } } },
+    orderBy: { name: "asc" }
+  })
+  const services = await prisma.service.findMany({ orderBy: { serviceName: "asc" } })
+  const quickActionProjects = activeProjects.map((p: any) => ({
+    id: p.id,
+    siteName: p.site.domainName,
+    services: p.services
+  }))
+
+  const formattedPartners = JSON.parse(JSON.stringify(partners))
+  const formattedServices = JSON.parse(JSON.stringify(services))
+
+
+  // Recent Projects for QuickStart (Keeping this feature at bottom)
   const recentProjects = await prisma.project.findMany({
     take: 4,
     orderBy: { updatedAt: "desc" },
     include: {
       services: true,
-      site: {
-        include: {
-          partner: true,
-        },
-      },
+      site: { include: { partner: true } },
     },
   })
 
-  // Fetch active projects for quick look
-  const activeProjects = await prisma.project.findMany({
-    where: {
-      status: "Active"
-    },
-    take: 6,
-    orderBy: { updatedAt: "desc" },
-    include: {
-      services: true,
-      site: {
-        include: {
-          partner: true,
-        },
-      },
-      _count: {
-        select: {
-          tasks: true
-        }
-      }
-    },
-  })
-
-  // Calculate daily stats
-  const startOfDay = new Date()
-  startOfDay.setHours(0, 0, 0, 0)
-
-  const endOfDay = new Date()
-  endOfDay.setHours(23, 59, 59, 999)
-
-  const dailyLogs = await prisma.timeLog.findMany({
-    where: {
-      startTime: {
-        gte: startOfDay,
-        lte: endOfDay,
-      },
-    },
-    include: {
-      project: {
-        include: {
-          site: {
-            include: {
-              partner: true,
-            },
-          },
-        },
-      },
-    },
-  })
-
-  const totalSeconds = dailyLogs.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0)
-
-  // Group by partner
-  const partnerMap = new Map<string, number>()
-  dailyLogs.forEach((log: any) => {
-    const partnerName = log.project.site.partner.name
-    const current = partnerMap.get(partnerName) || 0
-    partnerMap.set(partnerName, current + (log.durationSeconds || 0))
-  })
-
-  const partnerStats = Array.from(partnerMap.entries()).map(([name, seconds]) => ({
-    name,
-    seconds,
-    color: "bg-primary",
-  }))
-
-  // Format recent projects
   const finalRecentProjects = recentProjects.map((p: any) => ({
     id: p.id,
     name: p.name || (p.services?.[0]?.serviceName || "Unnamed Project"),
@@ -94,52 +124,56 @@ export default async function Home() {
     siteName: p.site.domainName,
   }))
 
-  // Format active projects
-  const formattedActiveProjects = JSON.parse(JSON.stringify(activeProjects))
-
-  // Fetch partners and services for quick actions
-  const partners = await prisma.partner.findMany({
-    include: {
-      sites: {
-        select: { id: true, domainName: true }
-      }
-    },
-    orderBy: { name: "asc" }
-  })
-
-  const services = await prisma.service.findMany({
-    orderBy: { serviceName: "asc" }
-  })
-
-  const formattedPartners = JSON.parse(JSON.stringify(partners))
-  const formattedServices = JSON.parse(JSON.stringify(services))
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black uppercase italic tracking-tighter leading-none">
             <span className="text-primary">Overview</span>
           </h2>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest opacity-60">
-            Dashboard / Quick Insights
+            Freelancer Dashboard
           </p>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <QuickActions partners={formattedPartners} services={formattedServices} />
+      {/* Top Row Metrics */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatsCard
+          title="Revenue This Month"
+          value={formattedRevenue}
+          description="Potential based on active projects"
+          icon={CreditCard}
+        />
+        <StatsCard
+          title="Hours Worked"
+          value={`${totalHoursMonth}h`}
+          description="Total logged this month"
+          icon={Clock}
+        />
+      </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      {/* Quick Actions */}
+      <QuickActions
+        partners={formattedPartners}
+        services={formattedServices}
+        projects={quickActionProjects}
+      />
+
+      {/* Split Overview */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 min-h-[500px] h-auto">
         <div className="col-span-4">
-          <DailyStats totalSeconds={totalSeconds} partnerStats={partnerStats} />
+          <RecurringProjectsList projects={recurringProjects} />
         </div>
         <div className="col-span-3">
-          <ActiveProjectsQuickLook projects={formattedActiveProjects} />
+          <OneTimeProjectsList projects={oneTimeProjects} />
         </div>
       </div>
 
-      <QuickStart recentProjects={finalRecentProjects} />
+      <div className="pt-8">
+        <h3 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-widest">Recent Activity</h3>
+        <QuickStart recentProjects={finalRecentProjects} />
+      </div>
     </div>
   )
 }

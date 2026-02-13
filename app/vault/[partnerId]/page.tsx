@@ -7,6 +7,7 @@ import { ExternalLink, Globe, Plus } from "lucide-react"
 import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
+import { SitesListView } from "@/components/vault/sites-list-view"
 
 export const dynamic = "force-dynamic"
 
@@ -81,36 +82,7 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
                 </Card>
             )}
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {partner.sites.map((site: any) => (
-                    <Link key={site.id} href={`/vault/${partner.id}/${site.id}`} className="block h-full">
-                        <Card className="h-full hover:bg-muted/50 transition-colors">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Globe className="h-4 w-4" />
-                                    {site.domainName}
-                                </CardTitle>
-                                <CardDescription>
-                                    {site._count.projects} Active Projects
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {site.driveLink && (
-                                    <div className="flex items-center text-xs text-blue-500 hover:underline">
-                                        <ExternalLink className="h-3 w-3 mr-1" />
-                                        Drive Folder
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </Link>
-                ))}
-                {partner.sites.length === 0 && (
-                    <div className="col-span-full text-center py-10 text-muted-foreground">
-                        No sites found for this partner. Add their first website.
-                    </div>
-                )}
-            </div>
+            <SitesListView sites={partner.sites} partnerId={partner.id} />
         </div>
     )
 }

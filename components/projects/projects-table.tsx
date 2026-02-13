@@ -12,10 +12,7 @@ import {
 } from "@/components/ui/table"
 import {
     Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription
+    SheetContent
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,24 +26,13 @@ import {
     SelectValue
 } from "@/components/ui/select"
 import {
-    Globe,
-    Users,
-    ExternalLink,
-    Clock,
     CheckCircle2,
-    Calendar,
-    Settings,
-    LayoutGrid,
-    CircleDollarSign,
-    Target,
-    Layers,
-    X,
-    FolderOpen,
-    Trash2,
-    Plus,
-    Check,
-    AlertCircle,
-    Loader2
+    Users,
+    Globe,
+    CreditCard,
+    MoreHorizontal,
+    Expand,
+    ExternalLink
 } from "lucide-react"
 import { ProjectTasks } from "@/components/projects/project-tasks"
 import { formatDistanceToNow, format } from "date-fns"
@@ -55,6 +41,9 @@ import { updateProject } from "@/lib/actions"
 import { toast } from "sonner"
 import { BulkActionsBar } from "@/components/projects/bulk-actions-bar"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
+import { SiteSheetContent } from "@/components/vault/site-sheet-content"
+import { getProjectDisplayName } from "@/lib/project-utils"
 
 interface ProjectTableProps {
     projects: any[]
@@ -63,32 +52,14 @@ interface ProjectTableProps {
 
 export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
+    const [selectedSite, setSelectedSite] = React.useState<any>(null)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
-    const [isEditingServices, setIsEditingServices] = React.useState(false)
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
-    const [localName, setLocalName] = React.useState("")
 
-    // Sync localName with selectedProject
-    React.useEffect(() => {
-        if (selectedProject) {
-            setLocalName(selectedProject.name || getProjectDisplayName(selectedProject))
-        }
-    }, [selectedProject])
 
     // Derived from projects
     const recurringProjects = projects.filter(p => p.services?.[0]?.isRecurring)
     const oneTimeProjects = projects.filter(p => !p.services?.[0]?.isRecurring)
-
-    const getProjectDisplayName = (project: any) => {
-        if (project.name) return project.name
-
-        const serviceNames = project.services?.map((s: any) => s.serviceName).join(" & ") || "Generic Project"
-        const base = `${project.site.domainName} - ${serviceNames}`
-        if (project.services?.[0]?.isRecurring) {
-            return `${base} - ${format(new Date(), "MMMM")}`
-        }
-        return base
-    }
 
     const handleUpdate = async (projectId: string, data: any) => {
         setUpdatingId(projectId)
@@ -115,43 +86,7 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
         }
     }
 
-    const toggleService = (serviceId: string) => {
-        if (!selectedProject) return
-
-        const currentServices = selectedProject.services || []
-        const currentIds = currentServices.map((s: any) => s.id)
-        let nextIds: string[]
-
-        if (currentIds.includes(serviceId)) {
-            // Remove service (ensure at least one remains)
-            if (currentIds.length === 1) {
-                toast.error("Project must have at least one service.")
-                return
-            }
-            nextIds = currentIds.filter((id: string) => id !== serviceId)
-        } else {
-            // Add service
-            const serviceToAdd = allServices.find(s => s.id === serviceId)
-            if (!serviceToAdd) return
-
-            // If project is empty or we are forcing a switch
-            if (currentServices.length === 0) {
-                nextIds = [serviceId]
-            } else {
-                // Check if same kind as first existing service
-                const firstService = currentServices[0]
-                if (serviceToAdd.isRecurring !== firstService.isRecurring) {
-                    toast.error(`Type Mismatch: This project is ${firstService.isRecurring ? 'Recurring' : 'One-time'}. You cannot mix types. To switch, remove existing services first.`, {
-                        icon: <AlertCircle className="h-4 w-4 text-rose-500" />
-                    })
-                    return
-                }
-                nextIds = [...currentIds, serviceId]
-            }
-        }
-
-        handleUpdate(selectedProject.id, { serviceIds: nextIds })
-    }
+    // toggleService moved to ProjectSheetContent
 
     const toggleSelectAll = () => {
         if (selectedIds.length === projects.length) {
@@ -219,13 +154,16 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                         <Users className="h-3 w-3 opacity-50 group-hover/partner:opacity-100" />
                         {project.site.partner.name}
                     </Link>
-                    <Link
-                        href={`/vault/${project.site.partner.id}/${project.site.id}`}
-                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-all group/site"
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedSite(project.site)
+                        }}
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-all group/site cursor-pointer"
                     >
                         <Globe className="h-3 w-3 opacity-50 group-hover/site:opacity-100" />
                         Site Vault
-                    </Link>
+                    </div>
                 </div>
             </TableCell>
 
@@ -342,295 +280,32 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
             <Sheet open={!!selectedProject} onOpenChange={(open) => {
                 if (!open) {
                     setSelectedProject(null)
-                    setIsEditingServices(false)
                 }
             }}>
                 <SheetContent side="right" className="sm:max-w-[800px] w-full p-0 flex flex-col border-none shadow-2xl">
                     {selectedProject && (
-                        <>
-                            <SheetHeader className="p-8 border-b bg-muted/20 relative">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                                        <Link href={`/vault/${selectedProject.site.partner.id}`} className="flex items-center gap-1 hover:text-primary transition-colors">
-                                            <Users className="h-3 w-3" />
-                                            {selectedProject.site.partner.name}
-                                        </Link>
-                                        <span className="opacity-30">/</span>
-                                        <Link href={`/vault/${selectedProject.site.partner.id}/${selectedProject.site.id}`} className="flex items-center gap-1 hover:text-primary transition-colors">
-                                            <Globe className="h-3 w-3" />
-                                            {selectedProject.site.domainName}
-                                        </Link>
-                                    </div>
-                                    <SheetTitle className="group relative">
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <Input
-                                                    value={localName}
-                                                    onChange={(e) => setLocalName(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && localName !== (selectedProject.name || getProjectDisplayName(selectedProject))) {
-                                                            handleUpdate(selectedProject.id, { name: localName })
-                                                        }
-                                                        if (e.key === 'Escape') {
-                                                            setLocalName(selectedProject.name || getProjectDisplayName(selectedProject))
-                                                        }
-                                                    }}
-                                                    className="text-5xl font-black italic tracking-tighter border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto pr-24"
-                                                    placeholder="Project Nickname"
-                                                />
-                                                <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                    {updatingId === selectedProject.id ? (
-                                                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                                    ) : (
-                                                        localName !== (selectedProject.name || getProjectDisplayName(selectedProject)) && (
-                                                            <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-7 w-7 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
-                                                                    onClick={() => handleUpdate(selectedProject.id, { name: localName })}
-                                                                >
-                                                                    <Check className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                                                                    onClick={() => setLocalName(selectedProject.name || getProjectDisplayName(selectedProject))}
-                                                                >
-                                                                    <X className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {localName !== (selectedProject.name || getProjectDisplayName(selectedProject)) && (
-                                                <div className="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">
-                                                    Unsaved Changes
-                                                </div>
-                                            )}
-                                        </div>
-                                    </SheetTitle>
+                        <ProjectSheetContent
+                            project={selectedProject}
+                            allServices={allServices}
+                            onUpdate={(updated) => setSelectedProject((prev: any) => ({ ...prev, ...updated }))}
+                            onOpenSite={(site) => setSelectedSite(site)}
+                        />
+                    )}
+                </SheetContent>
+            </Sheet>
 
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-wrap gap-2">
-                                            {selectedProject.services?.map((s: any) => (
-                                                <Link key={s.id} href="/services">
-                                                    <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 hover:bg-primary/10 transition-colors">
-                                                        {s.serviceName}
-                                                    </Badge>
-                                                </Link>
-                                            )) || <span className="text-xs text-muted-foreground italic">No services assigned</span>}
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 text-[10px] font-black uppercase tracking-tighter"
-                                            onClick={() => setIsEditingServices(!isEditingServices)}
-                                        >
-                                            {isEditingServices ? "Cancel" : "Manage Services"}
-                                        </Button>
-                                    </div>
-
-                                    {isEditingServices && (
-                                        <div className="bg-background border p-4 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
-                                            <div className="flex justify-between items-center border-b pb-2">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                                    Service Library
-                                                </span>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-primary italic">
-                                                    Active Project Type: {selectedProject.services?.[0]?.isRecurring ? "Recurring" : "One-time"}
-                                                </span>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-2">
-                                                <div className="space-y-2">
-                                                    <div className="text-[9px] font-black uppercase text-rose-500/60 flex items-center gap-1">
-                                                        <Clock className="h-3 w-3" /> Recurring
-                                                    </div>
-                                                    {allServices.filter(s => s.isRecurring).map(s => {
-                                                        const isSelected = selectedProject.services?.some((ps: any) => ps.id === s.id)
-                                                        return (
-                                                            <button
-                                                                key={s.id}
-                                                                onClick={() => toggleService(s.id)}
-                                                                className={cn(
-                                                                    "w-full flex items-center justify-between p-2 rounded-lg border text-left transition-all",
-                                                                    isSelected
-                                                                        ? "bg-primary text-primary-foreground border-primary font-bold shadow-md shadow-primary/20"
-                                                                        : "bg-muted/20 border-transparent hover:border-primary/20 text-muted-foreground hover:text-foreground"
-                                                                )}
-                                                            >
-                                                                <span className="text-[10px] truncate">{s.serviceName}</span>
-                                                                {isSelected && <Check className="h-3 w-3" />}
-                                                            </button>
-                                                        )
-                                                    })}
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <div className="text-[9px] font-black uppercase text-emerald-500/60 flex items-center gap-1">
-                                                        <CheckCircle2 className="h-3 w-3" /> One-Time
-                                                    </div>
-                                                    {allServices.filter(s => !s.isRecurring).map(s => {
-                                                        const isSelected = selectedProject.services?.some((ps: any) => ps.id === s.id)
-                                                        return (
-                                                            <button
-                                                                key={s.id}
-                                                                onClick={() => toggleService(s.id)}
-                                                                className={cn(
-                                                                    "w-full flex items-center justify-between p-2 rounded-lg border text-left transition-all",
-                                                                    isSelected
-                                                                        ? "bg-primary text-primary-foreground border-primary font-bold shadow-md shadow-primary/20"
-                                                                        : "bg-muted/20 border-transparent hover:border-primary/20 text-muted-foreground hover:text-foreground"
-                                                                )}
-                                                            >
-                                                                <span className="text-[10px] truncate">{s.serviceName}</span>
-                                                                {isSelected && <Check className="h-3 w-3" />}
-                                                            </button>
-                                                        )
-                                                    })}
-                                                </div>
-                                            </div>
-                                            <div className="text-[9px] text-muted-foreground italic flex items-start gap-1 p-2 bg-muted/30 rounded-lg">
-                                                <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-                                                To switch project type, you must first remove all current services of the other type.
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </SheetHeader>
-
-                            <div className="flex-1 overflow-y-auto p-8 space-y-12 text-sm">
-                                {/* EDITABLE CONTROLS SECTION */}
-                                <section className="grid grid-cols-2 gap-6 bg-muted/20 p-6 rounded-2xl border border-dashed">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Lifecycle Status</Label>
-                                        <Select
-                                            defaultValue={selectedProject.status}
-                                            onValueChange={(val) => handleUpdate(selectedProject.id, { status: val })}
-                                        >
-                                            <SelectTrigger className="h-11 bg-background border-none shadow-sm font-bold">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Active">Active</SelectItem>
-                                                <SelectItem value="Paused">Paused</SelectItem>
-                                                <SelectItem value="Completed">Completed</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ledger Status</Label>
-                                        <Select
-                                            defaultValue={selectedProject.paymentStatus}
-                                            onValueChange={(val) => handleUpdate(selectedProject.id, { paymentStatus: val })}
-                                        >
-                                            <SelectTrigger className={cn(
-                                                "h-11 bg-background border-none shadow-sm font-black italic",
-                                                selectedProject.paymentStatus === "Paid" ? "text-emerald-600" : "text-rose-600"
-                                            )}>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Paid">PAID</SelectItem>
-                                                <SelectItem value="Unpaid">UNPAID</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2 col-span-2">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex justify-between">
-                                            Contract Fee (RON)
-                                            <span className="text-primary/40 font-mono">Current: {selectedProject.currentFee}</span>
-                                        </Label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground opacity-40">RON</span>
-                                            <Input
-                                                type="number"
-                                                defaultValue={selectedProject.currentFee}
-                                                className="h-11 bg-background border-none shadow-sm pl-12 font-black italic text-lg"
-                                                onBlur={(e) => {
-                                                    const val = parseFloat(e.target.value)
-                                                    if (val !== selectedProject.currentFee) {
-                                                        handleUpdate(selectedProject.id, { currentFee: val })
-                                                    }
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                </section>
-
-                                {/* TASKS SECTION */}
-                                <section className="space-y-6">
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                                        <CheckCircle2 className="h-4 w-4 text-primary" /> Service Checklist
-                                    </h3>
-                                    <ProjectTasks
-                                        projectId={selectedProject.id}
-                                        initialTasks={selectedProject.tasks || []}
-                                    />
-                                </section>
-
-                                {/* SITE CONTEXT SECTION */}
-                                <section className="space-y-6 pt-6 border-t border-dashed">
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                                        <Target className="h-4 w-4 text-primary" /> Context & Technicals
-                                    </h3>
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <Link
-                                            href={`/vault/${selectedProject.site.partner.id}`}
-                                            className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-all group"
-                                        >
-                                            <div className="space-y-0.5">
-                                                <div className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest">Partner Entity</div>
-                                                <div className="font-bold text-sm group-hover:text-primary transition-colors">{selectedProject.site.partner.name}</div>
-                                            </div>
-                                            <FolderOpen className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                        </Link>
-
-                                        <Link
-                                            href={`/vault/${selectedProject.site.partner.id}/${selectedProject.site.id}`}
-                                            className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-all group"
-                                        >
-                                            <div className="space-y-0.5">
-                                                <div className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest">Domain Asset</div>
-                                                <div className="font-bold text-sm tracking-tight group-hover:text-primary transition-colors">{selectedProject.site.domainName}</div>
-                                            </div>
-                                            <Globe className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                        </Link>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-4 bg-muted/10 rounded-xl space-y-1">
-                                            <div className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">GTM ID</div>
-                                            <div className="font-mono text-xs font-bold text-muted-foreground">{selectedProject.site.gtmId || "UNSET"}</div>
-                                        </div>
-                                        <div className="p-4 bg-muted/10 rounded-xl space-y-1">
-                                            <div className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">ADS ID</div>
-                                            <div className="font-mono text-xs font-bold text-muted-foreground">{selectedProject.site.googleAdsId || "UNSET"}</div>
-                                        </div>
-                                    </div>
-                                </section>
-                            </div>
-
-                            <div className="p-8 border-t bg-muted/20 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
-                                        <Calendar className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Initialization Date</div>
-                                        <div className="text-sm font-bold">{format(new Date(selectedProject.createdAt), "MMMM do, yyyy")}</div>
-                                    </div>
-                                </div>
-                                <div className="text-[10px] font-mono font-medium text-muted-foreground opacity-40 italic">
-                                    Last edit {formatDistanceToNow(new Date(selectedProject.updatedAt))} ago
-                                </div>
-                            </div>
-                        </>
+            {/* Site Detail Sheet */}
+            <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
+                <SheetContent className="sm:max-w-xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl">
+                    {selectedSite && (
+                        <SiteSheetContent
+                            site={selectedSite}
+                            onUpdate={(updated) => {
+                                // Since sites are nested in projects, updating local state here is tricky without refetching projects
+                                // But we can update the selectedSite local state at least
+                                setSelectedSite({ ...selectedSite, ...updated })
+                            }}
+                        />
                     )}
                 </SheetContent>
             </Sheet>

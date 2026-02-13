@@ -1,10 +1,10 @@
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
+import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
+import { DeleteProjectButton } from "@/components/projects/delete-project-button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ProjectTasks } from "@/components/projects/project-tasks"
-import { Badge } from "@/components/ui/badge"
-import { Globe, Users, Clock } from "lucide-react"
+import { getProjectDisplayName } from "@/lib/project-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -33,83 +33,41 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         notFound()
     }
 
+    const servicesRaw = await prisma.service.findMany({
+        orderBy: { serviceName: "asc" }
+    })
+
     const project = JSON.parse(JSON.stringify(projectRaw))
+    const allServices = JSON.parse(JSON.stringify(servicesRaw))
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 max-w-5xl mx-auto">
             <DetailedBreadcrumbs items={[
                 { label: "Projects", href: "/projects" },
-                { label: project.name || (project.services?.[0]?.serviceName || "Unnamed Project") }
+                { label: getProjectDisplayName(project) }
             ]} />
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-3xl font-bold tracking-tight">
-                            {project.name || (project.services?.[0]?.serviceName || "Unnamed Project")}
-                        </h2>
-                    </div>
-                    <div className="flex items-center gap-4 text-muted-foreground text-sm">
-                        <span className="flex items-center gap-1">
-                            <Globe className="h-3 w-3" />
-                            {project.site.domainName}
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {project.site.partner.name}
-                        </span>
-                    </div>
-                </div>
+            {/* Main Content Card mimicking the Sheet style */}
+            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                <ProjectSheetContent
+                    project={project}
+                    allServices={allServices}
+                />
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Tasks</CardTitle>
-                            <CardDescription>Manage checklist for this project.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ProjectTasks projectId={project.id} initialTasks={project.tasks as any} />
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Project Overview</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Payment Status</span>
-                                <Badge variant={project.paymentStatus === "Paid" ? "default" : "outline"} className={project.paymentStatus === "Paid" ? "bg-green-500 hover:bg-green-600" : ""}>
-                                    {project.paymentStatus}
-                                </Badge>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Fee</span>
-                                <span className="font-medium">${project.currentFee?.toString() || "0.00"}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Logged Intervals</span>
-                                <span className="flex items-center gap-1 font-medium">
-                                    <Clock className="h-3 w-3" />
-                                    {project._count.timeLogs} entries
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card border-dashed className="bg-muted/30">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Quick Actions</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <p className="text-xs text-muted-foreground">Use the global timer in the bottom right to track time against this project.</p>
-                        </CardContent>
-                    </Card>
-                </div>
+            {/* Danger Zone */}
+            <div className="pt-8">
+                <Card className="border-rose-200 bg-rose-50/30">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-rose-900">Danger Zone</CardTitle>
+                        <CardDescription className="text-rose-700/60 text-xs">
+                            Irreversible actions for this project.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <DeleteProjectButton projectId={project.id} />
+                    </CardContent>
+                </Card>
             </div>
         </div>
     )

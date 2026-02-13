@@ -35,8 +35,7 @@ export function CreateProjectDialog({ siteId, services }: CreateProjectDialogPro
         try {
             await createProject({
                 siteId,
-                serviceId,
-                // currentFee: ... // Add field if needed
+                serviceIds: [serviceId],
             })
             setOpen(false)
             setServiceId("")

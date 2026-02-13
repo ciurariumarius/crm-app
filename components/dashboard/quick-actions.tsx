@@ -1,17 +1,22 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Plus, Briefcase, CheckSquare } from "lucide-react"
+import { Plus, Briefcase, CheckSquare, Clock } from "lucide-react"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
+import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
+import { GlobalCreateTimeLogDialog } from "@/components/time/global-create-time-log-dialog"
 import { useState } from "react"
 
 interface QuickActionsProps {
     partners: any[]
     services: any[]
+    projects: any[]
 }
 
-export function QuickActions({ partners, services }: QuickActionsProps) {
+export function QuickActions({ partners, services, projects }: QuickActionsProps) {
     const [showProjectDialog, setShowProjectDialog] = useState(false)
+    const [showTaskDialog, setShowTaskDialog] = useState(false)
+    const [showTimeLogDialog, setShowTimeLogDialog] = useState(false)
 
     return (
         <div className="flex items-center gap-3">
@@ -26,27 +31,23 @@ export function QuickActions({ partners, services }: QuickActionsProps) {
                 </Button>
 
                 <Button
-                    asChild
-                    variant="ghost"
+                    onClick={() => setShowTaskDialog(true)}
+                    variant="outline"
                     size="sm"
                     className="gap-2 h-9 px-4 font-medium text-xs"
                 >
-                    <a href="/projects">
-                        <Briefcase className="h-4 w-4" />
-                        All Projects
-                    </a>
+                    <CheckSquare className="h-4 w-4" />
+                    New Task
                 </Button>
 
                 <Button
-                    asChild
-                    variant="ghost"
+                    onClick={() => setShowTimeLogDialog(true)}
+                    variant="outline"
                     size="sm"
                     className="gap-2 h-9 px-4 font-medium text-xs"
                 >
-                    <a href="/projects?status=Active">
-                        <CheckSquare className="h-4 w-4" />
-                        Active Tasks
-                    </a>
+                    <Clock className="h-4 w-4" />
+                    Log Time
                 </Button>
             </div>
 
@@ -55,6 +56,18 @@ export function QuickActions({ partners, services }: QuickActionsProps) {
                 services={services}
                 open={showProjectDialog}
                 onOpenChange={setShowProjectDialog}
+            />
+
+            <GlobalCreateTaskDialog
+                open={showTaskDialog}
+                onOpenChange={setShowTaskDialog}
+                projects={projects}
+            />
+
+            <GlobalCreateTimeLogDialog
+                open={showTimeLogDialog}
+                onOpenChange={setShowTimeLogDialog}
+                projects={projects}
             />
         </div>
     )
