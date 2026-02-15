@@ -15,6 +15,7 @@ import {
     SheetContent
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
+import { formatProjectName } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,6 +46,14 @@ import { ProjectSheetContent } from "@/components/projects/project-sheet-content
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 import { getProjectDisplayName } from "@/lib/project-utils"
 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
 interface ProjectTableProps {
     projects: any[]
     allServices: any[]
@@ -55,6 +64,7 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
+
 
 
     // Derived from projects
@@ -116,6 +126,7 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Metrics</TableHead>
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Activity</TableHead>
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Created</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
             </TableRow>
         </TableHeader>
     )
@@ -141,7 +152,7 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                     <span className="font-semibold text-[13px] tracking-tight group-hover:text-primary transition-colors">
                         {getProjectDisplayName(project)}
                     </span>
-                    <span className="text-[10px] text-muted-foreground/60 font-medium">{project.site.domainName}</span>
+                    <span className="text-[10px] text-muted-foreground/60 font-medium">{formatProjectName(project)}</span>
                 </div>
             </TableCell>
             <TableCell>
@@ -300,6 +311,7 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                 onClearSelection={() => setSelectedIds([])}
                 totalProjects={projects.length}
             />
+
         </div>
     )
 }

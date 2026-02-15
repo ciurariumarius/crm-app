@@ -22,18 +22,166 @@ import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 
+import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
+
+import { startTimer, stopTimer, pauseTimer, resumeTimer } from "@/lib/actions"
+import { Play, Square, Pause } from "lucide-react"
+
 interface TasksCardViewProps {
     tasks: any[]
     allServices: any[]
+    initialActiveTimer?: any
 }
 
-export function TasksCardView({ tasks, allServices }: TasksCardViewProps) {
+export function TasksCardView({ tasks, allServices, initialActiveTimer }: TasksCardViewProps) {
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
     const [selectedTask, setSelectedTask] = React.useState<any>(null)
+    const [quickLogTask, setQuickLogTask] = React.useState<any>(null) // New state for quick log
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
     const [isBulkOperating, setIsBulkOperating] = React.useState(false)
+    const [activeTimer, setActiveTimer] = React.useState<any>(initialActiveTimer)
+    const [timerDuration, setTimerDuration] = React.useState(0)
+
+    React.useEffect(() => {
+        // If we have a local optimistic timer ("temp"), don't overwrite it with initialProps
+        if (activeTimer?.id === "temp") return
+
+        // Sync with server state
+        if (initialActiveTimer) {
+            // If we have a running or paused timer from server, use it
+            // We trust the server state more than local optimistic one if server provides one
+            setActiveTimer(initialActiveTimer)
+        } else {
+            // Server says no timer.
+            // If local timer is 'temp' (optimistic start), we keep it until server confirms or error.
+            if (activeTimer?.id !== 'temp') {
+                setActiveTimer(null)
+            }
+        }
+    }, [initialActiveTimer])
+
+    React.useEffect(() => {
+        if (!activeTimer || activeTimer.status === 'paused') {
+            setTimerDuration(0)
+            return
+        }
+
+        const calculateDuration = () => {
+            const start = new Date(activeTimer.startTime).getTime()
+            const now = new Date().getTime()
+            return Math.floor((now - start) / 1000)
+        }
+
+        setTimerDuration(calculateDuration())
+
+        const interval = setInterval(() => {
+            setTimerDuration(calculateDuration())
+        }, 1000)
+
+        return () => clearInterval(interval)
+    }, [activeTimer])
+
+    const handleStartTimer = async (task: any) => {
+        if (activeTimer?.status === 'running') {
+            await handleStopTimer()
+        }
+
+        // Optimistic
+        const tempTimer = {
+            id: 'temp',
+            startTime: new Date(),
+            taskId: task.id,
+            projectId: task.projectId,
+            status: 'running',
+            task: { name: task.name }
+        }
+        setActiveTimer(tempTimer)
+
+        try {
+            const result = await startTimer(task.projectId, task.id)
+            if (result.success) {
+                toast.success("Timer started")
+                setActiveTimer({ ...result.data, status: 'running' })
+            } else {
+                toast.error(result.error || "Failed to start timer")
+                setActiveTimer(null)
+            }
+        } catch (error) {
+            toast.error("Failed to start timer")
+            setActiveTimer(null)
+        }
+    }
+
+    const handleStopTimer = async () => {
+        const prevTimer = activeTimer
+        setActiveTimer(null)
+
+        try {
+            const result = await stopTimer()
+            if (result.success) {
+                toast.success("Timer stopped")
+            } else {
+                toast.error(result.error || "Failed to stop timer")
+                setActiveTimer(prevTimer)
+            }
+        } catch (error) {
+            toast.error("Failed to stop timer")
+            setActiveTimer(prevTimer)
+        }
+    }
+
+    const handlePauseTimer = async () => {
+        const prevTimer = activeTimer
+        // Optimistic
+        if (activeTimer) {
+            setActiveTimer({ ...activeTimer, status: 'paused' })
+        }
+
+        try {
+            const result = await pauseTimer()
+            if (result.success) {
+                toast.success("Timer paused")
+            } else {
+                toast.error(result.error || "Failed to pause")
+                setActiveTimer(prevTimer)
+            }
+        } catch (error) {
+            toast.error("Failed to pause timer")
+            setActiveTimer(prevTimer)
+        }
+    }
+
+    const handleResumeTimer = async () => {
+        const prevTimer = activeTimer
+        // Optimistic (approximation of start time)
+        if (activeTimer) {
+            setActiveTimer({ ...activeTimer, status: 'running', startTime: new Date() })
+        }
+
+        try {
+            const result = await resumeTimer()
+            if (result.success) {
+                toast.success("Timer resumed")
+                setActiveTimer({ ...result.data, status: 'running' })
+            } else {
+                toast.error(result.error || "Failed to resume")
+                setActiveTimer(prevTimer)
+            }
+        } catch (error) {
+            toast.error("Failed to resume timer")
+            setActiveTimer(prevTimer)
+        }
+    }
+
+    const formatTimer = (seconds: number) => {
+        const h = Math.floor(seconds / 3600)
+        const m = Math.floor((seconds % 3600) / 60)
+        const s = seconds % 60
+        return `${h > 0 ? `${h}:` : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+    }
+
 
     const toggleSelect = (id: string) => {
         setSelectedIds(prev =>
@@ -235,22 +383,115 @@ export function TasksCardView({ tasks, allServices }: TasksCardViewProps) {
                                                 <DropdownMenuItem onClick={() => handleUrgencyUpdate(task.id, "Urgent")}>Urgent</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
+
+                                        {activeTimer && activeTimer.taskId === task.id ? (
+                                            <div className="flex items-center gap-1">
+                                                {activeTimer.status === 'paused' ? (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10 rounded-full"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleResumeTimer()
+                                                        }}
+                                                        title="Resume Timer"
+                                                    >
+                                                        <Play className="h-3.5 w-3.5 fill-current" />
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 rounded-full"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handlePauseTimer()
+                                                        }}
+                                                        title="Pause Timer"
+                                                    >
+                                                        <Pause className="h-3.5 w-3.5 fill-current" />
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className={cn(
+                                                        "h-6 gap-1.5 px-2 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-full",
+                                                        activeTimer.status === 'running' && "animate-pulse"
+                                                    )}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleStopTimer()
+                                                    }}
+                                                    title="Stop Timer"
+                                                >
+                                                    <Square className="h-2.5 w-2.5 fill-current" />
+                                                    <span className="text-[10px] font-mono font-bold">
+                                                        {activeTimer.status === 'paused' ? "Paused" : formatTimer(timerDuration)}
+                                                    </span>
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10 rounded-full"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    handleStartTimer(task)
+                                                }}
+                                                title="Start Timer"
+                                            >
+                                                <Play className="h-3.5 w-3.5 fill-current" />
+                                            </Button>
+                                        )}
+
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setQuickLogTask(task)
+                                            }}
+                                            title="Log Time Manually"
+                                        >
+                                            <Clock className="h-3.5 w-3.5" strokeWidth={2} />
+                                        </Button>
+
                                     </div>
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-4 text-[11px] font-medium text-muted-foreground/60">
+                                    <div className="flex items-center gap-4 text-[11px] font-medium text-muted-foreground/60 flex-wrap">
                                         <div className="flex items-center gap-2 min-w-0">
                                             <Users className="h-3.5 w-3.5 opacity-40 shrink-0" strokeWidth={1.5} />
                                             <span className="truncate">{task.project.site.partner.name}</span>
                                         </div>
                                         {task.deadline && (
                                             <div className={cn(
-                                                "flex items-center gap-2 shrink-0 ml-auto px-2 py-0.5 rounded-md bg-muted/50 border border-border",
+                                                "flex items-center gap-2 shrink-0 px-2 py-0.5 rounded-md bg-muted/50 border border-border",
                                                 new Date(task.deadline) < new Date() && !task.isCompleted ? "text-rose-500 border-rose-500/20" : ""
                                             )}>
                                                 <CalendarIcon className="h-3.5 w-3.5 opacity-40" strokeWidth={1.5} />
                                                 <span>{format(new Date(task.deadline), "MMM dd")}</span>
+                                            </div>
+                                        )}
+                                        {(task.timeLogs && task.timeLogs.length > 0 || (activeTimer && activeTimer.taskId === task.id)) && (
+                                            <div className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded-md bg-emerald-500/5 text-emerald-600 border border-emerald-500/10">
+                                                <Clock className="h-3.5 w-3.5 opacity-60" strokeWidth={1.5} />
+                                                <span>
+                                                    {(() => {
+                                                        const logsDuration = task.timeLogs.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0)
+                                                        const currentTimerDuration = activeTimer && activeTimer.taskId === task.id ? timerDuration : 0
+                                                        const totalSeconds = logsDuration + currentTimerDuration
+
+                                                        const hours = Math.floor(totalSeconds / 3600)
+                                                        const mins = Math.floor((totalSeconds % 3600) / 60)
+                                                        return `${hours}h ${mins}m`
+                                                    })()}
+                                                </span>
                                             </div>
                                         )}
                                     </div>
@@ -336,6 +577,19 @@ export function TasksCardView({ tasks, allServices }: TasksCardViewProps) {
                     )}
                 </SheetContent>
             </Sheet>
-        </div>
+
+            {/* Quick Time Log Dialog */}
+            {quickLogTask && (
+                <QuickTimeLogDialog
+                    open={!!quickLogTask}
+                    onOpenChange={(open) => !open && setQuickLogTask(null)}
+                    projectId={quickLogTask.projectId}
+                    taskId={quickLogTask.id}
+                    taskName={quickLogTask.name}
+                    projectName={quickLogTask.project.name || quickLogTask.project.site.domainName}
+                />
+            )}
+
+        </div >
     )
 }

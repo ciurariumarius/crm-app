@@ -3,9 +3,11 @@ import { QuickActions } from "@/components/dashboard/quick-actions"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { RecurringProjectsList } from "@/components/dashboard/recurring-projects-list"
 import { OneTimeProjectsList } from "@/components/dashboard/one-time-projects-list"
+import { UpcomingTasks } from "@/components/dashboard/upcoming-tasks"
 import prisma from "@/lib/prisma"
 import { CreditCard, Clock } from "lucide-react"
 import { GreetingHeader } from "@/components/dashboard/greeting-header"
+import { calculateDashboardMetrics } from "@/lib/dashboard-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -41,29 +43,6 @@ export default async function Home() {
     },
   })
 
-  // Split into Recurring and One-Time
-  const recurringProjects: any[] = []
-  const oneTimeProjects: any[] = []
-
-  activeProjects.forEach((project: any) => {
-    const isRecurring = project.services.some((s: any) => s.isRecurring)
-    const formattedProject = {
-      id: project.id,
-      siteName: project.site.domainName,
-      hoursLogged: project.timeLogs.reduce((sum: number, log: any) => sum + (log.durationSeconds || 0), 0) / 3600,
-      paymentStatus: project.paymentStatus,
-      completedTasks: project._count.tasks, // Count of completed tasks
-      totalTasks: project.tasks.length, // Total tasks count
-      services: project.services
-    }
-
-    if (isRecurring) {
-      recurringProjects.push(formattedProject)
-    } else {
-      oneTimeProjects.push(formattedProject)
-    }
-  })
-
   // Calculate Month Metrics
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   const timeLogsThisMonth = await prisma.timeLog.aggregate({
@@ -77,38 +56,7 @@ export default async function Home() {
     }
   })
 
-  const totalSecondsMonth = timeLogsThisMonth._sum.durationSeconds || 0
-  const totalHoursMonth = (totalSecondsMonth / 3600).toFixed(1)
-
-  // Revenue: Sum of currentFee of all active projects (Simplification as per plan)
-  const totalRevenue = activeProjects.reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
-
-  // Format currency
-  const formattedRevenue = new Intl.NumberFormat('ro-RO', {
-    style: 'currency',
-    currency: 'RON',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(totalRevenue)
-
-
-  // Data for QuickActions
-  const partners = await prisma.partner.findMany({
-    include: { sites: { select: { id: true, domainName: true } } },
-    orderBy: { name: "asc" }
-  })
-  const services = await prisma.service.findMany({ orderBy: { serviceName: "asc" } })
-  const quickActionProjects = activeProjects.map((p: any) => ({
-    id: p.id,
-    siteName: p.site.domainName,
-    services: p.services
-  }))
-
-  const formattedPartners = JSON.parse(JSON.stringify(partners))
-  const formattedServices = JSON.parse(JSON.stringify(services))
-
-
-  // Recent Projects for QuickStart (Keeping this feature at bottom)
+  // Recent Projects for QuickStart
   const recentProjects = await prisma.project.findMany({
     take: 4,
     orderBy: { updatedAt: "desc" },
@@ -118,12 +66,39 @@ export default async function Home() {
     },
   })
 
-  const finalRecentProjects = recentProjects.map((p: any) => ({
-    id: p.id,
-    name: p.name || (p.services?.[0]?.serviceName || "Unnamed Project"),
-    partnerName: p.site.partner.name,
-    siteName: p.site.domainName,
-  }))
+  // Upcoming Tasks
+  const upcomingTasks = await prisma.task.findMany({
+    where: {
+      status: { not: 'Completed' },
+      OR: [
+        { deadline: { lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } }, // Next 7 days
+        { urgency: { in: ['High', 'Urgent'] } }
+      ]
+    },
+    orderBy: [
+      { urgency: 'desc' }, // Urgent first
+      { deadline: 'asc' }  // Soonest first
+    ],
+    take: 20,
+    include: {
+      project: {
+        include: { site: { include: { partner: true } } }
+      }
+    }
+  })
+
+  // Calculate Metrics
+  const metrics = calculateDashboardMetrics(activeProjects, timeLogsThisMonth, recentProjects)
+
+  // Data for QuickActions
+  const partners = await prisma.partner.findMany({
+    include: { sites: { select: { id: true, domainName: true } } },
+    orderBy: { name: "asc" }
+  })
+  const services = await prisma.service.findMany({ orderBy: { serviceName: "asc" } })
+
+  const formattedPartners = JSON.parse(JSON.stringify(partners))
+  const formattedServices = JSON.parse(JSON.stringify(services))
 
   return (
     <div className="space-y-10 pb-10">
@@ -136,7 +111,7 @@ export default async function Home() {
         <div className="md:col-span-2 lg:col-span-3">
           <StatsCard
             title="Projected Billing"
-            value={formattedRevenue}
+            value={metrics.formattedRevenue}
             description="Across all active engagements"
             icon={CreditCard}
             trend="+12% vs last month"
@@ -145,7 +120,7 @@ export default async function Home() {
         <div className="md:col-span-2 lg:col-span-3">
           <StatsCard
             title="Operational Velocity"
-            value={`${totalHoursMonth}h`}
+            value={`${metrics.totalHoursMonth}h`}
             description="Total logged this billing cycle"
             icon={Clock}
             trend="Stable output"
@@ -157,16 +132,21 @@ export default async function Home() {
           <QuickActions
             partners={formattedPartners}
             services={formattedServices}
-            projects={quickActionProjects}
+            projects={metrics.quickActionProjects}
           />
         </div>
 
         {/* Project Lists - Parallel Columns */}
         <div className="md:col-span-4 lg:col-span-4">
-          <RecurringProjectsList projects={recurringProjects} />
+          <RecurringProjectsList projects={metrics.recurringProjects} />
         </div>
         <div className="md:col-span-4 lg:col-span-2">
-          <OneTimeProjectsList projects={oneTimeProjects} />
+          <OneTimeProjectsList projects={metrics.oneTimeProjects} />
+        </div>
+
+        {/* Upcoming Tasks - Parallel Columns */}
+        <div className="md:col-span-4 lg:col-span-6 h-[400px]">
+          <UpcomingTasks tasks={JSON.parse(JSON.stringify(upcomingTasks))} />
         </div>
 
         {/* Recent Context */}
@@ -174,7 +154,7 @@ export default async function Home() {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[11px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">Asset Context</h3>
           </div>
-          <QuickStart recentProjects={finalRecentProjects} />
+          <QuickStart recentProjects={metrics.finalRecentProjects} />
         </div>
       </div>
     </div>

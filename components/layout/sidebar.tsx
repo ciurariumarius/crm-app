@@ -13,7 +13,8 @@ import {
     CheckSquare,
     ChevronDown,
     ChevronRight,
-    Circle
+    Circle,
+    Clock
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,7 @@ export function Sidebar() {
         { name: "Overview", href: "/", icon: LayoutDashboard },
         { name: "Projects", href: "/projects", icon: Briefcase },
         { name: "Tasks", href: "/tasks", icon: CheckSquare },
+        { name: "Time", href: "/time", icon: Clock },
     ]
 
     const vaultItems = [

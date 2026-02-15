@@ -16,10 +16,12 @@ import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
 
+import { QuickActionProject } from "@/types"
+
 interface GlobalCreateTimeLogDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    projects: { id: string; siteName: string; }[]
+    projects: QuickActionProject[]
 }
 
 export function GlobalCreateTimeLogDialog({ open, onOpenChange, projects }: GlobalCreateTimeLogDialogProps) {

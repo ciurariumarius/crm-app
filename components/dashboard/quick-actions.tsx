@@ -7,10 +7,13 @@ import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-di
 import { GlobalCreateTimeLogDialog } from "@/components/time/global-create-time-log-dialog"
 import { useState } from "react"
 
+import { PartnerWithSites, QuickActionProject } from "@/types"
+import { Service } from "@prisma/client"
+
 interface QuickActionsProps {
-    partners: any[]
-    services: any[]
-    projects: any[]
+    partners: PartnerWithSites[]
+    services: Service[]
+    projects: QuickActionProject[]
 }
 
 export function QuickActions({ partners, services, projects }: QuickActionsProps) {

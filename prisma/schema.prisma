@@ -73,6 +73,7 @@ model Project {
   
   status        String   @default("Active") // Active, Paused, Completed
   paymentStatus String   @default("Unpaid") @map("payment_status") // Paid, Unpaid
+  paidAt        DateTime? @map("paid_at")
   currentFee    Decimal? @map("current_fee")
 
   createdAt     DateTime @default(now())
@@ -114,6 +115,7 @@ model TimeLog {
   startTime       DateTime  @map("start_time")
   endTime         DateTime? @map("end_time")
   durationSeconds Int?      @map("duration_seconds")
+  isPaused        Boolean   @default(false) @map("is_paused")
 
   createdAt       DateTime  @default(now())
 
@@ -122,3 +124,4 @@ model TimeLog {
 
   @@map("time_logs")
 }
+

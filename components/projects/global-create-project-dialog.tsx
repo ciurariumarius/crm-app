@@ -20,22 +20,11 @@ import { toast } from "sonner"
 import { Plus, Globe, Users, Briefcase, Sparkles, Check, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-
-interface Partner {
-    id: string
-    name: string
-    sites: { id: string; domainName: string }[]
-}
-
-interface Service {
-    id: string
-    serviceName: string
-    isRecurring: boolean
-    baseFee: any // Decimal
-}
+import { Partner, Service } from "@prisma/client"
+import { PartnerWithSites } from "@/types"
 
 interface GlobalCreateProjectDialogProps {
-    partners: Partner[]
+    partners: PartnerWithSites[]
     services: Service[]
     defaultPartnerId?: string
     defaultSiteId?: string
@@ -193,13 +182,11 @@ export function GlobalCreateProjectDialog({
 
     return (
         <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) resetForm(); }}>
-            <DialogTrigger asChild>
-                {trigger || (
-                    <Button className="shadow-sm font-black uppercase tracking-wider">
-                        <Plus className="mr-2 h-4 w-4" /> DEPLOY PROJECT
-                    </Button>
-                )}
-            </DialogTrigger>
+            {trigger && (
+                <DialogTrigger asChild>
+                    {trigger}
+                </DialogTrigger>
+            )}
             <DialogContent className="sm:max-w-[500px] overflow-hidden border-none shadow-2xl p-0">
                 <form onSubmit={handleSubmit} className="flex flex-col">
                     <DialogHeader className="p-6 pb-0">

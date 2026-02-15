@@ -18,6 +18,7 @@ const UpdateProjectSchema = z.object({
     name: z.string().nullable().optional(),
     status: z.enum(["Active", "Paused", "Completed"]).optional(),
     paymentStatus: z.enum(["Paid", "Unpaid"]).optional(),
+    paidAt: z.union([z.date(), z.string(), z.null()]).optional(),
     currentFee: z.number().nullable().optional(),
     serviceIds: z.array(z.string().uuid()).optional(),
 })
@@ -166,13 +167,13 @@ export async function createProject(data: {
             let projectName = validated.name
             if (!projectName) {
                 const site = await tx.site.findUnique({ where: { id: validated.siteId } })
-                const serviceNames = services.map((s: any) => s.serviceName).join(" + ")
+                const serviceNames = services.map((s: any) => s.serviceName).join(", ")
                 const isRecurring = services.some((s: any) => s.isRecurring)
 
                 projectName = `${site?.domainName || "Project"} - ${serviceNames}`
                 if (isRecurring) {
                     const date = new Date()
-                    const month = date.toLocaleString('en-US', { month: 'long' })
+                    const month = date.toLocaleString('en-US', { month: 'short' })
                     const year = date.getFullYear()
                     projectName += ` - ${month} ${year}`
                 }
@@ -250,6 +251,7 @@ export async function updateProject(projectId: string, data: {
     name?: string
     status?: string
     paymentStatus?: string
+    paidAt?: Date | string | null
     currentFee?: number
     serviceIds?: string[]
 }) {
@@ -263,6 +265,7 @@ export async function updateProject(projectId: string, data: {
         if (data.name !== undefined) updateData.name = data.name === "" ? null : data.name
         if (data.status !== undefined) updateData.status = data.status
         if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus
+        if (data.paidAt !== undefined) updateData.paidAt = data.paidAt
         if (data.currentFee !== undefined) updateData.currentFee = data.currentFee
         if (data.serviceIds !== undefined) updateData.serviceIds = data.serviceIds
 
@@ -283,14 +286,14 @@ export async function updateProject(projectId: string, data: {
             })
 
             if (projectInfo && projectInfo.site && newServices.length > 0) {
-                const serviceNames = newServices.map((s: any) => s.serviceName).join(" + ")
+                const serviceNames = newServices.map((s: any) => s.serviceName).join(", ")
                 const isRecurring = newServices.some((s: any) => s.isRecurring)
 
                 let newName = `${projectInfo.site.domainName} - ${serviceNames}`
                 if (isRecurring) {
                     // Safe bet: For recurring, always stamp with current month if we are regenerating title.
                     const date = new Date()
-                    const month = date.toLocaleString('en-US', { month: 'long' })
+                    const month = date.toLocaleString('en-US', { month: 'short' })
                     const year = date.getFullYear()
                     newName += ` - ${month} ${year}`
                 }
@@ -439,7 +442,7 @@ export async function logTime(data: {
         const log = await prisma.timeLog.create({
             data: {
                 projectId: data.projectId,
-                // taskId: data.taskId, // Optional
+                taskId: data.taskId, // Optional
                 description: data.description,
                 startTime: data.startTime || new Date(),
                 endTime: data.endTime,
@@ -449,6 +452,8 @@ export async function logTime(data: {
         })
         revalidatePath("/")
         // revalidatePath("/reports") // if it existed
+        revalidatePath("/time")
+        revalidatePath("/tasks") // Add this
         revalidatePath(`/projects/${data.projectId}`)
         revalidatePath(`/vault/${log.project.site.partnerId}/${log.project.siteId}`)
         return { success: true }
@@ -538,5 +543,317 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
     } catch (error) {
         console.error("Bulk update tasks status failed:", error)
         return { success: false, error: error instanceof Error ? error.message : "Failed to update tasks" }
+    }
+}
+
+export async function getTimeLogs(filters?: { projectId?: string, partnerId?: string }) {
+    try {
+        const where: any = {}
+        if (filters?.projectId && filters.projectId !== "all") {
+            where.projectId = filters.projectId
+        } else if (filters?.partnerId && filters.partnerId !== "all") {
+            where.project = {
+                site: { partnerId: filters.partnerId }
+            }
+        }
+
+        const logs = await prisma.timeLog.findMany({
+            where,
+            include: {
+                project: {
+                    include: {
+                        site: {
+                            select: {
+                                domainName: true
+                            }
+                        },
+                        services: {
+                            select: {
+                                serviceName: true,
+                                isRecurring: true
+                            }
+                        }
+                    }
+                },
+                task: true
+            },
+            orderBy: {
+                startTime: 'desc'
+            }
+        })
+        return { success: true, data: logs }
+    } catch (error) {
+        console.error("Get time logs failed:", error)
+        return { success: false, error: "Failed to fetch time logs" }
+    }
+}
+
+export async function updateTimeLog(logId: string, data: {
+    projectId?: string
+    taskId?: string | null
+    description?: string
+    startTime?: Date
+    endTime?: Date
+    durationSeconds?: number
+}) {
+    try {
+        const log = await prisma.timeLog.update({
+            where: { id: logId },
+            data: {
+                projectId: data.projectId,
+                taskId: data.taskId,
+                description: data.description,
+                startTime: data.startTime,
+                endTime: data.endTime,
+                durationSeconds: data.durationSeconds,
+            },
+            include: { project: { include: { site: true } } }
+        })
+        revalidatePath("/time")
+        revalidatePath(`/projects/${log.projectId}`)
+        revalidatePath("/")
+        return { success: true }
+    } catch (error) {
+        console.error("Update time log failed:", error)
+        return { success: false, error: error instanceof Error ? error.message : "Failed to update time log" }
+    }
+}
+
+export async function deleteTimeLog(logId: string) {
+    try {
+        const log = await prisma.timeLog.delete({
+            where: { id: logId }
+        })
+        revalidatePath("/time")
+        revalidatePath(`/projects/${log.projectId}`)
+        revalidatePath("/")
+        return { success: true }
+    } catch (error) {
+        console.error("Delete time log failed:", error)
+        return { success: false, error: error instanceof Error ? error.message : "Failed to delete time log" }
+    }
+}
+
+export async function deleteTimeLogs(logIds: string[]) {
+    try {
+        await prisma.timeLog.deleteMany({
+            where: {
+                id: { in: logIds }
+            }
+        })
+        revalidatePath("/time")
+        revalidatePath("/")
+        return { success: true }
+    } catch (error) {
+        console.error("Bulk delete time logs failed:", error)
+        return { success: false, error: "Failed to delete time logs" }
+    }
+}
+
+export async function startTimer(projectId: string, taskId?: string) {
+    try {
+        // Stop any currently running timer first
+        const activeTimer = await prisma.timeLog.findFirst({
+            where: { endTime: null }
+        })
+
+        if (activeTimer) {
+            const endTime = new Date()
+            const durationSeconds = Math.floor((endTime.getTime() - activeTimer.startTime.getTime()) / 1000)
+            await prisma.timeLog.update({
+                where: { id: activeTimer.id },
+                data: {
+                    endTime,
+                    durationSeconds
+                }
+            })
+        }
+
+        // Also stop (clear paused flag) any paused timers so they don't linger forever
+        // Actually, if we start a NEW timer, the previous paused timer is effectively "abandoned" or just history.
+        // We can optionally explicitly update them, but it's not strictly necessary unless we want to enforce only 1 paused context.
+        // Let's leave them be for now. Users might want to check history.
+
+        // Start new timer
+        const log = await prisma.timeLog.create({
+            data: {
+                projectId,
+                taskId,
+                startTime: new Date(),
+                endTime: null, // Indicates running timer
+                durationSeconds: null
+            },
+            include: { project: { include: { site: true } } }
+        })
+
+        revalidatePath("/")
+        revalidatePath("/time")
+        revalidatePath("/tasks")
+        revalidatePath(`/projects/${projectId}`)
+        return { success: true, data: log }
+    } catch (error) {
+        console.error("Start timer failed:", error)
+        return { success: false, error: "Failed to start timer" }
+    }
+}
+
+export async function stopTimer() {
+    try {
+        // Check for running timer
+        const activeTimer = await prisma.timeLog.findFirst({
+            where: { endTime: null }
+        })
+
+        if (activeTimer) {
+            const endTime = new Date()
+            const durationSeconds = Math.floor((endTime.getTime() - activeTimer.startTime.getTime()) / 1000)
+
+            await prisma.timeLog.update({
+                where: { id: activeTimer.id },
+                data: {
+                    endTime,
+                    durationSeconds
+                }
+            })
+        } else {
+            // Check for paused timer to "stop" it completely (remove paused flag so it doesn't show up as actionable)
+            const pausedTimer = await prisma.timeLog.findFirst({
+                where: { isPaused: true },
+                orderBy: { endTime: "desc" }
+            })
+
+            if (pausedTimer) {
+                await prisma.timeLog.update({
+                    where: { id: pausedTimer.id },
+                    data: { isPaused: false }
+                })
+            } else {
+                return { success: false, error: "No active or paused timer found" }
+            }
+        }
+
+        revalidatePath("/")
+        revalidatePath("/time")
+        revalidatePath("/tasks")
+        return { success: true }
+    } catch (error) {
+        console.error("Stop timer failed:", error)
+        return { success: false, error: "Failed to stop timer" }
+    }
+}
+
+export async function pauseTimer() {
+    try {
+        const activeTimer = await prisma.timeLog.findFirst({
+            where: { endTime: null }
+        })
+
+        if (!activeTimer) {
+            return { success: false, error: "No active timer found" }
+        }
+
+        const endTime = new Date()
+        const durationSeconds = Math.floor((endTime.getTime() - activeTimer.startTime.getTime()) / 1000)
+
+        // Update current log to completed AND paused
+        await prisma.timeLog.update({
+            where: { id: activeTimer.id },
+            data: {
+                endTime,
+                durationSeconds,
+                isPaused: true
+            }
+        })
+
+        revalidatePath("/")
+        revalidatePath("/time")
+        revalidatePath("/tasks")
+        return { success: true }
+    } catch (error) {
+        console.error("Pause timer failed:", error)
+        return { success: false, error: "Failed to pause timer" }
+    }
+}
+
+export async function resumeTimer() {
+    try {
+        // Find the latest paused timer
+        const pausedTimer = await prisma.timeLog.findFirst({
+            where: { isPaused: true },
+            orderBy: { endTime: "desc" }
+        })
+
+        if (!pausedTimer) {
+            return { success: false, error: "No paused timer found" }
+        }
+
+        // Start new timer with same details
+        const log = await prisma.timeLog.create({
+            data: {
+                projectId: pausedTimer.projectId,
+                taskId: pausedTimer.taskId,
+                description: pausedTimer.description,
+                startTime: new Date(),
+                endTime: null,
+            },
+            include: { project: { include: { site: true } } }
+        })
+
+        // Mark old timer as NOT paused anymore (it's resumed, so the pause state is consumed)
+        await prisma.timeLog.update({
+            where: { id: pausedTimer.id },
+            data: { isPaused: false }
+        })
+
+        revalidatePath("/")
+        revalidatePath("/time")
+        revalidatePath("/tasks")
+        return { success: true, data: log }
+    } catch (error) {
+        console.error("Resume timer failed:", error)
+        return { success: false, error: "Failed to resume timer" }
+    }
+}
+
+export async function getActiveTimer() {
+    try {
+        // Prioritize running timer
+        const activeTimer = await prisma.timeLog.findFirst({
+            where: { endTime: null },
+            include: {
+                task: true,
+                project: {
+                    include: {
+                        site: true
+                    }
+                }
+            }
+        })
+
+        if (activeTimer) {
+            return { success: true, data: activeTimer, status: "running" }
+        }
+
+        // If no running timer, check for paused timer
+        const pausedTimer = await prisma.timeLog.findFirst({
+            where: { isPaused: true },
+            orderBy: { endTime: "desc" },
+            include: {
+                task: true,
+                project: {
+                    include: {
+                        site: true
+                    }
+                }
+            }
+        })
+
+        if (pausedTimer) {
+            return { success: true, data: pausedTimer, status: "paused" }
+        }
+
+        return { success: true, data: null, status: "idle" }
+    } catch (error) {
+        return { success: false, error: "Failed to fetch active timer" }
     }
 }

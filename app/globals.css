@@ -148,3 +148,10 @@
     background-image: var(--mesh-gradient);
   }
 }
+
+/* Force pointer cursor on interactive elements */
+@layer base {
+  button, [role="button"], a, input[type="submit"], input[type="button"], select {
+    cursor: pointer;
+  }
+}

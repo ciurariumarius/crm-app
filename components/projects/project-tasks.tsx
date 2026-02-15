@@ -9,12 +9,7 @@ import { addTask, toggleTaskStatus, deleteTask } from "@/lib/actions"
 import { useTimer } from "@/components/providers/timer-provider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-
-interface Task {
-    id: string
-    name: string
-    status: string
-}
+import { Task } from "@prisma/client"
 
 export function ProjectTasks({ projectId, initialTasks }: { projectId: string, initialTasks: Task[] }) {
     const [newTaskName, setNewTaskName] = useState("")
@@ -70,8 +65,8 @@ export function ProjectTasks({ projectId, initialTasks }: { projectId: string, i
     }
 
     const sortedTasks = [...initialTasks].sort((a, b) => {
-        if (a.status === "Done" && b.status !== "Done") return 1
-        if (a.status !== "Done" && b.status === "Done") return -1
+        if (a.status === "Completed" && b.status !== "Completed") return 1
+        if (a.status !== "Completed" && b.status === "Completed") return -1
         return 0
     })
 
@@ -105,21 +100,21 @@ export function ProjectTasks({ projectId, initialTasks }: { projectId: string, i
                         key={task.id}
                         className={cn(
                             "flex items-center justify-between p-4 rounded-2xl border border-transparent transition-all duration-300 group hover:scale-[1.01] hover:border-primary/20",
-                            task.status === "Done"
+                            task.status === "Completed"
                                 ? "bg-muted/20"
                                 : "bg-card border-border hover:bg-muted/30"
                         )}
                     >
                         <div className="flex items-center gap-4">
                             <Checkbox
-                                checked={task.status === "Done"}
+                                checked={task.status === "Completed"}
                                 onCheckedChange={() => handleToggle(task.id, task.status)}
                                 disabled={loading === task.id}
                                 className="h-5 w-5 rounded-md border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                             />
                             <span className={cn(
                                 "text-[13px] font-medium transition-all",
-                                task.status === "Done"
+                                task.status === "Completed"
                                     ? "line-through text-muted-foreground/40"
                                     : "text-foreground group-hover:text-primary"
                             )}>
@@ -128,7 +123,7 @@ export function ProjectTasks({ projectId, initialTasks }: { projectId: string, i
                         </div>
 
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                            {task.status !== "Done" && (
+                            {task.status !== "Completed" && (
                                 <Button
                                     size="icon"
                                     variant="ghost"

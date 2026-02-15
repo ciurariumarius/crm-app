@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers/providers"
 import { Sidebar } from "@/components/layout/sidebar"
 import { GlobalTimer } from "@/components/layout/global-timer"
 import prisma from "@/lib/prisma"
+import { getActiveTimer } from "@/lib/actions"
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -27,7 +28,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const [activeTasksCountData, partnersData, servicesData, projectsRaw] = await Promise.all([
+  const [activeTasksCountData, partnersData, servicesData, projectsRaw, activeTimerResult] = await Promise.all([
     prisma.task.count({ where: { status: { not: "Completed" } } }),
     prisma.partner.findMany({ include: { sites: { select: { id: true, domainName: true } } } }),
     prisma.service.findMany(),
@@ -35,20 +36,29 @@ export default async function RootLayout({
       where: { status: "Active" },
       select: {
         id: true,
+        createdAt: true,
         site: { select: { domainName: true } },
-        services: { select: { serviceName: true } }
+        services: { select: { serviceName: true, isRecurring: true } } // Added isRecurring for formatProjectName
       }
-    })
+    }),
+    getActiveTimer()
   ])
 
   // Serialize Decimal objects
   const partners = JSON.parse(JSON.stringify(partnersData))
   const services = JSON.parse(JSON.stringify(servicesData))
   const activeTasksCount = activeTasksCountData
+
+  // Handle new activeTimer structure
+  const initialActiveTimer = activeTimerResult.success && activeTimerResult.data
+    ? { ...activeTimerResult.data, status: activeTimerResult.status }
+    : null
+
   const activeProjects = projectsRaw.map((p: any) => ({
     id: p.id,
     siteName: p.site.domainName,
-    services: p.services
+    services: p.services,
+    createdAt: p.createdAt
   }))
 
   return (
@@ -64,6 +74,7 @@ export default async function RootLayout({
                   services={services}
                   activeTasksCount={activeTasksCount}
                   activeProjects={activeProjects}
+                  initialActiveTimer={initialActiveTimer}
                 />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-4 md:pt-4 transition-all duration-300">
                   {children}

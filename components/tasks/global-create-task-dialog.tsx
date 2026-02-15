@@ -15,11 +15,14 @@ import { addTask } from "@/lib/actions"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
+import { formatProjectName } from "@/lib/utils"
+
+import { QuickActionProject } from "@/types"
 
 interface GlobalCreateTaskDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    projects: { id: string; siteName: string; services: { serviceName: string }[] }[]
+    projects: QuickActionProject[]
 }
 
 export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalCreateTaskDialogProps) {
@@ -65,7 +68,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                             <SelectContent>
                                 {projects?.map((p) => (
                                     <SelectItem key={p.id} value={p.id}>
-                                        {p.siteName} - {p.services.map((s: any) => s.serviceName).join(", ")}
+                                        {formatProjectName(p)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

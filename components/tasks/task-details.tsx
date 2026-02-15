@@ -29,7 +29,7 @@ import { format } from "date-fns"
 import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, Trash2, Loader2, Globe, Users, Target, X } from "lucide-react"
 import { updateTask, deleteTask } from "@/lib/actions"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
 
 interface TaskDetailsProps {
     task: any
@@ -240,7 +240,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                         {deadline ? format(deadline, "PPP") : <span>Set Deadline</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={deadline}
@@ -273,9 +273,8 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         <div className="grid grid-cols-1 gap-4">
                             <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-transparent">
                                 <div className="space-y-0.5">
-                                    <div className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest">Parent Project</div>
                                     <div className="font-bold text-sm text-primary italic">
-                                        {task.project.name || (task.project.services?.[0]?.serviceName || "General Project")}
+                                        {formatProjectName(task.project) || "General Project"}
                                     </div>
                                 </div>
                             </div>

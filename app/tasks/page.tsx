@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, TrendingUp, CheckSquare, Zap, Target } from "lucide-react"
 import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
+import { formatProjectName } from "@/lib/utils"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
@@ -31,7 +32,8 @@ export default async function TasksPage({
                         }
                     }
                 }
-            }
+            },
+            timeLogs: true
         },
         orderBy: {
             updatedAt: "desc"
@@ -42,8 +44,12 @@ export default async function TasksPage({
         orderBy: { serviceName: "asc" }
     })
 
-    const [allTasks, allServicesRaw] = await Promise.all([allTasksPromise, servicesPromise])
+    const [allTasks, allServicesRaw, activeTimerRaw] = await Promise.all([allTasksPromise, servicesPromise, prisma.timeLog.findFirst({
+        where: { endTime: null },
+        include: { task: true, project: true }
+    })])
     const allServices = JSON.parse(JSON.stringify(allServicesRaw))
+    const initialActiveTimer = JSON.parse(JSON.stringify(activeTimerRaw))
 
     // Calculate metrics based on ALL tasks
     const activeTasksCount = allTasks.filter((t: any) => t.status === "Active").length
@@ -91,13 +97,17 @@ export default async function TasksPage({
 
             {/* Extract unique partners and projects for filters */}
             {(() => {
-                const partnersList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.site.partner.id, name: t.project.site.partner.name })))).map((s) => JSON.parse(s as string))
-                const projectsList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.id, name: t.project.name || t.project.site.domainName })))).map((s) => JSON.parse(s as string))
+                const partnersList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.site.partner.id, name: t.project.site.partner.name })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
+                const projectsList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.id, name: formatProjectName(t.project) })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
 
                 return (
                     <div className="space-y-4">
                         <TasksToolbar partners={partnersList} projects={projectsList} />
-                        <TasksCardView tasks={serializedTasks} allServices={allServices} />
+                        <TasksCardView
+                            tasks={serializedTasks}
+                            allServices={allServices}
+                            initialActiveTimer={initialActiveTimer}
+                        />
                     </div>
                 )
             })()}

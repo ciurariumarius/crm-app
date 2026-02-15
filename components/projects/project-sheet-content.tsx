@@ -34,16 +34,18 @@ import { updateProject } from "@/lib/actions"
 import { toast } from "sonner"
 
 import { getProjectDisplayName } from "@/lib/project-utils"
+import { ProjectWithDetails } from "@/types"
+import { Service, Site } from "@prisma/client"
 
 interface ProjectSheetContentProps {
-    project: any
-    allServices: any[]
-    onUpdate?: (updatedProject: any) => void
-    onOpenSite?: (site: any) => void
+    project: ProjectWithDetails
+    allServices: Service[]
+    onUpdate?: (updatedProject: ProjectWithDetails) => void
+    onOpenSite?: (site: Site) => void
 }
 
 export function ProjectSheetContent({ project: initialProject, allServices, onUpdate, onOpenSite }: ProjectSheetContentProps) {
-    const [project, setProject] = React.useState(initialProject)
+    const [project, setProject] = React.useState<ProjectWithDetails>(initialProject)
     const [localName, setLocalName] = React.useState("")
     const [isEditingServices, setIsEditingServices] = React.useState(false)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
@@ -280,37 +282,56 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
 
                     <div className="space-y-3">
                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1">Ledger State</Label>
-                        <Select
-                            defaultValue={project.paymentStatus}
-                            onValueChange={(val) => handleUpdate({ paymentStatus: val })}
-                        >
-                            <SelectTrigger className={cn(
-                                "h-12 bg-card border-border focus:ring-primary/20 shadow-sm rounded-2xl font-bold px-4 transition-all hover:bg-muted/50",
-                                project.paymentStatus === "Paid" ? "text-emerald-600" : "text-rose-600"
-                            )}>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover border-border">
-                                <SelectItem value="Paid" className="font-bold text-emerald-600">PAID</SelectItem>
-                                <SelectItem value="Unpaid" className="font-bold text-rose-600">UNPAID</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                            <Select
+                                defaultValue={project.paymentStatus}
+                                onValueChange={(val) => {
+                                    const updates: any = { paymentStatus: val }
+                                    if (val === "Paid" && !project.paidAt) {
+                                        updates.paidAt = new Date()
+                                    } else if (val === "Unpaid") {
+                                        updates.paidAt = null
+                                    }
+                                    handleUpdate(updates)
+                                }}
+                            >
+                                <SelectTrigger className={cn(
+                                    "h-12 bg-card border-border focus:ring-primary/20 shadow-sm rounded-2xl font-bold px-4 transition-all hover:bg-muted/50",
+                                    project.paymentStatus === "Paid" ? "text-emerald-600" : "text-rose-600"
+                                )}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover border-border">
+                                    <SelectItem value="Paid" className="font-bold text-emerald-600">PAID</SelectItem>
+                                    <SelectItem value="Unpaid" className="font-bold text-rose-600">UNPAID</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {project.paymentStatus === "Paid" && project.paidAt && (
+                                <div className="flex items-center gap-2 px-2">
+                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                    <span className="text-[10px] font-medium text-emerald-600/80">
+                                        Settled on {format(new Date(project.paidAt), "MMM do, yyyy")}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="space-y-3 col-span-2">
                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1 flex justify-between px-1">
                             Contract Fee
-                            <span className="text-primary/60 font-mono tracking-normal">Current: {project.currentFee} RON</span>
+                            <span className="text-primary/60 font-mono tracking-normal">Current: {Number(project.currentFee)} RON</span>
                         </Label>
                         <div className="relative group">
                             <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-muted-foreground/50">RON</span>
                             <Input
                                 type="number"
-                                defaultValue={project.currentFee}
+                                defaultValue={project.currentFee ? Number(project.currentFee) : ""}
                                 className="h-14 bg-card border-border focus:border-primary/40 focus:ring-primary/10 shadow-sm pl-14 font-semibold text-xl rounded-2xl transition-all group-hover:bg-muted/30"
                                 onBlur={(e) => {
                                     const val = parseFloat(e.target.value)
-                                    if (val !== project.currentFee) {
+                                    if (project.currentFee && val !== Number(project.currentFee)) {
                                         handleUpdate({ currentFee: val })
                                     }
                                 }}
@@ -384,15 +405,37 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
             </div>
 
             <div className="p-8 border-t border-border bg-muted/20 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground/60 border border-border">
-                        <Calendar className="h-5 w-5" strokeWidth={1.5} />
+                <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground/60 border border-border">
+                            <Calendar className="h-5 w-5" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Created on</div>
+                            <div className="text-[13px] font-semibold text-foreground/70">{format(new Date(project.createdAt), "MMMM do, yyyy")}</div>
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Created on</div>
-                        <div className="text-[13px] font-semibold text-foreground/70">{format(new Date(project.createdAt), "MMMM do, yyyy")}</div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground/60 border border-border">
+                            <Clock className="h-5 w-5" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Total Time</div>
+                            <div className="text-[13px] font-semibold text-foreground/70">
+                                {project.timeLogs ? (
+                                    (() => {
+                                        const seconds = project.timeLogs.reduce((acc, log) => acc + (log.durationSeconds || 0), 0)
+                                        const hours = Math.floor(seconds / 3600)
+                                        const mins = Math.floor((seconds % 3600) / 60)
+                                        return `${hours}h ${mins}m`
+                                    })()
+                                ) : "0h 0m"}
+                            </div>
+                        </div>
                     </div>
                 </div>
+
                 <div className="text-[10px] font-medium text-muted-foreground/40 italic">
                     Edited {formatDistanceToNow(new Date(project.updatedAt))} ago
                 </div>
