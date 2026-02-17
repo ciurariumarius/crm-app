@@ -9,9 +9,10 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Search, Users, Filter, Layers, LayoutGrid, CreditCard, ChevronDown } from "lucide-react"
+import { Search, Users, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
+import { DateFilter } from "@/components/projects/date-filter"
 
 interface ProjectsToolbarProps {
     partners: { id: string; name: string }[]
@@ -54,6 +55,13 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
 
     const updateFilter = (key: string, value: string | null) => {
         const params = new URLSearchParams(searchParams.toString())
+
+        if (key === "payment" && value !== "All" && value !== "all") {
+            if (!params.get("status") || params.get("status") === "Active") {
+                params.set("status", "All")
+            }
+        }
+
         if (value && value !== "All" && value !== "all") {
             params.set(key, value)
         } else {
@@ -68,7 +76,15 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
 
     const handleStatusChange = (val: string) => {
         const params = new URLSearchParams(searchParams.toString())
-        params.set("status", val)
+        if (val === "All") {
+            params.delete("status") // Default behavior might need explicit "All" if API defaults to "Active"
+            // Actually, if we want to show ALL, we might need to send "All" if the backend defaults to "Active" when missing.
+            // Based on previous code: if (!params.get("status") || params.get("status") === "Active")
+            // It seems "Active" is default. So "All" needs to be sent.
+            params.set("status", "All")
+        } else {
+            params.set("status", val)
+        }
         params.delete("page")
         router.push(`/projects?${params.toString()}`)
     }
@@ -80,149 +96,141 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
         payment: searchParams.get("payment") || "All"
     }
 
-    // Helper to get color classes based on filter type and value
-    const getActiveColor = (type: 'type' | 'payment' | 'status', value: string) => {
-        // Only Payment and Status use pills now
-        if (type === 'payment') {
-            if (value === 'Paid') return "bg-emerald-600 text-white shadow-md shadow-emerald-500/20 ring-0"
-            if (value === 'Unpaid') return "bg-rose-600 text-white shadow-md shadow-rose-500/20 ring-0"
-            return "bg-slate-800 text-white shadow-md ring-0"
+    const getButtonStyle = (value: string, isActive: boolean) => {
+        if (isActive) {
+            if (value === 'Paid') return "bg-emerald-600 text-white shadow-md shadow-emerald-500/20 ring-0 font-bold"
+            if (value === 'Unpaid') return "bg-rose-600 text-white shadow-md shadow-rose-500/20 ring-0 font-bold"
+            if (value === 'Active') return "bg-primary text-primary-foreground shadow-md shadow-primary/20 ring-0 font-bold"
+            if (value === 'Paused') return "bg-amber-500 text-white shadow-md shadow-amber-500/20 ring-0 font-bold"
+            if (value === 'Completed') return "bg-blue-500 text-white shadow-md shadow-blue-500/20 ring-0 font-bold"
+            return "bg-background text-foreground shadow-md ring-0 font-bold"
         }
-        if (type === 'status') {
-            if (value === 'Active') return "bg-primary text-primary-foreground shadow-md shadow-primary/20 ring-0"
-            if (value === 'Paused') return "bg-amber-500 text-white shadow-md shadow-amber-500/20 ring-0"
-            if (value === 'Completed') return "bg-slate-500 text-white shadow-md ring-0"
-            return "bg-slate-800 text-white shadow-md ring-0"
-        }
-        return "bg-primary text-primary-foreground"
+        return "text-muted-foreground hover:text-foreground hover:bg-muted/50"
     }
 
-    const FilterGroup = ({
-        options,
-        currentValue,
-        onChange,
-        type
-    }: {
-        options: { label: string, value: string }[],
-        currentValue: string,
-        onChange: (val: string) => void,
-        type: 'type' | 'payment' | 'status'
-    }) => (
-        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/40">
-            {options.map((opt) => (
-                <button
-                    key={opt.value}
-                    onClick={() => onChange(opt.value)}
-                    className={cn(
-                        "px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] rounded-lg transition-all duration-200 whitespace-nowrap",
-                        currentValue === opt.value
-                            ? getActiveColor(type, opt.value)
-                            : "text-muted-foreground hover:text-foreground hover:bg-background/80"
-                    )}
-                >
-                    {opt.label}
-                </button>
-            ))}
-        </div>
-    )
-
-    const Separator = () => (
-        <div className="h-8 w-px bg-border/60 mx-1 hidden 2xl:block" />
-    )
-
-    const typeLabel = currentParams.type === "Recurring" ? "MONTHLY" : currentParams.type === "OneTime" ? "ONE-TIME" : "ALL TYPES"
-
     return (
-        <div className="flex flex-col 2xl:flex-row gap-4 items-center justify-between bg-card border border-border p-2 rounded-2xl shadow-sm z-30 relative">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-full p-2 shadow-sm border border-border/60 sticky top-4 z-40 backdrop-blur-xl bg-card/80">
 
-            {/* Left Section: Search & Partner */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full 2xl:flex-1">
-                {/* Search - Decreased min-width as requested */}
-                <div className="relative flex-1 w-full min-w-[150px] sm:min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
-                    <Input
-                        placeholder="Search..."
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                        className="w-full pl-9 h-11 bg-muted/30 border-transparent focus:bg-background focus:border-border transition-all text-sm font-medium rounded-xl"
-                    />
-                </div>
-
-                {/* Partner Filter (DropdownMenu) - Smaller fixed width */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="w-full sm:w-[150px] h-11 flex items-center justify-between px-3 border-none bg-muted/30 hover:bg-muted/50 data-[state=open]:bg-muted/50 shadow-none text-[10px] font-bold uppercase tracking-[0.1em] focus:ring-0 rounded-xl outline-none transition-colors">
-                        <div className="flex items-center gap-2 truncate">
-                            <Users className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span className="truncate">{partners.find(p => p.id === currentPartner)?.name || "All Partners"}</span>
-                        </div>
-                        <ChevronDown className="h-3 w-3 opacity-50 flex-shrink-0" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[200px] max-h-[300px] overflow-y-auto bg-popover/95 backdrop-blur-sm z-50">
-                        <DropdownMenuItem onSelect={() => updateFilter("partnerId", "all")} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                            ALL PARTNERS
-                        </DropdownMenuItem>
-                        {partners.map((p) => (
-                            <DropdownMenuItem key={p.id} onSelect={() => updateFilter("partnerId", p.id)} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                                {p.name.toUpperCase()}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+            {/* Left: Search (Fixed Compact) */}
+            <div className="relative w-full xl:w-[200px] pl-4">
+                <Search className="absolute left-6 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/40" />
+                <Input
+                    placeholder="Search projects..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="w-full pl-9 h-10 bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-xs"
+                />
             </div>
 
-            {/* Separator - Hidden on mobile/tablet/laptop */}
-            <Separator />
+            {/* Middle: Filters (Pills) */}
+            <div className="flex items-center gap-2 overflow-x-auto w-full xl:w-auto scrollbar-hide px-2">
 
-            {/* Right Section: Filters */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full 2xl:w-auto justify-start 2xl:justify-end overflow-x-auto pb-2 2xl:pb-0 scrollbar-hide">
+                {/* Status Pills */}
+                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-full">
+                    {[
+                        { label: "ALL", value: "All" },
+                        { label: "ACTIVE", value: "Active" },
+                        { label: "PAUSED", value: "Paused" },
+                        { label: "COMPLETED", value: "Completed" }
+                    ].map((opt) => (
+                        <button
+                            key={opt.value}
+                            onClick={() => handleStatusChange(opt.value)}
+                            className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap",
+                                getButtonStyle(opt.value, currentParams.status === opt.value)
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
 
-                {/* Type - Back to Dropdown as requested */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="h-11 px-3 flex items-center gap-2 border-none bg-muted/30 hover:bg-muted/50 data-[state=open]:bg-muted/50 shadow-none text-[10px] font-bold uppercase tracking-[0.1em] focus:ring-0 rounded-xl outline-none transition-colors whitespace-nowrap min-w-[120px] justify-between">
-                        <span>{typeLabel}</span>
-                        <ChevronDown className="h-3 w-3 opacity-50" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[140px] bg-popover/95 backdrop-blur-sm z-50">
-                        <DropdownMenuItem onSelect={() => updateFilter("recurring", "All")} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                            ALL TYPES
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => updateFilter("recurring", "Recurring")} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                            MONTHLY
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => updateFilter("recurring", "OneTime")} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                            ONE-TIME
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="w-px h-6 bg-border/40 mx-2 hidden sm:block" />
 
-                <Separator />
+                {/* Payment Pills */}
+                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-full">
+                    {[
+                        { label: "ALL", value: "All" },
+                        { label: "PAID", value: "Paid" },
+                        { label: "UNPAID", value: "Unpaid" }
+                    ].map((opt) => (
+                        <button
+                            key={opt.value}
+                            onClick={() => updateFilter("payment", opt.value)}
+                            className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap",
+                                getButtonStyle(opt.value, currentParams.payment === opt.value)
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
 
-                {/* Payment */}
-                <FilterGroup
-                    type="payment"
-                    options={[
-                        { label: "All", value: "All" },
-                        { label: "Paid", value: "Paid" },
-                        { label: "Unpaid", value: "Unpaid" }
-                    ]}
-                    currentValue={currentParams.payment}
-                    onChange={(val) => updateFilter("payment", val)}
-                />
+                <div className="w-px h-6 bg-border/40 mx-2 hidden sm:block" />
 
-                <Separator />
+                {/* Type & Partner Pills */}
+                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-full">
 
-                {/* Status */}
-                <FilterGroup
-                    type="status"
-                    options={[
-                        { label: "Active", value: "Active" },
-                        { label: "Paused", value: "Paused" },
-                        { label: "Completed", value: "Completed" },
-                        { label: "All", value: "All" }
-                    ]}
-                    currentValue={currentParams.status}
-                    onChange={handleStatusChange}
-                />
+                    {/* Type Dropdown as Pill */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2",
+                                currentParams.type !== "All"
+                                    ? "bg-background shadow-sm text-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}>
+                                <span>{currentParams.type === "Recurring" ? "MONTHLY" : currentParams.type === "OneTime" ? "ONE-TIME" : "ALL TYPES"}</span>
+                                <ChevronDown className="w-3 h-3 opacity-50" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[140px] bg-popover/95 backdrop-blur-sm z-50 p-1">
+                            <DropdownMenuItem onSelect={() => updateFilter("recurring", "All")} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                All Types
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => updateFilter("recurring", "Recurring")} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                Monthly
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => updateFilter("recurring", "OneTime")} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                One-Time
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Partner Dropdown as Pill */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2",
+                                currentPartner !== "all"
+                                    ? "bg-background shadow-sm text-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}>
+                                <Users className="w-3 h-3" />
+                                <span className="max-w-[100px] truncate">
+                                    {partners.find(p => p.id === currentPartner)?.name || "ALL PARTNERS"}
+                                </span>
+                                <ChevronDown className="w-3 h-3 opacity-50" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[200px] max-h-[300px] overflow-y-auto bg-popover/95 backdrop-blur-sm z-50 p-1">
+                            <DropdownMenuItem onSelect={() => updateFilter("partnerId", "all")} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                All Partners
+                            </DropdownMenuItem>
+                            {partners.map((p) => (
+                                <DropdownMenuItem key={p.id} onSelect={() => updateFilter("partnerId", p.id)} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                    {p.name}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                <div className="w-px h-6 bg-border/40 mx-2 hidden sm:block" />
+                <DateFilter />
+
             </div>
         </div>
     )

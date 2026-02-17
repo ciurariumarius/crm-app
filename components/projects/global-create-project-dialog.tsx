@@ -187,19 +187,19 @@ export function GlobalCreateProjectDialog({
                     {trigger}
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[500px] overflow-hidden border-none shadow-2xl p-0">
-                <form onSubmit={handleSubmit} className="flex flex-col">
-                    <DialogHeader className="p-6 pb-0">
-                        <DialogTitle className="text-2xl flex items-center gap-2 font-black italic">
-                            <Sparkles className="h-5 w-5 text-primary" />
-                            DEPLOY PROJECT
+            <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
+                <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+                    <DialogHeader className="p-8 pb-5 border-b">
+                        <DialogTitle className="text-2xl flex items-center gap-3 font-bold tracking-tight">
+                            <Sparkles className="h-6 w-6 text-primary" />
+                            ADD NEW PROJECT
                         </DialogTitle>
                         <DialogDescription className="font-medium">
                             Bundle services into a single project template.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="p-6 space-y-6">
+                    <div className="flex-1 overflow-y-auto p-8 py-6 space-y-6 scrollbar-thin scrollbar-thumb-primary/10">
                         {/* 1. Partner Selection */}
                         {!defaultPartnerId && (
                             <div className="space-y-2">
@@ -351,7 +351,7 @@ export function GlobalCreateProjectDialog({
                                                         type="number"
                                                         step="0.01"
                                                         placeholder="0.00"
-                                                        className="pl-12 h-11 bg-primary/5 border-none font-bold italic"
+                                                        className="pl-12 h-11 bg-primary/5 border-none font-bold"
                                                         value={fee}
                                                         onChange={(e) => setFee(e.target.value)}
                                                     />
@@ -359,33 +359,54 @@ export function GlobalCreateProjectDialog({
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-right block">Type</Label>
-                                                <div className="h-11 flex items-center justify-end px-4 bg-muted/20 rounded-xl text-xs font-black uppercase italic tracking-tighter text-primary">
+                                                <div className="h-11 flex items-center justify-end px-4 bg-muted/20 rounded-xl text-xs font-black uppercase tracking-tighter text-primary">
                                                     {allowedKind ? "RECURRING" : "ONE-TIME"}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between gap-4 pt-2">
-                                            <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl flex-1 border border-transparent hover:border-primary/20 transition-colors">
-                                                <Switch
-                                                    checked={isCompleted}
-                                                    onCheckedChange={setIsCompleted}
-                                                    id="completed-mode"
-                                                />
-                                                <Label htmlFor="completed-mode" className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
-                                                    {isCompleted ? "Mark as COMPLETED" : "Mark as ACTIVE"}
+                                        <div className="grid grid-cols-2 gap-3 pt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsCompleted(!isCompleted)}
+                                                className={cn(
+                                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all",
+                                                    isCompleted
+                                                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                                                        : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
+                                                )}
+                                            >
+                                                <Label className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
+                                                    Mark as COMPLETED
                                                 </Label>
-                                            </div>
-                                            <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl flex-1 border border-transparent hover:border-primary/20 transition-colors">
-                                                <Switch
-                                                    checked={isPaid}
-                                                    onCheckedChange={setIsPaid}
-                                                    id="paid-mode"
-                                                />
-                                                <Label htmlFor="paid-mode" className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
-                                                    {isPaid ? "Mark as PAID" : "Mark as UNPAID"}
+                                                <div className={cn(
+                                                    "h-5 w-5 rounded-md border flex items-center justify-center transition-all",
+                                                    isCompleted ? "bg-emerald-500 border-emerald-500 text-white" : "border-muted-foreground/30 bg-background"
+                                                )}>
+                                                    {isCompleted && <Check className="h-3 w-3" />}
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsPaid(!isPaid)}
+                                                className={cn(
+                                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all",
+                                                    isPaid
+                                                        ? "bg-blue-500/10 border-blue-500/30 text-blue-600"
+                                                        : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
+                                                )}
+                                            >
+                                                <Label className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
+                                                    Mark as PAID
                                                 </Label>
-                                            </div>
+                                                <div className={cn(
+                                                    "h-5 w-5 rounded-md border flex items-center justify-center transition-all",
+                                                    isPaid ? "bg-blue-500 border-blue-500 text-white" : "border-muted-foreground/30 bg-background"
+                                                )}>
+                                                    {isPaid && <Check className="h-3 w-3" />}
+                                                </div>
+                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -393,15 +414,15 @@ export function GlobalCreateProjectDialog({
                         )}
                     </div>
 
-                    <DialogFooter className="p-6 bg-muted/5 border-t">
+                    <DialogFooter className="p-8 bg-muted/5 border-t">
                         <Button
                             type="submit"
                             disabled={loading || !siteId || selectedServiceIds.length === 0}
-                            className="w-full h-12 text-base font-black italic shadow-xl shadow-primary/20 rounded-xl"
+                            className="w-full h-14 text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 rounded-xl"
                         >
                             {loading ? "INITIALIZING..." : (
                                 <span className="flex items-center gap-2">
-                                    DEPLOY PROJECT <Check className="h-4 w-4" />
+                                    ADD NEW PROJECT <Check className="h-5 w-5" />
                                 </span>
                             )}
                         </Button>

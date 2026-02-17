@@ -22,52 +22,36 @@ export function QuickActions({ partners, services, projects }: QuickActionsProps
     const [showTimeLogDialog, setShowTimeLogDialog] = useState(false)
 
     return (
-        <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-3 bg-card p-2 rounded-full border border-border shadow-sm">
+        <div className="flex items-center gap-4">
+            <div className="flex items-center p-1 bg-muted/40 rounded-xl border border-border/60">
                 <Button
                     onClick={() => setShowProjectDialog(true)}
-                    className="btn-primary h-11 px-8 text-[11px] uppercase tracking-[0.1em]"
+                    className="btn-primary h-9 px-4 text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all"
                 >
-                    <Plus className="h-4 w-4 mr-2" strokeWidth={2.5} />
-                    Deploy Project
+                    <Plus className="h-4 w-4 mr-2" strokeWidth={3} />
+                    Project
                 </Button>
-
-                <div className="flex items-center gap-1.5 px-2">
-                    <Button
-                        onClick={() => setShowTaskDialog(true)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-10 px-4 rounded-full border border-border hover:border-primary/30 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-all group"
-                    >
-                        <CheckSquare className="h-3.5 w-3.5 mr-2 opacity-40 group-hover:opacity-100" strokeWidth={1.5} />
-                        Task
-                    </Button>
-
-                    <Button
-                        onClick={() => setShowTimeLogDialog(true)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-10 px-4 rounded-full border border-border hover:border-primary/30 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-all group"
-                    >
-                        <Clock className="h-3.5 w-3.5 mr-2 opacity-40 group-hover:opacity-100" strokeWidth={1.5} />
-                        Track
-                    </Button>
-                </div>
+                <div className="w-px h-5 bg-border/60 mx-1" />
+                <Button
+                    onClick={() => setShowTaskDialog(true)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 px-4 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                >
+                    <CheckSquare className="h-4 w-4 mr-2" strokeWidth={2} />
+                    Task
+                </Button>
             </div>
 
-            <div className="hidden lg:flex items-center gap-3 px-6 border-l border-border h-10 ml-2">
-                <div className="flex -space-x-2">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-7 w-7 rounded-full border-2 border-background bg-muted flex items-center justify-center">
-                            <div className="h-full w-full rounded-full bg-gradient-to-br from-primary/20 to-indigo-500/20" />
-                        </div>
-                    ))}
-                </div>
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/80">Active Operations</span>
-                    <span className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-widest">3 Nodes Online</span>
-                </div>
-            </div>
+            <Button
+                onClick={() => setShowTimeLogDialog(true)}
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 rounded-full border-2 border-dashed border-muted-foreground/20 text-muted-foreground hover:text-emerald-600 hover:border-emerald-500/50 hover:bg-emerald-50 transition-all"
+                title="Log Time"
+            >
+                <Clock className="h-5 w-5" strokeWidth={2.5} />
+            </Button>
 
             <GlobalCreateProjectDialog
                 partners={partners}

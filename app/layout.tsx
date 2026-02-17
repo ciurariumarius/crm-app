@@ -28,26 +28,39 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const [activeTasksCountData, partnersData, servicesData, projectsRaw, activeTimerResult] = await Promise.all([
+  const [activeTasksCountData, partnersData, servicesData, projectsRaw, activeTimerResult, pendingTasksData] = await Promise.all([
     prisma.task.count({ where: { status: { not: "Completed" } } }),
     prisma.partner.findMany({ include: { sites: { select: { id: true, domainName: true } } } }),
     prisma.service.findMany(),
     prisma.project.findMany({
-      where: { status: "Active" },
       select: {
         id: true,
+        status: true,
         createdAt: true,
         site: { select: { domainName: true } },
-        services: { select: { serviceName: true, isRecurring: true } } // Added isRecurring for formatProjectName
+        services: { select: { serviceName: true, isRecurring: true } }
       }
     }),
-    getActiveTimer()
+    getActiveTimer(),
+    prisma.task.findMany({
+      where: { status: { not: "Completed" }, isCompleted: false },
+      orderBy: [{ urgency: 'desc' }, { deadline: 'asc' }],
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        urgency: true,
+        deadline: true,
+        project: { select: { site: { select: { domainName: true } }, name: true } }
+      }
+    })
   ])
 
   // Serialize Decimal objects
   const partners = JSON.parse(JSON.stringify(partnersData))
   const services = JSON.parse(JSON.stringify(servicesData))
   const activeTasksCount = activeTasksCountData
+  const pendingTasks = JSON.parse(JSON.stringify(pendingTasksData))
 
   // Handle new activeTimer structure
   const initialActiveTimer = activeTimerResult.success && activeTimerResult.data
@@ -58,23 +71,25 @@ export default async function RootLayout({
     id: p.id,
     siteName: p.site.domainName,
     services: p.services,
+    status: p.status,
     createdAt: p.createdAt
   }))
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${jakarta.variable} font-sans`}>
-        <Providers>
+        <Providers initialActiveTimer={initialActiveTimer}>
           <HeaderProvider>
             <div className="flex h-screen overflow-hidden bg-background">
               <Sidebar />
-              <div className="flex-1 flex flex-col min-w-0 md:ml-64">
+              <div className="flex-1 flex flex-col min-w-0 md:ml-[70px] transition-all duration-300">
                 <TopBar
                   partners={partners}
                   services={services}
                   activeTasksCount={activeTasksCount}
                   activeProjects={activeProjects}
                   initialActiveTimer={initialActiveTimer}
+                  pendingTasks={pendingTasks}
                 />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-4 md:pt-4 transition-all duration-300">
                   {children}

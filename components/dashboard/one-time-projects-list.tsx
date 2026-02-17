@@ -1,115 +1,152 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useContext } from "react"
 import Link from "next/link"
-import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckSquare, ChevronLeft, ChevronRight } from "lucide-react"
+import { CheckSquare, ChevronLeft, ChevronRight, Plus, ArrowRight, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
+import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 
 interface OneTimeProject {
     id: string
     siteName: string
     completedTasks: number
     totalTasks: number
+    hoursLogged: number
+    paymentStatus: string
 }
 
 interface OneTimeProjectsListProps {
     projects: OneTimeProject[]
+    partners: any[]
+    services: any[]
 }
 
 const ITEMS_PER_PAGE = 5
 
-export function OneTimeProjectsList({ projects }: OneTimeProjectsListProps) {
+export function OneTimeProjectsList({ projects, partners, services }: OneTimeProjectsListProps) {
     const [currentPage, setCurrentPage] = useState(1)
+    const [createProjectOpen, setCreateProjectOpen] = useState(false)
+    const { openProject } = useContext(ProjectSheetContext)
     const totalPages = Math.ceil(projects.length / ITEMS_PER_PAGE)
 
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     const displayedProjects = projects.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
     return (
-        <Card className="flex flex-col h-full bento-card p-0 overflow-hidden shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
-                <div className="space-y-1">
-                    <CardTitle className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Projects</CardTitle>
-                    <p className="text-xl font-bold text-foreground tracking-tight">Active Ventures</p>
-                </div>
-                {totalPages > 1 && (
-                    <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-full border border-border">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full hover:bg-muted"
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-[10px] font-bold tabular-nums text-muted-foreground/60 px-1">
-                            {currentPage} / {totalPages}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full hover:bg-muted"
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                )}
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-2 flex-1">
-                {projects.length === 0 ? (
-                    <div className="text-[12px] text-muted-foreground/50 text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border mx-4">
-                        No active one-time projects.
-                    </div>
-                ) : (
-                    displayedProjects.map((project) => {
-                        const progress = project.totalTasks > 0
-                            ? Math.round((project.completedTasks / project.totalTasks) * 100)
-                            : 0
-
-                        return (
-                            <Link
-                                key={project.id}
-                                href={`/projects/${project.id}`}
-                                className="group block px-6 py-5 min-h-[72px] rounded-2xl border border-transparent hover:border-primary/30 hover:bg-muted/50 hover:scale-[1.01] transition-all duration-300"
-                            >
-                                <div className="flex justify-between items-start gap-4 mb-4">
-                                    <div className="flex items-center gap-4 min-w-0 flex-1">
-                                        <Avatar className="h-9 w-9 border border-border bg-muted/50">
-                                            <AvatarFallback className="text-[10px] uppercase font-bold text-muted-foreground/60">
-                                                {project.siteName.charAt(0)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="text-sm font-bold text-foreground/80 group-hover:text-foreground transition-colors truncate">{project.siteName}</div>
-                                    </div>
-                                    <div className="text-[10px] font-bold text-primary flex items-center bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                                        <CheckSquare className="mr-1.5 h-3 w-3" strokeWidth={1.5} />
-                                        {project.completedTasks}/{project.totalTasks}
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-[0.1em]">
-                                        <span className="text-muted-foreground/50">Velocity</span>
-                                        <span className="text-primary">{progress}%</span>
-                                    </div>
-                                    <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-primary transition-all duration-500 ease-out"
-                                            style={{ width: `${progress}%` }}
-                                        />
-                                    </div>
-                                </div>
+        <>
+            <Card className="flex flex-col bento-card p-0 overflow-hidden shadow-sm">
+                <CardHeader className="py-6 px-8 flex flex-row items-center justify-between bg-card/80">
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-muted-foreground">
+                        <CheckSquare className="h-4 w-4 text-primary" />
+                        <span>One Time Projects</span>
+                    </CardTitle>
+                    <div className="flex items-center gap-3">
+                        {totalPages > 1 && (
+                            <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-full border border-border">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full hover:bg-muted"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-[10px] font-bold tabular-nums text-muted-foreground/60 px-1">
+                                    {currentPage} / {totalPages}
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full hover:bg-muted"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                            <Link href="/projects">
+                                <Button variant="secondary" size="sm" className="h-7 text-[10px] uppercase font-bold px-3 rounded-full">
+                                    View All
+                                    <ArrowRight className="ml-1 h-3 w-3" />
+                                </Button>
                             </Link>
-                        )
-                    })
-                )}
-            </CardContent>
-        </Card>
+                            <Button
+                                size="icon"
+                                className="h-7 w-7 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-sm transition-all"
+                                onClick={() => setCreateProjectOpen(true)}
+                                title="Add Project"
+                            >
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-8 pt-0 space-y-4 flex-1">
+                    {projects.length === 0 ? (
+                        <div className="text-[12px] text-muted-foreground/50 text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border mx-4">
+                            No active one-time projects.
+                        </div>
+                    ) : (
+                        displayedProjects.map((project) => (
+                            <div
+                                key={project.id}
+                                onClick={() => openProject(project.id)}
+                                className="group flex items-center justify-between px-6 py-3 min-h-[60px] rounded-2xl border border-transparent hover:border-primary/30 hover:bg-muted/50 hover:scale-[1.01] transition-all duration-300 cursor-pointer"
+                            >
+                                <div className="flex flex-col justify-center gap-1.5 min-w-0 flex-1 pr-4">
+                                    <div className="text-sm font-bold text-foreground/80 group-hover:text-foreground transition-colors break-words leading-tight">{project.siteName}</div>
+                                    <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground/60">
+                                        <div className="flex items-center gap-1.5">
+                                            <Clock className="h-3 w-3 opacity-40 group-hover:text-primary transition-colors" strokeWidth={1.5} />
+                                            <span className="font-mono text-[10px] font-bold">
+                                                {Math.floor(project.hoursLogged)}h {Math.round((project.hoursLogged % 1) * 60)}m
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <CheckSquare className="h-3 w-3 opacity-40 group-hover:text-primary transition-colors" strokeWidth={1.5} />
+                                            {project.completedTasks}/{project.totalTasks} tasks
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4 shrink-0">
+                                    <Badge className={cn(
+                                        "border-none text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-md shrink-0",
+                                        project.paymentStatus === "Paid"
+                                            ? "bg-emerald-100 text-emerald-700"
+                                            : "bg-rose-100 text-rose-700"
+                                    )}>
+                                        {project.paymentStatus === "Paid" ? "PAID" : "UNPAID"}
+                                    </Badge>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-all group-hover:translate-x-1 opacity-0 group-hover:opacity-100" strokeWidth={1.5} />
+                                </div>
+                            </div>
+                        ))
+                    )}
+                    {/* Shadow Project (Create New) */}
+                    <div
+                        onClick={() => setCreateProjectOpen(true)}
+                        className="group flex items-center justify-center px-6 py-3 min-h-[60px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 cursor-pointer text-muted-foreground hover:text-primary"
+                    >
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide">
+                            <Plus className="h-4 w-4" strokeWidth={2} />
+                            <span>Add New Project</span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card >
+            <GlobalCreateProjectDialog
+                open={createProjectOpen}
+                onOpenChange={setCreateProjectOpen}
+                partners={partners}
+                services={services}
+            />
+        </>
     )
 }

@@ -3,13 +3,13 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
+import { Search, Briefcase, ChevronDown } from "lucide-react"
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Search, Users, Briefcase, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
 
@@ -24,6 +24,7 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
 
     // Local state for search to avoid lagging input
     const [searchTerm, setSearchTerm] = React.useState(searchParams.get("q") || "")
+    const [isSearchFocused, setIsSearchFocused] = React.useState(false)
     const debouncedSearch = useDebounce(searchTerm, 300)
 
     // Sync from URL if it changes externally
@@ -83,6 +84,8 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
             if (value === 'Active') return "bg-emerald-500 text-white shadow-md shadow-emerald-500/20 ring-0 font-bold"
             if (value === 'Paused') return "bg-amber-500 text-white shadow-md shadow-amber-500/20 ring-0 font-bold"
             if (value === 'Completed') return "bg-blue-500 text-white shadow-md shadow-blue-500/20 ring-0 font-bold"
+            if (value === 'Urgent') return "bg-rose-500 text-white shadow-md shadow-rose-500/20 ring-0 font-bold"
+            if (value === 'Idea') return "bg-indigo-500 text-white shadow-md shadow-indigo-500/20 ring-0 font-bold"
             return "bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 shadow-md ring-0 font-bold"
         }
 
@@ -90,6 +93,8 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
         if (value === 'Active') return "text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400"
         if (value === 'Paused') return "text-muted-foreground hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
         if (value === 'Completed') return "text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400"
+        if (value === 'Urgent') return "text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400"
+        if (value === 'Idea') return "text-muted-foreground hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400"
         return "text-muted-foreground hover:bg-zinc-500/10 hover:text-zinc-900 dark:hover:text-zinc-100"
     }
 
@@ -123,80 +128,102 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
     )
 
     return (
-        <div className="flex flex-col 2xl:flex-row gap-4 items-center justify-between bg-card border border-border p-2 rounded-2xl shadow-sm z-30 relative">
-
-            {/* Left Section: Search & Filters */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full 2xl:flex-1">
-                {/* Search */}
-                <div className="relative flex-1 w-full min-w-[150px] sm:min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
-                    <Input
-                        placeholder="Search tasks..."
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                        className="w-full pl-9 h-11 bg-muted/30 border-transparent focus:bg-background focus:border-border transition-all text-sm font-medium rounded-xl"
-                    />
-                </div>
-
-                {/* Partner Filter */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="w-full sm:w-[150px] h-11 flex items-center justify-between px-3 border-none bg-muted/30 hover:bg-muted/50 data-[state=open]:bg-muted/50 shadow-none text-[10px] font-bold uppercase tracking-[0.1em] focus:ring-0 rounded-xl outline-none transition-colors">
-                        <div className="flex items-center gap-2 truncate">
-                            <Users className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span className="truncate">{partners.find(p => p.id === currentPartner)?.name || "All Partners"}</span>
-                        </div>
-                        <ChevronDown className="h-3 w-3 opacity-50 flex-shrink-0" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[200px] max-h-[300px] overflow-y-auto bg-popover/95 backdrop-blur-sm z-50">
-                        <DropdownMenuItem onSelect={() => updateFilter("partnerId", "all")} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                            ALL PARTNERS
-                        </DropdownMenuItem>
-                        {partners.map((p) => (
-                            <DropdownMenuItem key={p.id} onSelect={() => updateFilter("partnerId", p.id)} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                                {p.name.toUpperCase()}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Project Filter */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="w-full sm:w-[150px] h-11 flex items-center justify-between px-3 border-none bg-muted/30 hover:bg-muted/50 data-[state=open]:bg-muted/50 shadow-none text-[10px] font-bold uppercase tracking-[0.1em] focus:ring-0 rounded-xl outline-none transition-colors">
-                        <div className="flex items-center gap-2 truncate">
-                            <Briefcase className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span className="truncate">{projects.find(p => p.id === currentProject)?.name || "All Projects"}</span>
-                        </div>
-                        <ChevronDown className="h-3 w-3 opacity-50 flex-shrink-0" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[200px] max-h-[300px] overflow-y-auto bg-popover/95 backdrop-blur-sm z-50">
-                        <DropdownMenuItem onSelect={() => updateFilter("projectId", "all")} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                            ALL PROJECTS
-                        </DropdownMenuItem>
-                        {projects.map((p) => (
-                            <DropdownMenuItem key={p.id} onSelect={() => updateFilter("projectId", p.id)} className="text-xs font-bold font-mono py-2 cursor-pointer">
-                                {p.name.toUpperCase()}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-
-            {/* Separator */}
-            <Separator />
-
-            {/* Right Section: Status */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full 2xl:w-auto justify-start 2xl:justify-end overflow-x-auto pb-2 2xl:pb-0 scrollbar-hide">
-                <FilterGroup
-                    options={[
-                        { label: "Active", value: "Active" },
-                        { label: "Paused", value: "Paused" },
-                        { label: "Completed", value: "Completed" },
-                        { label: "All", value: "All" }
-                    ]}
-                    currentValue={currentStatus}
-                    onChange={(val) => updateFilter("status", val)}
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-full p-2 shadow-sm border border-border/60 sticky top-4 z-40 backdrop-blur-xl bg-card/80">
+            {/* Left: Search (Transparent) */}
+            {/* Left: Search (Expandable) */}
+            {/* Left: Search (Fixed Compact) */}
+            <div className="relative w-[120px] 2xl:w-[150px] pl-4">
+                <Search className="absolute left-6 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/40" />
+                <Input
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="w-full pl-9 h-10 bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-xs"
                 />
             </div>
+
+            {/* Middle: Filters (Pills) */}
+            <div className="flex items-center gap-2 overflow-x-auto w-full xl:w-auto scrollbar-hide px-2">
+                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-full">
+                    {[
+                        { label: "ALL", value: "All" },
+                        { label: "ACTIVE", value: "Active" },
+                        { label: "PAUSED", value: "Paused" },
+                        { label: "COMPLETED", value: "Completed" }
+                    ].map((opt) => (
+                        <button
+                            key={opt.value}
+                            onClick={() => updateFilter("status", opt.value)}
+                            className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap",
+                                (opt.value === "All" && (currentStatus === "All" || !currentStatus) || currentStatus === opt.value)
+                                    ? "bg-background shadow-sm text-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="w-px h-6 bg-border/40 mx-2 hidden sm:block" />
+
+                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-full">
+                    {[
+                        { label: "ALL", value: "all" },
+                        { label: "NORMAL", value: "Normal" },
+                        { label: "URGENT", value: "Urgent" },
+                        { label: "IDEA", value: "Idea" }
+                    ].map((opt) => (
+                        <button
+                            key={opt.value}
+                            onClick={() => updateFilter("urgency", opt.value)}
+                            className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap",
+                                (opt.value === "all" && (!searchParams.get("urgency") || searchParams.get("urgency") === "all") || searchParams.get("urgency") === opt.value)
+                                    ? "bg-background shadow-sm text-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="w-px h-6 bg-border/40 mx-2 hidden sm:block" />
+
+                {/* Project Filter */}
+                <div className="flex items-center p-1 bg-muted/30 rounded-full">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2",
+                                currentProject && currentProject !== "all"
+                                    ? "bg-background shadow-sm text-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}>
+                                <Briefcase className="w-3 h-3" />
+                                <span className="max-w-[100px] truncate">
+                                    {projects.find(p => p.id === currentProject)?.name || "ALL PROJECTS"}
+                                </span>
+                                <ChevronDown className="w-3 h-3 opacity-50" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[200px] max-h-[300px] overflow-y-auto">
+                            <DropdownMenuItem onClick={() => updateFilter("projectId", "all")}>
+                                All Projects
+                            </DropdownMenuItem>
+                            {projects.map((project) => (
+                                <DropdownMenuItem key={project.id} onClick={() => updateFilter("projectId", project.id)}>
+                                    {project.name}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
+
+
         </div>
     )
 }

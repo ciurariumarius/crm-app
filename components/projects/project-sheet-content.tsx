@@ -22,12 +22,18 @@ import {
     Target,
     FolderOpen,
     Check,
-    X,
     Loader2,
     AlertCircle,
-    Expand
+    Expand,
+    Trash2
 } from "lucide-react"
+import {
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet"
+import { Textarea } from "@/components/ui/textarea"
 import { ProjectTasks } from "@/components/projects/project-tasks"
+import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
 import { formatDistanceToNow, format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { updateProject } from "@/lib/actions"
@@ -126,320 +132,330 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
     }
 
     return (
-        <div className="flex flex-col h-full bg-background">
-            <div className="p-10 pb-8 relative overflow-hidden">
-                {/* Subtle mesh highlight */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        <TaskSheetWrapper tasks={project.tasks || []} project={project}>
+            <div className="flex flex-col h-full bg-background sm:rounded-l-2xl overflow-hidden">
+                <SheetHeader className="p-8 border-b bg-muted/20 relative">
+                    <div className="absolute right-6 top-6 z-10">
+                        <Link
+                            href={`/projects/${project.id}`}
+                            className="h-10 w-10 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-all"
+                        >
+                            <Expand className="h-5 w-5" strokeWidth={1.5} />
+                        </Link>
+                    </div>
 
-                <div className="space-y-8 relative z-10">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-muted-foreground/60">
-                            <span className="flex items-center gap-2">PROJ</span>
-                            <span className="opacity-40">/</span>
-                            <Link href={`/vault/${project.site.partner.id}`} className="hover:text-primary transition-colors">
+                    <div className="space-y-4 pr-12">
+                        {/* Breadcrumbs */}
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 leading-relaxed">
+                            <Link
+                                href={`/vault/${project.site.partner.id}`}
+                                className="flex items-center gap-1.5 hover:text-primary transition-colors bg-muted/40 px-2.5 py-1 rounded-md"
+                            >
+                                <Users className="h-3 w-3" />
                                 {project.site.partner.name}
                             </Link>
-                            <span className="opacity-40">/</span>
-                            <span className="text-muted-foreground/60">{project.site.domainName}</span>
+                            <span className="opacity-30 text-xs">/</span>
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground/80 tracking-widest leading-none w-fit px-1 py-1.5 rounded-lg border border-transparent hover:bg-muted/60 transition-colors">
+                                <Globe className="h-3.5 w-3.5 text-primary/60" />
+                                <span className="opacity-90">{project.site.domainName}</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Link href={`/projects/${project.id}`} className="h-9 w-9 flex items-center justify-center rounded-xl bg-muted/50 border border-border hover:bg-muted text-muted-foreground transition-all">
-                                <Expand className="h-4 w-4" strokeWidth={1.5} />
+
+                        <SheetTitle className="group relative">
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <Textarea
+                                        value={localName}
+                                        onChange={(e) => setLocalName(e.target.value)}
+                                        className="text-2xl md:text-3xl font-black tracking-tight border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto min-h-[40px] resize-none leading-tight overflow-hidden pr-24"
+                                        placeholder="Project Name"
+                                        rows={1}
+                                        onInput={(e) => {
+                                            const target = e.target as HTMLTextAreaElement
+                                            target.style.height = 'auto'
+                                            target.style.height = `${target.scrollHeight}px`
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault()
+                                                if (localName !== (project.name || getProjectDisplayName(project))) {
+                                                    handleUpdate({ name: localName })
+                                                }
+                                            }
+                                            if (e.key === 'Escape') {
+                                                setLocalName(project.name || getProjectDisplayName(project))
+                                            }
+                                        }}
+                                    />
+                                    {updatingId === project.id && (
+                                        <div className="absolute right-0 top-1.2">
+                                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </SheetTitle>
+
+                        {/* Controls Row */}
+                        <div className="flex flex-col gap-4 pt-2">
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                {/* Status Select */}
+                                <Select
+                                    value={project.status}
+                                    onValueChange={(val) => handleUpdate({ status: val })}
+                                >
+                                    <SelectTrigger className={cn(
+                                        "h-9 w-auto min-w-[130px] border-none transition-all shadow-none focus:ring-1 p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
+                                        project.status === "Active" ? "bg-emerald-600 text-white hover:bg-emerald-700" :
+                                            project.status === "Paused" ? "bg-orange-500 text-white hover:bg-orange-600" :
+                                                "bg-blue-600 text-white hover:bg-blue-700"
+                                    )}>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Active" className="text-xs font-bold">ACTIVE</SelectItem>
+                                        <SelectItem value="Paused" className="text-xs font-bold">PAUSED</SelectItem>
+                                        <SelectItem value="Completed" className="text-xs font-bold">COMPLETED</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                {/* Payment Status Select */}
+                                <Select
+                                    value={project.paymentStatus}
+                                    onValueChange={(val) => {
+                                        const updates: any = { paymentStatus: val }
+                                        if (val === "Paid" && !project.paidAt) {
+                                            updates.paidAt = new Date()
+                                        } else if (val === "Unpaid") {
+                                            updates.paidAt = null
+                                        }
+                                        handleUpdate(updates)
+                                    }}
+                                >
+                                    <SelectTrigger className={cn(
+                                        "h-9 w-auto min-w-[130px] border-none shadow-none focus:ring-1 transition-all p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
+                                        project.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
+                                            "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                    )}>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Paid" className="text-xs font-bold text-emerald-600">PAID</SelectItem>
+                                        <SelectItem value="Unpaid" className="text-xs font-bold text-rose-600">UNPAID</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                {/* Total Time Badge */}
+                                <div className="flex items-center gap-2 h-9 text-[10px] font-black tracking-widest px-4 rounded-full border bg-emerald-500/10 text-emerald-700 border-emerald-500/20">
+                                    <Clock className="h-3 w-3" strokeWidth={3} />
+                                    <span>
+                                        {project.timeLogs ? (
+                                            (() => {
+                                                const seconds = project.timeLogs.reduce((acc, log) => acc + (log.durationSeconds || 0), 0)
+                                                const hours = Math.floor(seconds / 3600)
+                                                const mins = Math.floor((seconds % 3600) / 60)
+                                                return `${hours}H ${mins}M`
+                                            })()
+                                        ) : "0H 0M"}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </SheetHeader>
+
+                <div className="flex-1 overflow-y-auto p-8 pt-0 space-y-10">
+                    {/* FINANCIALS & SERVICES */}
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Financials & Operations</label>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Contract Fee */}
+                            <div className="group relative bg-muted/30 border border-border rounded-xl p-4 transition-all hover:bg-muted/50">
+                                <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1 block">Price</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground/50">RON</span>
+                                    <Input
+                                        type="number"
+                                        defaultValue={project.currentFee ? Number(project.currentFee) : ""}
+                                        className="h-8 bg-transparent border-none focus-visible:ring-0 shadow-none font-black text-xl pl-12"
+                                        onBlur={(e) => {
+                                            const val = parseFloat(e.target.value)
+                                            if (project.currentFee && val !== Number(project.currentFee)) {
+                                                handleUpdate({ currentFee: val })
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Services List Display */}
+                            <div className="group relative bg-muted/30 border border-border rounded-xl p-4 transition-all hover:bg-muted/50 flex flex-col justify-center">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">Active Services</label>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 px-2 text-[9px] font-bold uppercase tracking-widest bg-background/50 hover:bg-background border border-border/50 rounded-full text-muted-foreground hover:text-primary transition-all"
+                                        onClick={() => setIsEditingServices(!isEditingServices)}
+                                    >
+                                        {isEditingServices ? "Close Catalog" : "Edit Services"}
+                                    </Button>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {project.services?.map((s: any) => (
+                                        <Badge key={s.id} className="bg-primary/10 text-primary border border-primary/20 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-none">
+                                            {s.serviceName}
+                                        </Badge>
+                                    )) || <span className="text-[10px] text-muted-foreground/40 font-medium italic">No services</span>}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Service Catalog Dropdown */}
+                        {isEditingServices && (
+                            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
+                                <div className="flex justify-between items-center border-b border-border pb-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                                        Service Catalog
+                                    </span>
+                                    <div className="px-2 py-0.5 rounded-md bg-primary/5 border border-primary/20 text-[9px] font-bold uppercase tracking-widest text-primary">
+                                        {project.services?.[0]?.isRecurring ? "Subscription" : "One-Time"} Mode
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                    <div className="space-y-2">
+                                        <div className="text-[9px] font-bold uppercase text-indigo-600/60 flex items-center gap-2 px-1 tracking-widest">
+                                            RECURRING
+                                        </div>
+                                        <div className="space-y-1">
+                                            {allServices.filter(s => s.isRecurring).map(s => {
+                                                const isSelected = project.services?.some((ps: any) => ps.id === s.id)
+                                                return (
+                                                    <button
+                                                        key={s.id}
+                                                        onClick={() => toggleService(s.id)}
+                                                        className={cn(
+                                                            "w-full flex items-center justify-between p-2 rounded-lg border text-left transition-all",
+                                                            isSelected
+                                                                ? "bg-primary/10 border-primary/40 text-primary font-bold"
+                                                                : "bg-muted/30 border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
+                                                        )}
+                                                    >
+                                                        <span className="text-[10px] font-medium">{s.serviceName}</span>
+                                                        {isSelected && <Check className="h-3 w-3" strokeWidth={2.5} />}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="text-[9px] font-bold uppercase text-emerald-600/60 flex items-center gap-2 px-1 tracking-widest">
+                                            ONE-TIME
+                                        </div>
+                                        <div className="space-y-1">
+                                            {allServices.filter(s => !s.isRecurring).map(s => {
+                                                const isSelected = project.services?.some((ps: any) => ps.id === s.id)
+                                                return (
+                                                    <button
+                                                        key={s.id}
+                                                        onClick={() => toggleService(s.id)}
+                                                        className={cn(
+                                                            "w-full flex items-center justify-between p-2 rounded-lg border text-left transition-all",
+                                                            isSelected
+                                                                ? "bg-primary/10 border-primary/40 text-primary font-bold"
+                                                                : "bg-muted/30 border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
+                                                        )}
+                                                    >
+                                                        <span className="text-[10px] font-medium">{s.serviceName}</span>
+                                                        {isSelected && <Check className="h-3 w-3" strokeWidth={2.5} />}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* TASKS SECTION */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tasks</label>
+                        </div>
+                        <ProjectTasks
+                            projectId={project.id}
+                            initialTasks={project.tasks || []}
+                        />
+                    </div>
+
+                    {/* CONTEXT & ASSETS */}
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Context & Assets</label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Link
+                                href={`/vault/${project.site.partner.id}`}
+                                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
+                            >
+                                <div className="space-y-1">
+                                    <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Partner Entity</div>
+                                    <div className="font-semibold text-xs text-foreground/80 group-hover:text-foreground transition-colors">{project.site.partner.name}</div>
+                                </div>
+                                <FolderOpen className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
                             </Link>
+
+                            <Link
+                                href={`/vault/${project.site.partner.id}/${project.site.id}`}
+                                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
+                            >
+                                <div className="space-y-1">
+                                    <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Domain Asset</div>
+                                    <div className="font-semibold text-xs text-foreground/80 tracking-tight group-hover:text-foreground transition-colors">{project.site.domainName}</div>
+                                </div>
+                                <Globe className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-2 shadow-sm">
+                                <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider px-1">GTM Identifier</div>
+                                <div className="font-mono text-[10px] font-bold text-muted-foreground/80 bg-muted/50 p-1.5 rounded-lg border border-border text-center overflow-hidden text-ellipsis">{project.site.gtmId || "NOT DEFINED"}</div>
+                            </div>
+                            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-2 shadow-sm">
+                                <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider px-1">Ads Identifier</div>
+                                <div className="font-mono text-[10px] font-bold text-muted-foreground/80 bg-muted/50 p-1.5 rounded-lg border border-border text-center overflow-hidden text-ellipsis">{project.site.googleAdsId || "NOT DEFINED"}</div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <div className="relative group">
-                            <Input
-                                value={localName}
-                                onChange={(e) => setLocalName(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && localName !== (project.name || getProjectDisplayName(project))) {
-                                        handleUpdate({ name: localName })
-                                    }
-                                    if (e.key === 'Escape') {
-                                        setLocalName(project.name || getProjectDisplayName(project))
-                                    }
-                                }}
-                                className="input-ghost text-3xl font-bold tracking-tight p-0 h-auto text-foreground placeholder:text-muted-foreground/20"
-                                placeholder="Untitled Project"
-                            />
-                            {updatingId === project.id && (
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                                </div>
+                    {/* FOOTER */}
+                    <div className="p-6 border-t bg-muted/20 flex justify-between items-center text-xs text-muted-foreground/60">
+                        <div>
+                            <span>Created {format(new Date(project.createdAt), "MMM d, yyyy")}</span>
+                            {project.updatedAt && (
+                                <span className="ml-3 pl-3 border-l border-border/50">
+                                    Updated {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}
+                                </span>
                             )}
                         </div>
-
-                        <div className="flex items-center justify-between pb-4 border-b border-border">
-                            <div className="flex flex-wrap gap-2">
-                                {project.services?.map((s: any) => (
-                                    <Badge key={s.id} className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-md">
-                                        {s.serviceName}
-                                    </Badge>
-                                )) || <span className="text-[11px] text-muted-foreground/60 font-medium italic">No operations assigned</span>}
-                            </div>
+                        <div className="flex items-center gap-2">
                             <Button
                                 variant="ghost"
-                                size="sm"
-                                className="h-9 px-4 text-[10px] font-bold uppercase tracking-widest bg-muted hover:bg-muted/80 border border-border rounded-full text-muted-foreground hover:text-primary transition-all"
-                                onClick={() => setIsEditingServices(!isEditingServices)}
+                                size="icon"
+                                className="h-6 w-6 rounded-md hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                            // onClick={handleDelete}
                             >
-                                {isEditingServices ? "Hide Catalog" : "Service Catalog"}
+                                <Trash2 className="h-3 w-3" />
                             </Button>
                         </div>
                     </div>
-
-                    {isEditingServices && (
-                        <div className="bg-card border border-border p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 space-y-6">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">
-                                    Operational Modules
-                                </span>
-                                <div className="px-3 py-1 rounded-full bg-primary/5 border border-primary/20 text-[9px] font-bold uppercase tracking-widest text-primary">
-                                    {project.services?.[0]?.isRecurring ? "Subscription" : "One-Time"} Mode
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                <div className="space-y-4">
-                                    <div className="text-[10px] font-bold uppercase text-indigo-600/60 flex items-center gap-2 px-1 tracking-widest">
-                                        RECURRING
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        {allServices.filter(s => s.isRecurring).map(s => {
-                                            const isSelected = project.services?.some((ps: any) => ps.id === s.id)
-                                            return (
-                                                <button
-                                                    key={s.id}
-                                                    onClick={() => toggleService(s.id)}
-                                                    className={cn(
-                                                        "w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all",
-                                                        isSelected
-                                                            ? "bg-primary/10 border-primary/40 text-primary font-bold shadow-[0_0_20px_rgba(13,148,136,0.08)]"
-                                                            : "bg-muted/30 border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
-                                                    )}
-                                                >
-                                                    <span className="text-[11px] font-medium">{s.serviceName}</span>
-                                                    {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={2.5} />}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="text-[10px] font-bold uppercase text-emerald-600/60 flex items-center gap-2 px-1 tracking-widest">
-                                        ONE-TIME
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        {allServices.filter(s => !s.isRecurring).map(s => {
-                                            const isSelected = project.services?.some((ps: any) => ps.id === s.id)
-                                            return (
-                                                <button
-                                                    key={s.id}
-                                                    onClick={() => toggleService(s.id)}
-                                                    className={cn(
-                                                        "w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all",
-                                                        isSelected
-                                                            ? "bg-primary/10 border-primary/40 text-primary font-bold shadow-[0_0_20px_rgba(13,148,136,0.08)]"
-                                                            : "bg-muted/30 border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
-                                                    )}
-                                                >
-                                                    <span className="text-[11px] font-medium">{s.serviceName}</span>
-                                                    {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={2.5} />}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
-
-            <div className="flex-1 overflow-y-auto p-10 pt-0 space-y-12">
-                {/* SETTINGS SECTION */}
-                <section className="grid grid-cols-2 gap-8 bg-muted/20 p-8 rounded-2xl border border-border shadow-sm">
-                    <div className="space-y-3">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1">Lifecycle State</Label>
-                        <Select
-                            defaultValue={project.status}
-                            onValueChange={(val) => handleUpdate({ status: val })}
-                        >
-                            <SelectTrigger className="h-12 bg-card border-border focus:ring-primary/20 shadow-sm rounded-2xl font-semibold px-4 transition-all hover:bg-muted/50">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover border-border">
-                                <SelectItem value="Active" className="font-medium">Active</SelectItem>
-                                <SelectItem value="Paused" className="font-medium text-orange-600">Paused</SelectItem>
-                                <SelectItem value="Completed" className="font-medium text-emerald-600">Completed</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-3">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1">Ledger State</Label>
-                        <div className="space-y-2">
-                            <Select
-                                defaultValue={project.paymentStatus}
-                                onValueChange={(val) => {
-                                    const updates: any = { paymentStatus: val }
-                                    if (val === "Paid" && !project.paidAt) {
-                                        updates.paidAt = new Date()
-                                    } else if (val === "Unpaid") {
-                                        updates.paidAt = null
-                                    }
-                                    handleUpdate(updates)
-                                }}
-                            >
-                                <SelectTrigger className={cn(
-                                    "h-12 bg-card border-border focus:ring-primary/20 shadow-sm rounded-2xl font-bold px-4 transition-all hover:bg-muted/50",
-                                    project.paymentStatus === "Paid" ? "text-emerald-600" : "text-rose-600"
-                                )}>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-popover border-border">
-                                    <SelectItem value="Paid" className="font-bold text-emerald-600">PAID</SelectItem>
-                                    <SelectItem value="Unpaid" className="font-bold text-rose-600">UNPAID</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            {project.paymentStatus === "Paid" && project.paidAt && (
-                                <div className="flex items-center gap-2 px-2">
-                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                                    <span className="text-[10px] font-medium text-emerald-600/80">
-                                        Settled on {format(new Date(project.paidAt), "MMM do, yyyy")}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="space-y-3 col-span-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1 flex justify-between px-1">
-                            Contract Fee
-                            <span className="text-primary/60 font-mono tracking-normal">Current: {Number(project.currentFee)} RON</span>
-                        </Label>
-                        <div className="relative group">
-                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-muted-foreground/50">RON</span>
-                            <Input
-                                type="number"
-                                defaultValue={project.currentFee ? Number(project.currentFee) : ""}
-                                className="h-14 bg-card border-border focus:border-primary/40 focus:ring-primary/10 shadow-sm pl-14 font-semibold text-xl rounded-2xl transition-all group-hover:bg-muted/30"
-                                onBlur={(e) => {
-                                    const val = parseFloat(e.target.value)
-                                    if (project.currentFee && val !== Number(project.currentFee)) {
-                                        handleUpdate({ currentFee: val })
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                {/* TASKS SECTION */}
-                <section className="space-y-8">
-                    <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                            <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
-                        </div>
-                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                            Service Operations
-                        </h3>
-                    </div>
-                    <ProjectTasks
-                        projectId={project.id}
-                        initialTasks={project.tasks || []}
-                    />
-                </section>
-
-                {/* CONTEXT SECTION */}
-                <section className="space-y-8 pt-8 border-t border-border">
-                    <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
-                            <Target className="h-4 w-4" strokeWidth={2} />
-                        </div>
-                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                            Context & Assets
-                        </h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Link
-                            href={`/vault/${project.site.partner.id}`}
-                            className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
-                        >
-                            <div className="space-y-1">
-                                <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Partner Entity</div>
-                                <div className="font-semibold text-[13px] text-foreground/80 group-hover:text-foreground transition-colors">{project.site.partner.name}</div>
-                            </div>
-                            <FolderOpen className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
-                        </Link>
-
-                        <Link
-                            href={`/vault/${project.site.partner.id}/${project.site.id}`}
-                            className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
-                        >
-                            <div className="space-y-1">
-                                <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Domain Asset</div>
-                                <div className="font-semibold text-[13px] text-foreground/80 tracking-tight group-hover:text-foreground transition-colors">{project.site.domainName}</div>
-                            </div>
-                            <Globe className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
-                        </Link>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-5 bg-muted/30 border border-border rounded-2xl space-y-2 shadow-sm">
-                            <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider px-1">GTM Identifier</div>
-                            <div className="font-mono text-[11px] font-bold text-muted-foreground/80 bg-muted/50 p-2 rounded-lg border border-border text-center">{project.site.gtmId || "NOT DEFINED"}</div>
-                        </div>
-                        <div className="p-5 bg-muted/30 border border-border rounded-2xl space-y-2 shadow-sm">
-                            <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider px-1">Ads Identifier</div>
-                            <div className="font-mono text-[11px] font-bold text-muted-foreground/80 bg-muted/50 p-2 rounded-lg border border-border text-center">{project.site.googleAdsId || "NOT DEFINED"}</div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <div className="p-8 border-t border-border bg-muted/20 flex items-center justify-between">
-                <div className="flex items-center gap-8">
-                    <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground/60 border border-border">
-                            <Calendar className="h-5 w-5" strokeWidth={1.5} />
-                        </div>
-                        <div>
-                            <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Created on</div>
-                            <div className="text-[13px] font-semibold text-foreground/70">{format(new Date(project.createdAt), "MMMM do, yyyy")}</div>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground/60 border border-border">
-                            <Clock className="h-5 w-5" strokeWidth={1.5} />
-                        </div>
-                        <div>
-                            <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Total Time</div>
-                            <div className="text-[13px] font-semibold text-foreground/70">
-                                {project.timeLogs ? (
-                                    (() => {
-                                        const seconds = project.timeLogs.reduce((acc, log) => acc + (log.durationSeconds || 0), 0)
-                                        const hours = Math.floor(seconds / 3600)
-                                        const mins = Math.floor((seconds % 3600) / 60)
-                                        return `${hours}h ${mins}m`
-                                    })()
-                                ) : "0h 0m"}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="text-[10px] font-medium text-muted-foreground/40 italic">
-                    Edited {formatDistanceToNow(new Date(project.updatedAt))} ago
-                </div>
-            </div>
-        </div>
+        </TaskSheetWrapper>
     )
 }

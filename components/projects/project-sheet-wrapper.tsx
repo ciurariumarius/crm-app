@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 
 interface ProjectSheetWrapperProps {
@@ -47,11 +48,19 @@ export function ProjectSheetWrapper({ projects, allServices, children }: Project
     return (
         <ProjectSheetContext.Provider value={{ openProject, closeProject, currentProject: selectedProject }}>
             {children}
-
-            {/* We could use a Sheet component here directly or use the Sheet primitive from radix if we want more control,
-                but reusing the one from ui/sheet which is likely tailored. 
-                However, to make it work globally we need the Sheet component.
-            */}
+            <Sheet open={!!selectedProject} onOpenChange={(open) => !open && closeProject()}>
+                <SheetContent side="right" className="min-w-full sm:min-w-[600px] md:min-w-[700px] lg:min-w-[800px] p-0 border-l border-border bg-background shadow-2xl">
+                    {selectedProject && (
+                        <ProjectSheetContent
+                            project={selectedProject}
+                            allServices={allServices}
+                            onUpdate={(updated) => {
+                                setSelectedProject(updated)
+                            }}
+                        />
+                    )}
+                </SheetContent>
+            </Sheet>
         </ProjectSheetContext.Provider>
     )
 }

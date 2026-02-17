@@ -1,6 +1,8 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from "react"
+import { startTimer as serverStartTimer, stopTimer as serverStopTimer, pauseTimer as serverPauseTimer, resumeTimer as serverResumeTimer } from "@/lib/actions"
+import { toast } from "sonner"
 
 type TimerState = {
     isRunning: boolean
@@ -13,51 +15,46 @@ type TimerState = {
 
 type TimerContextType = {
     timerState: TimerState
-    startTimer: (projectId: string, taskId?: string, description?: string) => void
-    stopTimer: () => void
-    pauseTimer: () => void
-    resumeTimer: () => void
+    startTimer: (projectId: string, taskId?: string, description?: string) => Promise<void>
+    stopTimer: () => Promise<void>
+    pauseTimer: () => Promise<void>
+    resumeTimer: () => Promise<void>
 }
 
 const TimerContext = createContext<TimerContextType | undefined>(undefined)
 
-export function TimerProvider({ children }: { children: React.ReactNode }) {
-    const [timerState, setTimerState] = useState<TimerState>({
-        isRunning: false,
-        startTime: null,
-        elapsedSeconds: 0,
-        projectId: null,
-        taskId: null,
-        description: null,
-    })
+export function TimerProvider({ children, initialActiveTimer }: { children: React.ReactNode, initialActiveTimer?: any }) {
+    const [timerState, setTimerState] = useState<TimerState>(() => {
+        if (initialActiveTimer) {
+            const isRunning = initialActiveTimer.status === "running"
+            const startTime = initialActiveTimer.startTime ? new Date(initialActiveTimer.startTime).getTime() : null
+            let elapsedSeconds = 0
 
-    // Load from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem("crm-timer")
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved)
-                // If it was running, calculate elapsed time since last save/start
-                if (parsed.isRunning && parsed.startTime) {
-                    const now = Date.now()
-                    const additionalSeconds = Math.floor((now - parsed.lastUpdated) / 1000)
-                    setTimerState({
-                        ...parsed,
-                        elapsedSeconds: parsed.elapsedSeconds + additionalSeconds,
-                    })
-                } else {
-                    setTimerState(parsed)
-                }
-            } catch (e) {
-                console.error("Failed to parse timer state", e)
+            if (isRunning && startTime) {
+                elapsedSeconds = Math.floor((Date.now() - startTime) / 1000)
+            } else if (initialActiveTimer.durationSeconds) {
+                elapsedSeconds = initialActiveTimer.durationSeconds
+            }
+
+            return {
+                isRunning,
+                startTime,
+                elapsedSeconds,
+                projectId: initialActiveTimer.projectId,
+                taskId: initialActiveTimer.taskId,
+                description: initialActiveTimer.description || initialActiveTimer.task?.name || initialActiveTimer.project?.name || null,
             }
         }
-    }, [])
 
-    // Persist to localStorage
-    useEffect(() => {
-        localStorage.setItem("crm-timer", JSON.stringify({ ...timerState, lastUpdated: Date.now() }))
-    }, [timerState])
+        return {
+            isRunning: false,
+            startTime: null,
+            elapsedSeconds: 0,
+            projectId: null,
+            taskId: null,
+            description: null,
+        }
+    })
 
     // Tick
     useEffect(() => {
@@ -73,19 +70,30 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         return () => clearInterval(interval)
     }, [timerState.isRunning])
 
-    const startTimer = (projectId: string, taskId?: string, description?: string) => {
-        setTimerState({
+    const startTimer = async (projectId: string, taskId?: string, description?: string) => {
+        // Optimistic update
+        const newState = {
             isRunning: true,
             startTime: Date.now(),
             elapsedSeconds: 0,
             projectId,
             taskId: taskId || null,
             description: description || null,
-        })
+        }
+        setTimerState(newState)
+
+        try {
+            const result = await serverStartTimer(projectId, taskId)
+            if (!result.success) {
+                toast.error(result.error || "Failed to start timer")
+                // Rollback if needed, but usually we just want to stay consistent with server
+            }
+        } catch (error) {
+            toast.error("An error occurred while starting the timer")
+        }
     }
 
-    const stopTimer = () => {
-        // Here functionality would be added to save the log to the DB
+    const stopTimer = async () => {
         setTimerState({
             isRunning: false,
             startTime: null,
@@ -94,15 +102,46 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             taskId: null,
             description: null,
         })
-        localStorage.removeItem("crm-timer")
+
+        try {
+            const result = await serverStopTimer()
+            if (result.success) {
+                toast.success("Timer stopped")
+            } else {
+                toast.error(result.error || "Failed to stop timer")
+            }
+        } catch (error) {
+            toast.error("An error occurred while stopping the timer")
+        }
     }
 
-    const pauseTimer = () => {
+    const pauseTimer = async () => {
         setTimerState((prev) => ({ ...prev, isRunning: false }))
+        try {
+            const result = await serverPauseTimer()
+            if (result.success) {
+                toast.success("Timer paused")
+            } else {
+                toast.error(result.error || "Failed to pause timer")
+            }
+        } catch (error) {
+            toast.error("An error occurred while pausing the timer")
+        }
     }
 
-    const resumeTimer = () => {
-        setTimerState((prev) => ({ ...prev, isRunning: true }))
+    const resumeTimer = async () => {
+        // Optimistic update
+        setTimerState((prev) => ({ ...prev, isRunning: true, startTime: Date.now() }))
+        try {
+            const result = await serverResumeTimer()
+            if (result.success) {
+                toast.success("Timer resumed")
+            } else {
+                toast.error(result.error || "Failed to resume timer")
+            }
+        } catch (error) {
+            toast.error("An error occurred while resuming the timer")
+        }
     }
 
     return (

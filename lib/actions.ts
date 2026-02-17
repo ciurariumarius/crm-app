@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+// Force reload after schema update
 import prisma from "@/lib/prisma"
 import { z } from "zod"
 
@@ -324,17 +325,27 @@ export async function updateProject(projectId: string, data: {
     }
 }
 
-export async function addTask(projectId: string, name: string) {
+export async function addTask(projectId: string, name: string, options?: { deadline?: Date, status?: string, urgency?: string, estimatedMinutes?: number }) {
     try {
-        const task = await prisma.task.create({
-            data: { projectId, name, status: "Active", isCompleted: false },
+        const task: any = await prisma.task.create({
+            data: {
+                projectId,
+                name,
+                status: options?.status || "Active",
+                urgency: options?.urgency || "Normal",
+                isCompleted: false,
+                deadline: options?.deadline,
+                estimatedMinutes: options?.estimatedMinutes
+            },
             include: { project: { include: { site: true } } }
         })
         revalidatePath("/tasks")
         revalidatePath("/projects")
         revalidatePath(`/projects/${projectId}`)
         revalidatePath("/")
-        revalidatePath(`/vault/${task.project.site.partnerId}/${task.project.siteId}`)
+        if (task.project && task.project.site) {
+            revalidatePath(`/vault/${task.project.site.partnerId}/${task.project.siteId}`)
+        }
         return { success: true }
     } catch (error) {
         console.error("Add task failed:", error)
@@ -347,12 +358,13 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
         const isCompleted = currentStatus === "Completed"
         const newStatus = isCompleted ? "Active" : "Completed"
         const newIsCompleted = !isCompleted
+        // const newIsCompleted = !isCompleted // This line is no longer needed as isCompleted is derived from newStatus
 
         const task = await prisma.task.update({
             where: { id: taskId },
             data: {
                 status: newStatus,
-                isCompleted: newIsCompleted
+                isCompleted: newStatus === "Completed", // Sync
             },
             include: { project: { include: { site: true } } }
         })
@@ -375,6 +387,7 @@ export async function updateTask(taskId: string, data: {
     urgency?: string
     isCompleted?: boolean
     deadline?: Date | null
+    estimatedMinutes?: number | null
 }) {
     try {
         // If status is updated to Done, or isCompleted is updated to true, sync them
@@ -546,9 +559,14 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
     }
 }
 
-export async function getTimeLogs(filters?: { projectId?: string, partnerId?: string }) {
+export async function getTimeLogs(filters?: { projectId?: string, partnerId?: string, q?: string }) {
     try {
         const where: any = {}
+
+        if (filters?.q) {
+            where.description = { contains: filters.q }
+        }
+
         if (filters?.projectId && filters.projectId !== "all") {
             where.projectId = filters.projectId
         } else if (filters?.partnerId && filters.partnerId !== "all") {
@@ -595,6 +613,7 @@ export async function updateTimeLog(logId: string, data: {
     startTime?: Date
     endTime?: Date
     durationSeconds?: number
+    source?: "MANUAL" | "TIMER"
 }) {
     try {
         const log = await prisma.timeLog.update({
@@ -855,5 +874,51 @@ export async function getActiveTimer() {
         return { success: true, data: null, status: "idle" }
     } catch (error) {
         return { success: false, error: "Failed to fetch active timer" }
+    }
+}
+
+export async function getProjectDetails(projectId: string) {
+    try {
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            include: {
+                services: true,
+                site: {
+                    include: {
+                        partner: true,
+                    },
+                },
+                timeLogs: {
+                    where: {
+                        startTime: {
+                            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+                        }
+                    }
+                },
+                tasks: {
+                    include: {
+                        timeLogs: true
+                    },
+                    orderBy: {
+                        status: 'asc'
+                    }
+                }
+            },
+        })
+
+        if (!project) return { success: false, error: "Project not found" }
+
+        // Manually sort tasks
+        const statusOrder: Record<string, number> = { "Active": 0, "Paused": 1, "Completed": 2 }
+        project.tasks.sort((a, b) => {
+            const statusDiff = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
+            if (statusDiff !== 0) return statusDiff
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        })
+
+        return { success: true, data: JSON.parse(JSON.stringify(project)) }
+    } catch (error) {
+        console.error("Get project details failed:", error)
+        return { success: false, error: "Failed to fetch project details" }
     }
 }

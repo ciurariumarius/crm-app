@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Search, Bell, Plus, Briefcase, CheckSquare, ChevronRight, Slash, Menu, Square, Play, Pause } from "lucide-react"
+import { Search, Bell, Plus, Briefcase, CheckSquare, ChevronRight, Slash, Menu, Square, Play, Pause, FolderPlus } from "lucide-react"
 import { formatProjectName, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -28,7 +28,13 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
+import { useTimer } from "@/components/providers/timer-provider"
 
 interface TopBarProps {
     partners: any[]
@@ -36,51 +42,14 @@ interface TopBarProps {
     activeTasksCount: number
     activeProjects?: any[]
     initialActiveTimer?: any
+    pendingTasks?: any[]
 }
 
-export function TopBar({ partners, services, activeTasksCount, activeProjects = [], initialActiveTimer }: TopBarProps) {
+export function TopBar({ partners, services, activeTasksCount, activeProjects = [], initialActiveTimer, pendingTasks = [] }: TopBarProps) {
     const { breadcrumbs } = useHeader()
+    const { timerState, stopTimer, pauseTimer, resumeTimer } = useTimer()
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
-
-    // Active Timer State
-    const [activeTimer, setActiveTimer] = React.useState<any>(initialActiveTimer)
-    const [timerDuration, setTimerDuration] = React.useState(0)
-
-    React.useEffect(() => {
-        if (initialActiveTimer) {
-            setActiveTimer(initialActiveTimer)
-        } else {
-            // If server says no timer, but we have one locally, we might want to keep it 
-            // if it's "optimistic" (id='temp'). 
-            // But TopBar doesn't create optimistic temp timers easily yet (except maybe through dialog).
-            // For now, let's just sync.
-            if (activeTimer?.id !== 'temp') {
-                setActiveTimer(null)
-            }
-        }
-    }, [initialActiveTimer])
-
-    React.useEffect(() => {
-        if (!activeTimer) {
-            setTimerDuration(0)
-            return
-        }
-
-        const calculateDuration = () => {
-            const start = new Date(activeTimer.startTime).getTime()
-            const now = new Date().getTime()
-            return Math.floor((now - start) / 1000)
-        }
-
-        setTimerDuration(calculateDuration())
-
-        const interval = setInterval(() => {
-            setTimerDuration(calculateDuration())
-        }, 1000)
-
-        return () => clearInterval(interval)
-    }, [activeTimer])
 
     const formatTimer = (seconds: number) => {
         const h = Math.floor(seconds / 3600)
@@ -89,61 +58,16 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
         return `${h > 0 ? `${h}:` : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
     }
 
-
     const handleStopTimer = async () => {
-        const prevTimer = activeTimer
-        setActiveTimer(null)
-        try {
-            const result = await stopTimer()
-            if (result.success) {
-                toast.success("Timer stopped")
-            } else {
-                toast.error(result.error || "Failed to stop")
-                setActiveTimer(prevTimer)
-            }
-        } catch (error) {
-            toast.error("Failed to stop timer")
-            setActiveTimer(prevTimer)
-        }
+        await stopTimer()
     }
 
     const handlePauseTimer = async () => {
-        const prevTimer = activeTimer
-        if (activeTimer) {
-            setActiveTimer({ ...activeTimer, status: 'paused' })
-        }
-        try {
-            const result = await pauseTimer()
-            if (result.success) {
-                toast.success("Timer paused")
-            } else {
-                toast.error(result.error || "Failed to pause")
-                setActiveTimer(prevTimer)
-            }
-        } catch (error) {
-            toast.error("Failed to pause timer")
-            setActiveTimer(prevTimer)
-        }
+        await pauseTimer()
     }
 
     const handleResumeTimer = async () => {
-        const prevTimer = activeTimer
-        if (activeTimer) {
-            setActiveTimer({ ...activeTimer, status: 'running', startTime: new Date() })
-        }
-        try {
-            const result = await resumeTimer()
-            if (result.success) {
-                toast.success("Timer resumed")
-                setActiveTimer({ ...result.data, status: 'running' })
-            } else {
-                toast.error(result.error || "Failed to resume")
-                setActiveTimer(prevTimer)
-            }
-        } catch (error) {
-            toast.error("Failed to resume timer")
-            setActiveTimer(prevTimer)
-        }
+        await resumeTimer()
     }
 
     return (
@@ -196,26 +120,12 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
 
             {/* Right: Actions & Profile */}
             <div className="flex items-center gap-2 md:gap-4 flex-1 justify-end md:w-1/3">
-                {/* Active Tasks Info */}
-                <Link
-                    href="/tasks"
-                    className="hidden lg:flex items-center gap-2 group"
-                >
-                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors">
-                        <CheckSquare className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground/60 leading-none">Focus</span>
-                        <span className="text-xs font-semibold leading-tight">{activeTasksCount} Tasks</span>
-                    </div>
-                </Link>
 
-                <div className="h-6 w-px bg-border hidden lg:block" />
 
                 <div className="flex items-center gap-2">
-                    {activeTimer && (
+                    {(timerState.isRunning || timerState.elapsedSeconds > 0) && (
                         <div className="flex items-center gap-1.5 p-1 bg-muted/30 border border-border rounded-full pr-1.5 group/timer transition-colors hover:border-primary/20">
-                            {activeTimer.status === 'paused' ? (
+                            {!timerState.isRunning ? (
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -241,7 +151,7 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
                                         <div className="flex flex-col items-start min-w-[60px]">
                                             <span className="text-[9px] uppercase font-bold tracking-tighter opacity-60 leading-none">Running</span>
                                             <span className="font-mono font-bold text-xs leading-none">
-                                                {formatTimer(timerDuration)}
+                                                {formatTimer(timerState.elapsedSeconds)}
                                             </span>
                                         </div>
                                         <Pause className="h-3 w-3 fill-current opacity-80" />
@@ -258,7 +168,7 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
                                 </div>
                             )}
 
-                            {activeTimer.status === 'paused' && (
+                            {!timerState.isRunning && (
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -272,27 +182,25 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 pl-2">
                         <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9 px-4 rounded-full font-bold text-[10px] uppercase tracking-wider gap-2 border-primary/20 text-primary hover:bg-primary/5"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground hover:text-foreground rounded-full transition-colors"
                             onClick={() => setCreateProjectOpen(true)}
+                            title="New Project"
                         >
-                            <Briefcase className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Add Project</span>
-                            <span className="sm:hidden">Project</span>
+                            <FolderPlus className="h-5 w-5" strokeWidth={1.5} />
                         </Button>
 
                         <Button
-                            variant="default"
-                            size="sm"
-                            className="h-9 px-4 rounded-full font-bold text-[10px] uppercase tracking-wider gap-2 shadow-lg shadow-primary/20"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground hover:text-foreground rounded-full transition-colors"
                             onClick={() => setCreateTaskOpen(true)}
+                            title="New Task"
                         >
-                            <Plus className="h-3.5 w-3.5" strokeWidth={3} />
-                            <span className="hidden sm:inline">Add Task</span>
-                            <span className="sm:hidden">Task</span>
+                            <Plus className="h-5 w-5" strokeWidth={1.5} />
                         </Button>
                     </div>
 

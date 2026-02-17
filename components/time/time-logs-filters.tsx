@@ -1,30 +1,17 @@
 "use client"
 
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Search, Users, Briefcase, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import { useState } from "react"
+import { useDebounce } from "@/hooks/use-debounce"
 
 interface TimeLogsFiltersProps {
     partners: { id: string; name: string }[]
@@ -35,129 +22,138 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
 
-    const partnerId = searchParams.get("partnerId") || "all"
-    const projectId = searchParams.get("projectId") || "all"
-    const [open, setOpen] = useState(false)
+    // Local state for search
+    const [searchTerm, setSearchTerm] = React.useState(searchParams.get("q") || "")
+    const debouncedSearch = useDebounce(searchTerm, 300)
 
-    const handlePartnerChange = (value: string) => {
+    // Sync from URL
+    React.useEffect(() => {
+        if (searchParams.get("q") !== searchTerm) {
+            setSearchTerm(searchParams.get("q") || "")
+        }
+    }, [searchParams])
+
+    // Update URL on search
+    React.useEffect(() => {
         const params = new URLSearchParams(searchParams.toString())
-        if (value === "all") {
-            params.delete("partnerId")
+        const currentQ = params.get("q") || ""
+
+        if (debouncedSearch !== currentQ) {
+            if (debouncedSearch) {
+                params.set("q", debouncedSearch)
+            } else {
+                params.delete("q")
+            }
+            router.replace(`/time?${params.toString()}`)
+        }
+    }, [debouncedSearch, router, searchParams])
+
+    const handleSearch = (term: string) => {
+        setSearchTerm(term)
+    }
+
+    const updateFilter = (key: string, value: string | null) => {
+        const params = new URLSearchParams(searchParams.toString())
+        if (!value || value === "all") {
+            params.delete(key)
         } else {
-            params.set("partnerId", value)
-            // Selecting a partner clears specific project selection to show broad partner logs
-            params.delete("projectId")
+            params.set(key, value)
+            // If setting partner, clear project as they might be incompatible
+            if (key === "partnerId") params.delete("projectId")
+            // If setting project, clear partner as project implies partner
+            if (key === "projectId") params.delete("partnerId")
         }
         router.push(`/time?${params.toString()}`)
     }
 
-    const handleProjectChange = (value: string) => {
-        const params = new URLSearchParams(searchParams.toString())
-        if (value === "all") {
-            params.delete("projectId")
-        } else {
-            params.set("projectId", value)
-            // Selecting a specific project overrides/clears partner filter (as project implies partner)
-            params.delete("partnerId")
-        }
-        setOpen(false)
-        router.push(`/time?${params.toString()}`)
-    }
+    const currentPartner = searchParams.get("partnerId") || "all"
+    const currentProject = searchParams.get("projectId") || "all"
 
-    // Filter projects based on selected partner, IF a partner is selected
-    const filteredProjects = partnerId !== "all"
-        ? projects.filter(p => p.site.partnerId === partnerId)
+    // Filter projects for dropdown if partner is selected
+    const filteredProjects = currentPartner !== "all"
+        ? projects.filter(p => p.site.partnerId === currentPartner)
         : projects
 
     return (
-        <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-full sm:w-[250px]">
-                <Select value={partnerId} onValueChange={handlePartnerChange}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Filter by Partner" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Partners</SelectItem>
-                        {partners.map((partner) => (
-                            <SelectItem key={partner.id} value={partner.id}>
-                                {partner.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-full p-2 shadow-sm border border-border/60 sticky top-4 z-40 backdrop-blur-xl bg-card/80">
+
+            {/* Left: Search (Fixed Compact) */}
+            <div className="relative w-full xl:w-[200px] pl-4">
+                <Search className="absolute left-6 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/40" />
+                <Input
+                    placeholder="Search logs..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="w-full pl-9 h-10 bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-xs"
+                />
             </div>
 
-            <div className="w-full sm:w-[350px]">
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={open}
-                            className="w-full justify-between font-normal"
-                        >
-                            {projectId !== "all"
-                                ? projects.find((project) => project.id === projectId)?.displayName
-                                : "Filter by Project..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[350px] p-0 !pointer-events-auto" align="start">
-                        <Command>
-                            <CommandInput placeholder="Search project..." />
-                            <CommandList className="max-h-[300px] overflow-y-auto">
-                                <CommandEmpty>No project found.</CommandEmpty>
-                                <CommandGroup>
-                                    <CommandItem
-                                        value="all"
-                                        className="cursor-pointer"
-                                        onSelect={() => {
-                                            handleProjectChange("all")
-                                            setOpen(false)
-                                        }}
-                                    >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                projectId === "all" ? "opacity-100" : "opacity-0"
-                                            )}
-                                        />
-                                        All Projects
-                                    </CommandItem>
-                                    {filteredProjects.map((project) => (
-                                        <CommandItem
-                                            key={project.id}
-                                            value={`${project.displayName} ${project.id}`} // Ensure uniqueness for cmdk
-                                            className="cursor-pointer"
-                                            onSelect={() => {
-                                                handleProjectChange(project.id)
-                                                setOpen(false)
-                                            }}
-                                            onMouseDown={(e) => {
-                                                e.preventDefault()
-                                                e.stopPropagation()
-                                            }}
-                                            onClick={() => {
-                                                // Backup for click if onSelect fails
-                                                handleProjectChange(project.id)
-                                                setOpen(false)
-                                            }}
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    projectId === project.id ? "opacity-100" : "opacity-0"
-                                                )}
-                                            />
-                                            {project.displayName}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+            {/* Middle: Filters (Pills) */}
+            <div className="flex items-center gap-2 overflow-x-auto w-full xl:w-auto scrollbar-hide px-2">
+
+                {/* Partner & Project Pills */}
+                <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-full">
+
+                    {/* Partner Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2",
+                                currentPartner !== "all"
+                                    ? "bg-background shadow-sm text-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}>
+                                <Users className="w-3 h-3" />
+                                <span className="max-w-[100px] truncate">
+                                    {partners.find(p => p.id === currentPartner)?.name || "ALL PARTNERS"}
+                                </span>
+                                <ChevronDown className="w-3 h-3 opacity-50" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[200px] max-h-[300px] overflow-y-auto bg-popover/95 backdrop-blur-sm z-50 p-1">
+                            <DropdownMenuItem onSelect={() => updateFilter("partnerId", "all")} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                All Partners
+                            </DropdownMenuItem>
+                            {partners.map((p) => (
+                                <DropdownMenuItem key={p.id} onSelect={() => updateFilter("partnerId", p.id)} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                    {p.name.toUpperCase()}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <div className="w-px h-6 bg-border/40 mx-2 hidden sm:block" />
+
+                    {/* Project Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2",
+                                currentProject !== "all"
+                                    ? "bg-background shadow-sm text-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}>
+                                <Briefcase className="w-3 h-3" />
+                                <span className="max-w-[150px] truncate">
+                                    {projects.find(p => p.id === currentProject)?.displayName || "ALL PROJECTS"}
+                                </span>
+                                <ChevronDown className="w-3 h-3 opacity-50" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[300px] max-h-[350px] overflow-y-auto bg-popover/95 backdrop-blur-sm z-50 p-1">
+                            <DropdownMenuItem onSelect={() => updateFilter("projectId", "all")} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                ALL PROJECTS
+                            </DropdownMenuItem>
+                            {filteredProjects.map((p) => (
+                                <DropdownMenuItem key={p.id} onSelect={() => updateFilter("projectId", p.id)} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                    {p.displayName.toUpperCase()}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                </div>
             </div>
-        </div >
+        </div>
     )
 }

@@ -96,6 +96,7 @@ model Task {
   urgency     String    @default("Normal")  // Low, Normal, High, Urgent
   isCompleted Boolean   @default(false)     @map("is_completed")
   deadline    DateTime?
+  estimatedMinutes Int? @map("estimated_minutes")
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -116,6 +117,7 @@ model TimeLog {
   endTime         DateTime? @map("end_time")
   durationSeconds Int?      @map("duration_seconds")
   isPaused        Boolean   @default(false) @map("is_paused")
+  source          String    @default("MANUAL") // MANUAL, TIMER
 
   createdAt       DateTime  @default(now())
 

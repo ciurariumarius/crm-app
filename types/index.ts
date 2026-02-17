@@ -13,14 +13,21 @@ export interface ProjectWithDetails extends Project {
     }
 }
 
+export interface RevenueBreakdown {
+    monthly: { paid: number, unpaid: number }
+    oneTime: { paid: number, unpaid: number }
+}
+
 export interface DashboardMetrics {
     totalRevenue: number
     formattedRevenue: string
+    revenueBreakdown: RevenueBreakdown
     totalHoursMonth: string
     recurringProjects: FormattedProject[]
     oneTimeProjects: FormattedProject[]
     quickActionProjects: QuickActionProject[]
     finalRecentProjects: RecentProject[]
+    revenueByPartner: { name: string, value: number, fill: string }[]
 }
 
 export interface FormattedProject {
@@ -37,6 +44,7 @@ export interface QuickActionProject {
     id: string
     siteName: string
     services: Service[]
+    status: string
     createdAt?: Date | string
 }
 

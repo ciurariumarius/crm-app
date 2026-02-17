@@ -14,7 +14,9 @@ import {
     ChevronDown,
     ChevronRight,
     Circle,
-    Clock
+    Clock,
+    Search,
+    Share2
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -25,7 +27,9 @@ import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 export function Sidebar() {
     const pathname = usePathname()
-    const [isVaultOpen, setIsVaultOpen] = useState(true)
+    const [activeDrawer, setActiveDrawer] = useState<string | null>(null)
+    const [isVaultOpen, setIsVaultOpen] = useState(true) // Keep for mobile
+    const [isPPCOpen, setIsPPCOpen] = useState(true)     // Keep for mobile
 
     const navItems = [
         { name: "Overview", href: "/", icon: LayoutDashboard },
@@ -40,20 +44,47 @@ export function Sidebar() {
         { name: "Services", href: "/services", icon: Briefcase },
     ]
 
-    const renderLink = (item: any) => {
+    const ppcItems = [
+        { name: "Google Ads", href: "/ppc/google-ads", icon: Search },
+        { name: "Facebook Ads", href: "/ppc/facebook-ads", icon: Share2 },
+    ]
+
+    const renderRailItem = (item: any) => {
+        const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href) && item.href !== "/vault" && item.href !== "/ppc")
+        return (
+            <Link
+                key={item.href}
+                href={item.href}
+                onMouseEnter={() => setActiveDrawer(null)}
+                className={cn(
+                    "group relative flex items-center justify-center p-3 rounded-xl transition-all duration-300",
+                    isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}
+                title={item.name}
+            >
+                <item.icon className="h-5 w-5" strokeWidth={1.5} />
+                {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-primary shadow-[0_0_8px_rgba(13,148,136,0.4)]" />
+                )}
+            </Link>
+        )
+    }
+
+    const renderMobileLink = (item: any) => {
         const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
         return (
             <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                    "group relative flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-all duration-300",
+                    "group relative flex items-center gap-3 px-6 py-3.5 text-sm font-medium transition-all duration-300 border-l-[3px]",
                     isActive
-                        ? "text-foreground bg-primary/5"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        ? "text-foreground bg-primary/5 border-emerald-500"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-transparent"
                 )}
             >
-                {isActive && <div className="sidebar-active-indicator" />}
                 <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "opacity-40")} strokeWidth={1.5} />
                 <span className={cn("tracking-tight transition-all", isActive ? "font-bold" : "font-medium opacity-60")}>
                     {item.name}
@@ -79,7 +110,8 @@ export function Sidebar() {
                             </h1>
                         </div>
                         <nav className="flex-1 space-y-1">
-                            {navItems.map(renderLink)}
+                            {navItems.map(renderMobileLink)}
+
                             <div className="mt-8 mb-2 px-6">
                                 <button
                                     onClick={() => setIsVaultOpen(!isVaultOpen)}
@@ -89,7 +121,18 @@ export function Sidebar() {
                                     {isVaultOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                                 </button>
                             </div>
-                            {isVaultOpen && vaultItems.map(renderLink)}
+                            {isVaultOpen && vaultItems.map(renderMobileLink)}
+
+                            <div className="mt-8 mb-2 px-6">
+                                <button
+                                    onClick={() => setIsPPCOpen(!isPPCOpen)}
+                                    className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                                >
+                                    PPC
+                                    {isPPCOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                </button>
+                            </div>
+                            {isPPCOpen && ppcItems.map(renderMobileLink)}
                         </nav>
                         <div className="p-6 border-t border-border">
                             <ThemeToggle />
@@ -98,53 +141,141 @@ export function Sidebar() {
                 </SheetContent>
             </Sheet>
 
-            {/* Desktop Sidebar */}
-            <div className="hidden md:flex flex-col w-60 bg-card border-r border-border h-screen fixed left-0 top-0 overflow-y-auto z-50">
-                <div className="py-10 px-8">
-                    <h1 className="text-2xl font-bold uppercase tracking-tight text-foreground flex items-center gap-2">
-                        Pixelist<span className="text-primary">.</span>
-                        <div className="h-1 w-1 rounded-full bg-primary" />
-                    </h1>
+            {/* Desktop Rail + Drawer */}
+            <div
+                className="hidden md:flex fixed left-0 top-0 h-screen z-50 group isolate"
+                onMouseLeave={() => setActiveDrawer(null)}
+            >
+                {/* Primary Rail */}
+                <div className="w-[70px] bg-card border-r border-border h-full flex flex-col items-center py-6 gap-6 z-20 shadow-xl">
+                    <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
+                        <span className="font-bold text-xl">P.</span>
+                    </div>
+
+                    <nav className="flex-1 flex flex-col items-center gap-4 w-full px-2">
+                        {navItems.map(renderRailItem)}
+
+                        <div className="h-px w-8 bg-border/50 my-2" />
+
+                        {/* Vault Trigger */}
+                        <Link
+                            href="/vault"
+                            onMouseEnter={() => setActiveDrawer('vault')}
+                            className={cn(
+                                "group relative flex items-center justify-center p-3 rounded-xl transition-all duration-300",
+                                pathname.startsWith("/vault") || activeDrawer === 'vault'
+                                    ? "bg-indigo-500/10 text-indigo-500"
+                                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                            )}
+                        >
+                            <Database className="h-5 w-5" strokeWidth={1.5} />
+                            {(pathname.startsWith("/vault") || activeDrawer === 'vault') && (
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
+                            )}
+                        </Link>
+
+                        {/* PPC Trigger */}
+                        <Link
+                            href="/ppc/google-ads"
+                            onMouseEnter={() => setActiveDrawer('ppc')}
+                            className={cn(
+                                "group relative flex items-center justify-center p-3 rounded-xl transition-all duration-300",
+                                pathname.startsWith("/ppc") || activeDrawer === 'ppc'
+                                    ? "bg-rose-500/10 text-rose-500"
+                                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                            )}
+                        >
+                            <Share2 className="h-5 w-5" strokeWidth={1.5} />
+                            {(pathname.startsWith("/ppc") || activeDrawer === 'ppc') && (
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+                            )}
+                        </Link>
+
+                        <div className="h-px w-8 bg-border/50 my-2" />
+
+                        <Link
+                            href="/analytics"
+                            onMouseEnter={() => setActiveDrawer(null)}
+                            className={cn(
+                                "group relative flex items-center justify-center p-3 rounded-xl transition-all duration-300",
+                                pathname === "/analytics"
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                            )}
+                        >
+                            <BarChart3 className="h-5 w-5" strokeWidth={1.5} />
+                        </Link>
+
+                    </nav>
+
+                    <div className="mt-auto flex flex-col items-center gap-4 pb-4">
+                        <ThemeToggle />
+                        <Avatar className="h-8 w-8 border border-border cursor-pointer hover:ring-2 ring-primary/20 transition-all">
+                            <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold">ML</AvatarFallback>
+                        </Avatar>
+                    </div>
                 </div>
 
-                <nav className="flex-1 space-y-1">
-                    {navItems.map(renderLink)}
-
-                    <div className="mt-10 mb-2 px-6">
-                        <button
-                            onClick={() => setIsVaultOpen(!isVaultOpen)}
-                            className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                        >
-                            THE VAULT
-                            <div className="h-4 w-4 flex items-center justify-center rounded-lg hover:bg-muted/50">
-                                {isVaultOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                {/* Context Drawer */}
+                <div className={cn(
+                    "w-64 bg-background/95 backdrop-blur-xl border-r border-border h-full absolute left-[65px] top-0 z-10 transition-all duration-300 ease-[cubic-bezier(0.2,0.0,0.2,1)] shadow-2xl pl-2",
+                    activeDrawer ? "translate-x-0 opacity-100" : "-translate-x-[20px] opacity-0 pointer-events-none"
+                )}>
+                    <div className="h-full flex flex-col py-8 px-6">
+                        {activeDrawer === 'vault' && (
+                            <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6 flex items-center gap-2">
+                                    <Database className="h-3 w-3" />
+                                    The Vault
+                                </h3>
+                                <nav className="space-y-1">
+                                    {vaultItems.map(item => (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            className={cn(
+                                                "block px-4 py-2.5 rounded-lg text-sm transition-colors",
+                                                pathname === item.href
+                                                    ? "bg-indigo-500/10 text-indigo-600 font-medium"
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                            )}
+                                        >
+                                            {item.name}
+                                        </Link>
+                                    ))}
+                                </nav>
                             </div>
-                        </button>
-                    </div>
+                        )}
 
-                    {isVaultOpen && (
-                        <div className="animate-in slide-in-from-top-1 duration-300">
-                            {vaultItems.map(renderLink)}
-                        </div>
-                    )}
-
-                    <div className="mt-8">
-                        {renderLink({ name: "Analytics", href: "/analytics", icon: BarChart3 })}
-                    </div>
-                </nav>
-
-                <div className="p-6">
-                    <div className="flex items-center gap-3 p-3 rounded-2xl border border-border bg-muted/30 group hover:bg-muted/50 transition-all">
-                        <Avatar className="h-8 w-8 border border-border ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
-                            <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold uppercase">ML</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col text-sm">
-                            <span className="font-bold text-xs tracking-tight text-foreground/80 group-hover:text-foreground transition-colors">Marius L.</span>
-                            <div className="flex items-center gap-1">
-                                <span className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider">Ops Lead</span>
-                                <Circle className="h-1 w-1 fill-emerald-500/40 text-transparent" />
+                        {activeDrawer === 'ppc' && (
+                            <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6 flex items-center gap-2">
+                                    <Share2 className="h-3 w-3" />
+                                    Campaigns
+                                </h3>
+                                <nav className="space-y-1">
+                                    {ppcItems.map(item => (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            className={cn(
+                                                "block px-4 py-2.5 rounded-lg text-sm transition-colors",
+                                                pathname === item.href
+                                                    ? "bg-rose-500/10 text-rose-600 font-medium"
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                            )}
+                                        >
+                                            {item.name}
+                                        </Link>
+                                    ))}
+                                </nav>
                             </div>
-                        </div>
+                        )}
+
+                        {/* Empty/Loading State Protection */}
+                        {!activeDrawer && (
+                            <div className="h-full flex items-center justify-center opacity-0"></div>
+                        )}
                     </div>
                 </div>
             </div>

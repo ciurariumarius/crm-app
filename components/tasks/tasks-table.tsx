@@ -22,14 +22,16 @@ import { format, formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import { updateTask, toggleTaskStatus } from "@/lib/actions"
 import { toast } from "sonner"
-import { Calendar as CalendarIcon, Clock, Users, Globe, ExternalLink } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, Globe, ExternalLink, Target } from "lucide-react"
 import { TaskDetails } from "./task-details"
+import { useTimer } from "@/components/providers/timer-provider"
 
 interface TasksTableProps {
     tasks: any[]
 }
 
 export function TasksTable({ tasks }: TasksTableProps) {
+    const { timerState } = useTimer()
     const [selectedTask, setSelectedTask] = React.useState<any>(null)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
 
@@ -67,6 +69,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                         <TableHead>Project / Partner</TableHead>
                         <TableHead className="w-[140px]">Status</TableHead>
                         <TableHead className="w-[160px]">Deadline</TableHead>
+                        <TableHead className="w-[140px]">Duration</TableHead>
                         <TableHead className="w-[160px]">Last Update</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -148,6 +151,41 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 </div>
                             </TableCell>
                             <TableCell onClick={() => setSelectedTask(task)}>
+                                {(() => {
+                                    const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+                                    const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
+                                    const totalSeconds = logsDuration + currentTimerDuration
+                                    const hasTimeLogs = totalSeconds > 0
+                                    const useFallback = task.isCompleted && !hasTimeLogs && task.estimatedMinutes
+
+                                    if (!hasTimeLogs && !useFallback) {
+                                        if (task.estimatedMinutes) {
+                                            return (
+                                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold opacity-60">
+                                                    <Target className="h-3 w-3 opacity-50" />
+                                                    <span>Est: {task.estimatedMinutes >= 60 ? `${Math.floor(task.estimatedMinutes / 60)}h ${task.estimatedMinutes % 60}m` : `${task.estimatedMinutes}m`}</span>
+                                                </div>
+                                            )
+                                        }
+                                        return <span className="text-[10px] text-muted-foreground/30 italic">No tracking</span>
+                                    }
+
+                                    const displaySeconds = useFallback ? (task.estimatedMinutes * 60) : totalSeconds
+                                    const hours = Math.floor(displaySeconds / 3600)
+                                    const mins = Math.floor((displaySeconds % 3600) / 60)
+
+                                    return (
+                                        <div className={cn(
+                                            "flex items-center gap-2 text-[10px] font-bold",
+                                            useFallback ? "text-amber-600" : (timerState.taskId === task.id && timerState.isRunning ? "text-primary animate-pulse" : "text-emerald-600")
+                                        )}>
+                                            {useFallback ? <Target className="h-3 w-3 opacity-50" /> : <Clock className="h-3 w-3 opacity-50" />}
+                                            <span>{hours}h {mins}m {useFallback ? "(Est)" : ""}</span>
+                                        </div>
+                                    )
+                                })()}
+                            </TableCell>
+                            <TableCell onClick={() => setSelectedTask(task)}>
                                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
                                     <Clock className="h-3 w-3 opacity-50" />
                                     {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
@@ -163,13 +201,13 @@ export function TasksTable({ tasks }: TasksTableProps) {
                         </TableRow>
                     )}
                 </TableBody>
-            </Table>
+            </Table >
 
             <TaskDetails
                 task={selectedTask}
                 open={!!selectedTask}
                 onOpenChange={(open) => !open && setSelectedTask(null)}
             />
-        </div>
+        </div >
     )
 }

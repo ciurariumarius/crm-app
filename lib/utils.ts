@@ -16,7 +16,7 @@ export function formatProjectName(project: {
 
   // Get unique service names
   const serviceNames = project.services && project.services.length > 0
-    ? Array.from(new Set(project.services.map(s => s.serviceName))).join(", ")
+    ? Array.from(new Set(project.services.map(s => s.serviceName))).join(" + ")
     : "No Service"
 
   // Check if any service is recurring
@@ -24,7 +24,7 @@ export function formatProjectName(project: {
 
   if (isRecurring && project.createdAt) {
     const date = new Date(project.createdAt)
-    const monthYear = date.toLocaleString('default', { month: 'short', year: 'numeric' })
+    const monthYear = date.toLocaleString('default', { month: 'long', year: 'numeric' })
     return `${domain} - ${serviceNames} - ${monthYear}`
   }
 

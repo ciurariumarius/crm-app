@@ -3,22 +3,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, TrendingUp, CheckSquare, Zap, Target } from "lucide-react"
 import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
+import { CreateTaskButton } from "@/components/tasks/create-task-button"
 import { formatProjectName } from "@/lib/utils"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 
 export const dynamic = "force-dynamic"
 
 export default async function TasksPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string }>
+    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string; urgency?: string }>
 }) {
     const params = await searchParams
     const q = params.q
     const statusFilter = params.status || "Active"
     const partnerId = params.partnerId
     const projectId = params.projectId
+    const urgencyFilter = params.urgency || "all"
 
     // Fetch all tasks with project and partner info for metrics and filtering
     const allTasksPromise = prisma.task.findMany({
@@ -44,12 +47,32 @@ export default async function TasksPage({
         orderBy: { serviceName: "asc" }
     })
 
-    const [allTasks, allServicesRaw, activeTimerRaw] = await Promise.all([allTasksPromise, servicesPromise, prisma.timeLog.findFirst({
-        where: { endTime: null },
-        include: { task: true, project: true }
-    })])
+    // Fetch all projects for the "Add Task" dropdown
+    const activeProjectsPromise = prisma.project.findMany({
+        select: {
+            id: true,
+            name: true,
+            status: true,
+            site: { select: { domainName: true } },
+            services: { select: { serviceName: true, isRecurring: true } },
+            createdAt: true
+        },
+        orderBy: { updatedAt: "desc" }
+    })
+
+    const [allTasks, allServicesRaw, activeTimerRaw, activeProjectsRaw] = await Promise.all([
+        allTasksPromise,
+        servicesPromise,
+        prisma.timeLog.findFirst({
+            where: { endTime: null },
+            include: { task: true, project: true }
+        }),
+        activeProjectsPromise
+    ])
+
     const allServices = JSON.parse(JSON.stringify(allServicesRaw))
     const initialActiveTimer = JSON.parse(JSON.stringify(activeTimerRaw))
+    const activeProjects = JSON.parse(JSON.stringify(activeProjectsRaw))
 
     // Calculate metrics based on ALL tasks
     const activeTasksCount = allTasks.filter((t: any) => t.status === "Active").length
@@ -69,6 +92,11 @@ export default async function TasksPage({
         // Project filter
         if (projectId && projectId !== "all" && task.project.id !== projectId) return false
 
+        // Urgency filter
+        if (urgencyFilter && urgencyFilter !== "all") {
+            if (task.urgency !== urgencyFilter) return false
+        }
+
         // Search query filter
         if (q) {
             const searchLower = q.toLowerCase()
@@ -86,14 +114,20 @@ export default async function TasksPage({
     const serializedTasks = JSON.parse(JSON.stringify(filteredTasks))
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
-                    Tasks
-                </h1>
+        <div className="space-y-6">
+            <DetailedBreadcrumbs items={[{ label: "Tasks" }]} />
+
+            <div className="flex items-end justify-between gap-4 mb-2">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
+                        Tasks
+                    </h1>
+                    <p className="text-muted-foreground font-medium">
+                        Manage your daily execution flow
+                    </p>
+                </div>
+                <CreateTaskButton projects={activeProjects} />
             </div>
-
-
 
             {/* Extract unique partners and projects for filters */}
             {(() => {
@@ -107,6 +141,7 @@ export default async function TasksPage({
                             tasks={serializedTasks}
                             allServices={allServices}
                             initialActiveTimer={initialActiveTimer}
+                            projects={activeProjects}
                         />
                     </div>
                 )

@@ -80,9 +80,9 @@ export function CreateTimeLogDialog({ projects, tasks }: CreateTimeLogDialogProp
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="btn-primary">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Log Time
+                <Button className="flex items-center gap-2 font-bold h-11 px-6 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all">
+                    <Plus className="h-4 w-4" />
+                    Add new log time
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

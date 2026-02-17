@@ -46,7 +46,7 @@
 }
 
 :root {
-  --background: #FAFAFA;
+  --background: #F5F5F7;
   --foreground: #09090B;
   --card: #FFFFFF;
   --card-foreground: #09090B;
@@ -56,20 +56,19 @@
   --primary-foreground: #FFFFFF;
   --secondary: #F3F4F6;
   --secondary-foreground: #18181B;
-  --muted: #F3F4F6;
-  --muted-foreground: #6B7280;
+  --muted: #E2E8F0;
+  --muted-foreground: #64748B;
   --accent: #F3F4F6;
   --accent-foreground: #18181B;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
-  --border: #E5E7EB;
-  --input: #E5E7EB;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
   --ring: #0D9488;
   --radius: 16px;
 
+  /* Semantic Gradients - Reserved for Active States Only */
   --accent-gradient: linear-gradient(135deg, #0D9488 0%, #4F46E5 100%);
-  --mesh-gradient: radial-gradient(at 100% 0%, rgba(13, 148, 136, 0.04) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(79, 70, 229, 0.04) 0px, transparent 50%);
 }
 
 .dark {
@@ -94,8 +93,6 @@
   --ring: #2DD4BF;
 
   --accent-gradient: linear-gradient(135deg, #2DD4BF 0%, #6366F1 100%);
-  --mesh-gradient: radial-gradient(at 100% 0%, rgba(45, 212, 191, 0.05) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
 }
 
 @layer base {
@@ -105,7 +102,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
     letter-spacing: -0.01em;
   }
 
@@ -144,14 +141,20 @@
   }
 
   .bento-card {
-    @apply bg-card border border-border rounded-[16px] p-6 transition-all duration-300;
-    background-image: var(--mesh-gradient);
+    @apply bg-card border border-border/60 rounded-[16px] p-6 transition-all duration-300 shadow-sm hover:shadow-md;
+    /* Removed mesh gradient for cleaner look */
   }
 }
 
 /* Force pointer cursor on interactive elements */
 @layer base {
-  button, [role="button"], a, input[type="submit"], input[type="button"], select {
+
+  button,
+  [role="button"],
+  a,
+  input[type="submit"],
+  input[type="button"],
+  select {
     cursor: pointer;
   }
 }
