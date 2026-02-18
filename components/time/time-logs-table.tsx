@@ -43,7 +43,7 @@ interface TimeLogsTableProps {
 }
 
 import { TimeLogSheet } from "@/components/time/time-log-sheet"
-import { useState, useMemo, useRef, useEffect } from "react"
+import { useState, useMemo, useRef, useEffect, Fragment } from "react"
 import { cn } from "@/lib/utils"
 
 import { stopTimer, deleteTimeLogs, updateTimeLog, startTimer } from "@/lib/actions"
@@ -217,7 +217,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                             </TableRow>
                         ) : (
                             sortedDates.map(dateKey => (
-                                <>
+                                <Fragment key={dateKey}>
                                     {/* Date Header */}
                                     <TableRow key={dateKey} className="bg-muted/50 hover:bg-muted/50 sticky top-0 z-10 backdrop-blur-sm supports-[backdrop-filter]:bg-muted/40">
                                         <TableCell colSpan={6} className="py-2 px-4 shadow-sm border-b border-border/60">
@@ -348,7 +348,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                             </TableRow>
                                         )
                                     })}
-                                </>
+                                </Fragment>
                             ))
                         )}
                     </TableBody>

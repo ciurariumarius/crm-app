@@ -2,16 +2,13 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Input } from "@/components/ui/input"
-import { Search, Briefcase, ChevronDown } from "lucide-react"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
+import { Input } from "@/components/ui/input"
+import { Search, Briefcase, ChevronDown, Calendar, AlertCircle, ArrowUpDown } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface TasksToolbarProps {
     partners: { id: string; name: string }[]
@@ -77,6 +74,7 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
     const currentPartner = searchParams.get("partnerId") || "all"
     const currentProject = searchParams.get("projectId") || "all"
     const currentStatus = searchParams.get("status") || "Active"
+    const currentSort = searchParams.get("sort") || "newest"
 
     const getButtonStyle = (value: string, isActive: boolean) => {
         // Active States
@@ -194,36 +192,167 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
 
                 {/* Project Filter */}
                 <div className="flex items-center p-1 bg-muted/30 rounded-full">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button className={cn(
-                                "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2",
-                                currentProject && currentProject !== "all"
-                                    ? "bg-background shadow-sm text-foreground"
-                                    : "text-muted-foreground hover:text-foreground"
-                            )}>
-                                <Briefcase className="w-3 h-3" />
-                                <span className="max-w-[100px] truncate">
-                                    {projects.find(p => p.id === currentProject)?.name || "ALL PROJECTS"}
-                                </span>
-                                <ChevronDown className="w-3 h-3 opacity-50" />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[200px] max-h-[300px] overflow-y-auto">
-                            <DropdownMenuItem onClick={() => updateFilter("projectId", "all")}>
-                                All Projects
-                            </DropdownMenuItem>
-                            {projects.map((project) => (
-                                <DropdownMenuItem key={project.id} onClick={() => updateFilter("projectId", project.id)}>
-                                    {project.name}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <ProjectCombobox
+                        projects={projects}
+                        currentProject={currentProject}
+                        onSelect={(val) => updateFilter("projectId", val)}
+                    />
+                </div>
+
+                <div className="w-px h-6 bg-border/40 mx-2 hidden sm:block" />
+
+                {/* Sort Filter */}
+                <div className="flex items-center p-1 bg-muted/30 rounded-full">
+                    <SortCombobox
+                        currentSort={currentSort}
+                        onSelect={(val) => updateFilter("sort", val)}
+                    />
                 </div>
             </div>
 
 
         </div>
+    )
+}
+
+function ProjectCombobox({
+    projects,
+    currentProject,
+    onSelect
+}: {
+    projects: { id: string, name: string }[],
+    currentProject: string | null,
+    onSelect: (val: string) => void
+}) {
+    const [open, setOpen] = React.useState(false)
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    role="combobox"
+                    aria-expanded={open}
+                    className={cn(
+                        "px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2",
+                        currentProject && currentProject !== "all"
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    <Briefcase className="w-3 h-3" />
+                    <span className="max-w-[250px] truncate">
+                        {currentProject && currentProject !== "all"
+                            ? projects.find((project) => project.id === currentProject)?.name
+                            : "ALL PROJECTS"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[400px] p-0" align="end">
+                <Command>
+                    <CommandInput placeholder="Search project..." />
+                    <CommandList>
+                        <CommandEmpty>No project found.</CommandEmpty>
+                        <CommandGroup>
+                            <CommandItem
+                                value="all projects"
+                                onSelect={() => {
+                                    onSelect("all")
+                                    setOpen(false)
+                                }}
+                            >
+                                <Check
+                                    className={cn(
+                                        "mr-2 h-4 w-4",
+                                        !currentProject || currentProject === "all" ? "opacity-100" : "opacity-0"
+                                    )}
+                                />
+                                All Projects
+                            </CommandItem>
+                            {projects.map((project) => (
+                                <CommandItem
+                                    key={project.id}
+                                    value={project.name}
+                                    onSelect={() => {
+                                        onSelect(project.id)
+                                        setOpen(false)
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            currentProject === project.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {project.name}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+function SortCombobox({
+    currentSort,
+    onSelect
+}: {
+    currentSort: string,
+    onSelect: (val: string) => void
+}) {
+    const [open, setOpen] = React.useState(false)
+
+    const sorts = [
+        { label: "Newest First", value: "newest" },
+        { label: "Oldest First", value: "oldest" },
+        { label: "Recently Updated", value: "updated" },
+        { label: "Name (A-Z)", value: "name_asc" },
+        { label: "Name (Z-A)", value: "name_desc" },
+    ]
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    role="combobox"
+                    aria-expanded={open}
+                    className="px-4 py-1.5 text-[10px] font-bold rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                >
+                    <ArrowUpDown className="w-3 h-3" />
+                    <span className="max-w-[150px] truncate">
+                        {sorts.find((s) => s.value === currentSort)?.label || "SORT"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="end">
+                <Command>
+                    <CommandList>
+                        <CommandGroup>
+                            {sorts.map((sort) => (
+                                <CommandItem
+                                    key={sort.value}
+                                    value={sort.label}
+                                    onSelect={() => {
+                                        onSelect(sort.value)
+                                        setOpen(false)
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            currentSort === sort.value ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {sort.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
     )
 }

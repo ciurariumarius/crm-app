@@ -1,8 +1,9 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from "react"
+import React, { createContext, useContext, useState, useEffect, useRef } from "react"
 import { startTimer as serverStartTimer, stopTimer as serverStopTimer, pauseTimer as serverPauseTimer, resumeTimer as serverResumeTimer } from "@/lib/actions"
 import { toast } from "sonner"
+import { useIdle } from "react-use"
 
 type TimerState = {
     isRunning: boolean
@@ -23,8 +24,14 @@ type TimerContextType = {
 
 const TimerContext = createContext<TimerContextType | undefined>(undefined)
 
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
+const HARD_CAP_SECONDS = 3 * 3600 // 3 hours
+const REMINDER_INTERVAL_SECONDS = 3600 // 1 hour
+
 export function TimerProvider({ children, initialActiveTimer }: { children: React.ReactNode, initialActiveTimer?: any }) {
+    const isIdle = useIdle(IDLE_TIMEOUT_MS / 1000) // react-use takes seconds
     const [timerState, setTimerState] = useState<TimerState>(() => {
+        // Hydrate from initial server state (if available)
         if (initialActiveTimer) {
             const isRunning = initialActiveTimer.status === "running"
             const startTime = initialActiveTimer.startTime ? new Date(initialActiveTimer.startTime).getTime() : null
@@ -38,8 +45,8 @@ export function TimerProvider({ children, initialActiveTimer }: { children: Reac
 
             return {
                 isRunning,
-                startTime,
-                elapsedSeconds,
+                startTime: startTime,
+                elapsedSeconds: elapsedSeconds,
                 projectId: initialActiveTimer.projectId,
                 taskId: initialActiveTimer.taskId,
                 description: initialActiveTimer.description || initialActiveTimer.task?.name || initialActiveTimer.project?.name || null,
@@ -56,6 +63,80 @@ export function TimerProvider({ children, initialActiveTimer }: { children: Reac
         }
     })
 
+
+    // 1. Idle Detection Logic
+    useEffect(() => {
+        // Only trigger if running and the elapsed time since start > idle timeout
+        // This prevents immediate pause on page load if user is technically "idle" but just opened the page
+        if (timerState.isRunning && isIdle) {
+            pauseTimer()
+            toast.warning("Timer paused due to inactivity", {
+                description: "You were idle for 15 minutes. Click resume to continue tracking.",
+                action: {
+                    label: "Resume",
+                    onClick: () => resumeTimer()
+                },
+                duration: 10000 // Show for 10 seconds
+            })
+        }
+    }, [isIdle, timerState.isRunning])
+
+    // 2. Hard Cap & Hourly Reminders
+    useEffect(() => {
+        if (!timerState.isRunning) return
+
+        // Hard Cap
+        if (timerState.elapsedSeconds > HARD_CAP_SECONDS) {
+            stopTimer()
+            toast.error("Timer auto-stopped", {
+                description: "Timer limit of 3 hours reached.",
+                duration: Infinity
+            })
+
+            // Attempt to send browser notification for hard stop
+            if (Notification.permission === "granted") {
+                new Notification("Timer Stopped", {
+                    body: "Maximum duration of 3 hours reached.",
+                    icon: "/icon.png" // Optional
+                })
+            }
+        }
+
+        // Hourly Reminders
+        // Check if elapsed seconds is a multiple of REMINDER_INTERVAL_SECONDS (approximate trigger)
+        // We use a range or 'previous' check usually, but since this runs on state update which is every second, modulo is okay-ish
+        // BETTER: Store last reminded hour in a ref to avoid duplicate notifications
+    }, [timerState.elapsedSeconds, timerState.isRunning])
+
+    // Ref to track last reminded hour to prevent spamming
+    const lastRemindedHourRef = useRef<number>(0)
+
+    useEffect(() => {
+        if (!timerState.isRunning) {
+            lastRemindedHourRef.current = 0
+            return
+        }
+
+        const currentHour = Math.floor(timerState.elapsedSeconds / 3600)
+
+        if (currentHour > 0 && currentHour > lastRemindedHourRef.current) {
+            lastRemindedHourRef.current = currentHour
+
+            // Trigger Notification
+            toast.info(`Timer Running: ${currentHour}h`, {
+                description: "Just a reminder that your timer is still running.",
+                duration: 5000
+            })
+
+            if (Notification.permission === "granted") {
+                new Notification("Timer Update", {
+                    body: `You have been tracking time for ${currentHour} hour(s).`,
+                })
+            }
+        }
+    }, [timerState.elapsedSeconds, timerState.isRunning])
+
+
     // Tick
     useEffect(() => {
         let interval: NodeJS.Timeout
@@ -70,8 +151,15 @@ export function TimerProvider({ children, initialActiveTimer }: { children: Reac
         return () => clearInterval(interval)
     }, [timerState.isRunning])
 
+    // Request Notification Permission on Start
+    const requestNotificationPermission = () => {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission()
+        }
+    }
+
     const startTimer = async (projectId: string, taskId?: string, description?: string) => {
-        // Optimistic update
+        requestNotificationPermission()
         const newState = {
             isRunning: true,
             startTime: Date.now(),
@@ -81,12 +169,14 @@ export function TimerProvider({ children, initialActiveTimer }: { children: Reac
             description: description || null,
         }
         setTimerState(newState)
+        lastRemindedHourRef.current = 0
 
         try {
             const result = await serverStartTimer(projectId, taskId)
-            if (!result.success) {
+            if (result.success) {
+                toast.success("Timer started")
+            } else {
                 toast.error(result.error || "Failed to start timer")
-                // Rollback if needed, but usually we just want to stay consistent with server
             }
         } catch (error) {
             toast.error("An error occurred while starting the timer")
@@ -102,6 +192,7 @@ export function TimerProvider({ children, initialActiveTimer }: { children: Reac
             taskId: null,
             description: null,
         })
+        lastRemindedHourRef.current = 0
 
         try {
             const result = await serverStopTimer()
@@ -130,7 +221,7 @@ export function TimerProvider({ children, initialActiveTimer }: { children: Reac
     }
 
     const resumeTimer = async () => {
-        // Optimistic update
+        requestNotificationPermission()
         setTimerState((prev) => ({ ...prev, isRunning: true, startTime: Date.now() }))
         try {
             const result = await serverResumeTimer()

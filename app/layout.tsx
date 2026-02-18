@@ -63,9 +63,12 @@ export default async function RootLayout({
   const pendingTasks = JSON.parse(JSON.stringify(pendingTasksData))
 
   // Handle new activeTimer structure
-  const initialActiveTimer = activeTimerResult.success && activeTimerResult.data
+  // Handle new activeTimer structure
+  const rawActiveTimer = activeTimerResult.success && activeTimerResult.data
     ? { ...activeTimerResult.data, status: activeTimerResult.status }
     : null
+
+  const initialActiveTimer = rawActiveTimer ? JSON.parse(JSON.stringify(rawActiveTimer)) : null
 
   const activeProjects = projectsRaw.map((p: any) => ({
     id: p.id,

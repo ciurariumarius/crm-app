@@ -4,14 +4,20 @@ import * as React from "react"
 import { format } from "date-fns"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import { deleteTasks, updateTasksStatus, getProjectDetails } from "@/lib/actions"
+import { deleteTasks, updateTasksStatus, getProjectDetails, updateTask } from "@/lib/actions"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Calendar as CalendarIcon, Plus } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Calendar as CalendarIcon, Plus, CheckCircle2 } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 
 import { Sheet, SheetContent } from "@/components/ui/sheet"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 
@@ -166,14 +172,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                     const mins = Math.floor((totalSeconds % 3600) / 60)
                     const timeString = totalSeconds > 0 ? `${hours > 0 ? `${hours}h ` : ''}${mins}m` : "0m"
 
-                    // Partner Initials
-                    const partnerName = task.project.site.partner.name || "?"
-                    const partnerInitials = partnerName
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .join("")
-                        .substring(0, 2)
-                        .toUpperCase()
+
 
                     return (
                         <div
@@ -205,20 +204,79 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                 {/* Header: Urgency & Estimate */}
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="flex items-center gap-2">
-                                        <div className={cn(
-                                            "w-2 h-2 rounded-full",
-                                            task.urgency === "Urgent" ? "bg-rose-500" :
-                                                task.urgency === "Idea" ? "bg-indigo-500" :
-                                                    "bg-emerald-500"
-                                        )} />
-                                        <span className={cn(
-                                            "text-[11px] font-bold uppercase tracking-widest",
-                                            task.urgency === "Urgent" ? "text-rose-500" :
-                                                task.urgency === "Idea" ? "text-indigo-500" :
-                                                    "text-emerald-500"
-                                        )}>
-                                            {task.urgency || "NORMAL"}
-                                        </span>
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button className="flex items-center gap-2 hover:bg-muted/50 rounded-full px-2 py-1 transition-colors -ml-2">
+                                                        <div className={cn(
+                                                            "w-2 h-2 rounded-full",
+                                                            task.status === "Active" ? "bg-emerald-500" :
+                                                                task.status === "Paused" ? "bg-amber-500" :
+                                                                    "bg-blue-500"
+                                                        )} />
+                                                        <span className={cn(
+                                                            "text-[11px] font-bold uppercase tracking-widest",
+                                                            task.status === "Active" ? "text-emerald-500" :
+                                                                task.status === "Paused" ? "text-amber-500" :
+                                                                    "text-blue-500"
+                                                        )}>
+                                                            {task.status || "ACTIVE"}
+                                                        </span>
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start">
+                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { status: "Active" })}>
+                                                        <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
+                                                        Active
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { status: "Paused" })}>
+                                                        <div className="w-2 h-2 rounded-full bg-amber-500 mr-2" />
+                                                        Paused
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { status: "Completed" })}>
+                                                        <div className="w-2 h-2 rounded-full bg-blue-500 mr-2" />
+                                                        Completed
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button className="flex items-center gap-2 hover:bg-muted/50 rounded-full px-2 py-1 transition-colors">
+                                                        <div className={cn(
+                                                            "w-1.5 h-1.5 rounded-full ring-1 ring-offset-1",
+                                                            task.urgency === "Urgent" ? "bg-rose-500 ring-rose-500" :
+                                                                task.urgency === "Idea" ? "bg-indigo-500 ring-indigo-500" :
+                                                                    "bg-muted-foreground/30 ring-muted-foreground/30"
+                                                        )} />
+                                                        <span className={cn(
+                                                            "text-[10px] font-black uppercase tracking-widest opacity-70",
+                                                            task.urgency === "Urgent" ? "text-rose-500 opacity-100" :
+                                                                task.urgency === "Idea" ? "text-indigo-500 opacity-100" :
+                                                                    "text-muted-foreground"
+                                                        )}>
+                                                            {task.urgency || "NORMAL"}
+                                                        </span>
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start">
+                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Normal" })}>
+                                                        <div className="w-2 h-2 rounded-full bg-muted-foreground/30 mr-2" />
+                                                        Normal
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Urgent" })}>
+                                                        <div className="w-2 h-2 rounded-full bg-rose-500 mr-2" />
+                                                        Urgent
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Idea" })}>
+                                                        <div className="w-2 h-2 rounded-full bg-indigo-500 mr-2" />
+                                                        Idea
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </div>
 
                                     {task.estimatedMinutes && (
@@ -257,8 +315,8 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                             {/* Footer */}
                             <div className="flex items-end justify-between mt-10">
                                 <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center text-[10px] font-black text-muted-foreground/70 uppercase">
-                                        {partnerInitials}
+                                    <div className="h-8 rounded-full bg-muted/50 flex items-center justify-center px-3 text-[10px] font-black text-muted-foreground/70 uppercase">
+                                        {format(new Date(task.createdAt), "MMM dd, yyyy")}
                                     </div>
                                     {/* Play Button (Hover only) */}
                                     <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-[-10px] group-hover:translate-x-0 gap-2">
@@ -291,6 +349,17 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                             title="Log Time Manually"
                                         >
                                             <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                        </button>
+                                        <button
+                                            className="h-8 w-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center transition-all hover:scale-110 hover:bg-emerald-500 hover:text-white shadow-sm"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                updateTask(task.id, { status: "Completed" })
+                                                toast.success("Task marked as completed")
+                                            }}
+                                            title="Mark as Completed"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" strokeWidth={2.5} />
                                         </button>
                                     </div>
                                 </div>
