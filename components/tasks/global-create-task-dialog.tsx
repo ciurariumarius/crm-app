@@ -88,7 +88,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
+            <DialogContent className="w-[95vw] sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
                 <DialogHeader className="p-8 pb-5 border-b">
                     <DialogTitle className="text-2xl font-bold tracking-tight">Add New Task</DialogTitle>
                 </DialogHeader>
@@ -174,7 +174,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-3">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">03. Status</Label>
                                 <Select value={status} onValueChange={setStatus}>
@@ -203,7 +203,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-3 flex flex-col">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">05. Deadline</Label>
                                 <Popover open={openPopover} onOpenChange={setOpenPopover}>

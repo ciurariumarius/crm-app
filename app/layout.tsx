@@ -110,7 +110,7 @@ export default async function RootLayout({
                   initialActiveTimer={initialActiveTimer}
                   pendingTasks={pendingTasks}
                 />
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-4 md:pt-4 transition-all duration-300">
+                <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-4 md:pt-4 pb-24 md:pb-8 transition-all duration-300">
                   {children}
                 </main>
               </div>

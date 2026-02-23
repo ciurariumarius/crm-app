@@ -71,7 +71,7 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
     }
 
     return (
-        <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-8 gap-4 sticky top-0 z-30">
+        <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between pl-14 md:pl-8 pr-4 md:pr-8 gap-4 sticky top-0 z-30">
             {/* Left: Breadcrumbs */}
             <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-none md:w-1/3">
                 <div className="flex items-center text-sm font-medium text-muted-foreground/60 w-full overflow-hidden whitespace-nowrap mask-linear-fade">
@@ -148,9 +148,9 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
                                         onClick={handlePauseTimer}
                                         title="Pause Timer"
                                     >
-                                        <div className="flex flex-col items-start min-w-[60px]">
-                                            <span className="text-[9px] uppercase font-bold tracking-tighter opacity-60 leading-none">Running</span>
-                                            <span className="font-mono font-bold text-xs leading-none" suppressHydrationWarning>
+                                        <div className="flex flex-col items-start min-w-[40px] md:min-w-[60px]">
+                                            <span className="hidden md:inline text-[9px] uppercase font-bold tracking-tighter opacity-60 leading-none">Running</span>
+                                            <span className="font-mono font-bold text-xs md:text-sm leading-none" suppressHydrationWarning>
                                                 {formatTimer(timerState.elapsedSeconds)}
                                             </span>
                                         </div>

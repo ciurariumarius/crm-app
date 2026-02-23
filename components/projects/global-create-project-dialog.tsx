@@ -187,7 +187,7 @@ export function GlobalCreateProjectDialog({
                     {trigger}
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
+            <DialogContent className="w-[95vw] sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
                 <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
                     <DialogHeader className="p-8 pb-5 border-b">
                         <DialogTitle className="text-2xl flex items-center gap-3 font-bold tracking-tight">
@@ -341,7 +341,7 @@ export function GlobalCreateProjectDialog({
 
                                 {selectedServiceIds.length > 0 && (
                                     <div className="space-y-4 pt-4 border-t border-dashed animate-in zoom-in-95 duration-200">
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="fee" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Total Fee (RON)</Label>
                                                 <div className="relative">
@@ -365,7 +365,7 @@ export function GlobalCreateProjectDialog({
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-3 pt-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                                             <button
                                                 type="button"
                                                 onClick={() => setIsCompleted(!isCompleted)}

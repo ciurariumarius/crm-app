@@ -397,7 +397,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                     {/* CONTEXT & ASSETS */}
                     <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Context & Assets</label>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <Link
                                 href={`/vault/${project.site.partner.id}`}
                                 className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
@@ -421,7 +421,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                             </Link>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-2 shadow-sm">
                                 <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider px-1">GTM Identifier</div>
                                 <div className="font-mono text-[10px] font-bold text-muted-foreground/80 bg-muted/50 p-1.5 rounded-lg border border-border text-center overflow-hidden text-ellipsis">{project.site.gtmId || "NOT DEFINED"}</div>

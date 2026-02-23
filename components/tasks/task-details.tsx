@@ -312,7 +312,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                     {/* Status & Deadline Row */}
 
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-3">
                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Deadline Tracking</label>
                             <Popover>
