@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic"
 export default async function TasksPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string; urgency?: string }>
+    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string; urgency?: string; sort?: string }>
 }) {
     const params = await searchParams
     const q = params.q
@@ -22,6 +22,7 @@ export default async function TasksPage({
     const partnerId = params.partnerId
     const projectId = params.projectId
     const urgencyFilter = params.urgency || "all"
+    const sort = params.sort || "newest"
 
     // Fetch all tasks with project and partner info for metrics and filtering
     const allTasksPromise = prisma.task.findMany({
@@ -108,10 +109,21 @@ export default async function TasksPage({
         }
 
         return true
+    }).sort((a: any, b: any) => {
+        if (sort === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        if (sort === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        if (sort === "updated") return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        if (sort === "name_asc") return a.name.localeCompare(b.name)
+        if (sort === "name_desc") return b.name.localeCompare(a.name)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
 
     // Serialize to plain object
     const serializedTasks = JSON.parse(JSON.stringify(filteredTasks))
+
+    // Extract unique partners and projects for filters
+    const partnersList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.site.partner.id, name: t.project.site.partner.name })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
+    const projectsList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.id, name: formatProjectName(t.project) })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
 
     return (
         <div className="space-y-6">
@@ -129,23 +141,15 @@ export default async function TasksPage({
                 <CreateTaskButton projects={activeProjects} />
             </div>
 
-            {/* Extract unique partners and projects for filters */}
-            {(() => {
-                const partnersList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.site.partner.id, name: t.project.site.partner.name })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
-                const projectsList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.id, name: formatProjectName(t.project) })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
-
-                return (
-                    <div className="space-y-4">
-                        <TasksToolbar partners={partnersList} projects={projectsList} />
-                        <TasksCardView
-                            tasks={serializedTasks}
-                            allServices={allServices}
-                            initialActiveTimer={initialActiveTimer}
-                            projects={activeProjects}
-                        />
-                    </div>
-                )
-            })()}
+            <div className="space-y-4">
+                <TasksToolbar partners={partnersList} projects={projectsList} />
+                <TasksCardView
+                    tasks={serializedTasks}
+                    allServices={allServices}
+                    initialActiveTimer={initialActiveTimer}
+                    projects={activeProjects}
+                />
+            </div>
         </div>
     )
 }

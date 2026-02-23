@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
     Select,
     SelectContent,
@@ -353,10 +354,9 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         <div className="flex items-center justify-between">
                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description / Technical Notes</label>
                         </div>
-                        <Textarea
+                        <RichTextEditor
                             value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="min-h-[250px] bg-muted/30 border-none shadow-none focus-visible:ring-primary/20 text-sm font-medium resize-none leading-relaxed p-4 rounded-xl"
+                            onChange={setDescription}
                             placeholder="Add details, technical requirements, or SOP references..."
                         />
                     </div>

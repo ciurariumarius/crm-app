@@ -150,7 +150,7 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
                                     >
                                         <div className="flex flex-col items-start min-w-[60px]">
                                             <span className="text-[9px] uppercase font-bold tracking-tighter opacity-60 leading-none">Running</span>
-                                            <span className="font-mono font-bold text-xs leading-none">
+                                            <span className="font-mono font-bold text-xs leading-none" suppressHydrationWarning>
                                                 {formatTimer(timerState.elapsedSeconds)}
                                             </span>
                                         </div>
