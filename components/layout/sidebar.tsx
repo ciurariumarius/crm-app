@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ThemeToggle } from "@/components/layout/theme-toggle"
+
 
 export function Sidebar() {
     const pathname = usePathname()
@@ -135,7 +135,7 @@ export function Sidebar() {
                             {isPPCOpen && ppcItems.map(renderMobileLink)}
                         </nav>
                         <div className="p-6 border-t border-border">
-                            <ThemeToggle />
+
                         </div>
                     </div>
                 </SheetContent>
@@ -209,7 +209,7 @@ export function Sidebar() {
                     </nav>
 
                     <div className="mt-auto flex flex-col items-center gap-4 pb-4">
-                        <ThemeToggle />
+
                         <Avatar className="h-8 w-8 border border-border cursor-pointer hover:ring-2 ring-primary/20 transition-all">
                             <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold">ML</AvatarFallback>
                         </Avatar>
