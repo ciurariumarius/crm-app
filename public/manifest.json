@@ -1,0 +1,21 @@
+{
+    "name": "Pixelist CRM",
+    "short_name": "Pixelist",
+    "description": "Personal CRM & Time-Tracker",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F5F5F7",
+    "theme_color": "#0D9488",
+    "icons": [
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

@@ -304,93 +304,95 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
     return (
         <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                <Table>
-                    {renderHeader()}
-                    <TableBody>
-                        {/* Recurring Group */}
-                        {recurringProjects.length > 0 && (
-                            <>
-                                <TableRow className="bg-indigo-50/40 hover:bg-indigo-50/40 border-y border-indigo-100/50 pointer-events-none sticky top-0 z-10 backdrop-blur-sm">
-                                    <TableCell colSpan={9} className="py-3 px-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-sm" />
-                                            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-indigo-700">Monthly Projects</span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                                {recurringProjects.map(renderProjectRow)}
-                                <TableRow
-                                    className="group hover:bg-muted/10 border-b border-dashed border-border/60 transition-colors cursor-pointer"
-                                    onClick={() => setCreateProjectOpen(true)}
-                                >
-                                    <TableCell colSpan={9} className="py-2.5 text-center">
-                                        <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary transition-colors">
-                                            <Plus className="h-3 w-3" />
-                                            Add New Recurring Project
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            </>
-                        )}
+                <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+                    <Table>
+                        {renderHeader()}
+                        <TableBody>
+                            {/* Recurring Group */}
+                            {recurringProjects.length > 0 && (
+                                <>
+                                    <TableRow className="bg-indigo-50/40 hover:bg-indigo-50/40 border-y border-indigo-100/50 pointer-events-none sticky top-0 z-10 backdrop-blur-sm">
+                                        <TableCell colSpan={9} className="py-3 px-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-sm" />
+                                                <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-indigo-700">Monthly Projects</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                    {recurringProjects.map(renderProjectRow)}
+                                    <TableRow
+                                        className="group hover:bg-muted/10 border-b border-dashed border-border/60 transition-colors cursor-pointer"
+                                        onClick={() => setCreateProjectOpen(true)}
+                                    >
+                                        <TableCell colSpan={9} className="py-2.5 text-center">
+                                            <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary transition-colors">
+                                                <Plus className="h-3 w-3" />
+                                                Add New Recurring Project
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                </>
+                            )}
 
-                        {/* One-Time Group */}
-                        {oneTimeProjects.length > 0 && (
-                            <>
-                                <TableRow className="bg-slate-50/40 hover:bg-slate-50/40 border-y border-slate-100/50 pointer-events-none sticky top-0 z-10 backdrop-blur-sm">
-                                    <TableCell colSpan={9} className="py-3 px-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-slate-500 shadow-sm" />
-                                            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-700">One Time Projects</span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                                {oneTimeProjects.map(renderProjectRow)}
-                                <TableRow
-                                    className="group hover:bg-muted/10 border-b border-dashed border-border/60 transition-colors cursor-pointer"
-                                    onClick={() => setCreateProjectOpen(true)}
-                                >
-                                    <TableCell colSpan={9} className="py-2.5 text-center">
-                                        <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary transition-colors">
-                                            <Plus className="h-3 w-3" />
-                                            Add New One-Time Project
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            </>
-                        )}
-                    </TableBody>
-                    {/* Table Footer with Summaries */}
-                    <tfoot className="bg-muted/40 font-bold border-t border-border">
-                        <TableRow className="hover:bg-muted/40">
-                            <TableCell colSpan={4} className="pl-6 h-12 text-[11px] uppercase tracking-wider text-muted-foreground">
-                                Total: {projects.length} Projects
-                            </TableCell>
-                            <TableCell className="h-12">
-                                <span className="text-[11px] font-mono text-foreground/80">
-                                    {projects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString()} <span className="text-[9px] text-muted-foreground">RON</span>
-                                </span>
-                            </TableCell>
-                            <TableCell className="h-12">
-                                <div className="flex items-center gap-1.5 text-[11px] font-mono text-foreground/80">
-                                    <Clock className="h-3 w-3 opacity-50" />
-                                    {(() => {
-                                        const totalSeconds = projects.reduce((acc, p) => {
-                                            const projectSeconds = p.tasks?.reduce((tAcc: number, t: any) => {
-                                                const taskSeconds = t.timeLogs?.reduce((lAcc: number, l: any) => lAcc + (l.durationSeconds || 0), 0) || 0
-                                                return tAcc + taskSeconds
-                                            }, 0) || 0
-                                            return acc + projectSeconds
-                                        }, 0)
-                                        const h = Math.floor(totalSeconds / 3600)
-                                        const m = Math.floor((totalSeconds % 3600) / 60)
-                                        return `${h}h ${m}m`
-                                    })()}
-                                </div>
-                            </TableCell>
-                            <TableCell colSpan={2} />
-                        </TableRow>
-                    </tfoot>
-                </Table>
+                            {/* One-Time Group */}
+                            {oneTimeProjects.length > 0 && (
+                                <>
+                                    <TableRow className="bg-slate-50/40 hover:bg-slate-50/40 border-y border-slate-100/50 pointer-events-none sticky top-0 z-10 backdrop-blur-sm">
+                                        <TableCell colSpan={9} className="py-3 px-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-slate-500 shadow-sm" />
+                                                <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-700">One Time Projects</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                    {oneTimeProjects.map(renderProjectRow)}
+                                    <TableRow
+                                        className="group hover:bg-muted/10 border-b border-dashed border-border/60 transition-colors cursor-pointer"
+                                        onClick={() => setCreateProjectOpen(true)}
+                                    >
+                                        <TableCell colSpan={9} className="py-2.5 text-center">
+                                            <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary transition-colors">
+                                                <Plus className="h-3 w-3" />
+                                                Add New One-Time Project
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                </>
+                            )}
+                        </TableBody>
+                        {/* Table Footer with Summaries */}
+                        <tfoot className="bg-muted/40 font-bold border-t border-border">
+                            <TableRow className="hover:bg-muted/40">
+                                <TableCell colSpan={4} className="pl-6 h-12 text-[11px] uppercase tracking-wider text-muted-foreground">
+                                    Total: {projects.length} Projects
+                                </TableCell>
+                                <TableCell className="h-12">
+                                    <span className="text-[11px] font-mono text-foreground/80">
+                                        {projects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString()} <span className="text-[9px] text-muted-foreground">RON</span>
+                                    </span>
+                                </TableCell>
+                                <TableCell className="h-12">
+                                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-foreground/80">
+                                        <Clock className="h-3 w-3 opacity-50" />
+                                        {(() => {
+                                            const totalSeconds = projects.reduce((acc, p) => {
+                                                const projectSeconds = p.tasks?.reduce((tAcc: number, t: any) => {
+                                                    const taskSeconds = t.timeLogs?.reduce((lAcc: number, l: any) => lAcc + (l.durationSeconds || 0), 0) || 0
+                                                    return tAcc + taskSeconds
+                                                }, 0) || 0
+                                                return acc + projectSeconds
+                                            }, 0)
+                                            const h = Math.floor(totalSeconds / 3600)
+                                            const m = Math.floor((totalSeconds % 3600) / 60)
+                                            return `${h}h ${m}m`
+                                        })()}
+                                    </div>
+                                </TableCell>
+                                <TableCell colSpan={2} />
+                            </TableRow>
+                        </tfoot>
+                    </Table>
+                </div>
             </div>
 
             {/* Create Project Dialog */}

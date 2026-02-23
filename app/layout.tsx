@@ -12,15 +12,31 @@ const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
 })
 
+export const viewport: import("next").Viewport = {
+  themeColor: "#0D9488",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+}
+
 export const metadata: Metadata = {
   title: "Pixelist",
   description: "Personal CRM & Time-Tracker",
-  manifest: "/manifest.json", // Prepared for PWA
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Pixelist",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 }
 
 import { Toaster } from "@/components/ui/sonner"
 import { TopBar } from "@/components/layout/top-bar"
 import { HeaderProvider } from "@/components/layout/header-context"
+import { PWARegister } from "@/components/pwa-register"
 
 export default async function RootLayout({
   children,
@@ -100,6 +116,7 @@ export default async function RootLayout({
               </div>
               <GlobalTimer />
               <Toaster />
+              <PWARegister />
             </div>
           </HeaderProvider>
         </Providers>

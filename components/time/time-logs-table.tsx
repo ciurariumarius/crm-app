@@ -183,176 +183,178 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
             )}
 
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                <Table>
-                    <TableHeader className="bg-muted/30">
-                        <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[40px] pl-4">
-                                <Checkbox
-                                    checked={selectedIds.length === logs.length && logs.length > 0}
-                                    onCheckedChange={toggleSelectAll}
-                                    aria-label="Select all"
-                                />
-                            </TableHead>
-                            <TableHead className="w-[120px] font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Time</TableHead>
-                            <TableHead className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Context</TableHead>
-                            <TableHead className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Description</TableHead>
-                            <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest text-muted-foreground pr-8">Duration</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {logs.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="h-64 text-center items-center justify-center text-muted-foreground">
-                                    <div className="flex flex-col items-center justify-center gap-4 py-12">
-                                        <div className="h-16 w-16 rounded-full bg-muted/30 flex items-center justify-center">
-                                            <Clock className="h-8 w-8 opacity-20" />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <p className="font-bold text-foreground">No time logs found</p>
-                                            <p className="text-sm">Start a timer or log time manually to see entries here.</p>
-                                        </div>
-                                    </div>
-                                </TableCell>
+                <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+                    <Table>
+                        <TableHeader className="bg-muted/30">
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="w-[40px] pl-4">
+                                    <Checkbox
+                                        checked={selectedIds.length === logs.length && logs.length > 0}
+                                        onCheckedChange={toggleSelectAll}
+                                        aria-label="Select all"
+                                    />
+                                </TableHead>
+                                <TableHead className="w-[120px] font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Time</TableHead>
+                                <TableHead className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Context</TableHead>
+                                <TableHead className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Description</TableHead>
+                                <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest text-muted-foreground pr-8">Duration</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
-                        ) : (
-                            sortedDates.map(dateKey => (
-                                <Fragment key={dateKey}>
-                                    {/* Date Header */}
-                                    <TableRow key={dateKey} className="bg-muted/50 hover:bg-muted/50 sticky top-0 z-10 backdrop-blur-sm supports-[backdrop-filter]:bg-muted/40">
-                                        <TableCell colSpan={6} className="py-2 px-4 shadow-sm border-b border-border/60">
-                                            <span className="font-bold text-xs uppercase tracking-wider text-foreground/80">
-                                                {isToday(new Date(dateKey)) ? "Today" : isYesterday(new Date(dateKey)) ? "Yesterday" : format(new Date(dateKey), "MMM d, yyyy")}
-                                            </span>
-                                        </TableCell>
-                                    </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {logs.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-64 text-center items-center justify-center text-muted-foreground">
+                                        <div className="flex flex-col items-center justify-center gap-4 py-12">
+                                            <div className="h-16 w-16 rounded-full bg-muted/30 flex items-center justify-center">
+                                                <Clock className="h-8 w-8 opacity-20" />
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <p className="font-bold text-foreground">No time logs found</p>
+                                                <p className="text-sm">Start a timer or log time manually to see entries here.</p>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                sortedDates.map(dateKey => (
+                                    <Fragment key={dateKey}>
+                                        {/* Date Header */}
+                                        <TableRow key={dateKey} className="bg-muted/50 hover:bg-muted/50 sticky top-0 z-10 backdrop-blur-sm supports-[backdrop-filter]:bg-muted/40">
+                                            <TableCell colSpan={6} className="py-2 px-4 shadow-sm border-b border-border/60">
+                                                <span className="font-bold text-xs uppercase tracking-wider text-foreground/80">
+                                                    {isToday(new Date(dateKey)) ? "Today" : isYesterday(new Date(dateKey)) ? "Yesterday" : format(new Date(dateKey), "MMM d, yyyy")}
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
 
-                                    {/* Rows for this date */}
-                                    {groupedLogs[dateKey].map((log) => {
-                                        const isSelected = selectedIds.includes(log.id)
-                                        const isRunning = !log.endTime
+                                        {/* Rows for this date */}
+                                        {groupedLogs[dateKey].map((log) => {
+                                            const isSelected = selectedIds.includes(log.id)
+                                            const isRunning = !log.endTime
 
-                                        return (
-                                            <TableRow
-                                                key={log.id}
-                                                className={cn(
-                                                    "cursor-pointer transition-all duration-200 group border-b border-border/50",
-                                                    isSelected ? "bg-primary/[0.03] select-none" : "hover:bg-muted/20",
-                                                    // Alternating row style could be added here if desired via css nth-child
-                                                )}
-                                                onClick={() => setSelectedLog(log)}
-                                            >
-                                                {/* Checkbox */}
-                                                <TableCell className="pl-4 w-[40px]" onClick={(e) => e.stopPropagation()}>
-                                                    <Checkbox
-                                                        checked={isSelected}
-                                                        onCheckedChange={() => {
-                                                            setSelectedIds(prev =>
-                                                                prev.includes(log.id) ? prev.filter(i => i !== log.id) : [...prev, log.id]
-                                                            )
-                                                        }}
-                                                    />
-                                                </TableCell>
+                                            return (
+                                                <TableRow
+                                                    key={log.id}
+                                                    className={cn(
+                                                        "cursor-pointer transition-all duration-200 group border-b border-border/50",
+                                                        isSelected ? "bg-primary/[0.03] select-none" : "hover:bg-muted/20",
+                                                        // Alternating row style could be added here if desired via css nth-child
+                                                    )}
+                                                    onClick={() => setSelectedLog(log)}
+                                                >
+                                                    {/* Checkbox */}
+                                                    <TableCell className="pl-4 w-[40px]" onClick={(e) => e.stopPropagation()}>
+                                                        <Checkbox
+                                                            checked={isSelected}
+                                                            onCheckedChange={() => {
+                                                                setSelectedIds(prev =>
+                                                                    prev.includes(log.id) ? prev.filter(i => i !== log.id) : [...prev, log.id]
+                                                                )
+                                                            }}
+                                                        />
+                                                    </TableCell>
 
-                                                {/* Time Range (Monospaced) */}
-                                                <TableCell className="w-[140px] font-mono text-xs text-muted-foreground">
-                                                    {format(new Date(log.startTime), "HH:mm")} — {log.endTime ? format(new Date(log.endTime), "HH:mm") : "..."}
-                                                </TableCell>
+                                                    {/* Time Range (Monospaced) */}
+                                                    <TableCell className="w-[140px] font-mono text-xs text-muted-foreground">
+                                                        {format(new Date(log.startTime), "HH:mm")} — {log.endTime ? format(new Date(log.endTime), "HH:mm") : "..."}
+                                                    </TableCell>
 
-                                                {/* Context (Project + Task) */}
-                                                <TableCell>
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className="font-bold text-sm text-blue-600 hover:underline dark:text-blue-400 transition-colors" title={formatProjectName(log.project)}>
-                                                            {formatProjectName(log.project)}
-                                                        </span>
-                                                        {log.task ? (
-                                                            <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
-                                                                <CheckSquare className="h-3 w-3 opacity-70" />
-                                                                <span className="truncate max-w-[250px]">{log.task.name}</span>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-xs text-slate-400 italic">No task</span>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-
-                                                {/* Description - Editable */}
-                                                <TableCell className="max-w-[300px]" title={log.description || ""} onClick={(e) => e.stopPropagation()}>
-                                                    <InlineTextEdit
-                                                        value={log.description || ""}
-                                                        logId={log.id}
-                                                        placeholder="—"
-                                                    />
-                                                </TableCell>
-
-                                                {/* Duration & Source */}
-                                                <TableCell className="text-right pr-8" onClick={(e) => e.stopPropagation()}>
-                                                    <div className="flex items-center justify-end gap-3">
-                                                        {/* Source Indicator */}
-                                                        <div className={cn(
-                                                            "h-1.5 w-1.5 rounded-full shrink-0",
-                                                            log.source === "TIMER" ? "bg-emerald-400" : "bg-slate-300"
-                                                        )} title={log.source === "TIMER" ? "Tracked via Timer" : "Manually Logged"} />
-
-                                                        {/* Duration - Editable if not running */}
-                                                        <div className={cn(
-                                                            "font-mono text-sm font-bold tracking-tight min-w-[60px]",
-                                                            isRunning ? "text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-2" : "text-foreground"
-                                                        )}>
-                                                            {isRunning ? (
-                                                                <>
-                                                                    <span className="relative flex h-2 w-2">
-                                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                                    </span>
-                                                                    Running
-                                                                </>
+                                                    {/* Context (Project + Task) */}
+                                                    <TableCell>
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="font-bold text-sm text-blue-600 hover:underline dark:text-blue-400 transition-colors" title={formatProjectName(log.project)}>
+                                                                {formatProjectName(log.project)}
+                                                            </span>
+                                                            {log.task ? (
+                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                                                                    <CheckSquare className="h-3 w-3 opacity-70" />
+                                                                    <span className="truncate max-w-[250px]">{log.task.name}</span>
+                                                                </div>
                                                             ) : (
-                                                                <InlineDurationEdit
-                                                                    seconds={log.durationSeconds}
-                                                                    logId={log.id}
-                                                                />
+                                                                <span className="text-xs text-slate-400 italic">No task</span>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                </TableCell>
+                                                    </TableCell>
 
-                                                {/* Quick Actions (On Hover) */}
-                                                <TableCell className="w-[50px]">
-                                                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {isRunning ? (
-                                                            <Button
-                                                                size="icon"
-                                                                variant="ghost"
-                                                                className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                                                                onClick={(e) => handleStopTimer(e, log.id)}
-                                                                disabled={isStopping === log.id}
-                                                                title="Stop Timer"
-                                                            >
-                                                                <Square className="h-3.5 w-3.5 fill-current" />
-                                                            </Button>
-                                                        ) : (
-                                                            // Resume / Duplicate (Simulated for now as it requires startTimer import which I will fix in next step)
-                                                            <Button
-                                                                size="icon"
-                                                                variant="ghost"
-                                                                className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
-                                                                onClick={(e) => handleResume(e, log)}
-                                                                title="Resume Timer"
-                                                            >
-                                                                <Play className="h-3.5 w-3.5 fill-current" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )
-                                    })}
-                                </Fragment>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                                                    {/* Description - Editable */}
+                                                    <TableCell className="max-w-[300px]" title={log.description || ""} onClick={(e) => e.stopPropagation()}>
+                                                        <InlineTextEdit
+                                                            value={log.description || ""}
+                                                            logId={log.id}
+                                                            placeholder="—"
+                                                        />
+                                                    </TableCell>
+
+                                                    {/* Duration & Source */}
+                                                    <TableCell className="text-right pr-8" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex items-center justify-end gap-3">
+                                                            {/* Source Indicator */}
+                                                            <div className={cn(
+                                                                "h-1.5 w-1.5 rounded-full shrink-0",
+                                                                log.source === "TIMER" ? "bg-emerald-400" : "bg-slate-300"
+                                                            )} title={log.source === "TIMER" ? "Tracked via Timer" : "Manually Logged"} />
+
+                                                            {/* Duration - Editable if not running */}
+                                                            <div className={cn(
+                                                                "font-mono text-sm font-bold tracking-tight min-w-[60px]",
+                                                                isRunning ? "text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-2" : "text-foreground"
+                                                            )}>
+                                                                {isRunning ? (
+                                                                    <>
+                                                                        <span className="relative flex h-2 w-2">
+                                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                                        </span>
+                                                                        Running
+                                                                    </>
+                                                                ) : (
+                                                                    <InlineDurationEdit
+                                                                        seconds={log.durationSeconds}
+                                                                        logId={log.id}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+
+                                                    {/* Quick Actions (On Hover) */}
+                                                    <TableCell className="w-[50px]">
+                                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {isRunning ? (
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                                                                    onClick={(e) => handleStopTimer(e, log.id)}
+                                                                    disabled={isStopping === log.id}
+                                                                    title="Stop Timer"
+                                                                >
+                                                                    <Square className="h-3.5 w-3.5 fill-current" />
+                                                                </Button>
+                                                            ) : (
+                                                                // Resume / Duplicate (Simulated for now as it requires startTimer import which I will fix in next step)
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
+                                                                    onClick={(e) => handleResume(e, log)}
+                                                                    title="Resume Timer"
+                                                                >
+                                                                    <Play className="h-3.5 w-3.5 fill-current" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </Fragment>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
 
             <TimeLogSheet
