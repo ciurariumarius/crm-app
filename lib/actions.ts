@@ -1,10 +1,13 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-// Force reload after schema update
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
+import { createSession, destroySession, getSession, encrypt, decrypt } from "@/lib/auth"
+import { checkRateLimit } from "@/lib/rate-limit"
 import { z } from "zod"
+import bcrypt from "bcryptjs"
+import * as OTPAuth from "otpauth"
 
 // Zod Schemas
 const CreateProjectSchema = z.object({
@@ -25,7 +28,7 @@ const UpdateProjectSchema = z.object({
     serviceIds: z.array(z.string().uuid()).optional(),
 })
 
-// Previous functions...
+
 export async function createPartner(data: {
     name: string
     isMainJob: boolean
@@ -104,7 +107,7 @@ export async function updateSiteDetails(siteId: string, data: {
         revalidatePath("/")
     } catch (error) {
         console.error("Update site details failed:", error)
-        throw new Error(error instanceof Error ? error.message : "Failed to update site")
+        return { success: false, error: error instanceof Error ? error.message : "Failed to update site" }
     }
 }
 
@@ -370,8 +373,7 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
         await requireAuth()
         const isCompleted = currentStatus === "Completed"
         const newStatus = isCompleted ? "Active" : "Completed"
-        const newIsCompleted = !isCompleted
-        // const newIsCompleted = !isCompleted // This line is no longer needed as isCompleted is derived from newStatus
+
 
         const task = await prisma.task.update({
             where: { id: taskId },
@@ -480,7 +482,7 @@ export async function logTime(data: {
             include: { project: { include: { site: true } } }
         })
         revalidatePath("/")
-        // revalidatePath("/reports") // if it existed
+
         revalidatePath("/time")
         revalidatePath("/tasks") // Add this
         revalidatePath(`/projects/${data.projectId}`)
@@ -580,7 +582,7 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
     }
 }
 
-export async function getTimeLogs(filters?: { projectId?: string, partnerId?: string, q?: string }) {
+export async function getTimeLogs(filters?: { projectId?: string, partnerId?: string, q?: string, take?: number, skip?: number }) {
     try {
         const where: any = {}
 
@@ -618,7 +620,9 @@ export async function getTimeLogs(filters?: { projectId?: string, partnerId?: st
             },
             orderBy: {
                 startTime: 'desc'
-            }
+            },
+            take: filters?.take || 100,
+            skip: filters?.skip || 0
         })
         return { success: true, data: logs }
     } catch (error) {
@@ -713,10 +717,11 @@ export async function startTimer(projectId: string, taskId?: string, description
             })
         }
 
-        // Also stop (clear paused flag) any paused timers so they don't linger forever
-        // Actually, if we start a NEW timer, the previous paused timer is effectively "abandoned" or just history.
-        // We can optionally explicitly update them, but it's not strictly necessary unless we want to enforce only 1 paused context.
-        // Let's leave them be for now. Users might want to check history.
+        // Clean up any lingering paused timers so they don't confuse getActiveTimer
+        await prisma.timeLog.updateMany({
+            where: { isPaused: true },
+            data: { isPaused: false }
+        })
 
         // Start new timer
         const log = await prisma.timeLog.create({
@@ -790,6 +795,7 @@ export async function stopTimer() {
 
 export async function pauseTimer() {
     try {
+        await requireAuth()
         const activeTimer = await prisma.timeLog.findFirst({
             where: { endTime: null }
         })
@@ -948,11 +954,6 @@ export async function getProjectDetails(projectId: string) {
 }
 
 // --- AUTHENTICATION ACTIONS ---
-
-import bcrypt from "bcryptjs";
-import { createSession, destroySession, getSession, encrypt, decrypt } from "./auth";
-import { checkRateLimit } from "./rate-limit";
-import * as OTPAuth from "otpauth";
 
 export async function loginUser(formData: FormData) {
     const data = Object.fromEntries(formData.entries())

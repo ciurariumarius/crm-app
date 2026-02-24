@@ -36,10 +36,10 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Handle 2FA requirement. 
-    // If they have 2FA enabled, but it's not verified in this session, 
-    // we need to bounce them to a 2FA prompt page (we will handle this within /login flow usually, but we can do a check here if we want)
-    // For now, if the auth is valid, let them in. The login flow itself will ensure twoFactorVerified is true.
+    // Enforce 2FA: if user has 2FA enabled but hasn't completed it, redirect to login
+    if (session.twoFactorVerified === false) {
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
 
     return NextResponse.next()
 }

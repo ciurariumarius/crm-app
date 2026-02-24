@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { DeleteProjectButton } from "@/components/projects/delete-project-button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { getProjectDisplayName } from "@/lib/project-utils"
+import { formatProjectName } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 

@@ -122,7 +122,7 @@ model TimeLog {
   createdAt       DateTime  @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  task    Task?   @relation(fields: [taskId], references: [id])
+  task    Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@map("time_logs")
 }

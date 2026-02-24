@@ -35,7 +35,6 @@ import { BulkActionsBar } from "@/components/projects/bulk-actions-bar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
-import { getProjectDisplayName } from "@/lib/project-utils"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 
 import {

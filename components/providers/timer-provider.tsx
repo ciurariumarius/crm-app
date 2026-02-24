@@ -29,7 +29,7 @@ const HARD_CAP_SECONDS = 3 * 3600 // 3 hours
 const REMINDER_INTERVAL_SECONDS = 3600 // 1 hour
 
 export function TimerProvider({ children, initialActiveTimer }: { children: React.ReactNode, initialActiveTimer?: any }) {
-    const isIdle = useIdle(IDLE_TIMEOUT_MS / 1000) // react-use takes seconds
+    const isIdle = useIdle(IDLE_TIMEOUT_MS) // react-use takes milliseconds
     const [timerState, setTimerState] = useState<TimerState>(() => {
         // Hydrate from initial server state (if available)
         if (initialActiveTimer) {

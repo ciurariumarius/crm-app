@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils"
 import { updateProject } from "@/lib/actions"
 import { toast } from "sonner"
 
-import { getProjectDisplayName } from "@/lib/project-utils"
+import { formatProjectName } from "@/lib/utils"
 import { ProjectWithDetails } from "@/types"
 import { Service, Site } from "@prisma/client"
 
@@ -66,7 +66,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
     // Sync localName
     React.useEffect(() => {
         if (project) {
-            setLocalName(project.name || getProjectDisplayName(project))
+            setLocalName(project.name || formatProjectName(project))
         }
     }, [project])
 
@@ -152,7 +152,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                                             rows={1}
                                             autoFocus
                                             onBlur={() => {
-                                                if (localName !== (project.name || getProjectDisplayName(project))) {
+                                                if (localName !== (project.name || formatProjectName(project))) {
                                                     handleUpdate({ name: localName })
                                                 }
                                                 setIsEditingTitle(false)
@@ -165,13 +165,13 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' && !e.shiftKey) {
                                                     e.preventDefault()
-                                                    if (localName !== (project.name || getProjectDisplayName(project))) {
+                                                    if (localName !== (project.name || formatProjectName(project))) {
                                                         handleUpdate({ name: localName })
                                                     }
                                                     setIsEditingTitle(false)
                                                 }
                                                 if (e.key === 'Escape') {
-                                                    setLocalName(project.name || getProjectDisplayName(project))
+                                                    setLocalName(project.name || formatProjectName(project))
                                                     setIsEditingTitle(false)
                                                 }
                                             }}
@@ -179,7 +179,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                                     ) : (
                                         <div className="flex items-center gap-3">
                                             <span className="text-2xl md:text-3xl font-black tracking-tight leading-tight">
-                                                {localName || getProjectDisplayName(project)}
+                                                {localName || formatProjectName(project)}
                                             </span>
                                             <Button
                                                 variant="ghost"

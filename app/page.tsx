@@ -26,100 +26,75 @@ export default async function Home() {
     })
   }
 
-  // Fetch active projects and unpaid completed projects
-  const activeProjects = await prisma.project.findMany({
-    where: {
-      OR: [
-        { status: "Active" },
-        { paymentStatus: "Unpaid" }
-      ]
-    },
-    orderBy: { updatedAt: "desc" },
-    include: {
-      services: true,
-      site: {
-        include: {
-          partner: true,
-        },
-      },
-      timeLogs: {
-        where: {
-          startTime: {
-            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-          }
-        }
-      },
-      _count: {
-        select: {
-          tasks: { where: { isCompleted: true } },
-        }
-      },
-      tasks: true
-    },
-  })
-
-  // Calculate Month Metrics
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  const timeLogsThisMonth = await prisma.timeLog.aggregate({
-    _sum: {
-      durationSeconds: true
-    },
-    where: {
-      startTime: {
-        gte: startOfMonth
-      }
-    }
-  })
 
-  // Recent Projects for QuickStart
-  const recentProjects = await prisma.project.findMany({
-    take: 4,
-    orderBy: { updatedAt: "desc" },
-    include: {
-      services: true,
-      site: { include: { partner: true } },
-    },
-  })
-
-  // Today's Work: Urgent + Overdue + Today
-  const upcomingTasks = await prisma.task.findMany({
-    where: {
-      status: { not: 'Completed' },
-      OR: [
-        { urgency: 'Urgent' },
-        { deadline: { lte: new Date(new Date().setHours(23, 59, 59, 999)) } }
-      ]
-    },
-    orderBy: [
-      { urgency: 'desc' }, // Urgent first
-      { deadline: 'asc' }  // Overdue first
-    ],
-    take: 20,
-    include: {
-      project: {
-        include: {
-          site: { include: { partner: true } },
-          services: true
-        }
+  // Run all independent queries in parallel
+  const [activeProjects, timeLogsThisMonth, recentProjects, upcomingTasks, partners, services] = await Promise.all([
+    // Active + unpaid projects
+    prisma.project.findMany({
+      where: {
+        OR: [
+          { status: "Active" },
+          { paymentStatus: "Unpaid" }
+        ]
       },
-      timeLogs: {
-        select: {
-          durationSeconds: true
-        }
+      orderBy: { updatedAt: "desc" },
+      include: {
+        services: true,
+        site: { include: { partner: true } },
+        timeLogs: { where: { startTime: { gte: startOfMonth } } },
+        _count: { select: { tasks: { where: { isCompleted: true } } } },
+        tasks: true
+      },
+    }),
+    // Monthly time aggregate
+    prisma.timeLog.aggregate({
+      _sum: { durationSeconds: true },
+      where: { startTime: { gte: startOfMonth } }
+    }),
+    // Recent projects
+    prisma.project.findMany({
+      take: 4,
+      orderBy: { updatedAt: "desc" },
+      include: {
+        services: true,
+        site: { include: { partner: true } },
+      },
+    }),
+    // Upcoming tasks
+    prisma.task.findMany({
+      where: {
+        status: { not: 'Completed' },
+        OR: [
+          { urgency: 'Urgent' },
+          { deadline: { lte: new Date(new Date().setHours(23, 59, 59, 999)) } }
+        ]
+      },
+      orderBy: [
+        { urgency: 'desc' },
+        { deadline: 'asc' }
+      ],
+      take: 20,
+      include: {
+        project: {
+          include: {
+            site: { include: { partner: true } },
+            services: true
+          }
+        },
+        timeLogs: { select: { durationSeconds: true } }
       }
-    }
-  })
+    }),
+    // Partners
+    prisma.partner.findMany({
+      include: { sites: { select: { id: true, domainName: true } } },
+      orderBy: { name: "asc" }
+    }),
+    // Services
+    prisma.service.findMany({ orderBy: { serviceName: "asc" } })
+  ])
 
-  // Calculate Metrics
   const metrics = calculateDashboardMetrics(activeProjects, timeLogsThisMonth, recentProjects)
-
-  // Data for QuickActions
-  const partners = await prisma.partner.findMany({
-    include: { sites: { select: { id: true, domainName: true } } },
-    orderBy: { name: "asc" }
-  })
-  const services = await prisma.service.findMany({ orderBy: { serviceName: "asc" } })
-
   const formattedPartners = JSON.parse(JSON.stringify(partners))
   const formattedServices = JSON.parse(JSON.stringify(services))
 
@@ -147,7 +122,6 @@ export default async function Home() {
             formattedRevenue={metrics.formattedRevenue}
             revenueBreakdown={metrics.revenueBreakdown}
             revenueByPartner={metrics.revenueByPartner}
-            mom="+12%"
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

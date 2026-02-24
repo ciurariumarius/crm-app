@@ -141,8 +141,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
         }
     }
 
-    // Since I cannot import startTimer inside the component easily if I didn't verify it was exported correctly to be used here.
-    // I see `stopTimer` is imported. I will add `startTimer` and `updateTimeLog` to imports.
+
 
     return (
         <div className="relative">
