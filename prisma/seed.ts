@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
+import bcrypt from "bcryptjs"
 
 const filename = process.env.DATABASE_URL?.replace("file:", "") || "dev.db"
 const adapter = new PrismaBetterSqlite3({ url: filename })
@@ -7,6 +8,18 @@ const prisma = new PrismaClient({ adapter })
 
 async function main() {
     console.log("🚀 Custom Seed Runner...")
+
+    // 0. Create Auth User
+    const passwordHash = await bcrypt.hash("Marius123", 10)
+    await prisma.user.upsert({
+        where: { username: "mxa95" },
+        update: {},
+        create: {
+            username: "mxa95",
+            passwordHash,
+            twoFactorEnabled: false
+        }
+    })
 
     // 1. Create Partners
     const lms = await prisma.partner.upsert({

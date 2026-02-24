@@ -922,3 +922,129 @@ export async function getProjectDetails(projectId: string) {
         return { success: false, error: "Failed to fetch project details" }
     }
 }
+
+// --- AUTHENTICATION ACTIONS ---
+
+import bcrypt from "bcryptjs";
+import { createSession, destroySession, getSession } from "./auth";
+import * as speakeasy from "speakeasy";
+
+export async function loginUser(formData: FormData) {
+    const data = Object.fromEntries(formData.entries())
+    const username = data.username as string
+    const password = data.password as string
+
+    if (!username || !password) {
+        return { success: false, error: "Username and password required" }
+    }
+
+    try {
+        const user = await prisma.user.findUnique({ where: { username } })
+        if (!user) {
+            return { success: false, error: "Invalid credentials" }
+        }
+
+        const isValid = await bcrypt.compare(password, user.passwordHash)
+        if (!isValid) {
+            return { success: false, error: "Invalid credentials" }
+        }
+
+        if (user.twoFactorEnabled) {
+            return { success: true, requiresTwoFactor: true, userId: user.id }
+        }
+
+        await createSession(user.id, user.username, false)
+        return { success: true }
+
+    } catch (e: any) {
+        return { success: false, error: "Login failed" }
+    }
+}
+
+export async function verifyTwoFactor(userId: string, token: string) {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: userId } })
+        if (!user || !user.twoFactorSecret) {
+            return { success: false, error: "Invalid user or 2FA not set up" }
+        }
+
+        const isValid = speakeasy.totp.verify({ token, secret: user.twoFactorSecret, encoding: 'base32' })
+
+        if (!isValid) {
+            return { success: false, error: "Invalid authenticator code" }
+        }
+
+        await createSession(user.id, user.username, true)
+        return { success: true }
+    } catch (e: any) {
+        return { success: false, error: "Verification failed" }
+    }
+}
+
+export async function logoutUser() {
+    await destroySession()
+    return { success: true }
+}
+
+export async function changePassword(formData: FormData) {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
+    const currentPassword = formData.get("currentPassword") as string;
+    const newPassword = formData.get("newPassword") as string;
+
+    const user = await prisma.user.findUnique({ where: { id: session.userId } });
+    if (!user) return { success: false, error: "User not found" };
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) return { success: false, error: "Incorrect current password" };
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash }
+    });
+
+    return { success: true };
+}
+
+export async function generateTwoFactorSecret() {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
+    const user = await prisma.user.findUnique({ where: { id: session.userId } });
+    if (!user) return { success: false, error: "User not found" };
+
+    const secret = speakeasy.generateSecret({ name: "Pixelist" });
+    const otpauth = secret.otpauth_url;
+
+    return { success: true, secret: secret.base32, otpauth };
+}
+
+export async function enableTwoFactor(token: string, secret: string) {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
+    const isValid = speakeasy.totp.verify({ token, secret, encoding: 'base32' });
+    if (!isValid) return { success: false, error: "Invalid code" };
+
+    await prisma.user.update({
+        where: { id: session.userId },
+        data: { twoFactorEnabled: true, twoFactorSecret: secret }
+    });
+
+    return { success: true };
+}
+
+export async function disableTwoFactor() {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Unauthorized" };
+
+    await prisma.user.update({
+        where: { id: session.userId },
+        data: { twoFactorEnabled: false, twoFactorSecret: null }
+    });
+
+    return { success: true };
+}
+
