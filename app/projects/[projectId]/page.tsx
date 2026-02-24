@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
-import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { DeleteProjectButton } from "@/components/projects/delete-project-button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -42,10 +41,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto">
-            <DetailedBreadcrumbs items={[
-                { label: "Projects", href: "/projects" },
-                { label: getProjectDisplayName(project) }
-            ]} />
 
             {/* Main Content Card mimicking the Sheet style */}
             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">

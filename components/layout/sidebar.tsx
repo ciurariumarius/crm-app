@@ -55,13 +55,13 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         { name: "Overview", href: "/", icon: LayoutDashboard },
         { name: "Projects", href: "/projects", icon: Briefcase },
         { name: "Tasks", href: "/tasks", icon: CheckSquare },
-        { name: "Time", href: "/time", icon: Clock },
     ]
 
     const vaultItems = [
         { name: "Partners", href: "/vault", icon: Briefcase },
         { name: "Sites", href: "/vault/sites", icon: Database },
         { name: "Services", href: "/services", icon: Briefcase },
+        { name: "Time Logs", href: "/time", icon: Clock },
     ]
 
     const ppcItems = [
@@ -117,8 +117,8 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-transparent"
                 )}
             >
-                <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "opacity-40")} strokeWidth={1.5} />
-                <span className={cn("tracking-tight transition-all", isActive ? "font-bold" : "font-medium opacity-60")}>
+                <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "opacity-40")} strokeWidth={isActive ? 2 : 1.5} />
+                <span className={cn("tracking-tight transition-all", isActive ? "font-bold" : "font-semibold opacity-80")}>
                     {item.name}
                 </span>
             </Link>

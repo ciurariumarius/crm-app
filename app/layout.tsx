@@ -35,7 +35,6 @@ export const metadata: Metadata = {
 }
 
 import { Toaster } from "@/components/ui/sonner"
-import { TopBar } from "@/components/layout/top-bar"
 import { HeaderProvider } from "@/components/layout/header-context"
 import { PWARegister } from "@/components/pwa-register"
 
@@ -123,15 +122,7 @@ export default async function RootLayout({
             <div className="flex h-screen overflow-hidden bg-background">
               <Sidebar user={user} />
               <div className="flex-1 flex flex-col min-w-0 md:ml-[70px] h-screen overflow-y-auto transition-all duration-300">
-                <TopBar
-                  partners={partners}
-                  services={services}
-                  activeTasksCount={activeTasksCount}
-                  activeProjects={activeProjects}
-                  initialActiveTimer={initialActiveTimer}
-                  pendingTasks={pendingTasks}
-                />
-                <main className="flex-1 p-4 md:p-8 pt-4 md:pt-4 pb-24 md:pb-8 transition-all duration-300">
+                <main className="flex-1 px-4 md:px-8 pt-4 md:pt-8 pb-24 md:pb-8 transition-all duration-300">
                   {children}
                 </main>
               </div>

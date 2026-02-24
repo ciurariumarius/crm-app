@@ -19,10 +19,11 @@ export function CreateProjectButton({ partners, services }: CreateProjectButtonP
         <div className="relative z-50">
             <Button
                 onClick={() => setOpen(true)}
-                className="flex items-center gap-3 font-black uppercase tracking-widest h-12 px-8 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all text-xs"
+                size="icon"
+                className="h-10 w-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center flex-shrink-0"
+                title="Add new project"
             >
-                <Plus className="h-4 w-4" />
-                Add new project
+                <Plus className="h-5 w-5" strokeWidth={2.5} />
             </Button>
             <GlobalCreateProjectDialog
                 open={open}

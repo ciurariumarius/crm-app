@@ -6,7 +6,6 @@ import { GlobalCreateProjectDialog } from "@/components/projects/global-create-p
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
-import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 
 export const dynamic = "force-dynamic"
 
@@ -54,11 +53,6 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
 
     return (
         <div className="space-y-8">
-            <DetailedBreadcrumbs items={[
-                { label: "Vault", href: "/vault" },
-                { label: site.partner.name, href: `/vault/${site.partnerId}` },
-                { label: site.domainName }
-            ]} />
             <SiteDetail site={site} />
 
             <div className="space-y-4">

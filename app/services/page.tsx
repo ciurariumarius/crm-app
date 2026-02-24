@@ -17,11 +17,11 @@ export default async function ServicesPage() {
     const services = JSON.parse(JSON.stringify(servicesRaw))
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">Services</h1>
-                </div>
+        <div className="flex flex-col gap-6">
+            <div className="flex h-10 items-center justify-between gap-4">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
+                    Services
+                </h1>
                 <CreateServiceDialog />
             </div>
 

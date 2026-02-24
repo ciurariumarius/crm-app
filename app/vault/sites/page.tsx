@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma"
 import { Globe, Search as SearchIcon, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
-import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 import { SitesTable } from "@/components/vault/sites-table"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -59,18 +58,11 @@ export default async function SitesPage({
     const totalPages = Math.ceil(totalSites / pageSize)
 
     return (
-        <div className="space-y-6 pb-20">
-            <DetailedBreadcrumbs items={[
-                { label: "Vault", href: "/vault" },
-                { label: "Sites" }
-            ]} />
-
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
-                        Asset Registry
-                    </h1>
-                </div>
+        <div className="flex flex-col gap-6 pb-20">
+            <div className="flex h-10 items-center justify-between gap-4">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
+                    Sites
+                </h1>
 
                 <div className="flex items-center gap-2">
                     <CreateSiteDialog partners={partners as any} />

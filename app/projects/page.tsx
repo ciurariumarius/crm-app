@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 import { formatDistanceToNow, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subYears } from "date-fns"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { ProjectsTable } from "@/components/projects/projects-table"
@@ -148,13 +147,9 @@ export default async function MasterProjectsPage({
     }
 
     return (
-        <div className="space-y-6">
-            <DetailedBreadcrumbs items={[
-                { label: "Projects" }
-            ]} />
-
-            <div className="flex items-center justify-between gap-4">
-                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
+        <div className="flex flex-col gap-6">
+            <div className="flex h-10 items-center justify-between gap-4">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
                     Projects
                 </h1>
                 <CreateProjectButton

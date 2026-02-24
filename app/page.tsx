@@ -10,10 +10,21 @@ import { GreetingHeader } from "@/components/dashboard/greeting-header"
 import { calculateDashboardMetrics } from "@/lib/dashboard-utils"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
+import { getSession } from "@/lib/auth"
+import { DashboardHeaderActions } from "@/components/dashboard/dashboard-header-actions"
 
 export const dynamic = "force-dynamic"
 
 export default async function Home() {
+  const session = await getSession()
+  let user: any = null
+  if (session) {
+    user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { name: true, username: true }
+    })
+  }
+
   // Fetch active projects and unpaid completed projects
   const activeProjects = await prisma.project.findMany({
     where: {
@@ -114,7 +125,17 @@ export default async function Home() {
   return (
     <ProjectSheetWrapper projects={JSON.parse(JSON.stringify(activeProjects))} allServices={formattedServices}>
       <TaskSheetWrapper tasks={JSON.parse(JSON.stringify(upcomingTasks))}>
-        <div className="space-y-8 pb-10">
+        <div className="flex flex-col gap-6 pb-10">
+          <div className="flex h-10 items-center justify-between gap-4">
+            <div className="pl-14 md:pl-0">
+              <GreetingHeader name={user?.name?.split(' ')[0] || user?.username || "Admin"} />
+            </div>
+            <DashboardHeaderActions
+              partners={formattedPartners}
+              services={formattedServices}
+              activeProjects={metrics.quickActionProjects}
+            />
+          </div>
 
           {/* Metric Cards - Premium Highlight - Primary Head-Up Display */}
           <FinancialStatusBar

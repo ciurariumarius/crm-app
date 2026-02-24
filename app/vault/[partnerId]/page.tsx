@@ -4,7 +4,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { ExternalLink, Globe, Plus } from "lucide-react"
-import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { SitesListView } from "@/components/vault/sites-list-view"
@@ -52,10 +51,6 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
 
     return (
         <div className="space-y-6">
-            <DetailedBreadcrumbs items={[
-                { label: "Vault", href: "/vault" },
-                { label: partner.name }
-            ]} />
 
             <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-2">

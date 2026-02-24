@@ -100,41 +100,64 @@ export default async function VaultPage({
     }
 
     return (
-        <div className="space-y-8 pb-20">
-            {/* Header & Controls Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
-                    Partners
-                </h1>
-
-                <div className="flex items-center gap-4">
-                    {/* Sorting UI */}
-                    {/* Sorting UI */}
+        <div className="flex flex-col gap-6 pb-20">
+            <div className="flex flex-col gap-4">
+                <div className="flex h-10 items-center justify-between gap-4">
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
+                        Partners
+                    </h1>
                     <div className="flex items-center gap-2">
-                        <Link
-                            href={`/vault?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
-                            className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-[0.1em]",
-                                sortBy === "name"
-                                    ? "bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
-                                    : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
-                            )}
-                        >
-                            {sortBy === "name" ? <Type className="h-3.5 w-3.5" /> : <BarChart3 className="h-3.5 w-3.5" />}
-                            {sortBy === "name" ? "Name" : "Revenue"}
-                        </Link>
+                        <div className="hidden md:flex items-center gap-2 mr-2">
+                            <Link
+                                href={`/vault?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-[0.1em]",
+                                    sortBy === "name"
+                                        ? "bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
+                                        : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
+                                )}
+                            >
+                                {sortBy === "name" ? <Type className="h-3.5 w-3.5" /> : <BarChart3 className="h-3.5 w-3.5" />}
+                                {sortBy === "name" ? "Name" : "Revenue"}
+                            </Link>
 
-                        <Link
-                            href={`/vault?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
-                            className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-[10px] font-bold uppercase tracking-[0.1em]"
-                            )}
-                        >
-                            {order === "asc" ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
-                            {order === "asc" ? "Asc" : "Desc"}
-                        </Link>
+                            <Link
+                                href={`/vault?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-[10px] font-bold uppercase tracking-[0.1em]"
+                                )}
+                            >
+                                {order === "asc" ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
+                                {order === "asc" ? "Asc" : "Desc"}
+                            </Link>
+                        </div>
+                        <CreatePartnerDialog />
                     </div>
-                    <CreatePartnerDialog />
+                </div>
+
+                <div className="flex md:hidden items-center gap-2">
+                    <Link
+                        href={`/vault?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
+                        className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-[0.1em]",
+                            sortBy === "name"
+                                ? "bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
+                                : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
+                        )}
+                    >
+                        {sortBy === "name" ? <Type className="h-3.5 w-3.5" /> : <BarChart3 className="h-3.5 w-3.5" />}
+                        {sortBy === "name" ? "Name" : "Revenue"}
+                    </Link>
+
+                    <Link
+                        href={`/vault?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
+                        className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-[10px] font-bold uppercase tracking-[0.1em]"
+                        )}
+                    >
+                        {order === "asc" ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
+                        {order === "asc" ? "Asc" : "Desc"}
+                    </Link>
                 </div>
             </div>
 

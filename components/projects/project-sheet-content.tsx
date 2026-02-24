@@ -19,13 +19,14 @@ import {
     Clock,
     CheckCircle2,
     Calendar,
-    Target,
-    FolderOpen,
-    Check,
+    Expand,
+    Trash2,
+    Pencil,
     Loader2,
     AlertCircle,
-    Expand,
-    Trash2
+    Check,
+    FolderOpen,
+    Target
 } from "lucide-react"
 import {
     SheetHeader,
@@ -55,6 +56,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
     const [localName, setLocalName] = React.useState("")
     const [isEditingServices, setIsEditingServices] = React.useState(false)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+    const [isEditingTitle, setIsEditingTitle] = React.useState(false)
 
     // Sync state when prop changes
     React.useEffect(() => {
@@ -135,60 +137,62 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
         <TaskSheetWrapper tasks={project.tasks || []} project={project}>
             <div className="flex flex-col h-full bg-background sm:rounded-l-2xl overflow-hidden">
                 <SheetHeader className="p-8 border-b bg-muted/20 relative">
-                    <div className="absolute right-6 top-6 z-10">
-                        <Link
-                            href={`/projects/${project.id}`}
-                            className="h-10 w-10 flex items-center justify-center rounded-full bg-muted/50 hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-all"
-                        >
-                            <Expand className="h-5 w-5" strokeWidth={1.5} />
-                        </Link>
-                    </div>
 
                     <div className="space-y-4 pr-12">
-                        {/* Breadcrumbs */}
-                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 leading-relaxed">
-                            <Link
-                                href={`/vault/${project.site.partner.id}`}
-                                className="flex items-center gap-1.5 hover:text-primary transition-colors bg-muted/40 px-2.5 py-1 rounded-md"
-                            >
-                                <Users className="h-3 w-3" />
-                                {project.site.partner.name}
-                            </Link>
-                            <span className="opacity-30 text-xs">/</span>
-                            <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground/80 tracking-widest leading-none w-fit px-1 py-1.5 rounded-lg border border-transparent hover:bg-muted/60 transition-colors">
-                                <Globe className="h-3.5 w-3.5 text-primary/60" />
-                                <span className="opacity-90">{project.site.domainName}</span>
-                            </div>
-                        </div>
 
                         <SheetTitle className="group relative">
                             <div className="space-y-4">
                                 <div className="relative">
-                                    <Textarea
-                                        value={localName}
-                                        onChange={(e) => setLocalName(e.target.value)}
-                                        className="text-2xl md:text-3xl font-black tracking-tight border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto min-h-[40px] resize-none leading-tight overflow-hidden pr-24"
-                                        placeholder="Project Name"
-                                        rows={1}
-                                        onInput={(e) => {
-                                            const target = e.target as HTMLTextAreaElement
-                                            target.style.height = 'auto'
-                                            target.style.height = `${target.scrollHeight}px`
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault()
+                                    {isEditingTitle ? (
+                                        <Textarea
+                                            value={localName}
+                                            onChange={(e) => setLocalName(e.target.value)}
+                                            className="text-2xl md:text-3xl font-black tracking-tight border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto min-h-[40px] resize-none leading-tight overflow-hidden pr-24"
+                                            placeholder="Project Name"
+                                            rows={1}
+                                            autoFocus
+                                            onBlur={() => {
                                                 if (localName !== (project.name || getProjectDisplayName(project))) {
                                                     handleUpdate({ name: localName })
                                                 }
-                                            }
-                                            if (e.key === 'Escape') {
-                                                setLocalName(project.name || getProjectDisplayName(project))
-                                            }
-                                        }}
-                                    />
+                                                setIsEditingTitle(false)
+                                            }}
+                                            onInput={(e) => {
+                                                const target = e.target as HTMLTextAreaElement
+                                                target.style.height = 'auto'
+                                                target.style.height = `${target.scrollHeight}px`
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault()
+                                                    if (localName !== (project.name || getProjectDisplayName(project))) {
+                                                        handleUpdate({ name: localName })
+                                                    }
+                                                    setIsEditingTitle(false)
+                                                }
+                                                if (e.key === 'Escape') {
+                                                    setLocalName(project.name || getProjectDisplayName(project))
+                                                    setIsEditingTitle(false)
+                                                }
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl md:text-3xl font-black tracking-tight leading-tight">
+                                                {localName || getProjectDisplayName(project)}
+                                            </span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                onClick={() => setIsEditingTitle(true)}
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    )}
                                     {updatingId === project.id && (
-                                        <div className="absolute right-0 top-1.2">
+                                        <div className="absolute right-0 top-1.5">
                                             <Loader2 className="h-5 w-5 animate-spin text-primary" />
                                         </div>
                                     )}

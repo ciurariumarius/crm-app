@@ -85,12 +85,11 @@ export default async function AnalyticsPage() {
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
+        <div className="flex flex-col gap-6">
+            <div className="flex h-10 items-center justify-between gap-4">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
                     Analytics
                 </h1>
-
             </div>
 
             {/* Key Metrics */}

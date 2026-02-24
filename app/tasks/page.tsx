@@ -7,7 +7,6 @@ import { CreateTaskButton } from "@/components/tasks/create-task-button"
 import { formatProjectName } from "@/lib/utils"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 
 export const dynamic = "force-dynamic"
 
@@ -126,18 +125,11 @@ export default async function TasksPage({
     const projectsList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.id, name: formatProjectName(t.project) })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
 
     return (
-        <div className="space-y-6">
-            <DetailedBreadcrumbs items={[{ label: "Tasks" }]} />
-
-            <div className="flex items-end justify-between gap-4 mb-2">
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-                        Tasks
-                    </h1>
-                    <p className="text-muted-foreground font-medium">
-                        Manage your daily execution flow
-                    </p>
-                </div>
+        <div className="flex flex-col gap-6">
+            <div className="flex h-10 items-center justify-between gap-4">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
+                    Tasks
+                </h1>
                 <CreateTaskButton projects={activeProjects} />
             </div>
 

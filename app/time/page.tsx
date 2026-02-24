@@ -6,7 +6,6 @@ import prisma from "@/lib/prisma"
 import { Archive, Plus, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CreateTimeLogDialog } from "@/components/time/create-time-log-dialog"
-import { DetailedBreadcrumbs } from "@/components/layout/detailed-breadcrumbs"
 
 export const dynamic = 'force-dynamic'
 
@@ -56,12 +55,10 @@ export default async function TimePage({
     const serializedLogs = JSON.parse(JSON.stringify(logs))
 
     return (
-        <div className="space-y-6">
-            <DetailedBreadcrumbs items={[{ label: "Time Logger" }]} />
-
-            <div className="flex items-center justify-between gap-4">
-                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">
-                    Time Logger
+        <div className="flex flex-col gap-6">
+            <div className="flex h-10 items-center justify-between gap-4">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
+                    Time Logs
                 </h1>
                 <CreateTimeLogDialog
                     projects={formattedProjects}

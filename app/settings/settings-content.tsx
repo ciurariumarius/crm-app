@@ -103,11 +103,15 @@ export function SettingsContent({ user }: { user: UserData }) {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight mb-2">Settings</h1>
-                <p className="text-muted-foreground">Manage your profile, password, and security preferences.</p>
+        <div className="max-w-4xl mx-auto flex flex-col gap-6">
+            <div className="flex h-10 items-center justify-between gap-4">
+                <div className="flex flex-col gap-1 pr-12 md:pr-0">
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
+                        Settings
+                    </h1>
+                </div>
             </div>
+            <p className="text-muted-foreground pl-14 md:pl-0 -mt-4">Manage your profile, password, and security preferences.</p>
 
             <div className="grid grid-cols-1 gap-8">
                 {/* Profile Card */}

@@ -48,7 +48,7 @@ export function FinancialStatusBar({
         <Card className={cn("p-6 flex flex-col lg:flex-row gap-8 lg:gap-12 items-stretch lg:items-center shadow-sm hover:shadow-md transition-shadow bg-card/50", className)}>
 
             {/* ZONE 1: Total Revenue & Cash Flow */}
-            <div className="flex-1 min-w-[300px] flex flex-col gap-4">
+            <div className="flex-1 min-w-0 md:min-w-[300px] flex flex-col gap-4">
                 <div className="flex items-center gap-3">
                     <span className="text-3xl font-black tracking-tighter text-foreground">
                         {formattedRevenue}
@@ -86,7 +86,7 @@ export function FinancialStatusBar({
             <div className="hidden lg:block w-8" />
 
             {/* ZONE 2: Revenue Quality (Stability Indicator) */}
-            <div className="flex-1 min-w-[300px] flex flex-col gap-2 justify-center">
+            <div className="flex-1 min-w-0 md:min-w-[300px] flex flex-col gap-2 justify-center">
                 {/* Top Labels */}
                 <div className="flex justify-between text-xs mb-1">
                     <span className="font-bold text-foreground">{recurringPercent.toFixed(0)}% Monthly</span>
@@ -117,7 +117,7 @@ export function FinancialStatusBar({
             <div className="hidden lg:block w-px h-16 bg-border/40" />
 
             {/* ZONE 3: Partner Distribution */}
-            <div className="flex-1 min-w-[300px] flex flex-col gap-4 justify-center">
+            <div className="flex-1 min-w-0 md:min-w-[300px] flex flex-col gap-4 justify-center">
                 <span className="text-xs font-bold text-foreground">Partner Distribution</span>
 
                 <div className="flex flex-col gap-3">
