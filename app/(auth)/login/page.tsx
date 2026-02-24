@@ -15,7 +15,7 @@ export default function LoginPage() {
 
     // 2FA State
     const [requiresTwoFactor, setRequiresTwoFactor] = useState(false)
-    const [userId, setUserId] = useState("")
+    const [challengeToken, setChallengeToken] = useState("")
     const [token, setToken] = useState("")
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -29,7 +29,7 @@ export default function LoginPage() {
         if (result.success) {
             if (result.requiresTwoFactor) {
                 setRequiresTwoFactor(true)
-                setUserId(result.userId!)
+                setChallengeToken(result.challengeToken!)
                 setLoading(false)
             } else {
                 router.push("/")
@@ -45,7 +45,7 @@ export default function LoginPage() {
         setLoading(true)
         setError("")
 
-        const result = await verifyTwoFactor(userId, token)
+        const result = await verifyTwoFactor(challengeToken, token)
 
         if (result.success) {
             router.push("/")

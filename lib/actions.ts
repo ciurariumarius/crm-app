@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 // Force reload after schema update
 import prisma from "@/lib/prisma"
+import { requireAuth } from "@/lib/auth"
 import { z } from "zod"
 
 // Zod Schemas
@@ -30,6 +31,7 @@ export async function createPartner(data: {
     isMainJob: boolean
     internalNotes?: string
 }) {
+    await requireAuth()
     await prisma.partner.create({
         data: {
             name: data.name,
@@ -49,6 +51,7 @@ export async function updatePartner(partnerId: string, data: {
     phone?: string
     internalNotes?: string
 }) {
+    await requireAuth()
     await prisma.partner.update({
         where: { id: partnerId },
         data,
@@ -58,6 +61,7 @@ export async function updatePartner(partnerId: string, data: {
 }
 
 export async function deletePartner(partnerId: string) {
+    await requireAuth()
     await prisma.partner.delete({
         where: { id: partnerId },
     })
@@ -65,6 +69,7 @@ export async function deletePartner(partnerId: string) {
 }
 
 export async function createSite(partnerId: string, domainName: string) {
+    await requireAuth()
     const site = await prisma.site.create({
         data: {
             partnerId,
@@ -85,6 +90,7 @@ export async function updateSiteDetails(siteId: string, data: {
     marketingVault?: string // JSON string
 }) {
     try {
+        await requireAuth()
         const updateData = { ...data }
         if (updateData.name === "") updateData.name = null as any
 
@@ -109,6 +115,7 @@ export async function createService(data: {
     sopLink?: string
     baseFee?: number
 }) {
+    await requireAuth()
     await prisma.service.create({
         data: {
             serviceName: data.serviceName,
@@ -128,6 +135,7 @@ export async function updateService(serviceId: string, data: {
     sopLink?: string
     baseFee?: number
 }) {
+    await requireAuth()
     await prisma.service.update({
         where: { id: serviceId },
         data: {
@@ -150,6 +158,7 @@ export async function createProject(data: {
     paymentStatus?: "Paid" | "Unpaid"
 }) {
     try {
+        await requireAuth()
         // Validate input
         const validated = CreateProjectSchema.parse(data)
 
@@ -240,6 +249,7 @@ export async function createProject(data: {
 }
 
 export async function togglePaymentStatus(projectId: string, currentStatus: string) {
+    await requireAuth()
     const newStatus = currentStatus === "Paid" ? "Unpaid" : "Paid"
     await prisma.project.update({
         where: { id: projectId },
@@ -262,6 +272,7 @@ export async function updateProject(projectId: string, data: {
         // However, we need to massage the input a bit for Zod if nulls are involved
 
         // Manual construction before validation/update
+        await requireAuth()
         const updateData: any = {}
         if (data.name !== undefined) updateData.name = data.name === "" ? null : data.name
         if (data.status !== undefined) updateData.status = data.status
@@ -327,6 +338,7 @@ export async function updateProject(projectId: string, data: {
 
 export async function addTask(projectId: string, name: string, options?: { deadline?: Date, status?: string, urgency?: string, estimatedMinutes?: number }) {
     try {
+        await requireAuth()
         const task: any = await prisma.task.create({
             data: {
                 projectId,
@@ -355,6 +367,7 @@ export async function addTask(projectId: string, name: string, options?: { deadl
 
 export async function toggleTaskStatus(taskId: string, currentStatus: string, projectId: string) {
     try {
+        await requireAuth()
         const isCompleted = currentStatus === "Completed"
         const newStatus = isCompleted ? "Active" : "Completed"
         const newIsCompleted = !isCompleted
@@ -390,6 +403,7 @@ export async function updateTask(taskId: string, data: {
     estimatedMinutes?: number | null
 }) {
     try {
+        await requireAuth()
         // If status is updated to Done, or isCompleted is updated to true, sync them
         const updateData: any = { ...data }
 
@@ -427,6 +441,7 @@ export async function updateTask(taskId: string, data: {
 
 export async function deleteTask(taskId: string, projectId: string) {
     try {
+        await requireAuth()
         const task = await prisma.task.delete({
             where: { id: taskId },
             include: { project: { include: { site: true } } }
@@ -452,6 +467,7 @@ export async function logTime(data: {
     durationSeconds?: number
 }) {
     try {
+        await requireAuth()
         const log = await prisma.timeLog.create({
             data: {
                 projectId: data.projectId,
@@ -478,6 +494,7 @@ export async function logTime(data: {
 
 export async function deleteProject(projectId: string) {
     try {
+        await requireAuth()
         const project = await prisma.project.delete({
             where: { id: projectId },
             include: { site: true }
@@ -494,6 +511,7 @@ export async function deleteProject(projectId: string) {
 
 export async function deleteProjects(projectIds: string[]) {
     try {
+        await requireAuth()
         if (projectIds.length === 0) return { success: true }
 
         await prisma.project.deleteMany({
@@ -513,6 +531,7 @@ export async function deleteProjects(projectIds: string[]) {
 
 export async function deleteSite(siteId: string) {
     try {
+        await requireAuth()
         const site = await prisma.site.delete({
             where: { id: siteId },
         })
@@ -527,6 +546,7 @@ export async function deleteSite(siteId: string) {
 
 export async function deleteTasks(taskIds: string[]) {
     try {
+        await requireAuth()
         if (taskIds.length === 0) return { success: true }
         await prisma.task.deleteMany({
             where: { id: { in: taskIds } }
@@ -543,6 +563,7 @@ export async function deleteTasks(taskIds: string[]) {
 
 export async function updateTasksStatus(taskIds: string[], status: string) {
     try {
+        await requireAuth()
         if (taskIds.length === 0) return { success: true }
         const isCompleted = status === "Completed"
         await prisma.task.updateMany({
@@ -616,6 +637,7 @@ export async function updateTimeLog(logId: string, data: {
     source?: "MANUAL" | "TIMER"
 }) {
     try {
+        await requireAuth()
         const log = await prisma.timeLog.update({
             where: { id: logId },
             data: {
@@ -640,6 +662,7 @@ export async function updateTimeLog(logId: string, data: {
 
 export async function deleteTimeLog(logId: string) {
     try {
+        await requireAuth()
         const log = await prisma.timeLog.delete({
             where: { id: logId }
         })
@@ -655,6 +678,7 @@ export async function deleteTimeLog(logId: string) {
 
 export async function deleteTimeLogs(logIds: string[]) {
     try {
+        await requireAuth()
         await prisma.timeLog.deleteMany({
             where: {
                 id: { in: logIds }
@@ -669,8 +693,9 @@ export async function deleteTimeLogs(logIds: string[]) {
     }
 }
 
-export async function startTimer(projectId: string, taskId?: string) {
+export async function startTimer(projectId: string, taskId?: string, description?: string) {
     try {
+        await requireAuth()
         // Stop any currently running timer first
         const activeTimer = await prisma.timeLog.findFirst({
             where: { endTime: null }
@@ -698,6 +723,7 @@ export async function startTimer(projectId: string, taskId?: string) {
             data: {
                 projectId,
                 taskId,
+                description,
                 startTime: new Date(),
                 endTime: null, // Indicates running timer
                 durationSeconds: null
@@ -718,6 +744,7 @@ export async function startTimer(projectId: string, taskId?: string) {
 
 export async function stopTimer() {
     try {
+        await requireAuth()
         // Check for running timer
         const activeTimer = await prisma.timeLog.findFirst({
             where: { endTime: null }
@@ -806,22 +833,19 @@ export async function resumeTimer() {
             return { success: false, error: "No paused timer found" }
         }
 
-        // Start new timer with same details
-        const log = await prisma.timeLog.create({
+        // Calculate adjusted start time to account for previously elapsed duration
+        const adjustedStartTime = new Date(Date.now() - ((pausedTimer.durationSeconds || 0) * 1000));
+
+        // Update the existing timer to resume it
+        const log = await prisma.timeLog.update({
+            where: { id: pausedTimer.id },
             data: {
-                projectId: pausedTimer.projectId,
-                taskId: pausedTimer.taskId,
-                description: pausedTimer.description,
-                startTime: new Date(),
+                startTime: adjustedStartTime,
                 endTime: null,
+                durationSeconds: null,
+                isPaused: false
             },
             include: { project: { include: { site: true } } }
-        })
-
-        // Mark old timer as NOT paused anymore (it's resumed, so the pause state is consumed)
-        await prisma.timeLog.update({
-            where: { id: pausedTimer.id },
-            data: { isPaused: false }
         })
 
         revalidatePath("/")
@@ -926,8 +950,9 @@ export async function getProjectDetails(projectId: string) {
 // --- AUTHENTICATION ACTIONS ---
 
 import bcrypt from "bcryptjs";
-import { createSession, destroySession, getSession } from "./auth";
-import * as speakeasy from "speakeasy";
+import { createSession, destroySession, getSession, encrypt, decrypt } from "./auth";
+import { checkRateLimit } from "./rate-limit";
+import * as OTPAuth from "otpauth";
 
 export async function loginUser(formData: FormData) {
     const data = Object.fromEntries(formData.entries())
@@ -936,6 +961,12 @@ export async function loginUser(formData: FormData) {
 
     if (!username || !password) {
         return { success: false, error: "Username and password required" }
+    }
+
+    // Rate limit by username
+    const rl = checkRateLimit(`login:${username}`)
+    if (!rl.allowed) {
+        return { success: false, error: "Too many login attempts. Please try again later." }
     }
 
     try {
@@ -950,7 +981,13 @@ export async function loginUser(formData: FormData) {
         }
 
         if (user.twoFactorEnabled) {
-            return { success: true, requiresTwoFactor: true, userId: user.id }
+            // Return an opaque, encrypted challenge token instead of raw userId
+            const challengeToken = await encrypt({
+                userId: user.id,
+                purpose: "2fa_challenge",
+                exp: Math.floor(Date.now() / 1000) + 300, // 5 min expiry
+            })
+            return { success: true, requiresTwoFactor: true, challengeToken }
         }
 
         await createSession(user.id, user.username, false)
@@ -961,16 +998,41 @@ export async function loginUser(formData: FormData) {
     }
 }
 
-export async function verifyTwoFactor(userId: string, token: string) {
+export async function verifyTwoFactor(challengeToken: string, token: string) {
     try {
+        // Decrypt and validate the challenge token
+        const challenge = await decrypt(challengeToken)
+        if (!challenge || challenge.purpose !== "2fa_challenge") {
+            return { success: false, error: "Invalid or expired challenge" }
+        }
+
+        // Check expiry
+        if (challenge.exp && challenge.exp < Math.floor(Date.now() / 1000)) {
+            return { success: false, error: "Challenge expired. Please log in again." }
+        }
+
+        const userId = challenge.userId as string
+
+        // Rate limit by userId
+        const rl = checkRateLimit(`2fa:${userId}`)
+        if (!rl.allowed) {
+            return { success: false, error: "Too many verification attempts. Please try again later." }
+        }
+
         const user = await prisma.user.findUnique({ where: { id: userId } })
         if (!user || !user.twoFactorSecret) {
             return { success: false, error: "Invalid user or 2FA not set up" }
         }
 
-        const isValid = speakeasy.totp.verify({ token, secret: user.twoFactorSecret, encoding: 'base32' })
+        const totp = new OTPAuth.TOTP({
+            secret: OTPAuth.Secret.fromBase32(user.twoFactorSecret),
+            algorithm: "SHA1",
+            digits: 6,
+            period: 30,
+        })
+        const delta = totp.validate({ token, window: 1 })
 
-        if (!isValid) {
+        if (delta === null) {
             return { success: false, error: "Invalid authenticator code" }
         }
 
@@ -992,6 +1054,11 @@ export async function changePassword(formData: FormData) {
 
     const currentPassword = formData.get("currentPassword") as string;
     const newPassword = formData.get("newPassword") as string;
+
+    // Password strength validation
+    if (!newPassword || newPassword.length < 8) {
+        return { success: false, error: "New password must be at least 8 characters long" };
+    }
 
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) return { success: false, error: "User not found" };
@@ -1015,18 +1082,31 @@ export async function generateTwoFactorSecret() {
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) return { success: false, error: "User not found" };
 
-    const secret = speakeasy.generateSecret({ name: "Pixelist" });
-    const otpauth = secret.otpauth_url;
+    const secret = new OTPAuth.Secret();
+    const totp = new OTPAuth.TOTP({
+        issuer: "Pixelist",
+        label: user.username,
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret,
+    });
 
-    return { success: true, secret: secret.base32, otpauth };
+    return { success: true, secret: secret.base32, otpauth: totp.toString() };
 }
 
 export async function enableTwoFactor(token: string, secret: string) {
     const session = await getSession();
     if (!session) return { success: false, error: "Unauthorized" };
 
-    const isValid = speakeasy.totp.verify({ token, secret, encoding: 'base32' });
-    if (!isValid) return { success: false, error: "Invalid code" };
+    const totp = new OTPAuth.TOTP({
+        secret: OTPAuth.Secret.fromBase32(secret),
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+    });
+    const delta = totp.validate({ token, window: 1 });
+    if (delta === null) return { success: false, error: "Invalid code" };
 
     await prisma.user.update({
         where: { id: session.userId },

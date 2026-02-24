@@ -5,6 +5,13 @@ import { createProject } from '@/lib/actions'
 export const dynamic = 'force-dynamic' // Ensure it runs every time
 
 export async function GET(request: Request) {
+    // Authenticate cron requests
+    const authHeader = request.headers.get('authorization')
+    const cronSecret = process.env.CRON_SECRET
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     try {
         const today = new Date()
         const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1)

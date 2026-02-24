@@ -2,7 +2,10 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-const secretKey = process.env.JWT_SECRET || "default_super_secret_key_change_in_production";
+const secretKey = process.env.JWT_SECRET;
+if (!secretKey) {
+    throw new Error("FATAL: JWT_SECRET environment variable is not set. The application cannot start without it.");
+}
 const key = new TextEncoder().encode(secretKey);
 
 export const SESSION_COOKIE_NAME = "crm_session";
@@ -35,7 +38,7 @@ export async function createSession(userId: string, username: string, twoFactorV
         expires,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: "strict",
         path: "/",
     });
 }
@@ -61,7 +64,7 @@ export async function updateSession(request: NextRequest) {
         value: await encrypt(parsed),
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: "strict",
         expires: parsed.expires,
         path: "/",
     });
@@ -74,4 +77,12 @@ export async function destroySession() {
         expires: new Date(0),
         path: "/",
     });
+}
+
+export async function requireAuth() {
+    const session = await getSession();
+    if (!session || !session.userId) {
+        throw new Error("Unauthorized");
+    }
+    return session;
 }
