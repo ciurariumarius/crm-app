@@ -130,6 +130,8 @@ model TimeLog {
 model User {
   id               String   @id @default(uuid())
   username         String   @unique
+  name             String?
+  profilePic       String?  @map("profile_pic")
   passwordHash     String   @map("password_hash")
   twoFactorSecret  String?  @map("two_factor_secret")
   twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")

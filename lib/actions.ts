@@ -1048,3 +1048,27 @@ export async function disableTwoFactor() {
     return { success: true };
 }
 
+export async function updateProfile(formData: FormData) {
+    try {
+        const session = await getSession();
+        if (!session) return { success: false, error: "Unauthorized" };
+
+        const name = formData.get("name") as string;
+        const profilePic = formData.get("profilePic") as string;
+
+        await prisma.user.update({
+            where: { id: session.userId },
+            data: {
+                name: name || null,
+                profilePic: profilePic || null
+            }
+        });
+
+        revalidatePath("/");
+        revalidatePath("/settings");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Failed to update profile" }
+    }
+}
+

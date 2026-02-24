@@ -126,7 +126,7 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
     )
 
     return (
-        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-[24px] xl:rounded-full p-2 shadow-sm border border-border/60 sticky top-4 z-40 backdrop-blur-xl bg-card/80">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-[24px] xl:rounded-full p-2 shadow-sm border border-border/60 z-40 backdrop-blur-xl bg-card/80">
             {/* Left: Search (Transparent) */}
             {/* Left: Search (Expandable) */}
             {/* Left: Search (Fixed Compact) */}

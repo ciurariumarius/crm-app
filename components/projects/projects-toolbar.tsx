@@ -109,7 +109,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
     }
 
     return (
-        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-[24px] xl:rounded-full p-2 shadow-sm border border-border/60 sticky top-4 z-40 backdrop-blur-xl bg-card/80">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-[24px] xl:rounded-full p-2 shadow-sm border border-border/60 z-40 backdrop-blur-xl bg-card/80">
 
             {/* Left: Search (Fixed Compact) */}
             <div className="relative w-full xl:w-[200px] pl-4 pr-4 xl:pr-0">

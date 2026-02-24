@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { logoutUser } from "@/lib/actions"
 import {
     LayoutDashboard,
     Database,
@@ -33,11 +34,22 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 
-export function Sidebar() {
+export function Sidebar({ user }: { user?: { name: string | null, username: string, profilePic: string | null } }) {
     const pathname = usePathname()
+    const router = useRouter()
     const [activeDrawer, setActiveDrawer] = useState<string | null>(null)
     const [isVaultOpen, setIsVaultOpen] = useState(true) // Keep for mobile
     const [isPPCOpen, setIsPPCOpen] = useState(true)     // Keep for mobile
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+    const displayName = user?.name || user?.username || "Admin User"
+    const displayEmail = user?.username ? `@${user.username}` : "admin@example.com"
+    const initials = displayName.substring(0, 2).toUpperCase()
+
+    const handleLogout = async () => {
+        await logoutUser()
+        window.location.href = "/login"
+    }
 
     const navItems = [
         { name: "Overview", href: "/", icon: LayoutDashboard },
@@ -86,6 +98,7 @@ export function Sidebar() {
             <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
                     "group relative flex items-center gap-3 px-6 py-3.5 text-sm font-medium transition-all duration-300 border-l-[3px]",
                     isActive
@@ -104,15 +117,15 @@ export function Sidebar() {
     return (
         <>
             {/* Mobile Sidebar */}
-            <Sheet>
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-40 bg-card border border-border">
                         <Menu className="h-6 w-6" />
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[240px] p-0 bg-background border-r border-border shadow-lg">
-                    <div className="flex flex-col h-full py-6">
-                        <div className="px-8 mb-10">
+                <SheetContent side="left" className="w-[280px] p-0 bg-background border-r border-border shadow-lg">
+                    <div className="flex flex-col h-full py-6 overflow-y-auto">
+                        <div className="px-8 mb-10 shrink-0">
                             <h1 className="text-xl font-bold uppercase tracking-tight text-foreground">
                                 Pixelist<span className="text-primary">.</span>
                             </h1>
@@ -142,17 +155,20 @@ export function Sidebar() {
                             </div>
                             {isPPCOpen && ppcItems.map(renderMobileLink)}
                         </nav>
-                        <div className="p-6 border-t border-border flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                        <div className="p-6 border-t border-border flex items-center justify-between shrink-0">
+                            <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                                 <Avatar className="h-8 w-8">
-                                    <AvatarImage src="/avatar.png" alt="@marius" />
-                                    <AvatarFallback>ML</AvatarFallback>
+                                    <AvatarImage src={user?.profilePic || "/avatar.png"} alt={displayName} />
+                                    <AvatarFallback>{initials}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-medium leading-none">Marius Limitless</span>
-                                    <span className="text-xs text-muted-foreground mt-1">marius@example.com</span>
+                                    <span className="text-sm font-medium leading-none">{displayName}</span>
+                                    <span className="text-xs text-muted-foreground mt-1">{displayEmail}</span>
                                 </div>
-                            </div>
+                            </Link>
+                            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-rose-500 rounded-full">
+                                <Share2 className="h-4 w-4 rotate-90" /> {/* Just using Share2 rotated as generic logout icon fallback since log-out isn't imported */}
+                            </Button>
                         </div>
                     </div>
                 </SheetContent>
@@ -230,25 +246,27 @@ export function Sidebar() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Avatar className="h-8 w-8 border border-border cursor-pointer hover:ring-2 ring-primary/20 transition-all">
-                                    <AvatarImage src="/avatar.png" alt="@marius" />
-                                    <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold">ML</AvatarFallback>
+                                    <AvatarImage src={user?.profilePic || "/avatar.png"} alt={displayName} />
+                                    <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold">{initials}</AvatarFallback>
                                 </Avatar>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end" side="right" sideOffset={20} forceMount>
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">Marius Limitless</p>
+                                        <p className="text-sm font-medium leading-none">{displayName}</p>
                                         <p className="text-xs leading-none text-muted-foreground">
-                                            marius@example.com
+                                            {displayEmail}
                                         </p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>Profile</DropdownMenuItem>
-                                <DropdownMenuItem>Billing</DropdownMenuItem>
-                                <DropdownMenuItem>Settings</DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/settings" className="cursor-pointer w-full">Settings</Link>
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-rose-500">Log out</DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleLogout} className="text-rose-500 cursor-pointer">
+                                    Log out
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>

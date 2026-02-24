@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { GlobalTimer } from "@/components/layout/global-timer"
 import prisma from "@/lib/prisma"
 import { getActiveTimer } from "@/lib/actions"
+import { getSession } from "@/lib/auth"
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -44,7 +45,26 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const [activeTasksCountData, partnersData, servicesData, projectsRaw, activeTimerResult, pendingTasksData] = await Promise.all([
+  const session = await getSession();
+
+  // If no session, just render the bare minimum for the login page
+  if (!session) {
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${jakarta.variable} font-sans`}>
+          <Providers initialActiveTimer={null}>
+            <main className="min-h-screen bg-background text-foreground">
+              {children}
+            </main>
+            <Toaster />
+          </Providers>
+        </body>
+      </html>
+    );
+  }
+
+  // Authenticated state: Fetch all necessary data
+  const [activeTasksCountData, partnersData, servicesData, projectsRaw, activeTimerResult, pendingTasksData, userData] = await Promise.all([
     prisma.task.count({ where: { status: { not: "Completed" } } }),
     prisma.partner.findMany({ include: { sites: { select: { id: true, domainName: true } } } }),
     prisma.service.findMany(),
@@ -69,7 +89,8 @@ export default async function RootLayout({
         deadline: true,
         project: { select: { site: { select: { domainName: true } }, name: true } }
       }
-    })
+    }),
+    prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, username: true, profilePic: true } })
   ])
 
   // Serialize Decimal objects
@@ -77,8 +98,8 @@ export default async function RootLayout({
   const services = JSON.parse(JSON.stringify(servicesData))
   const activeTasksCount = activeTasksCountData
   const pendingTasks = JSON.parse(JSON.stringify(pendingTasksData))
+  const user = userData ? JSON.parse(JSON.stringify(userData)) : undefined
 
-  // Handle new activeTimer structure
   // Handle new activeTimer structure
   const rawActiveTimer = activeTimerResult.success && activeTimerResult.data
     ? { ...activeTimerResult.data, status: activeTimerResult.status }
@@ -100,8 +121,8 @@ export default async function RootLayout({
         <Providers initialActiveTimer={initialActiveTimer}>
           <HeaderProvider>
             <div className="flex h-screen overflow-hidden bg-background">
-              <Sidebar />
-              <div className="flex-1 flex flex-col min-w-0 md:ml-[70px] transition-all duration-300">
+              <Sidebar user={user} />
+              <div className="flex-1 flex flex-col min-w-0 md:ml-[70px] h-screen overflow-y-auto transition-all duration-300">
                 <TopBar
                   partners={partners}
                   services={services}
@@ -110,7 +131,7 @@ export default async function RootLayout({
                   initialActiveTimer={initialActiveTimer}
                   pendingTasks={pendingTasks}
                 />
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-4 md:pt-4 pb-24 md:pb-8 transition-all duration-300">
+                <main className="flex-1 p-4 md:p-8 pt-4 md:pt-4 pb-24 md:pb-8 transition-all duration-300">
                   {children}
                 </main>
               </div>
