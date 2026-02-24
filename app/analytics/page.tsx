@@ -87,7 +87,7 @@ export default async function AnalyticsPage() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex h-10 items-center justify-between gap-4">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0 leading-none flex items-center h-full">
                     Analytics
                 </h1>
             </div>

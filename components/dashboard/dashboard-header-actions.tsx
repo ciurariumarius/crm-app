@@ -17,22 +17,22 @@ export function DashboardHeaderActions({ partners, services, activeProjects }: D
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
 
     return (
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-3">
             <Button
-                size="icon"
-                className="h-10 w-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center flex-shrink-0"
+                size="default"
+                className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center gap-2 flex-shrink-0 font-bold"
                 onClick={() => setCreateProjectOpen(true)}
-                title="New Project"
             >
+                <span className="text-sm">Add Project</span>
                 <Plus className="h-5 w-5" strokeWidth={2.5} />
             </Button>
 
             <Button
-                size="icon"
-                className="h-10 w-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center flex-shrink-0"
+                size="default"
+                className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center gap-2 flex-shrink-0 font-bold"
                 onClick={() => setCreateTaskOpen(true)}
-                title="New Task"
             >
+                <span className="text-sm">Add Task</span>
                 <Plus className="h-5 w-5" strokeWidth={2.5} />
             </Button>
 

@@ -126,15 +126,17 @@ export default async function Home() {
     <ProjectSheetWrapper projects={JSON.parse(JSON.stringify(activeProjects))} allServices={formattedServices}>
       <TaskSheetWrapper tasks={JSON.parse(JSON.stringify(upcomingTasks))}>
         <div className="flex flex-col gap-6 pb-10">
-          <div className="flex h-10 items-center justify-between gap-4">
-            <div className="pl-14 md:pl-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex h-10 items-center pl-14 md:pl-0">
               <GreetingHeader name={user?.name?.split(' ')[0] || user?.username || "Admin"} />
             </div>
-            <DashboardHeaderActions
-              partners={formattedPartners}
-              services={formattedServices}
-              activeProjects={metrics.quickActionProjects}
-            />
+            <div className="flex flex-wrap items-center gap-3 pl-14 md:pl-0">
+              <DashboardHeaderActions
+                partners={formattedPartners}
+                services={formattedServices}
+                activeProjects={metrics.quickActionProjects}
+              />
+            </div>
           </div>
 
           {/* Metric Cards - Premium Highlight - Primary Head-Up Display */}
