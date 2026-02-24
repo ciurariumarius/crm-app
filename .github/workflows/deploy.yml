@@ -18,14 +18,17 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }} # Your Site User password (or use ssh_key instead)
           port: 22                             # Default SSH port
           script: |
+            set -e # Stop script on first error
+
             # Navigate to the site folder (Update the domain to your actual folder name!)
             cd /home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro
             
             # Configure Git to trust the workspace folder
             git config --global --add safe.directory /home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro
 
-            # Pull the latest code from GitHub
-            git pull origin main
+            # Forcefully pull the latest code from GitHub, discarding local changes
+            git fetch origin main
+            git reset --hard origin/main
             
             # Install dependencies
             npm install --include=dev
@@ -37,6 +40,5 @@ jobs:
             # Build the Next.js application
             npm run build
             
-            # Restart the Next.js app 
-            # (Note: if pm2 is not found globally, CloudPanel usually manages it, but npx provides a fallback)
-            npx pm2 restart all
+            # Restart the Next.js app (using global PM2 managed by CloudPanel)
+            pm2 restart all || npx pm2 restart all
