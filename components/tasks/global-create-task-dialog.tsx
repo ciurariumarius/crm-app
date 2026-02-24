@@ -14,7 +14,7 @@ import { useState } from "react"
 import { addTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Calendar as CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
+import { Loader2, Calendar as CalendarIcon, Check, ChevronsUpDown, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react"
 import { formatProjectName } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -50,6 +50,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
     const [showCompleted, setShowCompleted] = useState(false)
     const [openPopover, setOpenPopover] = useState(false)
     const [openCombobox, setOpenCombobox] = useState(false)
+    const [showDetails, setShowDetails] = useState(false)
 
     // Filter projects based on the "showCompleted" toggle
     const displayProjects = projects.filter(p => showCompleted || p.status === "Active")
@@ -96,7 +97,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                     <div className="flex-1 overflow-y-auto p-8 py-6 space-y-6 scrollbar-thin scrollbar-thumb-primary/10">
                         <div className="space-y-3 flex flex-col">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">01. Target Project</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Target Project</Label>
                                 <div className="flex items-center gap-2">
                                     <Label htmlFor="show-completed" className="text-[10px] uppercase font-bold text-muted-foreground/40 cursor-pointer tracking-wider">Search in completed</Label>
                                     <Switch
@@ -113,18 +114,20 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                         variant="outline"
                                         role="combobox"
                                         aria-expanded={openCombobox}
-                                        className="w-full justify-between h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 whitespace-normal text-left font-bold"
+                                        className="w-full justify-between h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 text-left font-bold"
                                     >
-                                        {selectedProjectId
-                                            ? formatProjectName(projects.find((p) => p.id === selectedProjectId)!)
-                                            : "Select a project..."}
+                                        <span className="truncate pr-4">
+                                            {selectedProjectId
+                                                ? formatProjectName(projects.find((p) => p.id === selectedProjectId)!)
+                                                : "Select a project..."}
+                                        </span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 max-h-[250px] overflow-hidden flex flex-col" align="start">
                                     <Command>
                                         <CommandInput placeholder="Search project..." />
-                                        <CommandList>
+                                        <CommandList className="max-h-[200px] overflow-y-auto">
                                             <CommandEmpty>No project found.</CommandEmpty>
                                             <CommandGroup>
                                                 {displayProjects.map((p) => (
@@ -137,14 +140,16 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                                         }}
                                                         className="flex items-center justify-between py-3"
                                                     >
-                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
                                                             <Check
                                                                 className={cn(
                                                                     "h-4 w-4 shrink-0",
                                                                     selectedProjectId === p.id ? "opacity-100" : "opacity-0"
                                                                 )}
                                                             />
-                                                            <span className="truncate leading-tight font-medium">{formatProjectName(p)}</span>
+                                                            <span className="truncate leading-tight font-medium" title={formatProjectName(p)}>
+                                                                {formatProjectName(p)}
+                                                            </span>
                                                         </div>
                                                         {p.status !== "Active" && (
                                                             <Badge variant="outline" className={cn(
@@ -164,7 +169,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                         </div>
 
                         <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">02. Task Name</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Task Name</Label>
                             <Input
                                 placeholder="ex. Verificare dataLayer"
                                 className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold"
@@ -174,90 +179,108 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">03. Status</Label>
-                                <Select value={status} onValueChange={setStatus}>
-                                    <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Active" className="font-bold">ACTIVE</SelectItem>
-                                        <SelectItem value="Paused" className="font-bold">PAUSED</SelectItem>
-                                        <SelectItem value="Completed" className="font-bold">COMPLETED</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">04. Priority</Label>
-                                <Select value={urgency} onValueChange={setUrgency}>
-                                    <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Normal" className="font-bold">NORMAL</SelectItem>
-                                        <SelectItem value="Urgent" className="font-bold">URGENT</SelectItem>
-                                        <SelectItem value="Idea" className="font-bold">IDEA</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        {/* Toggle Advanced Details Button */}
+                        <div className="pt-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setShowDetails(!showDetails)}
+                                className="w-full flex justify-between items-center h-12 bg-muted/10 hover:bg-muted/30 text-muted-foreground font-medium rounded-xl border border-dashed border-border"
+                            >
+                                <span className="flex items-center gap-2 text-sm">
+                                    <SlidersHorizontal className="w-4 h-4" />
+                                    {showDetails ? "Hide Additional Details" : "Add Additional Details"}
+                                </span>
+                                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div className="space-y-3 flex flex-col">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">05. Deadline</Label>
-                                <Popover open={openPopover} onOpenChange={setOpenPopover}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className={cn(
-                                                "pl-3 text-left font-bold w-full justify-start h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20",
-                                                !deadline && "text-muted-foreground font-normal"
-                                            )}
-                                            type="button"
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                                            {deadline ? format(deadline, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={deadline}
-                                            onSelect={(d) => {
-                                                setDeadline(d)
-                                                setOpenPopover(false)
-                                            }}
-                                            initialFocus
+                        {showDetails && (
+                            <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</Label>
+                                        <Select value={status} onValueChange={setStatus}>
+                                            <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Active" className="font-bold">ACTIVE</SelectItem>
+                                                <SelectItem value="Paused" className="font-bold">PAUSED</SelectItem>
+                                                <SelectItem value="Completed" className="font-bold">COMPLETED</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Priority</Label>
+                                        <Select value={urgency} onValueChange={setUrgency}>
+                                            <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Normal" className="font-bold">NORMAL</SelectItem>
+                                                <SelectItem value="Urgent" className="font-bold">URGENT</SelectItem>
+                                                <SelectItem value="Idea" className="font-bold">IDEA</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="space-y-3 flex flex-col">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Deadline</Label>
+                                        <Popover open={openPopover} onOpenChange={setOpenPopover}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "pl-3 text-left font-bold w-full justify-start h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20",
+                                                        !deadline && "text-muted-foreground font-normal"
+                                                    )}
+                                                    type="button"
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                                                    {deadline ? format(deadline, "PPP") : <span>Pick a date</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={deadline}
+                                                    onSelect={(d) => {
+                                                        setDeadline(d)
+                                                        setOpenPopover(false)
+                                                    }}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Est. Time (min)</Label>
+                                        <Input
+                                            type="number"
+                                            placeholder="ex. 60"
+                                            className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold"
+                                            value={estimatedMinutes}
+                                            onChange={(e) => setEstimatedMinutes(e.target.value)}
                                         />
-                                    </PopoverContent>
-                                </Popover>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">06. Est. Time (min)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="ex. 60"
-                                    className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold"
-                                    value={estimatedMinutes}
-                                    onChange={(e) => setEstimatedMinutes(e.target.value)}
-                                />
-                            </div>
-                        </div>
+                        )}
                     </div>
 
                     <DialogFooter className="p-8 bg-muted/5 border-t">
                         <Button
                             type="submit"
                             disabled={isLoading || !selectedProjectId || !name}
-                            className="w-full h-14 text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 rounded-xl"
+                            className="w-full h-12 font-bold shadow-md shadow-primary/10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
                         >
                             {isLoading ? (
                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                             ) : (
-                                <span className="flex items-center gap-2">
-                                    CREATE TASK <Check className="h-5 w-5" />
-                                </span>
+                                "Create Task"
                             )}
                         </Button>
                     </DialogFooter>
