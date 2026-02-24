@@ -10,7 +10,7 @@ import {
     SelectValue
 } from "@/components/ui/select"
 import { CheckSquare, Square, Loader2, Trash2 } from "lucide-react"
-import { updateProject, deleteProjects } from "@/lib/actions"
+import { updateProject, deleteProjects } from "@/lib/actions/projects"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import {

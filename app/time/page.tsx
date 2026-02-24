@@ -1,7 +1,7 @@
 import { TimeLogsFilters } from "@/components/time/time-logs-filters"
 import { formatProjectName } from "@/lib/utils"
 import { TimeLogsTable } from "@/components/time/time-logs-table"
-import { getTimeLogs } from "@/lib/actions"
+import { getTimeLogs } from "@/lib/actions/time"
 import prisma from "@/lib/prisma"
 import { Archive, Plus, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"

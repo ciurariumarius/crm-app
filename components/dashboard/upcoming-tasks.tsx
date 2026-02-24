@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 import { Calendar, AlertCircle, Clock, CheckCircle2, ArrowRight, Target, Plus, Play, Square, Pause, History } from "lucide-react"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import Link from "next/link"
-import { updateTask } from "@/lib/actions"
+import { updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
@@ -37,7 +37,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
         })
 
         try {
-            const result = await updateTask(taskId, { isCompleted: true, status: 'Completed' })
+            const result = await updateTask(taskId, { status: 'Completed' })
             if (result.success) {
                 toast.success("Task completed")
             } else {

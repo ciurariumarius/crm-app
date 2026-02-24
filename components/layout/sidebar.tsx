@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useHeader } from "./header-context"
-import { logoutUser } from "@/lib/actions"
+import { logoutUser } from "@/lib/actions/auth"
 import {
     LayoutDashboard,
     Database,

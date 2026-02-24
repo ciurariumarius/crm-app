@@ -37,7 +37,7 @@ import { ProjectTasks } from "@/components/projects/project-tasks"
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
 import { formatDistanceToNow, format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { updateProject } from "@/lib/actions"
+import { updateProject } from "@/lib/actions/projects"
 import { toast } from "sonner"
 
 import { formatProjectName } from "@/lib/utils"

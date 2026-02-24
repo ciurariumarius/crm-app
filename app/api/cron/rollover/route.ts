@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { createProject } from '@/lib/actions'
+import { createProject } from "@/lib/actions/projects"
 
 export const dynamic = 'force-dynamic' // Ensure it runs every time
 

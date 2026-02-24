@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Strip non-serializable values (Date, Decimal, etc.) for server→client transfer */
+export function serialize<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data))
+}
+
 export function formatProjectName(project: {
   site?: { domainName?: string },
   services?: { serviceName: string, isRecurring?: boolean }[],

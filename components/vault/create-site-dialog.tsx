@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createSite } from "@/lib/actions"
+import { createSite } from "@/lib/actions/sites"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
 import {

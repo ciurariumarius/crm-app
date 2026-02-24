@@ -5,7 +5,7 @@ import { Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { deleteProject } from "@/lib/actions"
+import { deleteProject } from "@/lib/actions/projects"
 import {
     AlertDialog,
     AlertDialogAction,

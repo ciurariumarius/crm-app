@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
-import { addTask } from "@/lib/actions"
+import { addTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Calendar as CalendarIcon, Check, ChevronsUpDown } from "lucide-react"

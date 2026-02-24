@@ -5,7 +5,7 @@ import { Providers } from "@/components/providers/providers"
 import { Sidebar } from "@/components/layout/sidebar"
 import { GlobalTimer } from "@/components/layout/global-timer"
 import prisma from "@/lib/prisma"
-import { getActiveTimer } from "@/lib/actions"
+import { getActiveTimer } from "@/lib/actions/time"
 import { getSession } from "@/lib/auth"
 
 const jakarta = Plus_Jakarta_Sans({
@@ -79,7 +79,7 @@ export default async function RootLayout({
     }),
     getActiveTimer(),
     prisma.task.findMany({
-      where: { status: { not: "Completed" }, isCompleted: false },
+      where: { status: { not: "Completed" } },
       orderBy: [{ urgency: 'desc' }, { deadline: 'asc' }],
       take: 5,
       select: {

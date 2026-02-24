@@ -1,7 +1,7 @@
 import { format } from "date-fns"
 import { CheckCircle2, Circle } from "lucide-react"
 import prisma from "@/lib/prisma"
-import { togglePaymentStatus } from "@/lib/actions"
+import { togglePaymentStatus } from "@/lib/actions/projects"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"

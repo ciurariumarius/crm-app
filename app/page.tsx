@@ -3,6 +3,7 @@ import { QuickActions } from "@/components/dashboard/quick-actions"
 import { RecurringProjectsList } from "@/components/dashboard/recurring-projects-list"
 import { OneTimeProjectsList } from "@/components/dashboard/one-time-projects-list"
 import { UpcomingTasks } from "@/components/dashboard/upcoming-tasks"
+import { serialize } from "@/lib/utils"
 import { FinancialStatusBar } from "@/components/dashboard/financial-status-bar"
 import prisma from "@/lib/prisma"
 import { CreditCard, Clock } from "lucide-react"
@@ -43,7 +44,7 @@ export default async function Home() {
         services: true,
         site: { include: { partner: true } },
         timeLogs: { where: { startTime: { gte: startOfMonth } } },
-        _count: { select: { tasks: { where: { isCompleted: true } } } },
+        _count: { select: { tasks: { where: { status: "Completed" } } } },
         tasks: true
       },
     }),
@@ -95,12 +96,12 @@ export default async function Home() {
   ])
 
   const metrics = calculateDashboardMetrics(activeProjects, timeLogsThisMonth, recentProjects)
-  const formattedPartners = JSON.parse(JSON.stringify(partners))
-  const formattedServices = JSON.parse(JSON.stringify(services))
+  const formattedPartners = serialize(partners)
+  const formattedServices = serialize(services)
 
   return (
-    <ProjectSheetWrapper projects={JSON.parse(JSON.stringify(activeProjects))} allServices={formattedServices}>
-      <TaskSheetWrapper tasks={JSON.parse(JSON.stringify(upcomingTasks))}>
+    <ProjectSheetWrapper projects={serialize(activeProjects)} allServices={formattedServices}>
+      <TaskSheetWrapper tasks={serialize(upcomingTasks)}>
         <div className="flex flex-col gap-6 pb-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex h-10 items-center md:pl-0 gap-3">

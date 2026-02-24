@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { updateSiteDetails } from "@/lib/actions"
+import { updateSiteDetails } from "@/lib/actions/sites"
 import { DeleteSiteButton } from "@/components/vault/delete-site-button"
 
 interface SiteSheetContentProps {

@@ -29,7 +29,7 @@ import {
 import { ProjectTasks } from "@/components/projects/project-tasks"
 import { formatDistanceToNow, format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { updateProject } from "@/lib/actions"
+import { updateProject } from "@/lib/actions/projects"
 import { toast } from "sonner"
 import { BulkActionsBar } from "@/components/projects/bulk-actions-bar"
 import { Checkbox } from "@/components/ui/checkbox"

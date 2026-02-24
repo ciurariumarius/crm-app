@@ -7,32 +7,38 @@ import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 export const dynamic = "force-dynamic"
 
 export default async function AnalyticsPage() {
-    // Fetch all projects with services and time logs
-    const projects = await prisma.project.findMany({
-        include: {
-            services: true,
-            site: {
-                include: {
-                    partner: true
-                }
-            },
-            timeLogs: true,
-            tasks: true
-        }
-    })
+    // Run all queries in parallel
+    const [projects, totalTimeAgg, projectCounts] = await Promise.all([
+        // Projects with services and partner info (no timeLogs - we use aggregate instead)
+        prisma.project.findMany({
+            include: {
+                services: true,
+                site: { include: { partner: true } },
+                timeLogs: { select: { durationSeconds: true } },
+                tasks: { select: { id: true } }
+            }
+        }),
+        // Total time across all projects via aggregate
+        prisma.timeLog.aggregate({
+            _sum: { durationSeconds: true }
+        }),
+        // Project counts by status via groupBy
+        prisma.project.groupBy({
+            by: ['status'],
+            _count: { _all: true }
+        })
+    ])
 
     // Calculate statistics
     const totalProjects = projects.length
-    const activeProjects = projects.filter((p: any) => p.status === "Active").length
-    const completedProjects = projects.filter((p: any) => p.status === "Completed").length
+    const activeProjects = projectCounts.find((g: any) => g.status === "Active")?._count._all || 0
+    const completedProjects = projectCounts.find((g: any) => g.status === "Completed")?._count._all || 0
 
     const totalRevenue = projects.reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
     const paidRevenue = projects.filter((p: any) => p.paymentStatus === "Paid").reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
     const unpaidRevenue = projects.filter((p: any) => p.paymentStatus === "Unpaid").reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
 
-    const totalTimeSeconds = projects.reduce((sum: number, p: any) =>
-        sum + p.timeLogs.reduce((logSum: number, log: any) => logSum + (log.durationSeconds || 0), 0), 0
-    )
+    const totalTimeSeconds = totalTimeAgg._sum.durationSeconds || 0
     const totalHours = Math.round(totalTimeSeconds / 3600)
 
     // Partner statistics

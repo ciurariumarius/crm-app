@@ -3,7 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, Trash2, Loader2, Play, AlertCircle, Clock, CheckCircle2, ChevronDown } from "lucide-react"
-import { addTask, toggleTaskStatus, deleteTask, updateTask } from "@/lib/actions"
+import { addTask, toggleTaskStatus, deleteTask, updateTask } from "@/lib/actions/tasks"
 import { useTimer } from "@/components/providers/timer-provider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -59,8 +59,7 @@ export function ProjectTasks({ projectId, initialTasks }: { projectId: string, i
         setLoading(taskId)
         try {
             const result = await updateTask(taskId, {
-                status: newStatus,
-                isCompleted: newStatus === "Completed"
+                status: newStatus
             })
             if (result.success) {
                 toast.success("Status updated")

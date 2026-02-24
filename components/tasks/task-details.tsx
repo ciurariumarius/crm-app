@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, Trash2, Loader2, Globe, Users, Target, X, Plus } from "lucide-react"
-import { updateTask, deleteTask } from "@/lib/actions"
+import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { cn, formatProjectName } from "@/lib/utils"
 import { useTimer } from "@/components/providers/timer-provider"
@@ -282,7 +282,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
                                     const totalSeconds = logsDuration + currentTimerDuration
                                     const hasTimeLogs = totalSeconds > 0
-                                    const useFallback = task.isCompleted && !hasTimeLogs && task.estimatedMinutes
+                                    const useFallback = task.status === "Completed" && !hasTimeLogs && task.estimatedMinutes
 
                                     if (!hasTimeLogs && !useFallback) return null
 

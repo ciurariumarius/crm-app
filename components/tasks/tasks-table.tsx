@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { format, formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
-import { updateTask, toggleTaskStatus } from "@/lib/actions"
+import { updateTask, toggleTaskStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { Calendar as CalendarIcon, Clock, Users, Globe, ExternalLink, Target } from "lucide-react"
 import { TaskDetails } from "./task-details"
@@ -82,7 +82,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                             >
                                 <TableCell onClick={(e) => e.stopPropagation()}>
                                     <Checkbox
-                                        checked={task.isCompleted}
+                                        checked={task.status === "Completed"}
                                         onCheckedChange={() => handleStatusChange(task.id, task.status, task.projectId)}
                                         disabled={updatingId === task.id}
                                     />
@@ -91,7 +91,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                     <div className="flex flex-col gap-0.5">
                                         <span className={cn(
                                             "font-semibold text-sm group-hover:text-primary transition-colors",
-                                            task.isCompleted && "line-through text-muted-foreground opacity-60"
+                                            task.status === "Completed" && "line-through text-muted-foreground opacity-60"
                                         )}>
                                             {task.name}
                                         </span>
@@ -138,11 +138,11 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                     <div className="flex items-center gap-2 text-[10px] font-bold">
                                         <CalendarIcon className={cn(
                                             "h-3 w-3",
-                                            task.deadline && new Date(task.deadline) < new Date() && !task.isCompleted ? "text-rose-500" : "text-muted-foreground"
+                                            task.deadline && new Date(task.deadline) < new Date() && task.status !== "Completed" ? "text-rose-500" : "text-muted-foreground"
                                         )} />
                                         {task.deadline ? (
                                             <span className={cn(
-                                                task.deadline && new Date(task.deadline) < new Date() && !task.isCompleted ? "text-rose-500" : "text-muted-foreground"
+                                                task.deadline && new Date(task.deadline) < new Date() && task.status !== "Completed" ? "text-rose-500" : "text-muted-foreground"
                                             )}>
                                                 {format(new Date(task.deadline), "MMM dd, yyyy")}
                                             </span>
@@ -157,7 +157,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                         const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
                                         const totalSeconds = logsDuration + currentTimerDuration
                                         const hasTimeLogs = totalSeconds > 0
-                                        const useFallback = task.isCompleted && !hasTimeLogs && task.estimatedMinutes
+                                        const useFallback = task.status === "Completed" && !hasTimeLogs && task.estimatedMinutes
 
                                         if (!hasTimeLogs && !useFallback) {
                                             if (task.estimatedMinutes) {

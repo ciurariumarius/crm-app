@@ -4,7 +4,8 @@ import * as React from "react"
 import { format } from "date-fns"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import { deleteTasks, updateTasksStatus, getProjectDetails, updateTask } from "@/lib/actions"
+import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
+import { getProjectDetails } from "@/lib/actions/projects"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
 import { Clock, Trash2, MoreVertical, Play, Pause, Calendar as CalendarIcon, Plus, CheckCircle2 } from "lucide-react"
@@ -288,7 +289,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                     {task.deadline && (
                                         <div className={cn(
                                             "flex items-center gap-1.5 text-[11px] font-medium",
-                                            new Date(task.deadline) < new Date() && !task.isCompleted ? "text-rose-500" : "text-muted-foreground/40"
+                                            new Date(task.deadline) < new Date() && task.status !== "Completed" ? "text-rose-500" : "text-muted-foreground/40"
                                         )}>
                                             <CalendarIcon className="h-3 w-3" strokeWidth={1.5} />
                                             <span>{format(new Date(task.deadline), "MMM dd")}</span>

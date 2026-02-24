@@ -12,7 +12,7 @@ import { Calendar as CalendarIcon, Clock, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { updateTimeLog, deleteTimeLog } from "@/lib/actions"
+import { updateTimeLog, deleteTimeLog } from "@/lib/actions/time"
 import { toast } from "sonner"
 
 interface TimeLogSheetProps {

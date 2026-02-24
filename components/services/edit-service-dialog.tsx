@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { updateService } from "@/lib/actions"
+import { updateService } from "@/lib/actions/services"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,

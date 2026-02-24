@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { createProject, createSite } from "@/lib/actions"
+import { createProject } from "@/lib/actions/projects"
+import { createSite } from "@/lib/actions/sites"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
