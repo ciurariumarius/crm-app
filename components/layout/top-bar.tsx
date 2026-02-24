@@ -6,19 +6,10 @@ import { usePathname } from "next/navigation"
 import { Search, Bell, Plus, Briefcase, CheckSquare, ChevronRight, Slash, Menu, Square, Play, Pause, FolderPlus } from "lucide-react"
 import { formatProjectName, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GlobalHeaderSearch } from "@/components/layout/global-header-search"
 import { useHeader } from "@/components/layout/header-context"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { stopTimer, getActiveTimer, pauseTimer, resumeTimer } from "@/lib/actions"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import {
     Breadcrumb,
@@ -216,44 +207,6 @@ export function TopBar({ partners, services, activeTasksCount, activeProjects = 
                         projects={activeProjects}
                     />
                 </div>
-
-                <div className="h-6 w-px bg-border hidden md:block" />
-
-                {/* Profile */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                            <Avatar className="h-9 w-9">
-                                <AvatarImage src="/avatar.png" alt="@marius" />
-                                <AvatarFallback>ML</AvatarFallback>
-                            </Avatar>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
-                        <DropdownMenuLabel className="font-normal">
-                            <div className="flex flex-col space-y-1">
-                                <p className="text-sm font-medium leading-none">Marius Limitless</p>
-                                <p className="text-xs leading-none text-muted-foreground">
-                                    marius@example.com
-                                </p>
-                            </div>
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                            Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                            Billing
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                            Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-rose-500">
-                            Log out
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
             </div>
         </header>
     )

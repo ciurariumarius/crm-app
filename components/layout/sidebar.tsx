@@ -22,7 +22,15 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 
 export function Sidebar() {
@@ -134,8 +142,17 @@ export function Sidebar() {
                             </div>
                             {isPPCOpen && ppcItems.map(renderMobileLink)}
                         </nav>
-                        <div className="p-6 border-t border-border">
-
+                        <div className="p-6 border-t border-border flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src="/avatar.png" alt="@marius" />
+                                    <AvatarFallback>ML</AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium leading-none">Marius Limitless</span>
+                                    <span className="text-xs text-muted-foreground mt-1">marius@example.com</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </SheetContent>
@@ -210,9 +227,30 @@ export function Sidebar() {
 
                     <div className="mt-auto flex flex-col items-center gap-4 pb-4">
 
-                        <Avatar className="h-8 w-8 border border-border cursor-pointer hover:ring-2 ring-primary/20 transition-all">
-                            <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold">ML</AvatarFallback>
-                        </Avatar>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Avatar className="h-8 w-8 border border-border cursor-pointer hover:ring-2 ring-primary/20 transition-all">
+                                    <AvatarImage src="/avatar.png" alt="@marius" />
+                                    <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold">ML</AvatarFallback>
+                                </Avatar>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56" align="end" side="right" sideOffset={20} forceMount>
+                                <DropdownMenuLabel className="font-normal">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none">Marius Limitless</p>
+                                        <p className="text-xs leading-none text-muted-foreground">
+                                            marius@example.com
+                                        </p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem>Profile</DropdownMenuItem>
+                                <DropdownMenuItem>Billing</DropdownMenuItem>
+                                <DropdownMenuItem>Settings</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-rose-500">Log out</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
 
