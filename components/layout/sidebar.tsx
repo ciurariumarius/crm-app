@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useHeader } from "./header-context"
 import { logoutUser } from "@/lib/actions"
 import {
     LayoutDashboard,
@@ -37,10 +38,10 @@ import {
 export function Sidebar({ user }: { user?: { name: string | null, username: string, profilePic: string | null } }) {
     const pathname = usePathname()
     const router = useRouter()
+    const { isMobileMenuOpen, setIsMobileMenuOpen } = useHeader()
     const [activeDrawer, setActiveDrawer] = useState<string | null>(null)
-    const [isVaultOpen, setIsVaultOpen] = useState(true) // Keep for mobile
-    const [isPPCOpen, setIsPPCOpen] = useState(true)     // Keep for mobile
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [isVaultOpen, setIsVaultOpen] = useState(true)
+    const [isPPCOpen, setIsPPCOpen] = useState(true)
 
     const displayName = user?.name || user?.username || "Admin User"
     const displayEmail = user?.username ? `@${user.username}` : "admin@example.com"
@@ -129,11 +130,6 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         <>
             {/* Mobile Sidebar */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-40 bg-card border border-border">
-                        <Menu className="h-6 w-6" />
-                    </Button>
-                </SheetTrigger>
                 <SheetContent side="left" className="w-[280px] p-0 bg-background border-r border-border shadow-lg">
                     <div className="flex flex-col h-full py-6 overflow-y-auto">
                         <div className="px-8 mb-10 shrink-0">

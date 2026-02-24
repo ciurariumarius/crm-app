@@ -12,6 +12,7 @@ import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
 import { getSession } from "@/lib/auth"
 import { DashboardHeaderActions } from "@/components/dashboard/dashboard-header-actions"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 
 export const dynamic = "force-dynamic"
 
@@ -127,10 +128,11 @@ export default async function Home() {
       <TaskSheetWrapper tasks={JSON.parse(JSON.stringify(upcomingTasks))}>
         <div className="flex flex-col gap-6 pb-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex h-10 items-center pl-14 md:pl-0">
+            <div className="flex h-10 items-center md:pl-0 gap-3">
+              <MobileMenuTrigger />
               <GreetingHeader name={user?.name?.split(' ')[0] || user?.username || "Admin"} />
             </div>
-            <div className="flex flex-wrap items-center gap-3 pl-14 md:pl-0">
+            <div className="flex items-center gap-3 md:pl-0 w-full md:w-auto">
               <DashboardHeaderActions
                 partners={formattedPartners}
                 services={formattedServices}

@@ -4,6 +4,7 @@ import { AlertCircle, TrendingUp, CheckSquare, Zap, Target } from "lucide-react"
 import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { formatProjectName } from "@/lib/utils"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -127,9 +128,12 @@ export default async function TasksPage({
     return (
         <div className="flex flex-col gap-6">
             <div className="flex h-10 items-center justify-between gap-4">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0 leading-none flex items-center h-full">
-                    Tasks
-                </h1>
+                <div className="flex items-center gap-3">
+                    <MobileMenuTrigger />
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
+                        Tasks
+                    </h1>
+                </div>
                 <CreateTaskButton projects={activeProjects} />
             </div>
 

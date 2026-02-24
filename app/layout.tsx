@@ -37,6 +37,7 @@ export const metadata: Metadata = {
 import { Toaster } from "@/components/ui/sonner"
 import { HeaderProvider } from "@/components/layout/header-context"
 import { PWARegister } from "@/components/pwa-register"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 
 export default async function RootLayout({
   children,
@@ -121,7 +122,7 @@ export default async function RootLayout({
           <HeaderProvider>
             <div className="flex h-screen overflow-hidden bg-background">
               <Sidebar user={user} />
-              <div className="flex-1 flex flex-col min-w-0 md:ml-[70px] h-screen overflow-y-auto transition-all duration-300">
+              <div className="flex-1 flex flex-col min-w-0 md:ml-[70px] h-screen overflow-y-auto transition-all duration-300 relative">
                 <main className="flex-1 px-4 md:px-8 pt-4 md:pt-8 pb-24 md:pb-8 transition-all duration-300">
                   {children}
                 </main>

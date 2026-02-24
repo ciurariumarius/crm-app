@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart3, TrendingUp, DollarSign, Clock, Briefcase, Users } from "lucide-react"
 import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 
 export const dynamic = "force-dynamic"
 
@@ -87,9 +88,12 @@ export default async function AnalyticsPage() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex h-10 items-center justify-between gap-4">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0 leading-none flex items-center h-full">
-                    Analytics
-                </h1>
+                <div className="flex items-center gap-3">
+                    <MobileMenuTrigger />
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
+                        Analytics
+                    </h1>
+                </div>
             </div>
 
             {/* Key Metrics */}

@@ -10,15 +10,18 @@ interface BreadcrumbItem {
 interface HeaderContextType {
     breadcrumbs: BreadcrumbItem[]
     setBreadcrumbs: (items: BreadcrumbItem[]) => void
+    isMobileMenuOpen: boolean
+    setIsMobileMenuOpen: (open: boolean) => void
 }
 
 const HeaderContext = createContext<HeaderContextType | undefined>(undefined)
 
 export function HeaderProvider({ children }: { children: ReactNode }) {
     const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([])
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     return (
-        <HeaderContext.Provider value={{ breadcrumbs, setBreadcrumbs }}>
+        <HeaderContext.Provider value={{ breadcrumbs, setBreadcrumbs, isMobileMenuOpen, setIsMobileMenuOpen }}>
             {children}
         </HeaderContext.Provider>
     )

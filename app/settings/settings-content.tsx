@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Shield, Key, QrCode, User as UserIcon, Link as LinkIcon, Save, Loader2 } from "lucide-react"
 import QRCode from "qrcode"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 
 interface UserData {
     name: string | null
@@ -106,9 +107,12 @@ export function SettingsContent({ user }: { user: UserData }) {
         <div className="max-w-4xl mx-auto flex flex-col gap-6">
             <div className="flex h-10 items-center justify-between gap-4">
                 <div className="flex flex-col gap-1 pr-12 md:pr-0 h-full">
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0 leading-none flex items-center h-full">
-                        Settings
-                    </h1>
+                    <div className="flex items-center gap-3">
+                        <MobileMenuTrigger />
+                        <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
+                            Settings
+                        </h1>
+                    </div>
                 </div>
             </div>
             <p className="text-muted-foreground pl-14 md:pl-0 -mt-4">Manage your profile, password, and security preferences.</p>

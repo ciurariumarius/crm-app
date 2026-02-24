@@ -5,6 +5,7 @@ import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { SitesTable } from "@/components/vault/sites-table"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 
 export const dynamic = "force-dynamic"
 
@@ -60,9 +61,12 @@ export default async function SitesPage({
     return (
         <div className="flex flex-col gap-6 pb-20">
             <div className="flex h-10 items-center justify-between gap-4">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0 leading-none flex items-center h-full">
-                    Sites
-                </h1>
+                <div className="flex items-center gap-3">
+                    <MobileMenuTrigger />
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
+                        Sites
+                    </h1>
+                </div>
 
                 <div className="flex items-center gap-2">
                     <CreateSiteDialog partners={partners as any} />

@@ -9,6 +9,7 @@ import { formatDistanceToNow, startOfMonth, endOfMonth, subMonths, startOfYear, 
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { ProjectsTable } from "@/components/projects/projects-table"
 import { ProjectsToolbar } from "@/components/projects/projects-toolbar"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { cn } from "@/lib/utils"
 
 
@@ -149,9 +150,12 @@ export default async function MasterProjectsPage({
     return (
         <div className="flex flex-col gap-6">
             <div className="flex h-10 items-center justify-between gap-4">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground pl-14 md:pl-0 leading-none flex items-center h-full">
-                    Projects
-                </h1>
+                <div className="flex items-center gap-3">
+                    <MobileMenuTrigger />
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
+                        Projects
+                    </h1>
+                </div>
                 <CreateProjectButton
                     partners={partnersFull as any}
                     services={services as any}
