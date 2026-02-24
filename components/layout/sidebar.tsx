@@ -92,13 +92,24 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         )
     }
 
+    const handleMobileNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        // Prevent default link behavior
+        e.preventDefault()
+        // Close the menu immediately to trigger animation
+        setIsMobileMenuOpen(false)
+        // Wait for sheet slide-out animation to finish (approx 300ms) before navigating
+        setTimeout(() => {
+            router.push(href)
+        }, 300)
+    }
+
     const renderMobileLink = (item: any) => {
         const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
         return (
             <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
+                onClick={(e) => handleMobileNav(e, item.href)}
                 className={cn(
                     "group relative flex items-center gap-3 px-6 py-3.5 text-sm font-medium transition-all duration-300 border-l-[3px]",
                     isActive
@@ -156,7 +167,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             {isPPCOpen && ppcItems.map(renderMobileLink)}
                         </nav>
                         <div className="p-6 border-t border-border flex items-center justify-between shrink-0">
-                            <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                            <Link href="/settings" onClick={(e) => handleMobileNav(e, "/settings")} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                                 <Avatar className="h-8 w-8">
                                     <AvatarImage src={user?.profilePic || "/avatar.png"} alt={displayName} />
                                     <AvatarFallback>{initials}</AvatarFallback>
