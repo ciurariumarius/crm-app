@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 
@@ -152,8 +152,10 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
             {tasks.map((task) => {
                 const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
-                const isRunning = timerState.taskId === task.id
-                const currentTimerDuration = isRunning ? timerState.elapsedSeconds : 0
+                const isActiveTimerThisTask = timerState.taskId === task.id
+                const isRunning = isActiveTimerThisTask && timerState.isRunning
+                const isPaused = isActiveTimerThisTask && !timerState.isRunning
+                const currentTimerDuration = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
                 const totalSeconds = logsDuration + currentTimerDuration
                 const timeString = formatTimer(totalSeconds)
                 const isOverdue = task.deadline && isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline))
@@ -178,12 +180,13 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         {/* Top Header Row */}
                         <div className="flex items-center justify-between mb-5">
                             <div className="flex items-center gap-2 flex-wrap">
-                                {task.urgency && task.urgency !== "Normal" && (
+                                {task.urgency && (
                                     <div className={cn(
                                         "px-2.5 py-1 flex items-center gap-1.5 rounded-lg border text-[10px] font-bold tracking-widest uppercase",
-                                        task.urgency === "Urgent" ? "border-rose-500/30 text-rose-500" :
-                                            task.urgency === "Medium" ? "border-blue-500/30 text-blue-500" :
-                                                "border-indigo-500/30 text-indigo-500"
+                                        task.urgency === "Urgent" ? "border-rose-500/30 text-rose-500 bg-rose-500/5" :
+                                            task.urgency === "Medium" ? "border-blue-500/30 text-blue-500 bg-blue-500/5" :
+                                                task.urgency === "Idea" ? "border-indigo-500/30 text-indigo-500 bg-indigo-500/5" :
+                                                    "border-border/50 text-muted-foreground bg-muted/30"
                                     )}>
                                         {getUrgencyIcon(task.urgency)} {task.urgency}
                                     </div>
@@ -214,9 +217,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                 {task.project.name || task.project.site?.domainName}
                             </div>
                         )}
-                        <p className="text-sm md:text-base text-muted-foreground/80 line-clamp-2 leading-relaxed">
-                            {task.description || "No description provided."}
-                        </p>
+                        {task.description && (
+                            <p className="text-sm md:text-base text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                                {task.description}
+                            </p>
+                        )}
 
                         <div className="flex-1 min-h-[40px]" />
 
@@ -231,14 +236,36 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                     onClick={(e) => {
                                         e.preventDefault()
                                         e.stopPropagation()
-                                        isRunning ? handlePauseTimer() : handleStartTimer(task)
+                                        if (isRunning) {
+                                            handlePauseTimer()
+                                        } else if (isPaused) {
+                                            handleResumeTimer()
+                                        } else {
+                                            handleStartTimer(task)
+                                        }
                                     }}
                                 >
                                     {isRunning ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
                                 </button>
+
+                                {isActiveTimerThisTask && (
+                                    <button
+                                        className="h-10 w-12 rounded-xl flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all border border-transparent hover:border-rose-500/30"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            handleStopTimer()
+                                        }}
+                                    >
+                                        <Square className="h-4 w-4 fill-current" />
+                                    </button>
+                                )}
+
                                 <button
-                                    className="h-10 w-10 rounded-xl flex items-center justify-center bg-transparent hover:bg-background hover:shadow-sm text-emerald-600 transition-all border border-transparent hover:border-border/50"
-                                    onClick={() => {
+                                    className="h-10 w-10 rounded-xl flex items-center justify-center bg-transparent hover:bg-background hover:shadow-sm text-emerald-600 transition-all border border-transparent hover:border-border/50 ml-1"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
                                         updateTask(task.id, { status: "Completed" })
                                         toast.success("Task completed")
                                     }}
@@ -284,8 +311,10 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
             <div className="divide-y divide-border/30">
                 {tasks.map((task) => {
                     const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
-                    const isRunning = timerState.taskId === task.id
-                    const currentTimerDuration = isRunning ? timerState.elapsedSeconds : 0
+                    const isActiveTimerThisTask = timerState.taskId === task.id
+                    const isRunning = isActiveTimerThisTask && timerState.isRunning
+                    const isPaused = isActiveTimerThisTask && !timerState.isRunning
+                    const currentTimerDuration = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
                     const totalSeconds = logsDuration + currentTimerDuration
                     const timeString = formatTimer(totalSeconds)
                     const isOverdue = task.deadline && isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline))
@@ -366,11 +395,31 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                             onClick={(e) => {
                                                 e.preventDefault()
                                                 e.stopPropagation()
-                                                isRunning ? handlePauseTimer() : handleStartTimer(task)
+                                                if (isRunning) {
+                                                    handlePauseTimer()
+                                                } else if (isPaused) {
+                                                    handleResumeTimer()
+                                                } else {
+                                                    handleStartTimer(task)
+                                                }
                                             }}
                                         >
                                             {isRunning ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current ml-0.5" />}
                                         </button>
+
+                                        {isActiveTimerThisTask && (
+                                            <button
+                                                className="h-7 w-7 rounded-lg flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all"
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    handleStopTimer()
+                                                }}
+                                            >
+                                                <Square className="h-3 w-3 fill-current" />
+                                            </button>
+                                        )}
+
                                         {renderTaskActionMenu(task)}
                                     </div>
                                 </div>
