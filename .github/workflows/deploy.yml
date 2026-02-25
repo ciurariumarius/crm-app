@@ -26,12 +26,15 @@ jobs:
             # Configure Git to trust the workspace folder
             git config --global --add safe.directory /home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro
 
+            # Stop the app first to release any open file locks (like Prisma engines)
+            pm2 stop all || npx pm2 stop all || true
+
             # Forcefully pull the latest code from GitHub, discarding local changes
             git fetch origin main
             git reset --hard origin/main
             
-            # Clear node_modules to avoid ENOTEMPTY errors and reinstall dependencies
-            rm -rf node_modules package-lock.json
+            # Clear node_modules to avoid ENOTEMPTY and Permission errors, then reinstall
+            rm -rf node_modules package-lock.json || true
             npm install --include=dev
             
             # Update Prisma ORM (if database schema changed)
