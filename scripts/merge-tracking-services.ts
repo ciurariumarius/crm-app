@@ -1,10 +1,7 @@
 import { PrismaClient } from "@prisma/client"
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 import path from "path"
 
-const filename = path.join(process.cwd(), "dev.db")
-const adapter = new PrismaBetterSqlite3({ url: filename })
-const prisma = new PrismaClient({ adapter })
+const prisma = new PrismaClient()
 
 async function mergeTrackingServices() {
     console.log("🔄 Merging tracking services into 'Tracking - eCommerce'...\n")

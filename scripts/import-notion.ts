@@ -1,14 +1,10 @@
 import { PrismaClient } from "@prisma/client"
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
-// @ts-ignore
-import Database from "better-sqlite3"
 import fs from "fs"
 import { parse } from "csv-parse/sync"
 import path from "path"
+import Papa from "papaparse"
 
-const filename = path.join(process.cwd(), "dev.db")
-const adapter = new PrismaBetterSqlite3({ url: filename })
-const prisma = new PrismaClient({ adapter })
+const prisma = new PrismaClient()
 
 const CSV_PATH = path.join(process.cwd(), "temp_imports", "projects.csv")
 
