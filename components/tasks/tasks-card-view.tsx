@@ -149,7 +149,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
     }
 
     const renderGridView = () => (
-        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
             {tasks.map((task) => {
                 const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
                 const isRunning = timerState.taskId === task.id
@@ -228,7 +228,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                         "h-10 w-12 rounded-xl flex items-center justify-center transition-all",
                                         isRunning ? "bg-blue-600 text-white shadow-md shadow-blue-500/20" : "bg-background text-foreground shadow-sm hover:bg-muted"
                                     )}
-                                    onClick={() => isRunning ? handlePauseTimer() : handleStartTimer(task)}
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        isRunning ? handlePauseTimer() : handleStartTimer(task)
+                                    }}
                                 >
                                     {isRunning ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
                                 </button>
@@ -359,7 +363,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                                 "h-7 w-7 rounded-lg flex items-center justify-center transition-all",
                                                 isRunning ? "bg-amber-500/20 text-amber-600" : "bg-transparent text-muted-foreground hover:bg-background hover:shadow-sm"
                                             )}
-                                            onClick={() => isRunning ? handlePauseTimer() : handleStartTimer(task)}
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                isRunning ? handlePauseTimer() : handleStartTimer(task)
+                                            }}
                                         >
                                             {isRunning ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current ml-0.5" />}
                                         </button>
