@@ -80,36 +80,24 @@ export default async function TasksPage({
     const pausedTasksCount = allTasks.filter((t: any) => t.status === "Paused").length
     const completedTasksCount = allTasks.filter((t: any) => t.status === "Completed").length
 
-    // Apply filters to tasks for the display
-    let filteredTasks = allTasks.filter((task: any) => {
-        // Status filter (from Cards or Select)
-        if (statusFilter && statusFilter !== "All") {
-            if (task.status !== statusFilter) return false
-        }
-
-        // Partner filter
-        if (partnerId && partnerId !== "all" && task.project.site.partner.id !== partnerId) return false
-
-        // Project filter
-        if (projectId && projectId !== "all" && task.project.id !== projectId) return false
-
-        // Urgency filter
-        if (urgencyFilter && urgencyFilter !== "all") {
-            if (task.urgency !== urgencyFilter) return false
-        }
-
-        // Search query filter
+    // Helper to evaluate filters optionally skipping a specific filter
+    const filterTaskBase = (task: any, skip: 'partner' | 'project' | 'none' = 'none') => {
+        if (statusFilter && statusFilter !== "All" && task.status !== statusFilter) return false
+        if (skip !== 'partner' && partnerId && partnerId !== "all" && task.project.site.partner.id !== partnerId) return false
+        if (skip !== 'project' && projectId && projectId !== "all" && task.project.id !== projectId) return false
+        if (urgencyFilter && urgencyFilter !== "all" && task.urgency !== urgencyFilter) return false
         if (q) {
             const searchLower = q.toLowerCase()
             const matchesName = task.name.toLowerCase().includes(searchLower)
             const matchesProject = (task.project.name || task.project.site.domainName).toLowerCase().includes(searchLower)
             const matchesPartner = task.project.site.partner.name.toLowerCase().includes(searchLower)
-
             if (!matchesName && !matchesProject && !matchesPartner) return false
         }
-
         return true
-    }).sort((a: any, b: any) => {
+    }
+
+    // Apply filters to tasks for the display
+    let filteredTasks = allTasks.filter((t: any) => filterTaskBase(t, 'none')).sort((a: any, b: any) => {
         if (sort === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         if (sort === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         if (sort === "updated") return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -121,9 +109,14 @@ export default async function TasksPage({
     // Serialize to plain object
     const serializedTasks = JSON.parse(JSON.stringify(filteredTasks))
 
-    // Extract unique partners and projects for filters
-    const partnersList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.site.partner.id, name: t.project.site.partner.name })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
-    const projectsList = Array.from(new Set(allTasks.map((t: any) => JSON.stringify({ id: t.project.id, name: formatProjectName(t.project) })))).map((s) => JSON.parse(s as string)).sort((a: any, b: any) => a.name.localeCompare(b.name))
+    // Extract unique partners and projects for filters (Adaptive)
+    const partnersList = Array.from(new Set(allTasks.filter((t: any) => filterTaskBase(t, 'partner')).map((t: any) => JSON.stringify({ id: t.project.site.partner.id, name: t.project.site.partner.name }))))
+        .map((s) => JSON.parse(s as string))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name))
+
+    const projectsList = Array.from(new Set(allTasks.filter((t: any) => filterTaskBase(t, 'project')).map((t: any) => JSON.stringify({ id: t.project.id, name: formatProjectName(t.project) }))))
+        .map((s) => JSON.parse(s as string))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name))
 
     return (
         <div className="flex flex-col gap-6">
