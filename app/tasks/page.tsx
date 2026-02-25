@@ -8,13 +8,14 @@ import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { formatProjectName } from "@/lib/utils"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { TasksViewToggle } from "@/components/tasks/tasks-view-toggle"
 
 export const dynamic = "force-dynamic"
 
 export default async function TasksPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string; urgency?: string; sort?: string }>
+    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string; urgency?: string; sort?: string; view?: string }>
 }) {
     const params = await searchParams
     const q = params.q
@@ -23,6 +24,7 @@ export default async function TasksPage({
     const projectId = params.projectId
     const urgencyFilter = params.urgency || "all"
     const sort = params.sort || "newest"
+    const view = (params.view as "grid" | "list") || "grid"
 
     // Fetch all tasks with project and partner info for metrics and filtering
     const allTasksPromise = prisma.task.findMany({
@@ -127,7 +129,10 @@ export default async function TasksPage({
                         Tasks
                     </h1>
                 </div>
-                <CreateTaskButton projects={activeProjects} />
+                <div className="flex items-center gap-3">
+                    <TasksViewToggle currentView={view} />
+                    <CreateTaskButton projects={activeProjects} />
+                </div>
             </div>
 
             <div className="space-y-4">
@@ -137,6 +142,7 @@ export default async function TasksPage({
                     allServices={allServices}
                     initialActiveTimer={initialActiveTimer}
                     projects={activeProjects}
+                    view={view}
                 />
             </div>
         </div>

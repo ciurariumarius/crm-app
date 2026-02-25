@@ -1,14 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
+import { format, isToday, isPast } from "date-fns"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
-import { getProjectDetails } from "@/lib/actions/projects"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Calendar as CalendarIcon, Plus, CheckCircle2 } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 
@@ -31,9 +30,10 @@ interface TasksCardViewProps {
     allServices: any[]
     initialActiveTimer?: any
     projects?: any[]
+    view?: "grid" | "list"
 }
 
-export function TasksCardView({ tasks, allServices, initialActiveTimer, projects = [] }: TasksCardViewProps) {
+export function TasksCardView({ tasks, allServices, initialActiveTimer, projects = [], view = "grid" }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
@@ -63,9 +63,8 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
         const h = Math.floor(seconds / 3600)
         const m = Math.floor((seconds % 3600) / 60)
         const s = seconds % 60
-        return `${h > 0 ? `${h}:` : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+        return `${h > 0 ? `${h}h ` : ''}${m}m`
     }
-
 
     const toggleSelect = (id: string) => {
         setSelectedIds(prev =>
@@ -108,7 +107,273 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
         }
     }
 
-    // ... return statement start
+    const renderTaskActionMenu = (task: any) => (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button className="h-8 w-8 rounded-full hover:bg-muted/50 flex items-center justify-center text-muted-foreground transition-colors" onClick={e => e.stopPropagation()}>
+                    <MoreVertical className="h-4 w-4" />
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px] p-2 rounded-2xl shadow-xl border-border/40">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toggleSelect(task.id); }} className="px-3 py-2 text-xs font-semibold rounded-xl focus:bg-primary/5 cursor-pointer">
+                    <CheckSquare className="mr-3 h-4 w-4 text-muted-foreground" /> Select Task
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task); }} className="px-3 py-2 text-xs font-semibold rounded-xl focus:bg-primary/5 cursor-pointer">
+                    <Clock className="mr-3 h-4 w-4 text-muted-foreground" /> Add Manual Time
+                </DropdownMenuItem>
+                <div className="h-px bg-border/40 my-1 mx-2" />
+                <DropdownMenuItem className="px-3 py-2 text-xs font-semibold rounded-xl text-rose-500 focus:bg-rose-500/10 focus:text-rose-600 cursor-pointer" onClick={(e) => {
+                    e.stopPropagation()
+                    if (confirm("Delete this task?")) {
+                        deleteTasks([task.id]).then(() => toast.success("Task deleted"))
+                    }
+                }}>
+                    <Trash2 className="mr-3 h-4 w-4" /> Delete Task
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+
+    const getStatusStyle = (status: string) => {
+        if (status === "Active") return "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+        if (status === "Paused") return "bg-amber-500 text-white shadow-sm shadow-amber-500/20"
+        if (status === "Completed") return "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20"
+        return "bg-muted text-muted-foreground"
+    }
+
+    const getUrgencyIcon = (urgency: string) => {
+        if (urgency === "Urgent") return <Zap className="h-3 w-3 text-rose-500 fill-current" />
+        if (urgency === "Medium") return <ArrowRight className="h-3 w-3 text-blue-500" strokeWidth={3} />
+        if (urgency === "Idea") return <Target className="h-3 w-3 text-indigo-500" />
+        return <ArrowRight className="h-3 w-3 text-muted-foreground" strokeWidth={2} />
+    }
+
+    const renderGridView = () => (
+        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-2 gap-6">
+            {tasks.map((task) => {
+                const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+                const isRunning = timerState.taskId === task.id
+                const currentTimerDuration = isRunning ? timerState.elapsedSeconds : 0
+                const totalSeconds = logsDuration + currentTimerDuration
+                const timeString = formatTimer(totalSeconds)
+                const isOverdue = task.deadline && isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline))
+                const isDueToday = task.deadline && isToday(new Date(task.deadline))
+                const activeHighlight = isRunning ? "text-blue-600" : "text-foreground"
+
+                return (
+                    <div
+                        key={task.id}
+                        className={cn(
+                            "group relative flex flex-col bg-card text-card-foreground rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border hover:border-border/80",
+                            selectedIds.includes(task.id) ? "border-primary ring-2 ring-primary/20" : "border-border/30"
+                        )}
+                        onClick={() => setSelectedTask(task)}
+                    >
+                        {selectedIds.includes(task.id) && (
+                            <div className="absolute top-6 right-16 z-10" onClick={(e) => { e.stopPropagation(); toggleSelect(task.id) }}>
+                                <Checkbox checked className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                            </div>
+                        )}
+
+                        {/* Top Header Row */}
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {task.urgency && task.urgency !== "Normal" && (
+                                    <div className={cn(
+                                        "px-2.5 py-1 flex items-center gap-1.5 rounded-lg border text-[10px] font-bold tracking-widest uppercase",
+                                        task.urgency === "Urgent" ? "border-rose-500/30 text-rose-500" :
+                                            task.urgency === "Medium" ? "border-blue-500/30 text-blue-500" :
+                                                "border-indigo-500/30 text-indigo-500"
+                                    )}>
+                                        {getUrgencyIcon(task.urgency)} {task.urgency}
+                                    </div>
+                                )}
+                                {task.deadline && (
+                                    <div className={cn(
+                                        "px-2.5 py-1 flex items-center gap-1.5 rounded-lg text-[10px] font-bold tracking-widest uppercase border",
+                                        isOverdue || isDueToday ? "bg-rose-600 text-white border-rose-600" : "bg-muted border-transparent text-muted-foreground"
+                                    )}>
+                                        <Target className="h-3 w-3" /> DUE: {isDueToday ? "TODAY, 18:00" : format(new Date(task.deadline), "MMM dd, yyyy")}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-[11px] font-medium text-muted-foreground/60 flex items-center gap-1.5">
+                                    <CalendarIcon className="w-3 h-3" /> {format(new Date(task.createdAt), "MMM dd, yyyy")}
+                                </span>
+                                {renderTaskActionMenu(task)}
+                            </div>
+                        </div>
+
+                        {/* Title and Project */}
+                        <h3 className={cn("text-xl md:text-2xl font-bold leading-tight tracking-tight mb-2 text-foreground/90", task.status === "Completed" && "line-through opacity-50")}>
+                            {task.name}
+                        </h3>
+                        {task.project && (
+                            <div className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 mb-4 line-clamp-1">
+                                {task.project.name || task.project.site?.domainName}
+                            </div>
+                        )}
+                        <p className="text-sm md:text-base text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                            {task.description || "No description provided."}
+                        </p>
+
+                        <div className="flex-1 min-h-[40px]" />
+
+                        {/* Footer Controls */}
+                        <div className="flex items-end justify-between mt-6">
+                            <div className="bg-muted/50 rounded-2xl p-1.5 flex items-center gap-1.5 border border-border/50" onClick={e => e.stopPropagation()}>
+                                <button
+                                    className={cn(
+                                        "h-10 w-12 rounded-xl flex items-center justify-center transition-all",
+                                        isRunning ? "bg-blue-600 text-white shadow-md shadow-blue-500/20" : "bg-background text-foreground shadow-sm hover:bg-muted"
+                                    )}
+                                    onClick={() => isRunning ? handlePauseTimer() : handleStartTimer(task)}
+                                >
+                                    {isRunning ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
+                                </button>
+                                <button
+                                    className="h-10 w-10 rounded-xl flex items-center justify-center bg-transparent hover:bg-background hover:shadow-sm text-emerald-600 transition-all border border-transparent hover:border-border/50"
+                                    onClick={() => {
+                                        updateTask(task.id, { status: "Completed" })
+                                        toast.success("Task completed")
+                                    }}
+                                >
+                                    <CheckCircle2 className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-6">
+                                <div className="flex flex-col items-end">
+                                    <div className="text-xl font-bold tracking-tighter flex items-baseline gap-1">
+                                        <span className={activeHighlight}>{timeString}</span>
+                                        {task.estimatedMinutes && (
+                                            <span className="text-muted-foreground/40 text-sm font-medium">/ {Math.floor(task.estimatedMinutes / 60)}h {task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}</span>
+                                        )}
+                                    </div>
+                                    <div className="text-[9px] font-black uppercase tracking-wider text-muted-foreground/30 mt-0.5">Spent / Est</div>
+                                </div>
+                                <div className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest", getStatusStyle(task.status))}>
+                                    {task.status}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    )
+
+    const renderListView = () => (
+        <div className="bg-card rounded-[32px] p-2 shadow-sm border border-border/50 overflow-hidden">
+            <div className="hidden lg:grid grid-cols-[auto_1fr_auto_auto_auto] gap-6 text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] px-8 py-5 border-b border-border/30">
+                <div className="flex items-center gap-6 w-36">
+                    <span className="w-8 text-center">PRI</span>
+                    <span>CREATED</span>
+                </div>
+                <div>TASK / PROJECT / DESCRIPTION</div>
+                <div className="w-24 text-center">STATUS</div>
+                <div className="w-32 text-center">DEADLINE</div>
+                <div className="w-48 text-right">TIME TRACKING</div>
+            </div>
+
+            <div className="divide-y divide-border/30">
+                {tasks.map((task) => {
+                    const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+                    const isRunning = timerState.taskId === task.id
+                    const currentTimerDuration = isRunning ? timerState.elapsedSeconds : 0
+                    const totalSeconds = logsDuration + currentTimerDuration
+                    const timeString = formatTimer(totalSeconds)
+                    const isOverdue = task.deadline && isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline))
+                    const isDueToday = task.deadline && isToday(new Date(task.deadline))
+                    const activeHighlight = isRunning ? "text-blue-600" : "text-foreground"
+
+                    return (
+                        <div
+                            key={task.id}
+                            className={cn(
+                                "group flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 bg-transparent hover:bg-muted/20 p-6 lg:px-8 border-transparent transition-colors cursor-pointer relative",
+                                selectedIds.includes(task.id) && "bg-primary/5 hover:bg-primary/10"
+                            )}
+                            onClick={() => setSelectedTask(task)}
+                        >
+                            {/* Mobile only elements implicitly stacked, Desktop uses precise widths */}
+                            <div className="flex items-center gap-6 lg:w-36 shrink-0">
+                                <div className="w-8 flex justify-center" title={task.urgency}>
+                                    {getUrgencyIcon(task.urgency)}
+                                </div>
+                                <div className="text-xs font-medium text-muted-foreground/60 flex items-center gap-1.5 whitespace-nowrap">
+                                    <CalendarIcon className="w-3.5 h-3.5" />
+                                    <span className="hidden lg:inline">{format(new Date(task.createdAt), "MMM dd")}</span>
+                                    <span className="inline lg:hidden">{format(new Date(task.createdAt), "MMM dd, yyyy")}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0 pr-4">
+                                <h3 className={cn("text-base font-bold truncate text-foreground/90", task.status === "Completed" && "line-through opacity-50")}>
+                                    {task.name}
+                                </h3>
+                                {task.project && (
+                                    <div className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-600 truncate mt-1">
+                                        {task.project.name || task.project.site?.domainName}
+                                    </div>
+                                )}
+                                {task.description && (
+                                    <p className="text-sm text-muted-foreground/70 truncate mt-1.5 hidden lg:block">
+                                        {task.description}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between lg:justify-end gap-6 lg:w-auto shrink-0 mt-4 lg:mt-0">
+                                <div className="w-auto lg:w-24 flex lg:justify-center shrink-0">
+                                    <div className={cn("px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest", getStatusStyle(task.status))}>
+                                        {task.status}
+                                    </div>
+                                </div>
+
+                                <div className="w-auto lg:w-32 flex lg:justify-center shrink-0">
+                                    {task.deadline ? (
+                                        <div className={cn("flex items-center gap-1.5 text-xs font-bold tracking-tight", isOverdue || isDueToday ? "text-rose-500" : "text-muted-foreground")}>
+                                            <Target className="w-3.5 h-3.5" />
+                                            {isDueToday ? "Today, 18:00" : format(new Date(task.deadline), "MMM dd")}
+                                        </div>
+                                    ) : (
+                                        <div className="text-xs font-medium text-muted-foreground/30">-</div>
+                                    )}
+                                </div>
+
+                                <div className="w-auto lg:w-48 flex items-center justify-end gap-4 shrink-0" onClick={e => e.stopPropagation()}>
+                                    <div className="flex flex-col items-end">
+                                        <div className="text-sm font-bold tracking-tighter flex items-baseline gap-1">
+                                            <span className={activeHighlight}>{timeString}</span>
+                                            {task.estimatedMinutes && (
+                                                <span className="text-muted-foreground/40 text-[11px] font-medium">/ {Math.floor(task.estimatedMinutes / 60)}h {task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}</span>
+                                            )}
+                                        </div>
+                                        <div className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/30">Spent / Est</div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 bg-muted/30 rounded-xl p-1 border border-border/40">
+                                        <button
+                                            className={cn(
+                                                "h-7 w-7 rounded-lg flex items-center justify-center transition-all",
+                                                isRunning ? "bg-amber-500/20 text-amber-600" : "bg-transparent text-muted-foreground hover:bg-background hover:shadow-sm"
+                                            )}
+                                            onClick={() => isRunning ? handlePauseTimer() : handleStartTimer(task)}
+                                        >
+                                            {isRunning ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current ml-0.5" />}
+                                        </button>
+                                        {renderTaskActionMenu(task)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+
     return (
         <div className="space-y-6">
             {/* Bulk Actions Bar */}
@@ -119,7 +384,6 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                             {selectedIds.length} Selected
                         </span>
                         <div className="flex items-center gap-2">
-                            {/* ... bulk buttons ... */}
                             <Button
                                 size="sm"
                                 variant="ghost"
@@ -163,232 +427,16 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {tasks.map((task) => {
-                    // Time Calculation
-                    const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
-                    const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
-                    const totalSeconds = logsDuration + currentTimerDuration
-                    const hours = Math.floor(totalSeconds / 3600)
-                    const mins = Math.floor((totalSeconds % 3600) / 60)
-                    const timeString = totalSeconds > 0 ? `${hours > 0 ? `${hours}h ` : ''}${mins}m` : "0m"
-
-
-
-                    return (
-                        <div
-                            key={task.id}
-                            className={cn(
-                                "group relative flex flex-col justify-between bg-card text-card-foreground rounded-[32px] p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border border-transparent hover:border-border/50",
-                                selectedIds.includes(task.id) && "ring-2 ring-primary"
-                            )}
-                            onClick={() => setSelectedTask(task)}
-                        >
-                            {/* Selection Checkbox (Hidden unless hovered/selected) */}
-                            <div
-                                className={cn(
-                                    "absolute top-8 right-8 z-10 transition-opacity duration-200",
-                                    selectedIds.includes(task.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                                )}
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    toggleSelect(task.id)
-                                }}
-                            >
-                                <Checkbox
-                                    checked={selectedIds.includes(task.id)}
-                                    className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                />
-                            </div>
-
-                            <div>
-                                {/* Header: Urgency & Estimate */}
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="flex items-center gap-2">
-                                        <div onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <button className="flex items-center gap-2 hover:bg-muted/50 rounded-full px-2 py-1 transition-colors -ml-2">
-                                                        <div className={cn(
-                                                            "w-2 h-2 rounded-full",
-                                                            task.status === "Active" ? "bg-emerald-500" :
-                                                                task.status === "Paused" ? "bg-amber-500" :
-                                                                    "bg-blue-500"
-                                                        )} />
-                                                        <span className={cn(
-                                                            "text-[11px] font-bold uppercase tracking-widest",
-                                                            task.status === "Active" ? "text-emerald-500" :
-                                                                task.status === "Paused" ? "text-amber-500" :
-                                                                    "text-blue-500"
-                                                        )}>
-                                                            {task.status || "ACTIVE"}
-                                                        </span>
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="start">
-                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { status: "Active" })}>
-                                                        <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
-                                                        Active
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { status: "Paused" })}>
-                                                        <div className="w-2 h-2 rounded-full bg-amber-500 mr-2" />
-                                                        Paused
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { status: "Completed" })}>
-                                                        <div className="w-2 h-2 rounded-full bg-blue-500 mr-2" />
-                                                        Completed
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-
-                                        <div onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <button className="flex items-center gap-2 hover:bg-muted/50 rounded-full px-2 py-1 transition-colors">
-                                                        <div className={cn(
-                                                            "w-1.5 h-1.5 rounded-full ring-1 ring-offset-1",
-                                                            task.urgency === "Urgent" ? "bg-rose-500 ring-rose-500" :
-                                                                task.urgency === "Idea" ? "bg-indigo-500 ring-indigo-500" :
-                                                                    "bg-muted-foreground/30 ring-muted-foreground/30"
-                                                        )} />
-                                                        <span className={cn(
-                                                            "text-[10px] font-black uppercase tracking-widest opacity-70",
-                                                            task.urgency === "Urgent" ? "text-rose-500 opacity-100" :
-                                                                task.urgency === "Idea" ? "text-indigo-500 opacity-100" :
-                                                                    "text-muted-foreground"
-                                                        )}>
-                                                            {task.urgency || "NORMAL"}
-                                                        </span>
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="start">
-                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Normal" })}>
-                                                        <div className="w-2 h-2 rounded-full bg-muted-foreground/30 mr-2" />
-                                                        Normal
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Urgent" })}>
-                                                        <div className="w-2 h-2 rounded-full bg-rose-500 mr-2" />
-                                                        Urgent
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Idea" })}>
-                                                        <div className="w-2 h-2 rounded-full bg-indigo-500 mr-2" />
-                                                        Idea
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
-
-                                    {task.estimatedMinutes && (
-                                        <span className="text-[11px] font-medium text-muted-foreground/40">
-                                            Est: {task.estimatedMinutes}m
-                                        </span>
-                                    )}
-
-                                    {task.deadline && (
-                                        <div className={cn(
-                                            "flex items-center gap-1.5 text-[11px] font-medium",
-                                            new Date(task.deadline) < new Date() && task.status !== "Completed" ? "text-rose-500" : "text-muted-foreground/40"
-                                        )}>
-                                            <CalendarIcon className="h-3 w-3" strokeWidth={1.5} />
-                                            <span>{format(new Date(task.deadline), "MMM dd")}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Title */}
-                                <h3 className={cn(
-                                    "text-lg font-bold leading-snug tracking-tight mb-6 text-foreground/90 pr-4",
-                                    task.status === "Completed" && "line-through opacity-50"
-                                )}>
-                                    {task.name}
-                                </h3>
-
-                                {/* Project Info */}
-                                <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-600 break-words leading-tight">
-                                        {task.project.name || task.project.site.domainName}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="flex items-end justify-between mt-10">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-8 rounded-full bg-muted/50 flex items-center justify-center px-3 text-[10px] font-black text-muted-foreground/70 uppercase">
-                                        {format(new Date(task.createdAt), "MMM dd, yyyy")}
-                                    </div>
-                                    {/* Play Button (Hover only) */}
-                                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-[-10px] group-hover:translate-x-0 gap-2">
-                                        <button
-                                            className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center transition-all hover:scale-110 hover:bg-primary hover:text-primary-foreground shadow-sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                if (timerState.taskId === task.id && timerState.isRunning) {
-                                                    handlePauseTimer()
-                                                } else if (timerState.taskId === task.id) {
-                                                    handleResumeTimer()
-                                                } else {
-                                                    handleStartTimer(task)
-                                                }
-                                            }}
-                                            title={timerState.taskId === task.id && timerState.isRunning ? "Pause Timer" : "Start Timer"}
-                                        >
-                                            {timerState.taskId === task.id && timerState.isRunning ? (
-                                                <Pause className="h-3.5 w-3.5 fill-current" />
-                                            ) : (
-                                                <Play className="h-3.5 w-3.5 fill-current ml-0.5" />
-                                            )}
-                                        </button>
-                                        <button
-                                            className="h-8 w-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center transition-all hover:scale-110 hover:bg-foreground hover:text-background shadow-sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setQuickLogTask(task)
-                                            }}
-                                            title="Log Time Manually"
-                                        >
-                                            <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                        </button>
-                                        <button
-                                            className="h-8 w-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center transition-all hover:scale-110 hover:bg-emerald-500 hover:text-white shadow-sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                updateTask(task.id, { status: "Completed" })
-                                                toast.success("Task marked as completed")
-                                            }}
-                                            title="Mark as Completed"
-                                        >
-                                            <CheckCircle2 className="h-4 w-4" strokeWidth={2.5} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col items-end">
-                                    <span className="text-xl font-bold tracking-tighter text-foreground/80">
-                                        {timeString}
-                                    </span>
-                                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40">
-                                        Spent
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )
-                })}
-
-                {
-                    tasks.length === 0 && (
-                        <div className="col-span-full h-64 flex flex-col items-center justify-center border border-dashed border-border rounded-3xl bg-muted/30">
-                            <Clock className="h-8 w-8 text-muted-foreground/20 mb-4" strokeWidth={1} />
-                            <p className="text-sm text-muted-foreground/60 font-medium">
-                                No active tasks found in this view.
-                            </p>
-                        </div>
-                    )
-                }
-            </div>
+            {tasks.length === 0 ? (
+                <div className="col-span-full h-64 flex flex-col items-center justify-center border border-dashed border-border rounded-3xl bg-muted/30">
+                    <Clock className="h-8 w-8 text-muted-foreground/20 mb-4" strokeWidth={1} />
+                    <p className="text-sm text-muted-foreground/60 font-medium">
+                        No active tasks found in this view.
+                    </p>
+                </div>
+            ) : (
+                view === "list" ? renderListView() : renderGridView()
+            )}
 
             <TaskDetails
                 task={selectedTask}
@@ -423,18 +471,16 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
             </Sheet>
 
             {/* Quick Time Log Dialog */}
-            {
-                quickLogTask && (
-                    <QuickTimeLogDialog
-                        open={!!quickLogTask}
-                        onOpenChange={(open) => !open && setQuickLogTask(null)}
-                        projectId={quickLogTask.projectId}
-                        taskId={quickLogTask.id}
-                        taskName={quickLogTask.name}
-                        projectName={quickLogTask.project.name || quickLogTask.project.site.domainName}
-                    />
-                )
-            }
+            {quickLogTask && (
+                <QuickTimeLogDialog
+                    open={!!quickLogTask}
+                    onOpenChange={(open) => !open && setQuickLogTask(null)}
+                    projectId={quickLogTask.projectId}
+                    taskId={quickLogTask.id}
+                    taskName={quickLogTask.name}
+                    projectName={quickLogTask.project.name || quickLogTask.project.site.domainName}
+                />
+            )}
 
             <GlobalCreateTaskDialog
                 open={createTaskOpen}
@@ -442,6 +488,6 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 projects={projects}
             />
 
-        </div >
+        </div>
     )
 }
