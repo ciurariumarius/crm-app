@@ -4,7 +4,7 @@ import { useState, useContext } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckSquare, ChevronLeft, ChevronRight, Plus, ArrowRight, Clock } from "lucide-react"
+import { CheckSquare, ChevronLeft, ChevronRight, Plus, ArrowRight, Clock, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
@@ -90,8 +90,9 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-4 flex-1">
                     {projects.length === 0 ? (
-                        <div className="text-[12px] text-muted-foreground/50 text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border mx-4">
-                            No active one-time projects.
+                        <div className="flex flex-col items-center justify-center gap-2 text-[12px] text-muted-foreground/50 text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border mx-4">
+                            <FolderOpen className="h-8 w-8 opacity-20" />
+                            <span>No active one-time projects.</span>
                         </div>
                     ) : (
                         displayedProjects.map((project) => (

@@ -4,7 +4,7 @@ import { useState, useContext } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, ChevronLeft, ChevronRight, Plus, ArrowRight, CheckSquare } from "lucide-react"
+import { Clock, ChevronLeft, ChevronRight, Plus, ArrowRight, CheckSquare, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
@@ -90,8 +90,9 @@ export function RecurringProjectsList({ projects, partners, services }: Recurrin
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-4 flex-1">
                     {projects.length === 0 ? (
-                        <div className="text-[12px] text-muted-foreground/50 text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border mx-4">
-                            No active subscriptions.
+                        <div className="flex flex-col items-center justify-center gap-2 text-[12px] text-muted-foreground/50 text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border mx-4">
+                            <FolderOpen className="h-8 w-8 opacity-20" />
+                            <span>No active subscriptions.</span>
                         </div>
                     ) : (
                         displayedProjects.map((project) => (

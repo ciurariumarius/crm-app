@@ -54,7 +54,7 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
 
             <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-2">
-                    <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">{partner.name}</h1>
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">{partner.name}</h1>
 
                 </div>
                 <div className="flex items-center gap-2">

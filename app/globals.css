@@ -38,6 +38,12 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -69,6 +75,14 @@
 
   /* Semantic Gradients - Reserved for Active States Only */
   --accent-gradient: linear-gradient(135deg, #0D9488 0%, #4F46E5 100%);
+
+  /* Additional Status Colors */
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+  --warning: #F59E0B;
+  --warning-foreground: #FFFFFF;
+  --info: #3B82F6;
+  --info-foreground: #FFFFFF;
 }
 
 

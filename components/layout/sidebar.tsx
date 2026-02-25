@@ -18,7 +18,8 @@ import {
     Circle,
     Clock,
     Search,
-    Share2
+    Share2,
+    LogOut
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -83,11 +84,15 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}
-                title={item.name}
             >
                 <item.icon className="h-5 w-5" strokeWidth={1.5} />
                 {isActive && (
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-primary shadow-[0_0_8px_rgba(13,148,136,0.4)]" />
+                )}
+                {!activeDrawer && (
+                    <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-foreground text-background text-xs font-bold rounded-md shadow-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
+                        {item.name}
+                    </div>
                 )}
             </Link>
         )
@@ -114,7 +119,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                 className={cn(
                     "group relative flex items-center gap-3 px-6 py-3.5 text-sm font-medium transition-all duration-300 border-l-[3px]",
                     isActive
-                        ? "text-foreground bg-primary/5 border-emerald-500"
+                        ? "text-foreground bg-primary/5 border-primary"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-transparent"
                 )}
             >
@@ -174,7 +179,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                                 </div>
                             </Link>
                             <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-rose-500 rounded-full">
-                                <Share2 className="h-4 w-4 rotate-90" /> {/* Just using Share2 rotated as generic logout icon fallback since log-out isn't imported */}
+                                <LogOut className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>
@@ -185,6 +190,9 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
             <div
                 className="hidden md:flex fixed left-0 top-0 h-screen z-50 group isolate"
                 onMouseLeave={() => setActiveDrawer(null)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Escape') setActiveDrawer(null)
+                }}
             >
                 {/* Primary Rail */}
                 <div className="w-[70px] bg-card border-r border-border h-full flex flex-col items-center py-6 gap-6 z-20 shadow-xl">
@@ -212,6 +220,11 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             {(pathname.startsWith("/vault") || activeDrawer === 'vault') && (
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
                             )}
+                            {!activeDrawer && (
+                                <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-foreground text-background text-xs font-bold rounded-md shadow-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
+                                    The Vault
+                                </div>
+                            )}
                         </Link>
 
                         {/* PPC Trigger */}
@@ -229,6 +242,11 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             {(pathname.startsWith("/ppc") || activeDrawer === 'ppc') && (
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
                             )}
+                            {!activeDrawer && (
+                                <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-foreground text-background text-xs font-bold rounded-md shadow-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
+                                    Campaigns
+                                </div>
+                            )}
                         </Link>
 
                         <div className="h-px w-8 bg-border/50 my-2" />
@@ -244,6 +262,11 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             )}
                         >
                             <BarChart3 className="h-5 w-5" strokeWidth={1.5} />
+                            {!activeDrawer && (
+                                <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-foreground text-background text-xs font-bold rounded-md shadow-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
+                                    Analytics
+                                </div>
+                            )}
                         </Link>
 
                     </nav>

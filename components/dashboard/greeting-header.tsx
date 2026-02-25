@@ -29,7 +29,7 @@ export function GreetingHeader({ name = "Marius" }: GreetingHeaderProps) {
     }
 
     return (
-        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-[-0.03em] text-foreground animate-in fade-in duration-500 leading-none flex items-center h-full">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground animate-in fade-in duration-500 leading-none flex items-center h-full">
             {greeting}, {name}
         </h1>
     )

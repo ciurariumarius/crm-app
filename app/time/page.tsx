@@ -55,6 +55,9 @@ export default async function TimePage({
     // Serialization for client component
     const serializedLogs = JSON.parse(JSON.stringify(logs))
 
+    const totalTimeSeconds = logs?.reduce((sum, log) => sum + (log.durationSeconds || 0), 0) || 0
+    const totalHours = (totalTimeSeconds / 3600).toFixed(1)
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex h-10 items-center justify-between gap-4">
@@ -76,12 +79,17 @@ export default async function TimePage({
                     projects={formattedProjects}
                 />
 
-                <div className="bg-card rounded-xl border border-border shadow-sm p-1">
+                <div className="bg-card rounded-xl border border-border shadow-sm p-4 md:p-6">
                     <TimeLogsTable
                         logs={serializedLogs}
                         projects={formattedProjects}
                         tasks={tasks}
                     />
+
+                    <div className="mt-6 pt-4 border-t border-border flex justify-between items-center px-2">
+                        <span className="font-bold text-sm text-muted-foreground uppercase tracking-widest">Total Hours (Filtered)</span>
+                        <span className="font-mono font-bold text-lg text-primary">{totalHours}h</span>
+                    </div>
                 </div>
             </div>
         </div>

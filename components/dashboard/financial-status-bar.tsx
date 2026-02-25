@@ -19,7 +19,7 @@ export function FinancialStatusBar({
     formattedRevenue,
     revenueBreakdown,
     revenueByPartner,
-    mom = "+12%",
+    mom,
     className
 }: FinancialStatusBarProps) {
     // Calculations for Zone 1: Cash Flow
@@ -53,14 +53,13 @@ export function FinancialStatusBar({
                     <span className="text-3xl font-black tracking-tighter text-foreground">
                         {formattedRevenue}
                     </span>
-                    <div className="flex gap-1.5">
-                        <div className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-wide">
-                            {mom} MOM
+                    {mom && (
+                        <div className="flex gap-1.5">
+                            <div className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-wide">
+                                {mom} MOM
+                            </div>
                         </div>
-                        <div className="flex items-center gap-0.5 text-[10px] font-bold text-sky-600 bg-sky-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-wide">
-                            +34% YOY
-                        </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Collection Progress Bar */}
@@ -73,7 +72,7 @@ export function FinancialStatusBar({
                     </div>
                     <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
                         <span>
-                            COLLECTED
+                            COLLECTED ({collectionRate.toFixed(0)}%)
                         </span>
                         <span className="text-muted-foreground/80">
                             {formatCurrency(totalPending)} PENDING
@@ -82,8 +81,8 @@ export function FinancialStatusBar({
                 </div>
             </div>
 
-            {/* Spacer/Divider (Desktop) - Invisible spacer instead of line to match clean look */}
-            <div className="hidden lg:block w-8" />
+            {/* Spacer/Divider (Desktop) */}
+            <div className="hidden lg:block w-px h-16 bg-border/40" />
 
             {/* ZONE 2: Revenue Quality (Stability Indicator) */}
             <div className="flex-1 min-w-0 md:min-w-[300px] flex flex-col gap-2 justify-center">
@@ -108,7 +107,7 @@ export function FinancialStatusBar({
                 </div>
 
                 {/* Bottom Label */}
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 italic mt-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mt-1">
                     Revenue Type
                 </span>
             </div>

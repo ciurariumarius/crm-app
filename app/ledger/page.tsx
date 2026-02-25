@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 
 export const dynamic = "force-dynamic"
 
@@ -51,8 +52,11 @@ export default async function LedgerPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">The Ledger</h1>
+            <div className="flex h-10 items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <MobileMenuTrigger />
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">The Ledger</h1>
+                </div>
             </div>
 
             <Tabs defaultValue="payments" className="w-full">
@@ -67,10 +71,15 @@ export default async function LedgerPage() {
                             <Card key={project.id} className={project.paymentStatus === "Unpaid" ? "border-red-500/50" : ""}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <div className="space-y-1">
-                                        <CardTitle className="text-base">
+                                        <CardTitle className="text-base flex items-center gap-2 flex-wrap">
                                             {project.services.length > 0
                                                 ? project.services.map((s: any) => s.serviceName).join(", ")
                                                 : "No Service"}
+                                            {project.currentFee != null && (
+                                                <span className="text-sm font-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
+                                                    {project.currentFee} RON
+                                                </span>
+                                            )}
                                         </CardTitle>
                                         <CardDescription>{project.site.domainName}</CardDescription>
                                     </div>
