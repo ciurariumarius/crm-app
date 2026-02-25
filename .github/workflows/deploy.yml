@@ -30,7 +30,8 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             
-            # Install dependencies
+            # Clear node_modules to avoid ENOTEMPTY errors and reinstall dependencies
+            rm -rf node_modules package-lock.json
             npm install --include=dev
             
             # Update Prisma ORM (if database schema changed)
