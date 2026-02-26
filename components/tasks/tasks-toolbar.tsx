@@ -14,15 +14,17 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet"
-import { Check, ChevronsUpDown, Filter, X } from "lucide-react"
+import { Check, ChevronsUpDown, Filter, X, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { TasksViewToggle } from "@/components/tasks/tasks-view-toggle"
 
 interface TasksToolbarProps {
     partners: { id: string; name: string }[]
     projects: { id: string; name: string }[]
+    currentView?: "grid" | "list"
 }
 
-export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
+export function TasksToolbar({ partners, projects, currentView = "grid" }: TasksToolbarProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -87,8 +89,9 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
     const currentPriority = searchParams.get("urgency") || "all"
 
     return (
-        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 w-full z-40 mt-6 mb-8">
-            <div className="flex flex-col md:flex-row items-center w-full xl:w-auto gap-4">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 w-full z-40 mt-1 md:mt-6 mb-4 md:mb-8">
+            {/* Desktop Layout */}
+            <div className="hidden md:flex flex-col md:flex-row items-center w-full xl:w-auto gap-4">
                 {/* Search Input */}
                 <div className={cn(
                     "flex items-center relative transition-all duration-300 ease-in-out bg-white dark:bg-zinc-900 rounded-xl border border-border/60 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] h-10 w-full xl:w-[280px]"
@@ -139,7 +142,8 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
             </div>
 
             {/* Desktop Filters (Pills) */}
-            <div className="flex items-center flex-wrap gap-2 w-full xl:w-auto xl:justify-end">
+            <div className="hidden md:flex items-center flex-wrap gap-2 w-full xl:w-auto xl:justify-end">
+                <TasksViewToggle currentView={currentView} />
                 <ProjectCombobox
                     projects={projects}
                     currentProject={currentProject}
@@ -153,6 +157,29 @@ export function TasksToolbar({ partners, projects }: TasksToolbarProps) {
                     currentSort={currentSort}
                     onSelect={(val) => updateFilter("sort", val)}
                 />
+            </div>
+
+            {/* Mobile Layout */}
+            <div className="flex md:hidden flex-col gap-4 w-full mt-2">
+                <div className="flex flex-row items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1 min-w-min hidescrollbar">
+                    <StatusMobileCombobox currentStatus={currentStatus} onSelect={(val) => updateFilter("status", val)} />
+                    <ProjectCombobox
+                        projects={projects}
+                        currentProject={currentProject}
+                        onSelect={(val) => updateFilter("projectId", val)}
+                    />
+                    <SortCombobox
+                        currentSort={currentSort}
+                        onSelect={(val) => updateFilter("sort", val)}
+                    />
+                </div>
+
+                <div className="w-full mt-2">
+                    <div className="h-1.5 w-full bg-border/40 rounded-full mb-6 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 h-1.5 w-1/2 bg-muted-foreground/30 rounded-full"></div>
+                    </div>
+                    <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/40 mb-1 ml-1">Ongoing Tasks</h2>
+                </div>
             </div>
         </div>
     )
@@ -178,10 +205,10 @@ function ProjectCombobox({
                     className="h-10 px-4 text-[10px] font-bold tracking-widest uppercase rounded-xl transition-all duration-200 flex items-center gap-2 bg-white dark:bg-zinc-900 border border-border/60 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-muted-foreground hover:text-foreground"
                 >
                     <Briefcase className="w-4 h-4 text-muted-foreground/40" />
-                    <span className="truncate max-w-[200px]">
-                        PROJECT: <span className="text-foreground">{currentProject && currentProject !== "all"
+                    <span className="truncate max-w-[150px]">
+                        {currentProject && currentProject !== "all"
                             ? projects.find((project) => project.id === currentProject)?.name
-                            : "ALL PROJECTS"}</span>
+                            : "Project"}
                     </span>
                     <ChevronDown className="ml-1 h-3 w-3 opacity-50" strokeWidth={3} />
                 </button>
@@ -341,6 +368,80 @@ function SortCombobox({
                                         )}
                                     />
                                     {sort.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+function StatusMobileCombobox({
+    currentStatus,
+    onSelect
+}: {
+    currentStatus: string,
+    onSelect: (val: string) => void
+}) {
+    const [open, setOpen] = React.useState(false)
+
+    const statuses = [
+        { label: "ALL", value: "All" },
+        { label: "ACTIVE", value: "Active" },
+        { label: "PAUSED", value: "Paused" },
+        { label: "DONE", value: "Completed" }
+    ]
+
+    const activeObj = statuses.find((s) => s.value === currentStatus) || statuses[1]
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <div className="flex items-center bg-zinc-900 border border-zinc-800 dark:bg-zinc-100 dark:border-border/60 shadow-sm rounded-xl h-10 overflow-hidden shrink-0">
+                <PopoverTrigger asChild>
+                    <button
+                        role="combobox"
+                        aria-expanded={open}
+                        className="pl-4 pr-3 py-2 text-[10px] font-bold tracking-widest text-white dark:text-zinc-900 uppercase transition-all duration-200 flex items-center gap-2 hover:bg-white/5 active:bg-white/10 dark:hover:bg-zinc-900/5 h-full"
+                    >
+                        <Layers className="w-4 h-4 text-blue-400 opacity-90 shrink-0" strokeWidth={2.5} />
+                        <span>{activeObj.label}</span>
+                    </button>
+                </PopoverTrigger>
+                {currentStatus !== "All" && (
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onSelect("All")
+                        }}
+                        className="pr-4 pl-3 py-2 h-full text-zinc-400 hover:text-white dark:text-zinc-600 dark:hover:text-zinc-900 flex items-center justify-center transition-colors border-l border-white/10 dark:border-black/10"
+                    >
+                        <X className="w-3.5 h-3.5" strokeWidth={3} />
+                    </button>
+                )}
+            </div>
+            <PopoverContent className="w-[150px] p-0" align="start">
+                <Command>
+                    <CommandList>
+                        <CommandGroup>
+                            {statuses.map((s) => (
+                                <CommandItem
+                                    key={s.value}
+                                    value={s.label}
+                                    onSelect={() => {
+                                        onSelect(s.value)
+                                        setOpen(false)
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            currentStatus === s.value || (s.value === 'Active' && !currentStatus) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {s.label}
                                 </CommandItem>
                             ))}
                         </CommandGroup>

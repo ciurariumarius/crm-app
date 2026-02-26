@@ -31,9 +31,10 @@ interface TasksCardViewProps {
     initialActiveTimer?: any
     projects?: any[]
     view?: "grid" | "list"
+    cols?: number
 }
 
-export function TasksCardView({ tasks, allServices, initialActiveTimer, projects = [], view = "grid" }: TasksCardViewProps) {
+export function TasksCardView({ tasks, allServices, initialActiveTimer, projects = [], view = "grid", cols = 3 }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
@@ -149,7 +150,13 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
     }
 
     const renderGridView = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+        <div className={cn(
+            "grid grid-cols-1 md:grid-cols-2 gap-6",
+            cols === 2 ? "xl:grid-cols-2 2xl:grid-cols-2" :
+                cols === 3 ? "xl:grid-cols-3 2xl:grid-cols-3" :
+                    cols === 4 ? "xl:grid-cols-4 2xl:grid-cols-4" :
+                        "xl:grid-cols-3 2xl:grid-cols-4"
+        )}>
             {tasks.map((task) => {
                 const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
                 const isActiveTimerThisTask = timerState.taskId === task.id
@@ -206,11 +213,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         </div>
 
                         {/* Title and Project */}
-                        <h3 className={cn("text-2xl md:text-[26px] font-black leading-tight tracking-tight mb-2 text-foreground", task.status === "Completed" && "line-through opacity-50")}>
+                        <h3 className={cn("text-2xl md:text-[26px] font-black leading-tight tracking-tight mb-2 text-foreground break-words text-wrap", task.status === "Completed" && "line-through opacity-50")}>
                             {task.name}
                         </h3>
                         {task.project && (
-                            <div className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 mb-4 line-clamp-1">
+                            <div className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 mb-4 whitespace-normal break-words">
                                 {task.project.name || task.project.site?.domainName}
                             </div>
                         )}
@@ -341,11 +348,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                             </div>
 
                             <div className="flex-1 min-w-0 pr-4">
-                                <h3 className={cn("text-base font-bold truncate text-foreground/90", task.status === "Completed" && "line-through opacity-50")}>
+                                <h3 className={cn("text-base font-bold text-foreground/90 break-words whitespace-normal", task.status === "Completed" && "line-through opacity-50")}>
                                     {task.name}
                                 </h3>
                                 {task.project && (
-                                    <div className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-600 truncate mt-1">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-600 break-words whitespace-normal mt-1">
                                         {task.project.name || task.project.site?.domainName}
                                     </div>
                                 )}

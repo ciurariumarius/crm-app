@@ -9,13 +9,14 @@ import { formatProjectName } from "@/lib/utils"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { TasksViewToggle } from "@/components/tasks/tasks-view-toggle"
+import { Search } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
 export default async function TasksPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string; urgency?: string; sort?: string; view?: string }>
+    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string; urgency?: string; sort?: string; view?: string; cols?: string }>
 }) {
     const params = await searchParams
     const q = params.q
@@ -25,6 +26,7 @@ export default async function TasksPage({
     const urgencyFilter = params.urgency || "all"
     const sort = params.sort || "newest"
     const view = (params.view as "grid" | "list") || "grid"
+    const cols = Number(params.cols) || 3
 
     // Fetch all tasks with project and partner info for metrics and filtering
     const allTasksPromise = prisma.task.findMany({
@@ -123,32 +125,49 @@ export default async function TasksPage({
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between w-full md:w-auto">
                     <div className="flex items-center gap-3">
                         <MobileMenuTrigger />
                         <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground md:pl-0 leading-none flex items-center h-full">
                             Tasks
                         </h1>
                     </div>
-                    <div className="text-[10px] font-extrabold tracking-widest uppercase text-muted-foreground/60 flex items-center gap-2 md:pl-0 ml-1 md:ml-0.5 mt-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        {activeTasksCount} ACTIVE TASKS, {pausedTasksCount} PAUSED AND {completedTasksCount} COMPLETED
+                    {/* Mobile Only Header Actions */}
+                    <div className="flex md:hidden items-center gap-2">
+                        {/* We add a fake search icon for now to match the screenshot UI. True mobile search might need a modal. */}
+                        <div className="p-2 text-muted-foreground/50 hover:text-foreground cursor-pointer transition-colors" title="Search">
+                            <Search className="w-5 h-5" strokeWidth={2.5} />
+                        </div>
+                        <TasksViewToggle currentView={view} />
+                        <CreateTaskButton projects={activeProjects} />
                     </div>
                 </div>
-                <div className="flex items-center gap-3 self-end md:self-auto">
-                    <TasksViewToggle currentView={view} />
+
+                {/* Subtitle (Desktop only, or keep under title) */}
+                <div className="hidden md:flex flex-col gap-2">
+                    <div className="hidden md:flex h-10 w-10"></div> {/* Spacer to align with 5xl text */}
+                </div>
+
+                <div className="text-[10px] font-extrabold tracking-widest uppercase text-muted-foreground/60 flex items-center gap-2 md:pl-0 ml-1 md:ml-0.5 mt-1 md:-mt-8">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                    {activeTasksCount} ACTIVE TASKS, {pausedTasksCount} PAUSED AND {completedTasksCount} COMPLETED
+                </div>
+
+                {/* Desktop Header Actions */}
+                <div className="hidden md:flex items-center gap-3 self-end md:self-auto">
                     <CreateTaskButton projects={activeProjects} />
                 </div>
             </div>
 
             <div className="space-y-4">
-                <TasksToolbar partners={partnersList} projects={projectsList} />
+                <TasksToolbar partners={partnersList} projects={projectsList} currentView={view} />
                 <TasksCardView
                     tasks={serializedTasks}
                     allServices={allServices}
                     initialActiveTimer={initialActiveTimer}
                     projects={activeProjects}
                     view={view}
+                    cols={cols}
                 />
             </div>
         </div>
