@@ -16,11 +16,9 @@ export function CreateTaskButton({ projects }: CreateTaskButtonProps) {
         <>
             <Button
                 onClick={() => setOpen(true)}
-                size="icon"
-                className="h-10 w-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center flex-shrink-0"
-                title="Add new task"
+                className="rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-all flex items-center justify-center font-bold tracking-widest text-[10px] xl:text-xs px-5 h-10 border border-transparent shadow-sm"
             >
-                <Plus className="h-5 w-5" strokeWidth={2.5} />
+                <Plus className="h-4 w-4 mr-1.5" strokeWidth={3} /> NEW TASK
             </Button>
             <GlobalCreateTaskDialog
                 open={open}

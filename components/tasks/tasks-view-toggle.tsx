@@ -23,24 +23,24 @@ export function TasksViewToggle({ currentView }: { currentView: string }) {
     }
 
     return (
-        <div className="flex items-center p-1 bg-muted/50 rounded-xl gap-1 border border-border/50">
+        <div className="flex items-center p-1 bg-white dark:bg-zinc-900 rounded-xl gap-1 border border-border/60 shadow-sm">
             <button
                 onClick={() => setView("list")}
                 className={cn(
                     "p-1.5 rounded-lg transition-all duration-200",
-                    currentView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                    currentView === "list" ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" : "text-muted-foreground/50 hover:text-foreground"
                 )}
             >
-                <List className="h-4 w-4" />
+                <List className="h-4 w-4" strokeWidth={2.5} />
             </button>
             <button
                 onClick={() => setView("grid")}
                 className={cn(
                     "p-1.5 rounded-lg transition-all duration-200",
-                    currentView === "grid" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                    currentView === "grid" ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" : "text-muted-foreground/50 hover:text-foreground"
                 )}
             >
-                <LayoutGrid className="h-4 w-4" />
+                <LayoutGrid className="h-4 w-4" strokeWidth={2.5} />
             </button>
         </div>
     )

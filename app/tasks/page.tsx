@@ -122,14 +122,20 @@ export default async function TasksPage({
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex h-10 items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <MobileMenuTrigger />
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
-                        Tasks
-                    </h1>
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                        <MobileMenuTrigger />
+                        <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground md:pl-0 leading-none flex items-center h-full">
+                            Tasks
+                        </h1>
+                    </div>
+                    <div className="text-[10px] font-extrabold tracking-widest uppercase text-muted-foreground/60 flex items-center gap-2 md:pl-0 ml-1 md:ml-0.5 mt-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                        {activeTasksCount} ACTIVE TASKS, {pausedTasksCount} PAUSED AND {completedTasksCount} COMPLETED
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 self-end md:self-auto">
                     <TasksViewToggle currentView={view} />
                     <CreateTaskButton projects={activeProjects} />
                 </div>
