@@ -9,6 +9,7 @@ import { formatProjectName } from "@/lib/utils"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { TasksViewToggle } from "@/components/tasks/tasks-view-toggle"
+import { MobileSearch } from "@/components/tasks/mobile-search"
 import { Search } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -134,10 +135,7 @@ export default async function TasksPage({
                     </div>
                     {/* Mobile Only Header Actions */}
                     <div className="flex md:hidden items-center gap-2">
-                        {/* We add a fake search icon for now to match the screenshot UI. True mobile search might need a modal. */}
-                        <div className="p-2 text-muted-foreground/50 hover:text-foreground cursor-pointer transition-colors" title="Search">
-                            <Search className="w-5 h-5" strokeWidth={2.5} />
-                        </div>
+                        <MobileSearch />
                         <TasksViewToggle currentView={view} />
                         <CreateTaskButton projects={activeProjects} />
                     </div>
