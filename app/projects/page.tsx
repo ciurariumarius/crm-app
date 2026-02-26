@@ -160,6 +160,14 @@ export default async function MasterProjectsPage({
                     </div>
                     {/* Mobile Only Header Actions */}
                     <div className="flex md:hidden items-center gap-2">
+                        <div className="flex items-center p-1 bg-white dark:bg-zinc-900 rounded-[14px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border/60 h-10 px-1">
+                            <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=list`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'list' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
+                                <List className={cn("w-4 h-4", layout === 'list' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                            </Link>
+                            <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=grid`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'grid' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
+                                <LayoutGrid className={cn("w-4 h-4", layout === 'grid' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                            </Link>
+                        </div>
                         <CreateProjectButton
                             partners={partnersFull as any}
                             services={services as any}
@@ -175,7 +183,7 @@ export default async function MasterProjectsPage({
                 {/* Desktop Header Actions */}
                 <div className="hidden md:flex items-center gap-3 self-end md:self-auto">
                     {/* Layout Toggle */}
-                    <div className="hidden xl:flex items-center p-1 bg-white dark:bg-zinc-900 rounded-[14px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border/60 h-10 px-1">
+                    <div className="hidden md:flex items-center p-1 bg-white dark:bg-zinc-900 rounded-[14px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border/60 h-10 px-1">
                         <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=list`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'list' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
                             <List className={cn("w-4 h-4", layout === 'list' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
                         </Link>

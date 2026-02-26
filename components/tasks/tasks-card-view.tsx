@@ -301,8 +301,8 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
     )
 
     const renderListView = () => (
-        <div className="bg-card rounded-[32px] p-2 shadow-sm border border-border/50 overflow-hidden">
-            <div className="hidden lg:grid grid-cols-[auto_1fr_auto_auto_auto] gap-6 text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] px-8 py-5 border-b border-border/30">
+        <div className="flex flex-col gap-3">
+            <div className="hidden lg:grid grid-cols-[auto_1fr_auto_auto_auto] gap-6 text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] px-8 py-2">
                 <div className="flex items-center gap-6 w-36">
                     <span className="w-8 text-center">PRI</span>
                     <span>CREATED</span>
@@ -313,7 +313,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 <div className="w-48 text-right">TIME TRACKING</div>
             </div>
 
-            <div className="divide-y divide-border/30">
+            <div className="flex flex-col gap-3">
                 {tasks.map((task) => {
                     const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
                     const isActiveTimerThisTask = timerState.taskId === task.id
@@ -330,8 +330,8 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         <div
                             key={task.id}
                             className={cn(
-                                "group flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 bg-transparent hover:bg-muted/20 p-6 lg:px-8 border-transparent transition-colors cursor-pointer relative",
-                                selectedIds.includes(task.id) && "bg-primary/5 hover:bg-primary/10"
+                                "group flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 bg-white dark:bg-zinc-900 rounded-[24px] p-6 lg:px-8 shadow-sm hover:shadow-md hover:-translate-y-0.5 border border-border/40 hover:border-border/80 transition-all duration-300 cursor-pointer relative overflow-hidden",
+                                selectedIds.includes(task.id) && "border-primary ring-2 ring-primary/20 bg-primary/5"
                             )}
                             onClick={() => setSelectedTask(task)}
                         >

@@ -16,10 +16,9 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet"
-import { Search, Users, ChevronDown, Filter, X } from "lucide-react"
+import { Search, Users, ChevronDown, Filter, X, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
-import { DateFilter } from "@/components/projects/date-filter"
 
 interface ProjectsToolbarProps {
     partners: { id: string; name: string }[]
@@ -104,6 +103,24 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
         payment: searchParams.get("payment") || "All"
     }
 
+    const activeFilterCount =
+        (currentParams.partner !== "all" ? 1 : 0) +
+        (currentParams.type !== "All" ? 1 : 0) +
+        (currentParams.payment !== "All" ? 1 : 0) +
+        (searchParams.get("period") && searchParams.get("period") !== "all_time" ? 1 : 0);
+
+    const hasFilters = activeFilterCount > 0;
+
+    const clearAllFilters = () => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.delete("partnerId")
+        params.delete("recurring")
+        params.delete("payment")
+        params.delete("period")
+        params.delete("page")
+        router.push(`/projects?${params.toString()}`)
+    }
+
     const getButtonStyle = (value: string, isActive: boolean) => {
         if (isActive) {
             if (value === 'Paid') return "bg-emerald-600 text-white shadow-md shadow-emerald-500/20 ring-0 font-bold"
@@ -123,107 +140,191 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
             : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
     )
 
+    const getFilterBtnClass = (isActive: boolean) => cn(
+        "px-4 py-2 text-[10px] font-bold tracking-widest uppercase transition-all duration-200 rounded-xl border",
+        isActive
+            ? "bg-primary text-primary-foreground border-primary shadow-md"
+            : "bg-white dark:bg-zinc-900 border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+    )
+
     return (
-        <div className="flex flex-row items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1 w-full hidescrollbar snap-x mt-4">
-            {/* Inline Desktop/Mobile Search Pill */}
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl h-10 px-4 shrink-0 focus-within:ring-1 focus-within:ring-blue-500 w-[240px] snap-start transition-colors">
-                <Search className="w-4 h-4 text-muted-foreground/40 shrink-0 mr-3" />
-                <Input
-                    placeholder="Search projects..."
-                    value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="h-full bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-[10px] font-bold tracking-widest uppercase transition-all duration-300 w-full px-0 text-foreground shadow-none"
-                />
-                {searchTerm && (
-                    <button onClick={() => setSearchTerm("")} className="shrink-0 ml-1">
-                        <X className="w-3.5 h-3.5 text-muted-foreground/60" />
-                    </button>
-                )}
-            </div>
-
-            {/* Status Segmented Control */}
-            <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 snap-start items-center">
-                {[
-                    { label: "ALL", value: "All" },
-                    { label: "ACTIVE", value: "Active", icon: <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2" /> },
-                    { label: "PAUSED", value: "Paused", icon: null },
-                    { label: "COMPLETED", value: "Completed", icon: null }
-                ].map((opt) => (
-                    <button
-                        key={opt.value}
-                        onClick={() => handleStatusChange(opt.value)}
-                        className={cn(getSegmentBtnClass(currentParams.status === opt.value), "flex items-center")}
-                    >
-                        {opt.value === "Active" && currentParams.status === "Active" && opt.icon}
-                        {opt.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Partner Dropdown */}
-            <DropdownMenu>
-                <div className="shrink-0 snap-start">
-                    <DropdownMenuTrigger asChild>
-                        <button className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase">
-                            <Users className="w-4 h-4 text-muted-foreground/40 shrink-0" />
-                            <span className={cn(currentPartner !== "all" ? "text-foreground" : "text-muted-foreground")}>
-                                {currentPartner !== "all" ? partners.find(p => p.id === currentPartner)?.name || "PARTNER" : "PARTNER"}
-                            </span>
-                            <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
-                        </button>
-                    </DropdownMenuTrigger>
+        <div className="flex flex-col gap-4 mt-4 w-full">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full justify-between">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {/* Inline Desktop/Mobile Search Pill */}
+                    <div className="flex items-center bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl h-10 px-4 shrink-0 focus-within:ring-1 focus-within:ring-blue-500 w-full sm:w-[240px] transition-colors">
+                        <Search className="w-4 h-4 text-muted-foreground/40 shrink-0 mr-3" />
+                        <Input
+                            placeholder="Search projects..."
+                            value={searchTerm}
+                            onChange={(e) => handleSearch(e.target.value)}
+                            className="h-full bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-[10px] font-bold tracking-widest uppercase transition-all duration-300 w-full px-0 text-foreground shadow-none"
+                        />
+                        {searchTerm && (
+                            <button onClick={() => setSearchTerm("")} className="shrink-0 ml-1">
+                                <X className="w-3.5 h-3.5 text-muted-foreground/60" />
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <DropdownMenuContent align="start" className="w-[200px]">
-                    <DropdownMenuItem onSelect={() => updateFilter("partnerId", "all")} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
-                        All Partners
-                    </DropdownMenuItem>
-                    {partners.map((p) => (
-                        <DropdownMenuItem key={p.id} onSelect={() => updateFilter("partnerId", p.id)} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
-                            {p.name}
-                        </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
 
-            {/* Timeline Filter component wrapper */}
-            <div className="shrink-0 snap-start">
-                <DateFilter />
-            </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto hidescrollbar pb-1 sm:pb-0 -mb-1 sm:mb-0">
+                    {/* Status Segmented Control */}
+                    <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 items-center">
+                        {[
+                            { label: "ALL", value: "All" },
+                            { label: "ACTIVE", value: "Active", icon: <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2" /> },
+                            { label: "PAUSED", value: "Paused", icon: null },
+                            { label: "COMPLETED", value: "Completed", icon: null }
+                        ].map((opt) => (
+                            <button
+                                key={opt.value}
+                                onClick={() => handleStatusChange(opt.value)}
+                                className={cn(getSegmentBtnClass(currentParams.status === opt.value), "flex items-center")}
+                            >
+                                {opt.value === "Active" && currentParams.status === "Active" && opt.icon}
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
 
-            {/* Type Segmented Control */}
-            <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 snap-start items-center">
-                <div className="text-[10px] font-bold text-blue-600/50 uppercase px-3 hidden md:flex"><span className="w-2.5 h-2.5 rounded-full border border-blue-500/50 flex items-center justify-center mr-1 text-[6px]">↻</span></div>
-                {[
-                    { label: "ALL", value: "All" },
-                    { label: "MONTHLY", value: "Recurring" },
-                    { label: "ONE-TIME", value: "OneTime" }
-                ].map((opt) => (
-                    <button
-                        key={opt.value}
-                        onClick={() => updateFilter("recurring", opt.value)}
-                        className={getSegmentBtnClass(currentParams.type === opt.value)}
-                    >
-                        {opt.label}
-                    </button>
-                ))}
-            </div>
+                    {/* Filter Sheet Trigger */}
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <button className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase relative shrink-0">
+                                <Filter className="w-4 h-4 text-muted-foreground/60" />
+                                <span>Filters</span>
+                                {hasFilters && (
+                                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[8px] font-bold text-white shadow-sm">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
+                            </button>
+                        </SheetTrigger>
+                        <SheetContent className="overflow-y-auto w-full sm:max-w-md bg-white dark:bg-zinc-950 p-6 z-[100]">
+                            <SheetHeader className="mb-6 mt-4">
+                                <div className="flex items-center justify-between">
+                                    <SheetTitle className="text-xl font-bold tracking-tight">Filters</SheetTitle>
+                                    {hasFilters && (
+                                        <button
+                                            onClick={clearAllFilters}
+                                            className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            Clear All
+                                        </button>
+                                    )}
+                                </div>
+                            </SheetHeader>
 
-            {/* Payment Segmented Control */}
-            <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 snap-start items-center">
-                <div className="text-[10px] font-bold text-emerald-600/50 uppercase px-3 hidden md:flex"><span className="w-2.5 h-2.5 rounded-full border border-emerald-500/50 bg-emerald-50 mr-1" /></div>
-                {[
-                    { label: "ALL", value: "All" },
-                    { label: "PAID", value: "Paid" },
-                    { label: "UNPAID", value: "Unpaid" }
-                ].map((opt) => (
-                    <button
-                        key={opt.value}
-                        onClick={() => updateFilter("payment", opt.value)}
-                        className={getSegmentBtnClass(currentParams.payment === opt.value)}
-                    >
-                        {opt.label}
-                    </button>
-                ))}
+                            <div className="flex flex-col gap-8">
+                                {/* Partner Filter */}
+                                <div className="flex flex-col gap-3">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                        <Users className="w-3.5 h-3.5" />
+                                        Partner
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => updateFilter("partnerId", "all")}
+                                            className={getFilterBtnClass(currentParams.partner === "all")}
+                                        >
+                                            All Partners
+                                        </button>
+                                        {partners.map((p) => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => updateFilter("partnerId", p.id)}
+                                                className={getFilterBtnClass(currentParams.partner === p.id)}
+                                            >
+                                                {p.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Timeline Filter */}
+                                <div className="flex flex-col gap-3">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        Timeline
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[
+                                            { label: "All Time", value: "all_time" },
+                                            { label: "This Month", value: "this_month" },
+                                            { label: "Last Month", value: "last_month" },
+                                            { label: "This Year", value: "this_year" },
+                                            { label: "Last Year", value: "last_year" },
+                                        ].map((p) => (
+                                            <button
+                                                key={p.value}
+                                                onClick={() => {
+                                                    const params = new URLSearchParams(searchParams.toString())
+                                                    if (p.value !== "all_time") {
+                                                        params.set("period", p.value)
+                                                    } else {
+                                                        params.delete("period")
+                                                    }
+                                                    params.delete("page")
+                                                    router.push(`/projects?${params.toString()}`)
+                                                }}
+                                                className={getFilterBtnClass((searchParams.get("period") || "all_time") === p.value)}
+                                            >
+                                                {p.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Type Filter */}
+                                <div className="flex flex-col gap-3">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                        <span className="w-3.5 h-3.5 rounded-full border border-blue-500/50 flex items-center justify-center text-[8px] text-blue-500">↻</span>
+                                        Project Type
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[
+                                            { label: "ALL", value: "All" },
+                                            { label: "MONTHLY", value: "Recurring" },
+                                            { label: "ONE-TIME", value: "OneTime" }
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => updateFilter("recurring", opt.value)}
+                                                className={getFilterBtnClass(currentParams.type === opt.value)}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Payment Filter */}
+                                <div className="flex flex-col gap-3">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                        <span className="w-3.5 h-3.5 rounded-full border border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950" />
+                                        Payment Status
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[
+                                            { label: "ALL", value: "All" },
+                                            { label: "PAID", value: "Paid" },
+                                            { label: "UNPAID", value: "Unpaid" }
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => updateFilter("payment", opt.value)}
+                                                className={getFilterBtnClass(currentParams.payment === opt.value)}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </SheetContent>
+                    </Sheet>
+                </div>
             </div>
         </div>
     )

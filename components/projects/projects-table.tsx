@@ -140,7 +140,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
             <div
                 key={project.id}
                 className={cn(
-                    "group relative flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] border border-border/40 hover:border-border/80 transition-all cursor-pointer overflow-hidden",
+                    "group relative flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 border border-border/40 hover:border-border/80 transition-all duration-300 cursor-pointer overflow-hidden",
                     isMonthly ? "border-l-[6px] border-l-blue-600" : "border-l-[6px] border-l-emerald-500"
                 )}
                 onClick={() => setSelectedProject(project)}
@@ -286,7 +286,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
         return (
             <div
                 key={project.id}
-                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-[20px] p-4 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border/40 hover:border-border transition-all w-full cursor-pointer overflow-x-auto min-w-[800px]"
+                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-[24px] p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 border border-border/40 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[800px]"
                 onClick={() => setSelectedProject(project)}
             >
                 {/* 1. Status Pill */}
