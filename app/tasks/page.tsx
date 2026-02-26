@@ -142,7 +142,7 @@ export default async function TasksPage({
                     {/* Subtitle */}
                     <div className="text-[10px] font-extrabold tracking-widest uppercase text-muted-foreground/60 flex items-center gap-2 md:pl-0 ml-1 md:ml-0.5 mt-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        {activeTasksCount} ACTIVE TASKS, {pausedTasksCount} PAUSED AND {completedTasksCount} COMPLETED
+                        {activeTasksCount} ACTIVE TASK{activeTasksCount !== 1 ? 'S' : ''}
                     </div>
                 </div>
 

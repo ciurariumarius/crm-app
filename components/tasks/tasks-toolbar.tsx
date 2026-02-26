@@ -194,10 +194,6 @@ export function TasksToolbar({ partners, projects, currentView = "grid" }: Tasks
                         onSelect={(val) => updateFilter("sort", val)}
                     />
                 </div>
-
-                <div className="w-full mt-2">
-                    <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/40 mb-1 ml-1">Ongoing Tasks</h2>
-                </div>
             </div>
         </div>
     )

@@ -213,21 +213,21 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         </div>
 
                         {/* Title and Project */}
-                        <h3 className={cn("text-2xl md:text-[26px] font-black leading-tight tracking-tight mb-2 text-foreground break-words text-wrap", task.status === "Completed" && "line-through opacity-50")}>
+                        <h3 className={cn("text-xl md:text-2xl font-black leading-tight tracking-tight mb-2 text-foreground break-words text-wrap", task.status === "Completed" && "line-through opacity-50")}>
                             {task.name}
                         </h3>
                         {task.project && (
-                            <div className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 mb-4 whitespace-normal break-words">
+                            <div className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 mb-2 whitespace-normal break-words">
                                 {task.project.name || task.project.site?.domainName}
                             </div>
                         )}
                         {task.description && (
-                            <p className="text-sm md:text-base text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                            <p className="text-sm md:text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
                                 {task.description}
                             </p>
                         )}
 
-                        <div className="flex-1 min-h-[40px]" />
+                        <div className="flex-1" />
 
                         {/* Footer Controls */}
                         <div className="flex items-end justify-between mt-6">
@@ -352,7 +352,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                     {task.name}
                                 </h3>
                                 {task.project && (
-                                    <div className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-600 break-words whitespace-normal mt-1">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 break-words whitespace-normal mt-1">
                                         {task.project.name || task.project.site?.domainName}
                                     </div>
                                 )}
