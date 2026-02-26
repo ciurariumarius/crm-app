@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma"
 import Link from "next/link"
-import { Briefcase, Globe, Users, Search as SearchIcon, Filter, X, CreditCard, CheckCircle2, AlertCircle, Plus } from "lucide-react"
+import { Briefcase, Globe, Users, Search as SearchIcon, Filter, X, CreditCard, CheckCircle2, AlertCircle, Plus, LayoutGrid, List } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic"
 export default async function MasterProjectsPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; payment?: string; recurring?: string; period?: string }>
+    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; payment?: string; recurring?: string; period?: string; layout?: string }>
 }) {
     const params = await searchParams
     const queryStatus = params.status || "Active"
@@ -27,6 +27,7 @@ export default async function MasterProjectsPage({
     const payment = params.payment || "All"
     const recurring = params.recurring || "All"
     const period = params.period || "all_time"
+    const layout = params.layout || "grid"
 
     let dateFilter: any = {}
     const now = new Date()
@@ -149,17 +150,44 @@ export default async function MasterProjectsPage({
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex h-10 items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <MobileMenuTrigger />
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
-                        Projects
-                    </h1>
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div className="flex items-center justify-between w-full md:w-auto">
+                    <div className="flex items-center gap-3">
+                        <MobileMenuTrigger />
+                        <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground md:pl-0 leading-none flex items-center h-full">
+                            Projects
+                        </h1>
+                    </div>
+                    {/* Mobile Only Header Actions */}
+                    <div className="flex md:hidden items-center gap-2">
+                        <CreateProjectButton
+                            partners={partnersFull as any}
+                            services={services as any}
+                        />
+                    </div>
                 </div>
-                <CreateProjectButton
-                    partners={partnersFull as any}
-                    services={services as any}
-                />
+
+                {/* Subtitle Space (hidden on mobile, aligned on desktop) */}
+                <div className="hidden md:flex flex-col gap-2">
+                    <div className="hidden md:flex h-10 w-10"></div>
+                </div>
+
+                {/* Desktop Header Actions */}
+                <div className="hidden md:flex items-center gap-3 self-end md:self-auto">
+                    {/* Layout Toggle */}
+                    <div className="hidden xl:flex items-center p-1 bg-white dark:bg-zinc-900 rounded-[14px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border/60 h-10 px-1">
+                        <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=list`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'list' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
+                            <List className={cn("w-4 h-4", layout === 'list' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                        </Link>
+                        <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=grid`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'grid' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
+                            <LayoutGrid className={cn("w-4 h-4", layout === 'grid' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                        </Link>
+                    </div>
+                    <CreateProjectButton
+                        partners={partnersFull as any}
+                        services={services as any}
+                    />
+                </div>
             </div>
 
             {/* Unified Filter Toolbar */}
@@ -221,7 +249,7 @@ export default async function MasterProjectsPage({
                 </div>
             )}
 
-            <ProjectsTable projects={projects} allServices={services} />
+            <ProjectsTable projects={projects} allServices={services} layout={layout as "grid" | "list"} />
         </div>
     )
 }

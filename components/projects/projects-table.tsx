@@ -24,7 +24,10 @@ import {
     Clock,
     Pencil,
     Trash2,
-    Plus
+    Plus,
+    Activity,
+    Sparkles,
+    MoreVertical
 } from "lucide-react"
 import { ProjectTasks } from "@/components/projects/project-tasks"
 import { formatDistanceToNow, format } from "date-fns"
@@ -48,9 +51,10 @@ import {
 interface ProjectTableProps {
     projects: any[]
     allServices: any[]
+    layout?: "grid" | "list"
 }
 
-export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
+export function ProjectsTable({ projects, allServices, layout = "grid" }: ProjectTableProps) {
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
@@ -106,97 +110,105 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
     }
 
     const renderHeader = () => (
-        <TableHeader>
-            <TableRow className="hover:bg-transparent border-border/40 border-b">
-                <TableHead className="w-[40px] pl-4"></TableHead>
-                <TableHead className="w-[250px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 h-10">Project</TableHead>
-                <TableHead className="w-[100px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 h-10">Status</TableHead>
-                <TableHead className="w-[100px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 text-center h-10">Partner</TableHead>
-                <TableHead className="w-[120px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 h-10">Payment</TableHead>
-                <TableHead className="w-[160px] text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 h-10">Progress</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 h-10">Created</TableHead>
-                <TableHead className="w-[100px] h-10"></TableHead>
-            </TableRow>
-        </TableHeader>
+        <div className={cn("hidden md:flex items-center px-4 mb-3 text-[10px] font-extrabold pb-2 uppercase tracking-widest text-muted-foreground/40 w-full min-w-[800px]", layout === "grid" && "hidden")}>
+            <div className="w-[120px] pl-2 shrink-0">Status</div>
+            <div className="flex-1 min-w-[200px] shrink-0">Project name & url</div>
+            <div className="w-[100px] shrink-0 text-center">Partner</div>
+            <div className="w-[120px] shrink-0 text-center">Payment</div>
+            <div className="w-[120px] shrink-0 pl-4">Amount</div>
+            <div className="w-[160px] shrink-0 pl-1">Activity tracking</div>
+            <div className="w-[100px] shrink-0">Created</div>
+        </div>
     )
 
-    const renderProjectRow = (project: any) => {
+    const renderGridCard = (project: any, isMonthly: boolean) => {
         const isPaused = project.status === "Paused"
         const isCompleted = project.status === "Completed"
         const isActive = project.status === "Active"
 
         const statusColor = isActive ? "text-foreground font-bold" : isPaused ? "text-muted-foreground" : "text-muted-foreground/50 line-through"
+        const totalSeconds = project.tasks?.reduce((acc: number, task: any) => {
+            const taskLogs = task.timeLogs?.reduce((lAcc: number, log: any) => lAcc + (log.durationSeconds || 0), 0) || 0
+            return acc + taskLogs
+        }, 0) || 0
+        const h = Math.floor(totalSeconds / 3600)
+        const m = Math.floor((totalSeconds % 3600) / 60)
+
+        const tasksDone = project._count?.tasks || 0
 
         return (
-            <TableRow
+            <div
                 key={project.id}
-                className="group hover:bg-muted/30 border-b border-border/40 transition-colors data-[state=selected]:bg-muted"
+                className={cn(
+                    "group relative flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] border border-border/40 hover:border-border/80 transition-all cursor-pointer overflow-hidden",
+                    isMonthly ? "border-l-[6px] border-l-blue-600" : "border-l-[6px] border-l-emerald-500"
+                )}
+                onClick={() => setSelectedProject(project)}
             >
-                <TableCell className="pl-4 py-2">
-                    <Checkbox
-                        checked={selectedIds.includes(project.id)}
-                        onCheckedChange={() => toggleSelectProject(project.id)}
-                        className={cn(
-                            "rounded-[4px] border-border/60 data-[state=checked]:bg-primary data-[state=checked]:border-primary transition-all",
-                            selectedIds.includes(project.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                        )}
-                    />
-                </TableCell>
+                {/* Top Row: Pills and Menu */}
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        {/* Status Pill */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                                        isActive ? "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20" :
+                                            isPaused ? "bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20" :
+                                                "bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                    )}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <Activity className="h-3 w-3" />
+                                    {project.status}
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="rounded-xl">
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-[10px] font-bold text-blue-500 tracking-wider uppercase p-2 cursor-pointer">Active</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-[10px] font-bold text-amber-600 tracking-wider uppercase p-2 cursor-pointer">Paused</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-[10px] font-bold text-slate-500 tracking-wider uppercase p-2 cursor-pointer">Completed</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
 
-                <TableCell className="py-2" onClick={() => setSelectedProject(project)}>
-                    <div className="flex flex-col cursor-pointer">
-                        <span className={cn("text-[13px] leading-tight transition-colors", statusColor)}>
-                            {formatProjectName(project)}
-                        </span>
-                        <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/50 font-medium truncate max-w-[200px]">
-                                {project.site.domainName}
-                            </span>
+                        {/* Type Pill */}
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-50 dark:bg-zinc-800/50 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-500">
+                            <Sparkles className="h-3 w-3 text-amber-500" />
+                            {isMonthly ? "MONTHLY" : "ONE-TIME"}
                         </div>
                     </div>
-                </TableCell>
 
-                <TableCell className="py-2">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className={cn(
-                                    "px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all border",
-                                    isActive ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20" :
-                                        isPaused ? "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20" :
-                                            "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
-                                )}
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {project.status}
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-bold text-emerald-600">Active</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-bold text-amber-600">Paused</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-bold text-slate-600">Completed</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </TableCell>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/40 hover:text-foreground">
+                        <MoreVertical className="h-4 w-4" />
+                    </Button>
+                </div>
 
-                <TableCell className="text-center py-2">
-                    <div
-                        className="flex justify-center"
-                        title={project.site.partner.name}
-                    >
-                        <Avatar className="h-6 w-6 border border-border/50 cursor-help">
-                            {project.site.partner.icon ? (
-                                <AvatarImage src={project.site.partner.icon} />
-                            ) : null}
-                            <AvatarFallback className="text-[9px] font-bold bg-muted text-muted-foreground">
-                                {project.site.partner.name.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                        </Avatar>
-                    </div>
-                </TableCell>
+                {/* Middle Row: Project Info */}
+                <div className="flex flex-col mb-6">
+                    <span className={cn("text-lg font-black tracking-tight leading-tight line-clamp-2 mb-1", statusColor)}>
+                        {formatProjectName(project)}
+                    </span>
+                    <span className="text-xs text-blue-500/70 font-medium truncate">
+                        {project.site.domainName}
+                    </span>
+                </div>
 
-                <TableCell className="py-2">
-                    <div className="flex items-center gap-2">
+                {/* Bottom Row: Partner, Payment, Amount */}
+                <div className="flex items-end justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        {/* Partner Avatar Wrapper */}
+                        <div title={project.site.partner.name}>
+                            <Avatar className="h-10 w-10 border-0 bg-zinc-950 dark:bg-zinc-100">
+                                {project.site.partner.icon ? (
+                                    <AvatarImage src={project.site.partner.icon} />
+                                ) : null}
+                                <AvatarFallback className="text-xs text-white dark:text-black font-extrabold uppercase bg-transparent">
+                                    {project.site.partner.name.substring(0, 2)}
+                                </AvatarFallback>
+                            </Avatar>
+                        </div>
+
+                        {/* Payment Pill */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button
@@ -204,48 +216,189 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <div className={cn(
-                                        "flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all hover:opacity-80",
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all border border-transparent hover:border-border/30",
                                         project.paymentStatus === "Paid"
-                                            ? "bg-emerald-100 border-emerald-200 text-emerald-700"
-                                            : "bg-rose-100 border-rose-200 text-rose-700"
+                                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"
+                                            : "bg-rose-50 text-rose-500 dark:bg-rose-500/10"
                                     )}>
                                         <div className={cn(
                                             "h-1.5 w-1.5 rounded-full",
                                             project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
                                         )} />
-                                        <span className="text-[9px] font-bold uppercase tracking-wider">
+                                        <span className="text-[9px] font-extrabold uppercase tracking-widest">
                                             {project.paymentStatus === "Paid" ? "PAID" : "UNPAID"}
                                         </span>
                                     </div>
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-bold text-emerald-600">Paid</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-bold text-rose-600">Unpaid</DropdownMenuItem>
+                            <DropdownMenuContent className="rounded-xl">
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest p-2 cursor-pointer">Paid</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-[10px] font-bold text-rose-500 uppercase tracking-widest p-2 cursor-pointer">Unpaid</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <div className="relative group/fee flex items-center">
-                            <Input
-                                type="number"
-                                defaultValue={project.currentFee || 0}
-                                onBlur={(e) => {
-                                    const val = parseFloat(e.target.value)
-                                    if (val !== project.currentFee) {
-                                        handleUpdate(project.id, { currentFee: val })
-                                    }
-                                }}
-                                className="h-6 text-[11px] font-medium bg-transparent border-transparent hover:bg-muted/50 focus:bg-muted/50 focus:ring-0 p-0 w-16 text-right cursor-text rounded transition-colors"
-                            />
-                            <span className="text-[9px] text-muted-foreground/50 ml-1 font-bold">RON</span>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="flex items-baseline gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Input
+                            type="number"
+                            defaultValue={project.currentFee || 0}
+                            onBlur={(e) => {
+                                const val = parseFloat(e.target.value)
+                                if (val !== project.currentFee) {
+                                    handleUpdate(project.id, { currentFee: val })
+                                }
+                            }}
+                            className="h-auto p-0 border-none bg-transparent hover:bg-muted/30 focus-visible:ring-0 text-xl md:text-2xl font-black text-right w-20 shadow-none -mb-1"
+                        />
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">RON</span>
+                    </div>
+                </div>
+
+                {/* Stats Row */}
+                <div className="flex items-center gap-3 mt-auto pt-2">
+                    <div className="flex-1 flex flex-col gap-1 p-3 rounded-[16px] border border-border/40 bg-zinc-50/50 dark:bg-zinc-800/30">
+                        <span className="text-[8px] font-extrabold text-muted-foreground/60 uppercase tracking-widest">TIME TRACKED</span>
+                        <div className="flex items-center gap-1.5 text-xs font-black text-foreground">
+                            <Clock className="w-3.5 h-3.5 text-blue-500" />
+                            {h}h {m}m
                         </div>
                     </div>
-                </TableCell>
+                    <div className="flex-1 flex flex-col gap-1 p-3 rounded-[16px] border border-border/40 bg-zinc-50/50 dark:bg-zinc-800/30">
+                        <span className="text-[8px] font-extrabold text-muted-foreground/60 uppercase tracking-widest">TASKS DONE</span>
+                        <div className="flex items-center gap-1.5 text-xs font-black text-foreground">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            {tasksDone} tasks
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
-                <TableCell className="py-2">
-                    <div className="flex items-center gap-3 opacity-70 group-hover:opacity-100 transition-opacity" onClick={() => setSelectedProject(project)}>
-                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium bg-muted/40 px-2 py-1 rounded-md" title="Time Tracked">
-                            <Clock className="h-3 w-3 opacity-70" />
-                            <span className="font-mono">
+    const renderProjectCard = (project: any) => {
+        const isPaused = project.status === "Paused"
+        const isCompleted = project.status === "Completed"
+        const isActive = project.status === "Active"
+
+        const statusColor = isActive ? "text-foreground font-bold" : isPaused ? "text-muted-foreground" : "text-muted-foreground/50 line-through"
+
+        return (
+            <div
+                key={project.id}
+                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-[20px] p-4 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border/40 hover:border-border transition-all w-full cursor-pointer overflow-x-auto min-w-[800px]"
+                onClick={() => setSelectedProject(project)}
+            >
+                {/* 1. Status Pill */}
+                <div className="w-[120px] shrink-0 pl-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                className={cn(
+                                    "px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all",
+                                    isActive ? "bg-blue-50 text-blue-500 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20" :
+                                        isPaused ? "bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20" :
+                                            "bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                )}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {project.status}
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="rounded-xl">
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-[10px] font-bold text-blue-500 tracking-wider uppercase p-2 cursor-pointer">Active</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-[10px] font-bold text-amber-600 tracking-wider uppercase p-2 cursor-pointer">Paused</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-[10px] font-bold text-slate-500 tracking-wider uppercase p-2 cursor-pointer">Completed</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                {/* 2. Project Name & URL */}
+                <div className="flex-1 min-w-[200px] shrink-0">
+                    <div className="flex flex-col pr-4">
+                        <span className={cn("text-sm font-black tracking-tight", statusColor)}>
+                            {formatProjectName(project)}
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-blue-500/60 dark:text-blue-400/60 font-medium truncate max-w-[200px]">
+                                {project.site.domainName}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Partner Avatar */}
+                <div className="w-[100px] shrink-0 flex items-center justify-center">
+                    <div
+                        className="flex justify-center"
+                        title={project.site.partner.name}
+                    >
+                        <Avatar className="h-8 w-8 border border-border/80">
+                            {project.site.partner.icon ? (
+                                <AvatarImage src={project.site.partner.icon} />
+                            ) : null}
+                            <AvatarFallback className="text-[10px] bg-white dark:bg-zinc-800 font-bold text-muted-foreground uppercase">
+                                {project.site.partner.name.substring(0, 2)}
+                            </AvatarFallback>
+                        </Avatar>
+                    </div>
+                </div>
+
+                {/* 4. Payment */}
+                <div className="w-[120px] shrink-0 flex items-center justify-center">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                className="focus:outline-none"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className={cn(
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border border-transparent hover:border-border/30",
+                                    project.paymentStatus === "Paid"
+                                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"
+                                        : "bg-rose-50 text-rose-500 dark:bg-rose-500/10"
+                                )}>
+                                    <div className={cn(
+                                        "h-1.5 w-1.5 rounded-full",
+                                        project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
+                                    )} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                                        {project.paymentStatus === "Paid" ? "PAID" : "UNPAID"}
+                                    </span>
+                                </div>
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="rounded-xl">
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest p-2 cursor-pointer">Paid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-[10px] font-bold text-rose-500 uppercase tracking-widest p-2 cursor-pointer">Unpaid</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                {/* 5. Amount */}
+                <div className="w-[120px] shrink-0 flex items-center justify-start pl-4">
+                    <div className="relative group/fee flex items-center">
+                        <Input
+                            type="number"
+                            defaultValue={project.currentFee || 0}
+                            onBlur={(e) => {
+                                const val = parseFloat(e.target.value)
+                                if (val !== project.currentFee) {
+                                    handleUpdate(project.id, { currentFee: val })
+                                }
+                            }}
+                            className="h-8 text-sm font-bold bg-transparent border-transparent hover:bg-muted/50 focus:bg-muted/50 focus:ring-0 p-0 w-16 text-right cursor-text rounded transition-colors"
+                        />
+                        <span className="text-xs text-muted-foreground/60 ml-1 font-bold">RON</span>
+                    </div>
+                </div>
+
+                {/* 6. Activity */}
+                <div className="w-[160px] shrink-0 flex items-center pl-1">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium" title="Time Tracked">
+                            <Clock className="h-3.5 w-3.5 opacity-50" />
+                            <span className="font-mono text-[11px]">
                                 {(() => {
                                     const totalSeconds = project.tasks?.reduce((acc: number, task: any) => {
                                         const taskLogs = task.timeLogs?.reduce((lAcc: number, log: any) => lAcc + (log.durationSeconds || 0), 0) || 0
@@ -257,142 +410,94 @@ export function ProjectsTable({ projects, allServices }: ProjectTableProps) {
                                 })()}
                             </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium" title="Tasks Completed">
-                            <CheckCircle2 className="h-3 w-3 opacity-70" />
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium" title="Tasks Completed">
+                            <CheckCircle2 className="h-3.5 w-3.5 opacity-50 text-emerald-500" />
                             <span>{project._count?.tasks || 0}</span>
                         </div>
                     </div>
-                </TableCell>
+                </div>
 
-                <TableCell className="py-2 text-[10px] text-muted-foreground/40 font-mono">
-                    {format(new Date(project.createdAt), "dd MMM")}
-                </TableCell>
+                {/* 7. Created */}
+                <div className="w-[100px] shrink-0 flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground font-bold tracking-wide">
+                        {format(new Date(project.createdAt), "dd MMM")}
+                    </span>
 
-                <TableCell className="py-2 pr-2">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedProject(project)
-                            }}
-                        >
-                            <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                            className="h-8 w-8 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-border/40 text-muted-foreground hover:text-rose-500 hover:border-rose-200 transition-colors"
                             onClick={(e) => {
                                 e.stopPropagation()
                                 // TODO: Implement delete or confirm dialog
                             }}
                         >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                     </div>
-                </TableCell>
-            </TableRow>
+                </div>
+            </div>
         )
     }
 
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
 
     return (
-        <div className="space-y-6">
-            <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-                    <Table>
-                        {renderHeader()}
-                        <TableBody>
-                            {/* Recurring Group */}
-                            {recurringProjects.length > 0 && (
-                                <>
-                                    <TableRow className="bg-indigo-50/40 hover:bg-indigo-50/40 border-y border-indigo-100/50 pointer-events-none sticky top-0 z-10 backdrop-blur-sm">
-                                        <TableCell colSpan={9} className="py-3 px-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-sm" />
-                                                <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-indigo-700">Monthly Projects</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                    {recurringProjects.map(renderProjectRow)}
-                                    <TableRow
-                                        className="group hover:bg-muted/10 border-b border-dashed border-border/60 transition-colors cursor-pointer"
-                                        onClick={() => setCreateProjectOpen(true)}
-                                    >
-                                        <TableCell colSpan={9} className="py-2.5 text-center">
-                                            <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary transition-colors">
-                                                <Plus className="h-3 w-3" />
-                                                Add New Recurring Project
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                </>
-                            )}
-
-                            {/* One-Time Group */}
-                            {oneTimeProjects.length > 0 && (
-                                <>
-                                    <TableRow className="bg-slate-50/40 hover:bg-slate-50/40 border-y border-slate-100/50 pointer-events-none sticky top-0 z-10 backdrop-blur-sm">
-                                        <TableCell colSpan={9} className="py-3 px-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-1.5 w-1.5 rounded-full bg-slate-500 shadow-sm" />
-                                                <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-700">One Time Projects</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                    {oneTimeProjects.map(renderProjectRow)}
-                                    <TableRow
-                                        className="group hover:bg-muted/10 border-b border-dashed border-border/60 transition-colors cursor-pointer"
-                                        onClick={() => setCreateProjectOpen(true)}
-                                    >
-                                        <TableCell colSpan={9} className="py-2.5 text-center">
-                                            <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary transition-colors">
-                                                <Plus className="h-3 w-3" />
-                                                Add New One-Time Project
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                </>
-                            )}
-                        </TableBody>
-                        {/* Table Footer with Summaries */}
-                        <tfoot className="bg-muted/40 font-bold border-t border-border">
-                            <TableRow className="hover:bg-muted/40">
-                                <TableCell colSpan={4} className="pl-6 h-12 text-[11px] uppercase tracking-wider text-muted-foreground">
-                                    Total: {projects.length} Projects
-                                </TableCell>
-                                <TableCell className="h-12">
-                                    <span className="text-[11px] font-mono text-foreground/80">
-                                        {projects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString()} <span className="text-[9px] text-muted-foreground">RON</span>
-                                    </span>
-                                </TableCell>
-                                <TableCell className="h-12">
-                                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-foreground/80">
-                                        <Clock className="h-3 w-3 opacity-50" />
-                                        {(() => {
-                                            const totalSeconds = projects.reduce((acc, p) => {
-                                                const projectSeconds = p.tasks?.reduce((tAcc: number, t: any) => {
-                                                    const taskSeconds = t.timeLogs?.reduce((lAcc: number, l: any) => lAcc + (l.durationSeconds || 0), 0) || 0
-                                                    return tAcc + taskSeconds
-                                                }, 0) || 0
-                                                return acc + projectSeconds
-                                            }, 0)
-                                            const h = Math.floor(totalSeconds / 3600)
-                                            const m = Math.floor((totalSeconds % 3600) / 60)
-                                            return `${h}h ${m}m`
-                                        })()}
-                                    </div>
-                                </TableCell>
-                                <TableCell colSpan={2} />
-                            </TableRow>
-                        </tfoot>
-                    </Table>
+        <div className="space-y-12">
+            {/* Monthly Group */}
+            {recurringProjects.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-5 w-1.5 rounded-full bg-blue-500 shadow-sm" />
+                            <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-foreground leading-none">Monthly Projects</span>
+                        </div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hidden md:block">
+                            Subtotal: <span className="text-foreground">{recurringProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString()} RON</span>
+                        </div>
+                    </div>
+                    {layout === "grid" ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+                            {recurringProjects.map(p => renderGridCard(p, true))}
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto pb-4 hidescrollbar">
+                            <div className="min-w-[800px] flex flex-col gap-2">
+                                {renderHeader()}
+                                {recurringProjects.map(renderProjectCard)}
+                            </div>
+                        </div>
+                    )}
                 </div>
-            </div>
+            )}
+
+            {/* One-Time Group */}
+            {oneTimeProjects.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-5 w-1.5 rounded-full bg-emerald-500 shadow-sm" />
+                            <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-foreground leading-none">One-Time Projects</span>
+                        </div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hidden md:block">
+                            Subtotal: <span className="text-foreground">{oneTimeProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString()} RON</span>
+                        </div>
+                    </div>
+                    {layout === "grid" ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+                            {oneTimeProjects.map(p => renderGridCard(p, false))}
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto pb-4 hidescrollbar">
+                            <div className="min-w-[800px] flex flex-col gap-2">
+                                {renderHeader()}
+                                {oneTimeProjects.map(renderProjectCard)}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Create Project Dialog */}
             <GlobalCreateProjectDialog

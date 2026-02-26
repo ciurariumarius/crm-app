@@ -39,12 +39,12 @@ export function DateFilter() {
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-2 h-9 px-3 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded-lg transition-colors outline-none whitespace-nowrap min-w-[120px] justify-between">
-                <div className="flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5 opacity-50" />
-                    <span className={cn(period !== "all_time" && "text-primary")}>{currentLabel}</span>
-                </div>
-                <ChevronDown className="h-3 w-3 opacity-30" />
+            <DropdownMenuTrigger className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase outline-none shrink-0 snap-start">
+                <Calendar className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                <span className={cn(period !== "all_time" ? "text-foreground" : "text-muted-foreground")}>
+                    {period !== "all_time" ? currentLabel : "TIMELINE"}
+                </span>
+                <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[150px] bg-popover/95 backdrop-blur-sm z-50 p-1">
                 {periods.map((p) => (
