@@ -400,8 +400,8 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     {task.timeLogs.length} Sessions
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                {task.timeLogs.sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((log: any) => {
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                {[...task.timeLogs].sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((log: any) => {
                                     const sessionH = Math.floor(log.durationSeconds / 3600)
                                     const sessionM = Math.floor((log.durationSeconds % 3600) / 60)
                                     const sessionS = log.durationSeconds % 60
