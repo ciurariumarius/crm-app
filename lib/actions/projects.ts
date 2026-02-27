@@ -24,6 +24,7 @@ const CreateProjectSchema = z.object({
 
 const UpdateProjectSchema = z.object({
     name: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
     status: z.enum(["Active", "Paused", "Completed"]).optional(),
     paymentStatus: z.enum(["Paid", "Unpaid"]).optional(),
     paidAt: z.union([z.date(), z.string(), z.null()]).optional(),
@@ -134,6 +135,7 @@ export async function togglePaymentStatus(projectId: string, currentStatus: stri
 
 export async function updateProject(projectId: string, data: {
     name?: string
+    description?: string | null
     status?: string
     paymentStatus?: string
     paidAt?: Date | string | null
@@ -144,6 +146,7 @@ export async function updateProject(projectId: string, data: {
         await requireAuth()
         const updateData: Record<string, unknown> = {}
         if (data.name !== undefined) updateData.name = data.name === "" ? null : data.name
+        if (data.description !== undefined) updateData.description = data.description
         if (data.status !== undefined) updateData.status = data.status
         if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus
         if (data.paidAt !== undefined) updateData.paidAt = data.paidAt

@@ -27,7 +27,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, Trash2, Loader2, Globe, Users, Target, X, Plus } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, Trash2, Loader2, Globe, Users, Target, X, Plus, Play, Pause, Square } from "lucide-react"
 import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { cn, formatProjectName } from "@/lib/utils"
@@ -158,31 +158,6 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         </Button>
                     </div>
                     <div className="space-y-4 pr-12">
-                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 leading-relaxed">
-                            <Link
-                                href={`/vault/${task.project.site.partner.id}`}
-                                className="flex items-center gap-1.5 hover:text-primary transition-colors bg-muted/40 px-2.5 py-1 rounded-md"
-                            >
-                                <Users className="h-3 w-3" />
-                                {task.project.site.partner.name}
-                            </Link>
-                            <span className="opacity-30 text-xs">/</span>
-                            <Link
-                                href={`/vault/${task.project.site.partner.id}/${task.project.site.id}`}
-                                className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground/80 tracking-widest leading-none w-fit px-1 py-1.5 rounded-lg border border-transparent hover:bg-muted/60 transition-colors"
-                            >
-                                <Target className="h-3.5 w-3.5 text-primary/60" />
-                                <span className="opacity-90">
-                                    {(task.project.site?.domainName || task.project.siteName)}
-                                    {" - "}
-                                    {task.project.services && task.project.services.length > 0
-                                        ? task.project.services.map((s: any) => s.serviceName).join(" + ")
-                                        : "General Operations"}
-                                    {" - "}
-                                    {format(new Date(task.project.createdAt), "MMMM yyyy")}
-                                </span>
-                            </Link>
-                        </div>
                         <SheetTitle className="group relative">
                             <div className="space-y-4">
                                 <div className="relative">
@@ -276,32 +251,70 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     </SelectContent>
                                 </Select>
 
-                                {/* Time Worked Badge */}
-                                {(() => {
-                                    const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
-                                    const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
-                                    const totalSeconds = logsDuration + currentTimerDuration
-                                    const hasTimeLogs = totalSeconds > 0
-                                    const useFallback = task.status === "Completed" && !hasTimeLogs && task.estimatedMinutes
+                                {/* Time Worked & Timer Controls */}
+                                <div className="flex items-center gap-2">
+                                    {(() => {
+                                        const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+                                        const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
+                                        const totalSeconds = logsDuration + currentTimerDuration
+                                        const hasTimeLogs = totalSeconds > 0
+                                        const useFallback = task.status === "Completed" && !hasTimeLogs && task.estimatedMinutes
+                                        const isActiveTimerThisTask = timerState.taskId === task.id
+                                        const isRunning = isActiveTimerThisTask && timerState.isRunning
+                                        const isPaused = isActiveTimerThisTask && !timerState.isRunning
 
-                                    if (!hasTimeLogs && !useFallback) return null
+                                        const displaySeconds = useFallback ? (task.estimatedMinutes * 60) : totalSeconds
+                                        const hours = Math.floor(displaySeconds / 3600)
+                                        const mins = Math.floor((displaySeconds % 3600) / 60)
 
-                                    const displaySeconds = useFallback ? (task.estimatedMinutes * 60) : totalSeconds
-                                    const hours = Math.floor(displaySeconds / 3600)
-                                    const mins = Math.floor((displaySeconds % 3600) / 60)
+                                        return (
+                                            <div className="flex items-center gap-2 h-9">
+                                                <div className={cn(
+                                                    "flex items-center gap-2 h-full text-[10px] font-black tracking-widest px-4 rounded-full border transition-all",
+                                                    useFallback
+                                                        ? "bg-amber-500/10 text-amber-700 border-amber-500/20"
+                                                        : (isRunning ? "bg-primary text-primary-foreground border-primary/20 animate-pulse shadow-lg shadow-primary/20" : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20")
+                                                )}>
+                                                    <Clock className="h-3 w-3" strokeWidth={3} />
+                                                    <span>{hours}H {mins}M {useFallback ? "EST" : "WORKED"}</span>
+                                                </div>
 
-                                    return (
-                                        <div className={cn(
-                                            "flex items-center gap-2 h-9 text-[10px] font-black tracking-widest px-4 rounded-full border animate-in fade-in zoom-in duration-300",
-                                            useFallback
-                                                ? "bg-amber-500/10 text-amber-700 border-amber-500/20"
-                                                : (timerState.taskId === task.id && timerState.isRunning ? "bg-primary text-primary-foreground border-primary/20 animate-pulse shadow-lg shadow-primary/20" : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20")
-                                        )}>
-                                            <Clock className="h-3 w-3" strokeWidth={3} />
-                                            <span>{hours}H {mins}M {useFallback ? "EST" : "WORKED"}</span>
-                                        </div>
-                                    )
-                                })()}
+                                                <button
+                                                    className={cn(
+                                                        "h-9 w-9 rounded-full flex items-center justify-center transition-all border",
+                                                        isRunning ? "bg-amber-500/20 text-amber-600 border-amber-500/20" : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border-transparent shadow-sm"
+                                                    )}
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        if (isRunning) {
+                                                            globalPauseTimer()
+                                                        } else if (isPaused) {
+                                                            globalResumeTimer()
+                                                        } else {
+                                                            globalStartTimer(task.projectId, task.id, task.name)
+                                                        }
+                                                    }}
+                                                >
+                                                    {isRunning ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-1" />}
+                                                </button>
+
+                                                {isActiveTimerThisTask && (
+                                                    <button
+                                                        className="h-9 w-9 rounded-full flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all border border-transparent shadow-sm"
+                                                        onClick={(e) => {
+                                                            e.preventDefault()
+                                                            e.stopPropagation()
+                                                            globalStopTimer()
+                                                        }}
+                                                    >
+                                                        <Square className="h-3.5 w-3.5 fill-current" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )
+                                    })()}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -373,9 +386,52 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                             Delete Task
                         </Button>
                     </div>
+
+                    {/* Recent Time Logs Section */}
+                    {task.timeLogs && task.timeLogs.length > 0 && (
+                        <div className="space-y-4 pt-8">
+                            <Separator className="bg-muted/10" />
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                    <Clock className="h-3 w-3" />
+                                    Time Logs
+                                </h4>
+                                <div className="text-[10px] uppercase font-bold text-muted-foreground/60">
+                                    {task.timeLogs.length} Sessions
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                {task.timeLogs.sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((log: any) => {
+                                    const sessionH = Math.floor(log.durationSeconds / 3600)
+                                    const sessionM = Math.floor((log.durationSeconds % 3600) / 60)
+                                    const sessionS = log.durationSeconds % 60
+                                    return (
+                                        <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-xs font-bold text-foreground">
+                                                    {format(new Date(log.startTime), "MMM do, yyyy")}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                                                    {format(new Date(log.startTime), "HH:mm")} - {log.endTime ? format(new Date(log.endTime), "HH:mm") : "Ongoing"}
+                                                </span>
+                                                {log.notes && (
+                                                    <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
+                                                        {log.notes}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-sm font-black text-foreground tabular-nums">
+                                                {sessionH > 0 && `${sessionH}h `}{sessionM > 0 && `${sessionM}m `}{sessionS}s
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                <div className="p-8 border-t bg-muted/20 flex items-center justify-between">
+                <div className="p-8 border-t bg-muted/20 flex items-center justify-between mt-auto">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
                             <Clock className="h-5 w-5" />

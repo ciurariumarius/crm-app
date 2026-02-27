@@ -71,6 +71,8 @@ model Project {
   id            String   @id @default(uuid())
   siteId        String   @map("site_id")
   name          String?  // Optional custom name override
+  description   String?  // Optional rich text content
+
   
   status        String   @default("Active") // Active, Paused, Completed
   paymentStatus String   @default("Unpaid") @map("payment_status") // Paid, Unpaid

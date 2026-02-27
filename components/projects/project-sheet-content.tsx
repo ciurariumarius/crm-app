@@ -26,7 +26,10 @@ import {
     AlertCircle,
     Check,
     FolderOpen,
-    Target
+    Target,
+    Play,
+    Pause,
+    Square
 } from "lucide-react"
 import {
     SheetHeader,
@@ -39,7 +42,12 @@ import { formatDistanceToNow, format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { updateProject } from "@/lib/actions/projects"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
+import { useTimer } from "@/components/providers/timer-provider"
+import { deleteProject } from "@/lib/actions/projects"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { Separator } from "@/components/ui/separator"
 import { formatProjectName } from "@/lib/utils"
 import { ProjectWithDetails } from "@/types"
 import { Service, Site } from "@prisma/client"
@@ -57,18 +65,43 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
     const [isEditingServices, setIsEditingServices] = React.useState(false)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
+    const [description, setDescription] = React.useState("")
+    const [isDeleting, setIsDeleting] = React.useState(false)
+    const router = useRouter()
+
+    const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
 
     // Sync state when prop changes
     React.useEffect(() => {
         setProject(initialProject)
     }, [initialProject])
 
-    // Sync localName
+    // Sync localName & description
     React.useEffect(() => {
         if (project) {
             setLocalName(project.name || formatProjectName(project))
+            setDescription((project as any).description || "")
         }
     }, [project])
+
+    // Auto-save logic
+    const isInitialMount = React.useRef(true)
+    React.useEffect(() => {
+        if (isInitialMount.current) {
+            isInitialMount.current = false
+            return
+        }
+
+        if (!project) return
+
+        const timer = setTimeout(() => {
+            if (description !== ((project as any).description || "")) {
+                handleUpdate({ description })
+            }
+        }, 1000)
+
+        return () => clearTimeout(timer)
+    }, [description])
 
     const handleUpdate = async (data: any) => {
         setUpdatingId(project.id)
@@ -131,6 +164,25 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
         }
 
         handleUpdate({ serviceIds: nextIds })
+    }
+
+    const handleDelete = async () => {
+        if (!project) return
+        setIsDeleting(true)
+        try {
+            const result = await deleteProject(project.id)
+            if (result.success) {
+                toast.success("Project deleted")
+                router.push("/projects")
+                router.refresh()
+            } else {
+                toast.error(result.error || "Failed to delete project")
+            }
+        } catch (error) {
+            toast.error("Failed to delete project")
+        } finally {
+            setIsDeleting(false)
+        }
     }
 
     return (
@@ -249,19 +301,67 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                                     </SelectContent>
                                 </Select>
 
-                                {/* Total Time Badge */}
-                                <div className="flex items-center gap-2 h-9 text-[10px] font-black tracking-widest px-4 rounded-full border bg-emerald-500/10 text-emerald-700 border-emerald-500/20">
-                                    <Clock className="h-3 w-3" strokeWidth={3} />
-                                    <span>
-                                        {project.timeLogs ? (
-                                            (() => {
-                                                const seconds = project.timeLogs.reduce((acc, log) => acc + (log.durationSeconds || 0), 0)
-                                                const hours = Math.floor(seconds / 3600)
-                                                const mins = Math.floor((seconds % 3600) / 60)
-                                                return `${hours}H ${mins}M`
-                                            })()
-                                        ) : "0H 0M"}
-                                    </span>
+                                {/* Total Time Badge & Timer Controls */}
+                                <div className="flex items-center gap-2">
+                                    {(() => {
+                                        const logsDuration = project.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+                                        const currentTimerDuration = timerState.projectId === project.id && !timerState.taskId ? timerState.elapsedSeconds : 0
+                                        const totalSeconds = logsDuration + currentTimerDuration
+
+                                        const hours = Math.floor(totalSeconds / 3600)
+                                        const mins = Math.floor((totalSeconds % 3600) / 60)
+
+                                        // A timer is active specifically on this project IF the projectId matches AND there is no specific sub-task being timed
+                                        const isActiveTimerThisProject = timerState.projectId === project.id && !timerState.taskId
+                                        const isRunning = isActiveTimerThisProject && timerState.isRunning
+                                        const isPaused = isActiveTimerThisProject && !timerState.isRunning
+
+                                        return (
+                                            <div className="flex items-center gap-2 h-9">
+                                                <div className={cn(
+                                                    "flex items-center gap-2 h-full text-[10px] font-black tracking-widest px-4 rounded-full border transition-all",
+                                                    isRunning ? "bg-primary text-primary-foreground border-primary/20 animate-pulse shadow-lg shadow-primary/20" : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                                                )}>
+                                                    <Clock className="h-3 w-3" strokeWidth={3} />
+                                                    <span>{hours}H {mins}M WORKED</span>
+                                                </div>
+
+                                                <button
+                                                    className={cn(
+                                                        "h-9 w-9 rounded-full flex items-center justify-center transition-all border",
+                                                        isRunning ? "bg-amber-500/20 text-amber-600 border-amber-500/20" : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border-transparent shadow-sm"
+                                                    )}
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        if (isRunning) {
+                                                            globalPauseTimer()
+                                                        } else if (isPaused) {
+                                                            globalResumeTimer()
+                                                        } else {
+                                                            // Start timer without a specific task
+                                                            globalStartTimer(project.id, undefined, project.name || formatProjectName(project))
+                                                        }
+                                                    }}
+                                                >
+                                                    {isRunning ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-1" />}
+                                                </button>
+
+                                                {isActiveTimerThisProject && (
+                                                    <button
+                                                        className="h-9 w-9 rounded-full flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all border border-transparent shadow-sm"
+                                                        onClick={(e) => {
+                                                            e.preventDefault()
+                                                            e.stopPropagation()
+                                                            globalStopTimer()
+                                                        }}
+                                                    >
+                                                        <Square className="h-3.5 w-3.5 fill-current" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -437,6 +537,65 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                         </div>
                     </div>
 
+                    {/* DESCRIPTION & NOTES */}
+                    <div className="space-y-3 pt-4">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Project Notes & Architecture</label>
+                        </div>
+                        <RichTextEditor
+                            value={description}
+                            onChange={setDescription}
+                            placeholder="Add scope details, overall technical notes, or reference links here..."
+                        />
+                    </div>
+
+                    {/* RECENT TIME LOGS SECTION */}
+                    {project.timeLogs && project.timeLogs.length > 0 && (
+                        <div className="space-y-4 pt-8">
+                            <Separator className="bg-muted/10" />
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                    <Clock className="h-3 w-3" />
+                                    Recent Project Time Logs
+                                </h4>
+                                <div className="text-[10px] uppercase font-bold text-muted-foreground/60">
+                                    {project.timeLogs.length} Sessions
+                                </div>
+                            </div>
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                {project.timeLogs.sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((log: any) => {
+                                    const sessionH = Math.floor(log.durationSeconds / 3600)
+                                    const sessionM = Math.floor((log.durationSeconds % 3600) / 60)
+                                    const sessionS = log.durationSeconds % 60
+
+                                    // If a task is associated, we could potentially grab the task name.
+                                    // But since timeLogs on project might be fetched with only relationIds, we just show standard info.
+                                    return (
+                                        <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-xs font-bold text-foreground">
+                                                    {format(new Date(log.startTime), "MMM do, yyyy")}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest flex items-center gap-2">
+                                                    {format(new Date(log.startTime), "HH:mm")} - {log.endTime ? format(new Date(log.endTime), "HH:mm") : "Ongoing"}
+                                                    {log.taskId ? <span className="text-primary px-1.5 py-0.5 rounded-md bg-primary/10 tracking-tighter">Task Attached</span> : null}
+                                                </span>
+                                                {log.notes && (
+                                                    <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
+                                                        {log.notes}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-sm font-black text-foreground tabular-nums opacity-80">
+                                                {sessionH > 0 && `${sessionH}h `}{sessionM > 0 && `${sessionM}m `}{sessionS}s
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* FOOTER */}
                     <div className="p-6 border-t bg-muted/20 flex justify-between items-center text-xs text-muted-foreground/60">
                         <div>
@@ -451,10 +610,11 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 rounded-md hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
-                            // onClick={handleDelete}
+                                className="h-8 w-8 rounded-md bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 transition-colors"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
                             >
-                                <Trash2 className="h-3 w-3" />
+                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                             </Button>
                         </div>
                     </div>

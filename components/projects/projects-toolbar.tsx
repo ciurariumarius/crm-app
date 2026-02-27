@@ -168,9 +168,39 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto hidescrollbar pb-1 sm:pb-0 -mb-1 sm:mb-0">
-                    {/* Status Segmented Control */}
-                    <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 items-center">
+                <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto hidescrollbar pb-1 sm:pb-0 -mb-1 sm:mb-0 max-w-full">
+                    {/* Mobile Status Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="flex md:hidden items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase shrink-0">
+                                {currentParams.status === "Active" && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />}
+                                <span className="text-foreground whitespace-nowrap">
+                                    {currentParams.status === "All" ? "STATUS: ALL" : currentParams.status.toUpperCase()}
+                                </span>
+                                <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-[150px]">
+                            {[
+                                { label: "ALL", value: "All" },
+                                { label: "ACTIVE", value: "Active", icon: <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 shrink-0 inline-block" /> },
+                                { label: "PAUSED", value: "Paused", icon: null },
+                                { label: "COMPLETED", value: "Completed", icon: null }
+                            ].map((opt) => (
+                                <DropdownMenuItem
+                                    key={opt.value}
+                                    onSelect={() => handleStatusChange(opt.value)}
+                                    className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer flex items-center"
+                                >
+                                    {opt.icon}
+                                    {opt.label}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Desktop Status Segmented Control */}
+                    <div className="hidden md:flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 items-center">
                         {[
                             { label: "ALL", value: "All" },
                             { label: "ACTIVE", value: "Active", icon: <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2" /> },
@@ -188,10 +218,119 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                         ))}
                     </div>
 
+                    {/* Desktop Selected Filters Inline */}
+                    <div className="hidden lg:flex items-center gap-2 shrink-0">
+                        {/* Partner Dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase">
+                                    <Users className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                                    <span className={cn(currentParams.partner !== "all" ? "text-foreground" : "text-muted-foreground")}>
+                                        {currentParams.partner !== "all" ? partners.find(p => p.id === currentParams.partner)?.name || "PARTNER" : "PARTNER"}
+                                    </span>
+                                    <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-[200px]">
+                                <DropdownMenuItem onSelect={() => updateFilter("partnerId", "all")} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                    All Partners
+                                </DropdownMenuItem>
+                                {partners.map((p) => (
+                                    <DropdownMenuItem key={p.id} onSelect={() => updateFilter("partnerId", p.id)} className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer">
+                                        {p.name}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Timeline Dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase">
+                                    <Calendar className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                                    <span className={cn(searchParams.get("period") && searchParams.get("period") !== "all_time" ? "text-foreground" : "text-muted-foreground")}>
+                                        {searchParams.get("period") && searchParams.get("period") !== "all_time"
+                                            ? [
+                                                { label: "All Time", value: "all_time" },
+                                                { label: "This Month", value: "this_month" },
+                                                { label: "Last Month", value: "last_month" },
+                                                { label: "This Year", value: "this_year" },
+                                                { label: "Last Year", value: "last_year" },
+                                            ].find(p => p.value === searchParams.get("period"))?.label || "TIMELINE"
+                                            : "TIMELINE"}
+                                    </span>
+                                    <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-[150px]">
+                                {[
+                                    { label: "All Time", value: "all_time" },
+                                    { label: "This Month", value: "this_month" },
+                                    { label: "Last Month", value: "last_month" },
+                                    { label: "This Year", value: "this_year" },
+                                    { label: "Last Year", value: "last_year" },
+                                ].map((p) => (
+                                    <DropdownMenuItem
+                                        key={p.value}
+                                        onSelect={() => {
+                                            const params = new URLSearchParams(searchParams.toString())
+                                            if (p.value !== "all_time") {
+                                                params.set("period", p.value)
+                                            } else {
+                                                params.delete("period")
+                                            }
+                                            params.delete("page")
+                                            router.push(`/projects?${params.toString()}`)
+                                        }}
+                                        className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer"
+                                    >
+                                        {p.label}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Type Segmented Control */}
+                        <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 items-center">
+                            <div className="text-[10px] font-bold text-blue-600/50 uppercase px-3 flex"><span className="w-2.5 h-2.5 rounded-full border border-blue-500/50 flex items-center justify-center mr-1 text-[6px]">↻</span></div>
+                            {[
+                                { label: "ALL", value: "All" },
+                                { label: "MONTHLY", value: "Recurring" },
+                                { label: "ONE-TIME", value: "OneTime" }
+                            ].map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => updateFilter("recurring", opt.value)}
+                                    className={getSegmentBtnClass(currentParams.type === opt.value)}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Payment Segmented Control */}
+                        <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 items-center">
+                            <div className="text-[10px] font-bold text-emerald-600/50 uppercase px-3 flex"><span className="w-2.5 h-2.5 rounded-full border border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950 mr-1" /></div>
+                            {[
+                                { label: "ALL", value: "All" },
+                                { label: "PAID", value: "Paid" },
+                                { label: "UNPAID", value: "Unpaid" }
+                            ].map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => updateFilter("payment", opt.value)}
+                                    className={getSegmentBtnClass(currentParams.payment === opt.value)}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Filter Sheet Trigger */}
                     <Sheet>
                         <SheetTrigger asChild>
-                            <button className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase relative shrink-0">
+                            <button className="flex lg:hidden items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase relative shrink-0">
                                 <Filter className="w-4 h-4 text-muted-foreground/60" />
                                 <span>Filters</span>
                                 {hasFilters && (
