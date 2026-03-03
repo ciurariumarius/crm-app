@@ -89,11 +89,6 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                 {isActive && (
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-primary shadow-[0_0_8px_rgba(13,148,136,0.4)]" />
                 )}
-                {!activeDrawer && (
-                    <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-foreground text-background text-xs font-bold rounded-md shadow-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
-                        {item.name}
-                    </div>
-                )}
             </Link>
         )
     }
@@ -220,11 +215,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             {(pathname.startsWith("/vault") || activeDrawer === 'vault') && (
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
                             )}
-                            {!activeDrawer && (
-                                <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-foreground text-background text-xs font-bold rounded-md shadow-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
-                                    The Vault
-                                </div>
-                            )}
+
                         </Link>
 
                         {/* PPC Trigger */}
@@ -242,11 +233,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             {(pathname.startsWith("/ppc") || activeDrawer === 'ppc') && (
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
                             )}
-                            {!activeDrawer && (
-                                <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-foreground text-background text-xs font-bold rounded-md shadow-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
-                                    Campaigns
-                                </div>
-                            )}
+
                         </Link>
 
                         <div className="h-px w-8 bg-border/50 my-2" />
@@ -262,11 +249,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             )}
                         >
                             <BarChart3 className="h-5 w-5" strokeWidth={1.5} />
-                            {!activeDrawer && (
-                                <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-foreground text-background text-xs font-bold rounded-md shadow-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
-                                    Analytics
-                                </div>
-                            )}
+
                         </Link>
 
                     </nav>

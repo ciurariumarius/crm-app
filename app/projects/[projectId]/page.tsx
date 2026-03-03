@@ -20,7 +20,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             },
             services: true,
             tasks: {
-                orderBy: { createdAt: "asc" }
+                orderBy: { createdAt: "asc" },
+                include: { timeLogs: true }
+            },
+            timeLogs: {
+                orderBy: { startTime: "desc" },
+                include: { task: true }
             },
             _count: {
                 select: { timeLogs: true }

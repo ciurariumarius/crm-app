@@ -101,6 +101,10 @@ export default async function MasterProjectsPage({
                     timeLogs: true
                 }
             },
+            timeLogs: {
+                orderBy: { startTime: "desc" },
+                include: { task: true }
+            },
             _count: {
                 select: { tasks: true }
             }

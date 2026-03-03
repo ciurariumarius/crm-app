@@ -46,6 +46,7 @@ import { useRouter } from "next/navigation"
 
 import { useTimer } from "@/components/providers/timer-provider"
 import { deleteProject } from "@/lib/actions/projects"
+import { logTime } from "@/lib/actions/time"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Separator } from "@/components/ui/separator"
 import { formatProjectName } from "@/lib/utils"
@@ -67,6 +68,10 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
     const [description, setDescription] = React.useState("")
     const [isDeleting, setIsDeleting] = React.useState(false)
+    const [isManualTimeOpen, setIsManualTimeOpen] = React.useState(false)
+    const [manualMinutes, setManualMinutes] = React.useState("")
+    const [manualNotes, setManualNotes] = React.useState("")
+    const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const router = useRouter()
 
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
@@ -120,6 +125,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
 
                 setProject(updated)
                 if (onUpdate) onUpdate(updated)
+                router.refresh()
             } else {
                 toast.error(result.error || "Update failed")
             }
@@ -168,6 +174,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
 
     const handleDelete = async () => {
         if (!project) return
+        if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) return
         setIsDeleting(true)
         try {
             const result = await deleteProject(project.id)
@@ -185,10 +192,41 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
         }
     }
 
+    const handleManualLog = async () => {
+        const mins = Number(manualMinutes)
+        if (!manualMinutes || isNaN(mins) || mins <= 0) {
+            toast.error("Please enter a valid number of minutes")
+            return
+        }
+        setIsLoggingTime(true)
+        try {
+            const res = await logTime({
+                projectId: project.id,
+                durationSeconds: mins * 60,
+                description: manualNotes || undefined,
+                startTime: new Date(Date.now() - (mins * 60 * 1000)), // Simulate it ended now
+                endTime: new Date()
+            })
+            if (res.success) {
+                toast.success("Time logged")
+                setIsManualTimeOpen(false)
+                setManualMinutes("")
+                setManualNotes("")
+                router.refresh()
+            } else {
+                toast.error(res.error || "Failed to log time")
+            }
+        } catch (error) {
+            toast.error("Failed to log time")
+        } finally {
+            setIsLoggingTime(false)
+        }
+    }
+
     return (
         <TaskSheetWrapper tasks={project.tasks || []} project={project}>
-            <div className="flex flex-col h-full bg-background sm:rounded-l-2xl overflow-hidden">
-                <SheetHeader className="p-8 border-b bg-muted/20 relative">
+            <div className="h-full bg-background sm:rounded-l-2xl overflow-y-auto custom-scrollbar">
+                <SheetHeader className="p-8 border-b bg-muted/20 relative shrink-0">
 
                     <div className="space-y-4 pr-12">
 
@@ -251,126 +289,126 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                                 </div>
                             </div>
                         </SheetTitle>
-
-                        {/* Controls Row */}
-                        <div className="flex flex-col gap-4 pt-2">
-                            <div className="flex flex-wrap items-center gap-2.5">
-                                {/* Status Select */}
-                                <Select
-                                    value={project.status}
-                                    onValueChange={(val) => handleUpdate({ status: val })}
-                                >
-                                    <SelectTrigger className={cn(
-                                        "h-9 w-auto min-w-[130px] border-none transition-all shadow-none focus:ring-1 p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
-                                        project.status === "Active" ? "bg-emerald-600 text-white hover:bg-emerald-700" :
-                                            project.status === "Paused" ? "bg-orange-500 text-white hover:bg-orange-600" :
-                                                "bg-blue-600 text-white hover:bg-blue-700"
-                                    )}>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Active" className="text-xs font-bold">ACTIVE</SelectItem>
-                                        <SelectItem value="Paused" className="text-xs font-bold">PAUSED</SelectItem>
-                                        <SelectItem value="Completed" className="text-xs font-bold">COMPLETED</SelectItem>
-                                    </SelectContent>
-                                </Select>
-
-                                {/* Payment Status Select */}
-                                <Select
-                                    value={project.paymentStatus}
-                                    onValueChange={(val) => {
-                                        const updates: any = { paymentStatus: val }
-                                        if (val === "Paid" && !project.paidAt) {
-                                            updates.paidAt = new Date()
-                                        } else if (val === "Unpaid") {
-                                            updates.paidAt = null
-                                        }
-                                        handleUpdate(updates)
-                                    }}
-                                >
-                                    <SelectTrigger className={cn(
-                                        "h-9 w-auto min-w-[130px] border-none shadow-none focus:ring-1 transition-all p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
-                                        project.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
-                                            "bg-rose-100 text-rose-700 hover:bg-rose-200"
-                                    )}>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Paid" className="text-xs font-bold text-emerald-600">PAID</SelectItem>
-                                        <SelectItem value="Unpaid" className="text-xs font-bold text-rose-600">UNPAID</SelectItem>
-                                    </SelectContent>
-                                </Select>
-
-                                {/* Total Time Badge & Timer Controls */}
-                                <div className="flex items-center gap-2">
-                                    {(() => {
-                                        const logsDuration = project.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
-                                        const currentTimerDuration = timerState.projectId === project.id && !timerState.taskId ? timerState.elapsedSeconds : 0
-                                        const totalSeconds = logsDuration + currentTimerDuration
-
-                                        const hours = Math.floor(totalSeconds / 3600)
-                                        const mins = Math.floor((totalSeconds % 3600) / 60)
-
-                                        // A timer is active specifically on this project IF the projectId matches AND there is no specific sub-task being timed
-                                        const isActiveTimerThisProject = timerState.projectId === project.id && !timerState.taskId
-                                        const isRunning = isActiveTimerThisProject && timerState.isRunning
-                                        const isPaused = isActiveTimerThisProject && !timerState.isRunning
-
-                                        return (
-                                            <div className="flex items-center gap-2 h-9">
-                                                <div className={cn(
-                                                    "flex items-center gap-2 h-full text-[10px] font-black tracking-widest px-4 rounded-full border transition-all",
-                                                    isRunning ? "bg-primary text-primary-foreground border-primary/20 animate-pulse shadow-lg shadow-primary/20" : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
-                                                )}>
-                                                    <Clock className="h-3 w-3" strokeWidth={3} />
-                                                    <span>{hours}H {mins}M WORKED</span>
-                                                </div>
-
-                                                <button
-                                                    className={cn(
-                                                        "h-9 w-9 rounded-full flex items-center justify-center transition-all border",
-                                                        isRunning ? "bg-amber-500/20 text-amber-600 border-amber-500/20" : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border-transparent shadow-sm"
-                                                    )}
-                                                    onClick={(e) => {
-                                                        e.preventDefault()
-                                                        e.stopPropagation()
-                                                        if (isRunning) {
-                                                            globalPauseTimer()
-                                                        } else if (isPaused) {
-                                                            globalResumeTimer()
-                                                        } else {
-                                                            // Start timer without a specific task
-                                                            globalStartTimer(project.id, undefined, project.name || formatProjectName(project))
-                                                        }
-                                                    }}
-                                                >
-                                                    {isRunning ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-1" />}
-                                                </button>
-
-                                                {isActiveTimerThisProject && (
-                                                    <button
-                                                        className="h-9 w-9 rounded-full flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all border border-transparent shadow-sm"
-                                                        onClick={(e) => {
-                                                            e.preventDefault()
-                                                            e.stopPropagation()
-                                                            globalStopTimer()
-                                                        }}
-                                                    >
-                                                        <Square className="h-3.5 w-3.5 fill-current" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )
-                                    })()}
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto p-8 pt-0 space-y-10">
+                <div className="p-8 pt-8 pb-0 space-y-6">
+                    {/* Controls Row */}
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            {/* Status Select */}
+                            <Select
+                                value={project.status}
+                                onValueChange={(val) => handleUpdate({ status: val })}
+                            >
+                                <SelectTrigger className={cn(
+                                    "h-9 w-auto min-w-[130px] border-none transition-all shadow-none focus:ring-1 p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
+                                    project.status === "Active" ? "bg-emerald-600 text-white hover:bg-emerald-700" :
+                                        project.status === "Paused" ? "bg-orange-500 text-white hover:bg-orange-600" :
+                                            "bg-blue-600 text-white hover:bg-blue-700"
+                                )}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Active" className="text-xs font-bold">ACTIVE</SelectItem>
+                                    <SelectItem value="Paused" className="text-xs font-bold">PAUSED</SelectItem>
+                                    <SelectItem value="Completed" className="text-xs font-bold">COMPLETED</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Payment Status Select */}
+                            <Select
+                                value={project.paymentStatus}
+                                onValueChange={(val) => {
+                                    const updates: any = { paymentStatus: val }
+                                    if (val === "Paid" && !project.paidAt) {
+                                        updates.paidAt = new Date()
+                                    } else if (val === "Unpaid") {
+                                        updates.paidAt = null
+                                    }
+                                    handleUpdate(updates)
+                                }}
+                            >
+                                <SelectTrigger className={cn(
+                                    "h-9 w-auto min-w-[130px] border-none shadow-none focus:ring-1 transition-all p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
+                                    project.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
+                                        "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                )}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Paid" className="text-xs font-bold text-emerald-600">PAID</SelectItem>
+                                    <SelectItem value="Unpaid" className="text-xs font-bold text-rose-600">UNPAID</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Total Time Badge & Timer Controls */}
+                            <div className="flex items-center gap-2">
+                                {(() => {
+                                    const logsDuration = project.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+                                    const currentTimerDuration = timerState.projectId === project.id && !timerState.taskId ? timerState.elapsedSeconds : 0
+                                    const totalSeconds = logsDuration + currentTimerDuration
+
+                                    const hours = Math.floor(totalSeconds / 3600)
+                                    const mins = Math.floor((totalSeconds % 3600) / 60)
+
+                                    // A timer is active specifically on this project IF the projectId matches AND there is no specific sub-task being timed
+                                    const isActiveTimerThisProject = timerState.projectId === project.id && !timerState.taskId
+                                    const isRunning = isActiveTimerThisProject && timerState.isRunning
+                                    const isPaused = isActiveTimerThisProject && !timerState.isRunning
+
+                                    return (
+                                        <div className="flex items-center gap-2 h-9">
+                                            <div className={cn(
+                                                "flex items-center gap-2 h-full text-[10px] font-black tracking-widest px-4 rounded-full border transition-all",
+                                                isRunning ? "bg-primary text-primary-foreground border-primary/20 animate-pulse shadow-lg shadow-primary/20" : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                                            )}>
+                                                <Clock className="h-3 w-3" strokeWidth={3} />
+                                                <span>{hours}H {mins}M WORKED</span>
+                                            </div>
+
+                                            <button
+                                                className={cn(
+                                                    "h-9 w-9 rounded-full flex items-center justify-center transition-all border",
+                                                    isRunning ? "bg-amber-500/20 text-amber-600 border-amber-500/20" : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border-transparent shadow-sm"
+                                                )}
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    if (isRunning) {
+                                                        globalPauseTimer()
+                                                    } else if (isPaused) {
+                                                        globalResumeTimer()
+                                                    } else {
+                                                        // Start timer without a specific task
+                                                        globalStartTimer(project.id, undefined, project.name || formatProjectName(project))
+                                                    }
+                                                }}
+                                            >
+                                                {isRunning ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-1" />}
+                                            </button>
+
+                                            {isActiveTimerThisProject && (
+                                                <button
+                                                    className="h-9 w-9 rounded-full flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all border border-transparent shadow-sm"
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        globalStopTimer()
+                                                    }}
+                                                >
+                                                    <Square className="h-3.5 w-3.5 fill-current" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* FINANCIALS & SERVICES */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 pt-4">
                         <div className="flex items-center justify-between">
                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Financials & Operations</label>
                         </div>
@@ -498,49 +536,10 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                         />
                     </div>
 
-                    {/* CONTEXT & ASSETS */}
-                    <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Context & Assets</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Link
-                                href={`/vault/${project.site.partner.id}`}
-                                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
-                            >
-                                <div className="space-y-1">
-                                    <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Partner Entity</div>
-                                    <div className="font-semibold text-xs text-foreground/80 group-hover:text-foreground transition-colors">{project.site.partner.name}</div>
-                                </div>
-                                <FolderOpen className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
-                            </Link>
-
-                            <Link
-                                href={`/vault/${project.site.partner.id}/${project.site.id}`}
-                                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
-                            >
-                                <div className="space-y-1">
-                                    <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Domain Asset</div>
-                                    <div className="font-semibold text-xs text-foreground/80 tracking-tight group-hover:text-foreground transition-colors">{project.site.domainName}</div>
-                                </div>
-                                <Globe className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
-                            </Link>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-2 shadow-sm">
-                                <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider px-1">GTM Identifier</div>
-                                <div className="font-mono text-[10px] font-bold text-muted-foreground/80 bg-muted/50 p-1.5 rounded-lg border border-border text-center overflow-hidden text-ellipsis">{project.site.gtmId || "NOT DEFINED"}</div>
-                            </div>
-                            <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-2 shadow-sm">
-                                <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider px-1">Ads Identifier</div>
-                                <div className="font-mono text-[10px] font-bold text-muted-foreground/80 bg-muted/50 p-1.5 rounded-lg border border-border text-center overflow-hidden text-ellipsis">{project.site.googleAdsId || "NOT DEFINED"}</div>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* DESCRIPTION & NOTES */}
                     <div className="space-y-3 pt-4">
                         <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Project Notes & Architecture</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Project. notes.</label>
                         </div>
                         <RichTextEditor
                             value={description}
@@ -550,18 +549,53 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                     </div>
 
                     {/* RECENT TIME LOGS SECTION */}
-                    {project.timeLogs && project.timeLogs.length > 0 && (
-                        <div className="space-y-4 pt-8">
-                            <Separator className="bg-muted/10" />
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                    <Clock className="h-3 w-3" />
-                                    Recent Project Time Logs
-                                </h4>
+                    {/* Always show section to allow manual tracking even if 0 logs */}
+                    <div className="space-y-4 pt-8">
+                        <Separator className="bg-muted/10" />
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                <Clock className="h-3 w-3" />
+                                Recent Project Time Logs
+                            </h4>
+                            <div className="flex items-center gap-3">
                                 <div className="text-[10px] uppercase font-bold text-muted-foreground/60">
-                                    {project.timeLogs.length} Sessions
+                                    {project.timeLogs?.length || 0} Sessions
                                 </div>
+                                <Button variant="outline" size="sm" className="h-6 text-[10px] font-bold px-2 rounded-md" onClick={() => setIsManualTimeOpen(!isManualTimeOpen)}>
+                                    {isManualTimeOpen ? "Cancel" : "Add Time"}
+                                </Button>
                             </div>
+                        </div>
+
+                        {isManualTimeOpen && (
+                            <div className="p-4 bg-muted/20 border border-border rounded-xl space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Add Manual Time Setup</div>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        placeholder="Minutes (e.g. 30)"
+                                        type="number"
+                                        value={manualMinutes}
+                                        onChange={(e) => setManualMinutes(e.target.value)}
+                                        className="h-9 font-bold bg-background text-sm"
+                                    />
+                                    <Button
+                                        disabled={isLoggingTime || !manualMinutes}
+                                        onClick={handleManualLog}
+                                        className="h-9 px-4 font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-xs"
+                                    >
+                                        {isLoggingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log Time"}
+                                    </Button>
+                                </div>
+                                <Input
+                                    placeholder="Note (optional)"
+                                    value={manualNotes}
+                                    onChange={(e) => setManualNotes(e.target.value)}
+                                    className="h-8 text-xs bg-background"
+                                />
+                            </div>
+                        )}
+
+                        {project.timeLogs && project.timeLogs.length > 0 && (
                             <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
                                 {[...project.timeLogs].sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((log: any) => {
                                     const sessionH = Math.floor(log.durationSeconds / 3600)
@@ -578,7 +612,7 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                                                 </span>
                                                 <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest flex items-center gap-2">
                                                     {format(new Date(log.startTime), "HH:mm")} - {log.endTime ? format(new Date(log.endTime), "HH:mm") : "Ongoing"}
-                                                    {log.taskId ? <span className="text-primary px-1.5 py-0.5 rounded-md bg-primary/10 tracking-tighter">Task Attached</span> : null}
+                                                    {log.task?.name ? <span className="text-primary px-1.5 py-0.5 rounded-md bg-primary/10 tracking-tighter truncate max-w-[200px]" title={log.task.name}>{log.task.name}</span> : log.taskId ? <span className="text-primary px-1.5 py-0.5 rounded-md bg-primary/10 tracking-tighter">Task Attached</span> : null}
                                                 </span>
                                                 {log.notes && (
                                                     <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
@@ -593,8 +627,36 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                                     )
                                 })}
                             </div>
+                        )}
+                    </div>
+
+                    {/* CONTEXT & ASSETS */}
+                    <div className="space-y-4 pt-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Context & Assets</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Link
+                                href={`/vault/${project.site.partner.id}`}
+                                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
+                            >
+                                <div className="space-y-1">
+                                    <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Partner</div>
+                                    <div className="font-semibold text-xs text-foreground/80 group-hover:text-foreground transition-colors">{project.site.partner.name}</div>
+                                </div>
+                                <FolderOpen className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
+                            </Link>
+
+                            <Link
+                                href={`/vault/${project.site.partner.id}/${project.site.id}`}
+                                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
+                            >
+                                <div className="space-y-1">
+                                    <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Domain</div>
+                                    <div className="font-semibold text-xs text-foreground/80 tracking-tight group-hover:text-foreground transition-colors">{project.site.domainName}</div>
+                                </div>
+                                <Globe className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
+                            </Link>
                         </div>
-                    )}
+                    </div>
 
                     {/* FOOTER */}
                     <div className="p-6 border-t bg-muted/20 flex justify-between items-center text-xs text-muted-foreground/60">

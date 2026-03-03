@@ -1,4 +1,5 @@
 import { useState, useContext } from "react"
+import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +23,7 @@ export function ProjectTasks({ projectId, initialTasks }: { projectId: string, i
     const [loading, setLoading] = useState<string | null>(null)
     const { startTimer } = useTimer()
     const { openTask } = useContext(TaskSheetContext)
+    const router = useRouter()
 
     const handleAddTask = async () => {
         if (!newTaskName.trim()) return
@@ -31,6 +33,7 @@ export function ProjectTasks({ projectId, initialTasks }: { projectId: string, i
             if (result.success) {
                 setNewTaskName("")
                 toast.success("Task added")
+                router.refresh()
             } else {
                 toast.error(result.error || "Failed to add task")
             }
@@ -200,15 +203,33 @@ export function ProjectTasks({ projectId, initialTasks }: { projectId: string, i
                                 {/* Priority Badge */}
                                 <div className="col-span-2 flex justify-center pointer-events-auto">
                                     <div onClick={(e) => e.stopPropagation()}>
-                                        <div className={cn(
-                                            "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                                            task.urgency === "Critical" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
-                                                task.urgency === "High" ? "bg-orange-500/10 text-orange-600 border-orange-500/20" :
-                                                    task.urgency === "Normal" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
-                                                        "bg-slate-500/10 text-slate-600 border-slate-500/20"
-                                        )}>
-                                            {task.urgency || "Normal"}
-                                        </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className={cn(
+                                                    "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all hover:brightness-95 active:scale-95 cursor-pointer",
+                                                    task.urgency === "Critical" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
+                                                        task.urgency === "High" ? "bg-orange-500/10 text-orange-600 border-orange-500/20" :
+                                                            task.urgency === "Normal" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                                                                "bg-slate-500/10 text-slate-600 border-slate-500/20"
+                                                )}>
+                                                    {task.urgency || "Normal"}
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="center">
+                                                <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Critical" })}>
+                                                    <span className="text-rose-600 font-bold text-[10px] uppercase tracking-wider">Critical</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "High" })}>
+                                                    <span className="text-orange-600 font-bold text-[10px] uppercase tracking-wider">High</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Normal" })}>
+                                                    <span className="text-blue-600 font-bold text-[10px] uppercase tracking-wider">Normal</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Low" })}>
+                                                    <span className="text-slate-600 font-bold text-[10px] uppercase tracking-wider">Low</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
 

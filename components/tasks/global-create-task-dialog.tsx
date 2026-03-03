@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { addTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -51,6 +52,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
     const [openPopover, setOpenPopover] = useState(false)
     const [openCombobox, setOpenCombobox] = useState(false)
     const [showDetails, setShowDetails] = useState(false)
+    const router = useRouter()
 
     // Filter projects based on the "showCompleted" toggle
     const displayProjects = projects.filter(p => showCompleted || p.status === "Active")
@@ -77,6 +79,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                 setEstimatedMinutes("")
                 setShowCompleted(false)
                 onOpenChange(false)
+                router.refresh()
             } else {
                 toast.error(result.error || "Failed to create task")
             }
