@@ -1,17 +1,18 @@
-import { getSession } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { SettingsContent } from "./settings-content"
+import { requireTenantContext } from "@/lib/tenant"
 
 export default async function SettingsPage() {
-    const session = await getSession()
-
-    if (!session) {
+    let session: Awaited<ReturnType<typeof requireTenantContext>>
+    try {
+        session = await requireTenantContext()
+    } catch {
         redirect("/login")
     }
 
-    const user = await prisma.user.findUnique({
-        where: { id: session.userId },
+    const user = await prisma.user.findFirst({
+        where: { id: session.userId, tenantId: session.tenantId },
         select: {
             name: true,
             username: true,

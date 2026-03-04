@@ -52,26 +52,29 @@
 }
 
 :root {
-  --background: #F5F5F7;
+  /* Font config provided by next/font/google via layout.tsx */
+  --background: #F9FAFB;
   --foreground: #09090B;
   --card: #FFFFFF;
   --card-foreground: #09090B;
   --popover: #FFFFFF;
   --popover-foreground: #09090B;
-  --primary: #0D9488;
+  --primary: #4F46E5;
   --primary-foreground: #FFFFFF;
   --secondary: #F3F4F6;
   --secondary-foreground: #18181B;
-  --muted: #E2E8F0;
-  --muted-foreground: #64748B;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
   --accent: #F3F4F6;
   --accent-foreground: #18181B;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --border: #E2E8F0;
   --input: #E2E8F0;
-  --ring: #0D9488;
-  --radius: 16px;
+  --ring: #4F46E5;
+  --radius: 12px;
+  --shadow-drawer: -10px 0 30px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 
   /* Semantic Gradients - Reserved for Active States Only */
   --accent-gradient: linear-gradient(135deg, #0D9488 0%, #4F46E5 100%);
@@ -133,8 +136,29 @@
   }
 
   .bento-card {
-    @apply bg-card border border-border/60 rounded-[16px] p-6 transition-all duration-300 shadow-sm hover:shadow-md;
-    /* Removed mesh gradient for cleaner look */
+    @apply bg-card border border-border/60 rounded-[12px] p-6 transition-all duration-300;
+    box-shadow: var(--shadow-card);
+  }
+
+  .page-title {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight text-foreground leading-none;
+    letter-spacing: -0.02em;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-muted-foreground pl-14 md:pl-0;
+  }
+
+  .header-action-button {
+    @apply h-10 w-10 md:w-auto md:px-4 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold text-sm inline-flex items-center justify-center gap-2 shrink-0;
+  }
+
+  .header-action-icon {
+    @apply inline-flex items-center justify-center;
+  }
+
+  .header-action-label {
+    @apply hidden md:inline text-sm font-semibold;
   }
 }
 

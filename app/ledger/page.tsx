@@ -6,58 +6,73 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { PageHeader } from "@/components/layout/page-header"
+import { requireTenantContext } from "@/lib/tenant"
+import Link from "next/link"
 
 export const dynamic = "force-dynamic"
+const PAGE_SIZE = 24
 
-export default async function LedgerPage() {
-    // Fetch unpaid projects
-    const unpaidProjects = await prisma.project.findMany({
-        where: {
-            status: "Active",
-            // We list all active projects here, highlighting unpaid ones 
-            // OR specifically just unpaid. Let's list all active to manage payments.
-        },
-        include: {
-            site: { include: { partner: true } },
-            services: true,
-        },
-        orderBy: { updatedAt: "desc" },
-    })
-
-    // Fetch all time logs for reports (this month)
+export default async function LedgerPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ page?: string }>
+}) {
+    const session = await requireTenantContext()
+    const { page: pageParam } = await searchParams
+    const page = Math.max(1, Number(pageParam) || 1)
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
+    const activeProjectsWhere = {
+        tenantId: session.tenantId,
+        status: "Active" as const,
+    }
 
-    const timeLogs = await prisma.timeLog.findMany({
-        where: {
-            startTime: { gte: startOfMonth }
-        },
-        include: {
-            project: {
-                include: {
-                    site: { include: { partner: true } }
-                }
-            }
-        }
+    const [unpaidProjects, totalActiveProjects, timeByProject] = await Promise.all([
+        prisma.project.findMany({
+            where: activeProjectsWhere,
+            include: {
+                site: { include: { partner: true } },
+                services: true,
+            },
+            orderBy: { updatedAt: "desc" },
+            skip: (page - 1) * PAGE_SIZE,
+            take: PAGE_SIZE,
+        }),
+        prisma.project.count({ where: activeProjectsWhere }),
+        prisma.timeLog.groupBy({
+            by: ["projectId"],
+            where: {
+                tenantId: session.tenantId,
+                startTime: { gte: startOfMonth },
+            },
+            _sum: { durationSeconds: true },
+        }),
+    ])
+
+    const projectIds = timeByProject.map((entry) => entry.projectId)
+    const projectsForStats = await prisma.project.findMany({
+        where: { tenantId: session.tenantId, id: { in: projectIds } },
+        select: { id: true, site: { select: { partner: { select: { name: true } } } } },
     })
+    const partnerByProject = new Map(projectsForStats.map((project) => [project.id, project.site.partner.name]))
 
     // Aggregate time by Partner
     const partnerStats: Record<string, number> = {}
-    timeLogs.forEach((log: any) => {
-        const pName = log.project.site.partner.name
-        partnerStats[pName] = (partnerStats[pName] || 0) + (log.durationSeconds || 0)
+    timeByProject.forEach((entry) => {
+        const partnerName = partnerByProject.get(entry.projectId)
+        if (!partnerName) return
+        partnerStats[partnerName] = (partnerStats[partnerName] || 0) + (entry._sum.durationSeconds || 0)
     })
+
+    const totalPages = Math.max(1, Math.ceil(totalActiveProjects / PAGE_SIZE))
+    const prevPage = page > 1 ? page - 1 : null
+    const nextPage = page < totalPages ? page + 1 : null
 
     return (
         <div className="space-y-6">
-            <div className="flex h-10 items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <MobileMenuTrigger />
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">The Ledger</h1>
-                </div>
-            </div>
+            <PageHeader title="The Ledger" />
 
             <Tabs defaultValue="payments" className="w-full">
                 <TabsList>
@@ -107,6 +122,25 @@ export default async function LedgerPage() {
                                 No active projects found.
                             </div>
                         )}
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
+                        <span className="text-muted-foreground">Page {page} of {totalPages} · {totalActiveProjects} active projects</span>
+                        <div className="flex items-center gap-2">
+                            {prevPage ? (
+                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={`/ledger?page=${prevPage}`}>
+                                    Previous
+                                </Link>
+                            ) : (
+                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                            )}
+                            {nextPage ? (
+                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={`/ledger?page=${nextPage}`}>
+                                    Next
+                                </Link>
+                            ) : (
+                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                            )}
+                        </div>
                     </div>
                 </TabsContent>
 

@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client"
 import path from "path"
 
 const prisma = new PrismaClient()
+const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
 async function mergeTrackingServices() {
     console.log("🔄 Merging tracking services into 'Tracking - eCommerce'...\n")
@@ -15,9 +16,10 @@ async function mergeTrackingServices() {
 
     // Find or create the unified service
     const unifiedService = await prisma.service.upsert({
-        where: { serviceName: "Tracking - eCommerce" },
+        where: { tenantId_serviceName: { tenantId: DEFAULT_TENANT_ID, serviceName: "Tracking - eCommerce" } },
         update: {},
         create: {
+            tenantId: DEFAULT_TENANT_ID,
             serviceName: "Tracking - eCommerce",
             isRecurring: false,
             standardTasks: JSON.stringify([
@@ -34,6 +36,7 @@ async function mergeTrackingServices() {
     // Find all services to merge
     const oldServices = await prisma.service.findMany({
         where: {
+            tenantId: DEFAULT_TENANT_ID,
             serviceName: {
                 in: servicesToMerge
             }
@@ -72,7 +75,7 @@ async function mergeTrackingServices() {
                 }
 
                 // Update project
-                await (prisma.project as any).update({
+                await prisma.project.update({
                     where: { id: project.id },
                     data: {
                         services: {
@@ -105,7 +108,7 @@ async function mergeTrackingServices() {
 
     // Verify
     const finalService = await prisma.service.findUnique({
-        where: { serviceName: "Tracking - eCommerce" },
+        where: { tenantId_serviceName: { tenantId: DEFAULT_TENANT_ID, serviceName: "Tracking - eCommerce" } },
         include: {
             _count: {
                 select: { projects: true }

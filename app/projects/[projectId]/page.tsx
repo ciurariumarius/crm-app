@@ -3,15 +3,16 @@ import { notFound } from "next/navigation"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { DeleteProjectButton } from "@/components/projects/delete-project-button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { formatProjectName } from "@/lib/utils"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ projectId: string }> }) {
+    const session = await requireTenantContext()
     const { projectId } = await params
 
-    const projectRaw = await prisma.project.findUnique({
-        where: { id: projectId },
+    const projectRaw = await prisma.project.findFirst({
+        where: { id: projectId, tenantId: session.tenantId },
         include: {
             site: {
                 include: {
@@ -38,6 +39,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     }
 
     const servicesRaw = await prisma.service.findMany({
+        where: { tenantId: session.tenantId },
         orderBy: { serviceName: "asc" }
     })
 
@@ -52,6 +54,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <ProjectSheetContent
                     project={project}
                     allServices={allServices}
+                    standalone
                 />
             </div>
 

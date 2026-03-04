@@ -360,9 +360,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                 </div>
 
                 {/* 7. Created */}
-                <div className="w-[100px] shrink-0 flex items-center justify-between">
+                <div className="w-[140px] shrink-0 flex items-center justify-between">
                     <span className="text-[11px] text-muted-foreground font-bold tracking-wide">
-                        {format(new Date(project.createdAt), "dd MMM")}
+                        {format(new Date(project.createdAt), "dd MMMM")}
                     </span>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4">
@@ -396,7 +396,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-foreground leading-none">Monthly Projects</span>
                         </div>
                         <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hidden md:block">
-                            Subtotal: <span className="text-foreground">{recurringProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString()} RON</span>
+                            Subtotal: <span className="text-foreground">{recurringProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString('en-US')} RON</span>
                         </div>
                     </div>
                     {layout === "grid" ? (
@@ -404,25 +404,30 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             {recurringProjects.map(p => renderGridCard(p, true))}
                         </div>
                     ) : (
-                        <div className="overflow-x-auto pb-4 hidescrollbar">
-                            <div className="min-w-[800px] flex flex-col gap-2">
-                                {renderHeader()}
-                                {recurringProjects.map(renderProjectCard)}
+                        <>
+                            <div className="grid grid-cols-1 gap-4 md:hidden">
+                                {recurringProjects.map(p => renderGridCard(p, true))}
                             </div>
-                        </div>
+                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar">
+                                <div className="min-w-[800px] flex flex-col gap-2">
+                                    {renderHeader()}
+                                    {recurringProjects.map(renderProjectCard)}
+                                </div>
+                            </div>
+                        </>
                     )}
                     {/* Shadow Create Row */}
                     {layout === "list" && (
                         <div
-                            className="group/shadow mt-2 flex items-center bg-zinc-50/30 dark:bg-zinc-900/10 rounded-2xl p-4 border border-dashed border-border/30 hover:border-primary/30 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30 transition-all cursor-pointer min-w-[1100px]"
+                            className="bg-primary/5 hover:bg-primary/20 border-2 border-dashed border-primary/20 hover:border-primary/50 text-white rounded-2xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1100px]"
                             onClick={() => setCreateProjectOpen(true)}
                         >
-                            <div className="w-[120px] shrink-0 flex justify-center">
-                                <div className="h-6 w-16 bg-muted/40 rounded-full animate-pulse" />
+                            <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
+                                <div className="h-6 w-16 bg-primary/20 rounded-full animate-pulse" />
                             </div>
                             <div className="flex-1 px-4 flex items-center gap-3">
-                                <Plus className="h-4 w-4 text-muted-foreground/30 group-hover/shadow:text-primary transition-colors" />
-                                <span className="text-sm font-bold text-muted-foreground/30 group-hover/shadow:text-primary/60 transition-colors uppercase tracking-widest">Add new project...</span>
+                                <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
+                                <span className="text-sm font-bold text-primary transition-colors uppercase tracking-widest">Add new project...</span>
                             </div>
                         </div>
                     )}
@@ -438,7 +443,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-foreground leading-none">One-Time Projects</span>
                         </div>
                         <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hidden md:block">
-                            Subtotal: <span className="text-foreground">{oneTimeProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString()} RON</span>
+                            Subtotal: <span className="text-foreground">{oneTimeProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString('en-US')} RON</span>
                         </div>
                     </div>
                     {layout === "grid" ? (
@@ -446,35 +451,40 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             {oneTimeProjects.map(p => renderGridCard(p, false))}
                             {/* Shadow Card */}
                             <div
-                                className="group/shadow flex flex-col justify-center items-center h-[180px] bg-zinc-50/30 dark:bg-zinc-900/10 rounded-3xl border-2 border-dashed border-border/20 hover:border-primary/20 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30 transition-all cursor-pointer"
+                                className="group/shadow bg-primary/5 hover:bg-primary/20 hover:border-primary/50 text-white border-2 border-dashed border-primary/20 rounded-3xl flex flex-col justify-center items-center h-[180px] transition-all cursor-pointer"
                                 onClick={() => setCreateProjectOpen(true)}
                             >
-                                <div className="h-10 w-10 rounded-2xl bg-muted/40 flex items-center justify-center text-muted-foreground/40 group-hover/shadow:scale-110 group-hover/shadow:bg-primary/10 group-hover/shadow:text-primary transition-all">
+                                <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover/shadow:scale-110 group-hover/shadow:bg-primary/20 transition-all">
                                     <Plus className="h-6 w-6" strokeWidth={3} />
                                 </div>
-                                <span className="mt-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 group-hover/shadow:text-primary transition-colors">Start New Project</span>
+                                <span className="mt-3 text-[10px] font-black uppercase tracking-widest text-primary transition-colors">Start New Project</span>
                             </div>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto pb-4 hidescrollbar">
-                            <div className="min-w-[800px] flex flex-col gap-2">
-                                {renderHeader()}
-                                {oneTimeProjects.map(renderProjectCard)}
-                                {/* Shadow Create Row */}
-                                <div
-                                    className="group/shadow mt-2 flex items-center bg-zinc-50/30 dark:bg-zinc-900/10 rounded-2xl p-4 border border-dashed border-border/30 hover:border-primary/30 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30 transition-all cursor-pointer min-w-[1100px]"
-                                    onClick={() => setCreateProjectOpen(true)}
-                                >
-                                    <div className="w-[120px] shrink-0 flex justify-center">
-                                        <div className="h-6 w-16 bg-muted/40 rounded-full animate-pulse" />
-                                    </div>
-                                    <div className="flex-1 px-4 flex items-center gap-3">
-                                        <Plus className="h-4 w-4 text-muted-foreground/30 group-hover/shadow:text-primary transition-colors" />
-                                        <span className="text-sm font-bold text-muted-foreground/30 group-hover/shadow:text-primary/60 transition-colors uppercase tracking-widest">Add new project...</span>
+                        <>
+                            <div className="grid grid-cols-1 gap-4 md:hidden">
+                                {oneTimeProjects.map(p => renderGridCard(p, false))}
+                            </div>
+                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar">
+                                <div className="min-w-[800px] flex flex-col gap-2">
+                                    {renderHeader()}
+                                    {oneTimeProjects.map(renderProjectCard)}
+                                    {/* Shadow Create Row */}
+                                    <div
+                                        className="bg-primary/5 hover:bg-primary/20 border-2 border-dashed border-primary/20 hover:border-primary/50 text-white rounded-2xl flex items-center p-4 transition-all cursor-pointer min-w-[1100px] mt-2 group/shadow"
+                                        onClick={() => setCreateProjectOpen(true)}
+                                    >
+                                        <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
+                                            <div className="h-6 w-16 bg-primary/20 rounded-full animate-pulse" />
+                                        </div>
+                                        <div className="flex-1 px-4 flex items-center gap-3">
+                                            <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
+                                            <span className="text-sm font-bold text-primary transition-colors uppercase tracking-widest">Add new project...</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     )}
                 </div>
             )}
@@ -493,7 +503,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     setSelectedProject(null)
                 }
             }}>
-                <SheetContent side="right" className="sm:max-w-[800px] w-full p-0 flex flex-col border-none shadow-xl bg-background backdrop-blur-3xl overflow-hidden">
+                <SheetContent side="right" className="w-[90vw] sm:max-w-[800px] 2xl:max-w-[1000px] p-0 flex flex-col border-none shadow-xl bg-background backdrop-blur-3xl overflow-hidden">
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}

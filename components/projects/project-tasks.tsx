@@ -1,43 +1,73 @@
-import { useState, useContext } from "react"
+"use client"
+
+import { useContext, useMemo, useState } from "react"
+import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Trash2, Loader2, Play, AlertCircle, Clock, CheckCircle2, ChevronDown } from "lucide-react"
-import { addTask, toggleTaskStatus, deleteTask, updateTask } from "@/lib/actions/tasks"
+import { CalendarDays, Loader2, Play, Plus } from "lucide-react"
+import { addTask, toggleTaskStatus } from "@/lib/actions/tasks"
 import { useTimer } from "@/components/providers/timer-provider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { Task } from "@prisma/client"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 
-export function ProjectTasks({ projectId, initialTasks }: { projectId: string, initialTasks: any[] }) {
+type TaskWithLogs = {
+    id: string
+    name: string
+    status: string
+    urgency?: string | null
+    deadline?: Date | string | null
+    createdAt?: Date | string | null
+    estimatedMinutes?: number | null
+    timeLogs?: Array<{ durationSeconds?: number | null }>
+}
+
+function toDate(value: Date | string | null | undefined) {
+    if (!value) return null
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+export function ProjectTasks({
+    projectId,
+    initialTasks,
+}: {
+    projectId: string
+    initialTasks: TaskWithLogs[]
+}) {
     const [newTaskName, setNewTaskName] = useState("")
     const [loading, setLoading] = useState<string | null>(null)
     const { startTimer } = useTimer()
     const { openTask } = useContext(TaskSheetContext)
     const router = useRouter()
 
+    const sortedTasks = useMemo(() => {
+        return [...initialTasks].sort((a, b) => {
+            if (a.status === "Completed" && b.status !== "Completed") return 1
+            if (a.status !== "Completed" && b.status === "Completed") return -1
+            const aDate = toDate(a.createdAt)?.getTime() ?? 0
+            const bDate = toDate(b.createdAt)?.getTime() ?? 0
+            return bDate - aDate
+        })
+    }, [initialTasks])
+
     const handleAddTask = async () => {
-        if (!newTaskName.trim()) return
+        const name = newTaskName.trim()
+        if (!name) return
+
         setLoading("add")
         try {
-            const result = await addTask(projectId, newTaskName)
+            const result = await addTask(projectId, name)
             if (result.success) {
                 setNewTaskName("")
                 toast.success("Task added")
                 router.refresh()
-            } else {
-                toast.error(result.error || "Failed to add task")
+                return
             }
-        } catch (error) {
+            toast.error(result.error || "Failed to add task")
+        } catch {
             toast.error("Failed to add task")
         } finally {
             setLoading(null)
@@ -49,244 +79,105 @@ export function ProjectTasks({ projectId, initialTasks }: { projectId: string, i
         try {
             const result = await toggleTaskStatus(taskId, currentStatus, projectId)
             if (!result.success) {
-                toast.error(result.error || "Failed to update status")
+                toast.error(result.error || "Failed to update task")
+                return
             }
-        } catch (error) {
-            toast.error("Failed to update status")
+            router.refresh()
+        } catch {
+            toast.error("Failed to update task")
         } finally {
             setLoading(null)
         }
     }
-
-    const handleStatusChange = async (taskId: string, newStatus: string) => {
-        setLoading(taskId)
-        try {
-            const result = await updateTask(taskId, {
-                status: newStatus
-            })
-            if (result.success) {
-                toast.success("Status updated")
-            } else {
-                toast.error(result.error || "Failed to update status")
-            }
-        } catch (error) {
-            toast.error("Failed to update status")
-        } finally {
-            setLoading(null)
-        }
-    }
-
-    const handleDelete = async (taskId: string) => {
-        setLoading(taskId)
-        try {
-            const result = await deleteTask(taskId, projectId)
-            if (result.success) {
-                toast.success("Task deleted")
-            } else {
-                toast.error(result.error || "Failed to delete task")
-            }
-        } catch (error) {
-            toast.error("Failed to delete task")
-        } finally {
-            setLoading(null)
-        }
-    }
-
-    const handleUpdateEstimate = async (taskId: string, minutes: number) => {
-        try {
-            await updateTask(taskId, { estimatedMinutes: minutes })
-            toast.success("Estimate updated")
-        } catch (error) {
-            toast.error("Failed to update estimate")
-        }
-    }
-
-    const sortedTasks = [...initialTasks].sort((a, b) => {
-        if (a.status === "Completed" && b.status !== "Completed") return 1
-        if (a.status !== "Completed" && b.status === "Completed") return -1
-        return 0
-    })
 
     return (
-        <div className="space-y-6">
-            <div className="relative group">
+        <div className="space-y-4">
+            <div className="relative">
                 <Input
-                    placeholder="Add task..."
                     value={newTaskName}
                     onChange={(e) => setNewTaskName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-                    className="h-10 bg-card border-border focus:border-primary/40 focus:ring-0 rounded-xl pl-9 pr-12 text-sm font-medium transition-all"
+                    placeholder="Type a task..."
+                    className="h-12 rounded-2xl border-slate-200 bg-slate-50 pr-14 text-base placeholder:text-slate-400"
                 />
-                <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" strokeWidth={2.5} />
                 <Button
+                    type="button"
                     size="icon"
                     onClick={handleAddTask}
                     disabled={loading === "add" || !newTaskName.trim()}
-                    className={cn(
-                        "absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg transition-all",
-                        newTaskName.trim() ? "btn-primary hover:opacity-90" : "bg-muted/50 text-muted-foreground/40"
-                    )}
+                    className="absolute right-1.5 top-1/2 h-9 w-9 -translate-y-1/2 rounded-xl bg-white text-slate-500 shadow-sm hover:bg-slate-100"
                 >
-                    {loading === "add" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={2.5} />}
+                    {loading === "add" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 </Button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
+                {sortedTasks.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-4 py-8 text-center text-sm text-slate-500">
+                        No tasks yet. Add your first task above.
+                    </div>
+                )}
+
                 {sortedTasks.map((task) => {
-                    const actualMinutes = task.timeLogs ? Math.floor(task.timeLogs.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) / 60) : 0
+                    const dueDate = toDate(task.deadline) ?? toDate(task.createdAt)
+                    const urgencyLabel = (task.urgency || "Normal").toUpperCase()
+                    const isCompleted = task.status === "Completed"
 
                     return (
                         <div
                             key={task.id}
                             className={cn(
-                                "group relative flex items-center gap-3 p-3 rounded-xl border border-transparent transition-all duration-300 hover:border-primary/20",
-                                task.status === "Completed" ? "bg-muted/20" : "bg-card border-border hover:bg-muted/30"
+                                "group flex items-center gap-3 rounded-3xl border px-4 py-3 transition",
+                                isCompleted
+                                    ? "border-slate-200 bg-slate-50/60"
+                                    : "border-slate-200 bg-white hover:border-slate-300"
                             )}
                         >
-                            {/* Clickable Area Overlay */}
-                            <div
-                                className="absolute inset-0 cursor-pointer z-0"
-                                onClick={() => openTask(task.id)}
+                            <Checkbox
+                                checked={isCompleted}
+                                disabled={loading === task.id}
+                                onCheckedChange={() => handleToggle(task.id, task.status)}
+                                className="h-5 w-5 rounded-md border-slate-300"
                             />
 
-                            {/* Checkbox (Z-Index above overlay) */}
-                            <div className="relative z-10 flex-shrink-0">
-                                <Checkbox
-                                    checked={task.status === "Completed"}
-                                    onCheckedChange={() => handleToggle(task.id, task.status)}
-                                    disabled={loading === task.id}
-                                    className="h-5 w-5 rounded-md border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                />
-                            </div>
-
-                            {/* Task Name & Metadata Grid */}
-                            <div className="flex-1 grid grid-cols-12 gap-4 items-center relative z-0 pointer-events-none">
-                                {/* Name */}
-                                <div className={cn(
-                                    "col-span-5 text-[13px] font-medium truncate transition-all",
-                                    task.status === "Completed" ? "line-through text-muted-foreground/40" : "text-foreground"
-                                )}>
-                                    {task.name}
-                                </div>
-
-                                {/* Status Badge */}
-                                <div className="col-span-3 pointer-events-auto">
-                                    <div onClick={(e) => e.stopPropagation()}>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button
-                                                    disabled={task.status === "Completed"}
-                                                    className="h-6 w-fit min-w-[80px] text-[10px] font-bold uppercase tracking-wider bg-transparent border-transparent hover:bg-muted/50 px-2 rounded-md transition-colors flex items-center gap-1"
-                                                >
-                                                    <span className={cn(
-                                                        task.status === "Active" ? "text-emerald-600" :
-                                                            task.status === "Paused" ? "text-orange-500" : "text-muted-foreground"
-                                                    )}>{task.status}</span>
-                                                    <ChevronDown className="h-3 w-3 opacity-50" />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="start">
-                                                <DropdownMenuItem onClick={() => handleStatusChange(task.id, "Active")}>
-                                                    <span className="text-emerald-600 font-bold text-xs">ACTIVE</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleStatusChange(task.id, "Paused")}>
-                                                    <span className="text-orange-500 font-bold text-xs">PAUSED</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleStatusChange(task.id, "Completed")}>
-                                                    <span className="text-muted-foreground font-bold text-xs">COMPLETED</span>
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </div>
-
-                                {/* Priority Badge */}
-                                <div className="col-span-2 flex justify-center pointer-events-auto">
-                                    <div onClick={(e) => e.stopPropagation()}>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button className={cn(
-                                                    "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all hover:brightness-95 active:scale-95 cursor-pointer",
-                                                    task.urgency === "Critical" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
-                                                        task.urgency === "High" ? "bg-orange-500/10 text-orange-600 border-orange-500/20" :
-                                                            task.urgency === "Normal" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
-                                                                "bg-slate-500/10 text-slate-600 border-slate-500/20"
-                                                )}>
-                                                    {task.urgency || "Normal"}
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="center">
-                                                <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Critical" })}>
-                                                    <span className="text-rose-600 font-bold text-[10px] uppercase tracking-wider">Critical</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "High" })}>
-                                                    <span className="text-orange-600 font-bold text-[10px] uppercase tracking-wider">High</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Normal" })}>
-                                                    <span className="text-blue-600 font-bold text-[10px] uppercase tracking-wider">Normal</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => updateTask(task.id, { urgency: "Low" })}>
-                                                    <span className="text-slate-600 font-bold text-[10px] uppercase tracking-wider">Low</span>
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </div>
-
-                                {/* Time (Est / Act) */}
-                                <div className="col-span-2 flex items-center justify-end gap-3 pointer-events-auto">
-                                    <div className="flex flex-col items-end leading-none" onClick={(e) => e.stopPropagation()}>
-                                        {/* Estimation Input */}
-                                        <div className="flex items-center justify-end gap-1 text-[10px] font-bold text-muted-foreground/50 hover:text-foreground transition-colors group/est">
-                                            <span className="opacity-0 group-hover/est:opacity-100 transition-opacity text-[9px] uppercase tracking-wider">Est</span>
-                                            <input
-                                                className="w-12 bg-transparent text-right hover:text-foreground focus:text-foreground focus:outline-none transition-colors placeholder:text-muted-foreground/30"
-                                                defaultValue={task.estimatedMinutes || ""}
-                                                placeholder="Set"
-                                                onBlur={(e) => {
-                                                    const val = e.target.value === "" ? 0 : parseInt(e.target.value)
-                                                    if (!isNaN(val) && val !== task.estimatedMinutes) {
-                                                        handleUpdateEstimate(task.id, val)
-                                                    }
-                                                }}
-                                            />
-                                            {task.estimatedMinutes > 0 && <span className="text-[9px]">m</span>}
-                                        </div>
-
-                                        {/* Actual duration (Only if > 0) */}
-                                        {actualMinutes > 0 && (
-                                            <div className="text-[10px] font-bold text-emerald-600/80 mt-0.5 flex items-center gap-1" title="Actual Time">
-                                                <span>{actualMinutes}m</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Actions (Hover) */}
-                            <div className="relative z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all ml-2 w-14 justify-end">
-                                {task.status !== "Completed" && (
-                                    <button
-                                        className="h-7 w-7 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            startTimer(projectId, task.id, task.name)
-                                        }}
-                                    >
-                                        <Play className="h-3 w-3 fill-current" />
-                                    </button>
-                                )}
-                                <button
-                                    className="h-7 w-7 flex items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleDelete(task.id)
-                                    }}
-                                    disabled={loading === task.id}
+                            <button
+                                type="button"
+                                onClick={() => openTask(task.id)}
+                                className="min-w-0 flex-1 text-left"
+                            >
+                                <p
+                                    className={cn(
+                                        "truncate text-base font-semibold leading-tight text-slate-800",
+                                        isCompleted && "text-slate-400 line-through"
+                                    )}
                                 >
-                                    {loading === task.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" strokeWidth={1.5} />}
-                                </button>
+                                    {task.name}
+                                </p>
+                            </button>
+
+                            <div className="hidden items-center gap-2 sm:flex">
+                                <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                    {urgencyLabel}
+                                </span>
+                                {dueDate && (
+                                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500">
+                                        <CalendarDays className="h-3.5 w-3.5" />
+                                        {format(dueDate, "MMM d")}
+                                    </span>
+                                )}
                             </div>
+
+                            {!isCompleted && (
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => startTimer(projectId, task.id, task.name)}
+                                    className="h-8 w-8 rounded-xl text-slate-400 opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600"
+                                >
+                                    <Play className="h-4 w-4 fill-current" />
+                                </Button>
+                            )}
                         </div>
                     )
                 })}

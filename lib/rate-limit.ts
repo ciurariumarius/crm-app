@@ -1,33 +1,51 @@
-/**
- * Simple in-memory rate limiter for login and 2FA endpoints.
- * For single-server deployments (SQLite-based apps).
- */
+import prisma from "@/lib/prisma"
 
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+const DEFAULT_WINDOW_MS = 15 * 60 * 1000
+const DEFAULT_MAX_ATTEMPTS = 10
 
-const WINDOW_MS = 15 * 60 * 1000 // 15 minutes
-const MAX_ATTEMPTS = 10           // max attempts per window
+export async function checkRateLimit(
+    key: string,
+    options?: { windowMs?: number; maxAttempts?: number }
+): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
+    const windowMs = options?.windowMs ?? DEFAULT_WINDOW_MS
+    const maxAttempts = options?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS
 
-export function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
-    const now = Date.now()
-    const entry = rateLimitMap.get(key)
+    const now = new Date()
+    const nextReset = new Date(now.getTime() + windowMs)
 
-    // Clean up expired entries periodically
-    if (rateLimitMap.size > 10000) {
-        for (const [k, v] of rateLimitMap) {
-            if (now > v.resetTime) rateLimitMap.delete(k)
+    return prisma.$transaction(async (tx) => {
+        const existing = await tx.rateLimitEntry.findUnique({ where: { key } })
+
+        if (!existing || existing.resetAt <= now) {
+            await tx.rateLimitEntry.upsert({
+                where: { key },
+                create: { key, count: 1, resetAt: nextReset },
+                update: { count: 1, resetAt: nextReset },
+            })
+            return { allowed: true, remaining: maxAttempts - 1, resetAt: nextReset }
         }
-    }
 
-    if (!entry || now > entry.resetTime) {
-        rateLimitMap.set(key, { count: 1, resetTime: now + WINDOW_MS })
-        return { allowed: true, remaining: MAX_ATTEMPTS - 1 }
-    }
+        if (existing.count >= maxAttempts) {
+            return { allowed: false, remaining: 0, resetAt: existing.resetAt }
+        }
 
-    if (entry.count >= MAX_ATTEMPTS) {
-        return { allowed: false, remaining: 0 }
-    }
+        const updated = await tx.rateLimitEntry.update({
+            where: { key },
+            data: { count: { increment: 1 } },
+            select: { count: true },
+        })
 
-    entry.count++
-    return { allowed: true, remaining: MAX_ATTEMPTS - entry.count }
+        return {
+            allowed: true,
+            remaining: Math.max(0, maxAttempts - updated.count),
+            resetAt: existing.resetAt,
+        }
+    })
+}
+
+export async function cleanupExpiredRateLimits() {
+    const now = new Date()
+    await prisma.rateLimitEntry.deleteMany({
+        where: { resetAt: { lt: now } },
+    })
 }

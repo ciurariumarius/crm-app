@@ -16,7 +16,6 @@ import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Plus } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 interface CreateTimeLogDialogProps {
     projects: { id: string; siteName: string }[]
@@ -80,8 +79,12 @@ export function CreateTimeLogDialog({ projects, tasks }: CreateTimeLogDialogProp
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="icon" className="h-10 w-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center flex-shrink-0" title="Add new log time">
-                    <Plus className="h-5 w-5" strokeWidth={2.5} />
+                <Button
+                    className="header-action-button"
+                    title="Add new log time"
+                >
+                    <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
+                    <span className="header-action-label">Log Time</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

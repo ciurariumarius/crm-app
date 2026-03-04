@@ -11,21 +11,18 @@ import { GreetingHeader } from "@/components/dashboard/greeting-header"
 import { calculateDashboardMetrics } from "@/lib/dashboard-utils"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
-import { getSession } from "@/lib/auth"
 import { DashboardHeaderActions } from "@/components/dashboard/dashboard-header-actions"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
 export default async function Home() {
-  const session = await getSession()
-  let user: any = null
-  if (session) {
-    user = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { name: true, username: true }
-    })
-  }
+  const session = await requireTenantContext()
+  const user = await prisma.user.findFirst({
+    where: { id: session.userId, tenantId: session.tenantId },
+    select: { name: true, username: true }
+  })
 
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 
@@ -34,6 +31,7 @@ export default async function Home() {
     // Active + unpaid projects
     prisma.project.findMany({
       where: {
+        tenantId: session.tenantId,
         OR: [
           { status: "Active" },
           { paymentStatus: "Unpaid" }
@@ -51,10 +49,11 @@ export default async function Home() {
     // Monthly time aggregate
     prisma.timeLog.aggregate({
       _sum: { durationSeconds: true },
-      where: { startTime: { gte: startOfMonth } }
+      where: { startTime: { gte: startOfMonth }, tenantId: session.tenantId }
     }),
     // Recent projects
     prisma.project.findMany({
+      where: { tenantId: session.tenantId },
       take: 4,
       orderBy: { updatedAt: "desc" },
       include: {
@@ -65,6 +64,7 @@ export default async function Home() {
     // Upcoming tasks
     prisma.task.findMany({
       where: {
+        tenantId: session.tenantId,
         status: { not: 'Completed' },
         OR: [
           { urgency: 'Urgent' },
@@ -88,11 +88,12 @@ export default async function Home() {
     }),
     // Partners
     prisma.partner.findMany({
+      where: { tenantId: session.tenantId },
       include: { sites: { select: { id: true, domainName: true } } },
       orderBy: { name: "asc" }
     }),
     // Services
-    prisma.service.findMany({ orderBy: { serviceName: "asc" } })
+    prisma.service.findMany({ where: { tenantId: session.tenantId }, orderBy: { serviceName: "asc" } })
   ])
 
   const metrics = calculateDashboardMetrics(activeProjects, timeLogsThisMonth, recentProjects)

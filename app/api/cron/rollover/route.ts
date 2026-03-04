@@ -1,97 +1,248 @@
-import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
+import { timingSafeEqual } from 'crypto'
 import prisma from '@/lib/prisma'
-import { createProject } from "@/lib/actions/projects"
+import { cleanupExpiredRateLimits } from '@/lib/rate-limit'
+import { apiError, apiInternalError, apiMethodNotAllowed, apiOk } from '@/lib/api-response'
 
-export const dynamic = 'force-dynamic' // Ensure it runs every time
+export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
-    // Authenticate cron requests
-    const authHeader = request.headers.get('authorization')
+function safeCompare(input: string, expected: string) {
+    const inputBuffer = Buffer.from(input)
+    const expectedBuffer = Buffer.from(expected)
+    if (inputBuffer.length !== expectedBuffer.length) {
+        return false
+    }
+    return timingSafeEqual(inputBuffer, expectedBuffer)
+}
+
+function isAuthorized(request: Request) {
     const cronSecret = process.env.CRON_SECRET
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!cronSecret) return false
+
+    const authHeader = request.headers.get('authorization')
+    const headerSecret = request.headers.get('x-cron-secret')
+    return safeCompare(authHeader || '', `Bearer ${cronSecret}`) || safeCompare(headerSecret || '', cronSecret)
+}
+
+function currentPeriod(date: Date) {
+    return {
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+    }
+}
+
+async function rolloverProject(project: {
+    id: string
+    tenantId: string
+    siteId: string
+    name: string | null
+    currentFee: Prisma.Decimal | null
+    services: { id: string; serviceName: string; standardTasks: string }[]
+    site: { domainName: string }
+}, today: Date) {
+    const period = currentPeriod(today)
+    const markerWhere = {
+        tenantId_sourceProjectId_targetYear_targetMonth: {
+            tenantId: project.tenantId,
+            sourceProjectId: project.id,
+            targetYear: period.year,
+            targetMonth: period.month,
+        },
+    }
+
+    return prisma.$transaction(async (tx) => {
+        const existingMarker = await tx.projectRollover.findUnique({ where: markerWhere })
+
+        if (existingMarker?.newProjectId) {
+            return {
+                status: 'skipped' as const,
+                oldProjectId: project.id,
+                oldProjectName: project.name,
+                reason: 'already_processed',
+                newProjectId: existingMarker.newProjectId,
+            }
+        }
+
+        if (!existingMarker) {
+            await tx.projectRollover.create({
+                data: {
+                    tenantId: project.tenantId,
+                    sourceProjectId: project.id,
+                    targetYear: period.year,
+                    targetMonth: period.month,
+                },
+            })
+        }
+
+        const updated = await tx.project.updateMany({
+            where: {
+                id: project.id,
+                tenantId: project.tenantId,
+                status: 'Active',
+            },
+            data: { status: 'Completed' },
+        })
+
+        if (updated.count === 0) {
+            return {
+                status: 'skipped' as const,
+                oldProjectId: project.id,
+                oldProjectName: project.name,
+                reason: 'source_not_active',
+            }
+        }
+
+        const serviceIds = project.services.map((service) => service.id)
+        const currentFee = project.currentFee ? Number(project.currentFee) : 0
+        const serviceNames = project.services.map((service) => service.serviceName).join(', ')
+        const month = today.toLocaleString('en-US', { month: 'short' })
+        const year = today.getFullYear()
+        const newProjectName = `${project.site.domainName} - ${serviceNames} - ${month} ${year}`
+
+        const allStandardTasks = project.services.flatMap((service) => {
+            try {
+                const parsed = JSON.parse(service.standardTasks)
+                return Array.isArray(parsed) ? parsed : []
+            } catch {
+                return []
+            }
+        })
+
+        const uniqueTasks = Array.from(new Set(allStandardTasks)).map((taskName) => String(taskName).trim()).filter(Boolean)
+
+        const createdProject = await tx.project.create({
+            data: {
+                tenantId: project.tenantId,
+                siteId: project.siteId,
+                name: newProjectName,
+                services: {
+                    connect: serviceIds.map((id) => ({ id })),
+                },
+                currentFee,
+                status: 'Active',
+                paymentStatus: 'Unpaid',
+            },
+        })
+
+        if (uniqueTasks.length > 0) {
+            await tx.task.createMany({
+                data: uniqueTasks.map((taskName) => ({
+                    tenantId: project.tenantId,
+                    projectId: createdProject.id,
+                    name: taskName,
+                    status: 'Active',
+                })),
+            })
+        }
+
+        await tx.projectRollover.update({
+            where: markerWhere,
+            data: {
+                newProjectId: createdProject.id,
+            },
+        })
+
+        return {
+            status: 'created' as const,
+            oldProjectId: project.id,
+            oldProjectName: project.name,
+            newProjectId: createdProject.id,
+        }
+    })
+}
+
+export async function POST(request: Request) {
+    if (!isAuthorized(request)) {
+        return apiError('Unauthorized', 401, { code: 'CRON_UNAUTHORIZED' })
     }
 
     try {
         const today = new Date()
         const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1)
 
-        // Find ALL active projects that have at least one recurring service
-        // AND were created before the current month started (i.e., last month's projects)
         const projectsToRollover = await prisma.project.findMany({
             where: {
-                status: "Active",
-                createdAt: {
-                    lt: startOfCurrentMonth
-                },
+                status: 'Active',
+                createdAt: { lt: startOfCurrentMonth },
                 services: {
-                    some: {
-                        isRecurring: true
-                    }
-                }
+                    some: { isRecurring: true },
+                },
             },
-            include: {
-                services: true,
-                site: true
-            }
+            select: {
+                id: true,
+                tenantId: true,
+                siteId: true,
+                name: true,
+                currentFee: true,
+                site: { select: { domainName: true } },
+                services: {
+                    select: {
+                        id: true,
+                        serviceName: true,
+                        standardTasks: true,
+                    },
+                },
+            },
         })
 
         if (projectsToRollover.length === 0) {
-            return NextResponse.json({
+            return apiOk({
                 success: true,
-                message: "No projects to rollover",
-                processed: 0
+                message: 'No projects to rollover',
+                processed: 0,
+                created: 0,
+                skipped: 0,
+                failed: 0,
+                details: [],
             })
         }
 
-        const results = []
+        const details: Array<Record<string, unknown>> = []
 
         for (const project of projectsToRollover) {
-            // 1. Mark the old project as Completed
-            await prisma.project.update({
-                where: { id: project.id },
-                data: {
-                    status: 'Completed',
-                    // Optional: timestamp completion? updatedAt handles it.
+            try {
+                const result = await rolloverProject(project, today)
+                details.push(result)
+            } catch (error) {
+                if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                    details.push({
+                        status: 'skipped',
+                        oldProjectId: project.id,
+                        oldProjectName: project.name,
+                        reason: 'duplicate_rollover_marker',
+                    })
+                    continue
                 }
-            })
 
-            // 2. Create the NEW project for the current month
-            // We reuse the createProject action which now has auto-naming logic!
-            // It will generate: "Site - Services - [CurrentMonth]"
-            // We pass null/undefined for name to trigger generation.
-
-            const serviceIds = project.services.map(s => s.id)
-
-            // Convert Decimal to number for the action input
-            const currentFee = project.currentFee ? Number(project.currentFee) : 0
-
-            const newProjectRes = await createProject({
-                siteId: project.siteId,
-                serviceIds: serviceIds,
-                currentFee: currentFee,
-                // Name left undefined -> auto-generated with current month
-            })
-
-            results.push({
-                oldProjectId: project.id,
-                oldProjectName: project.name,
-                newProject: newProjectRes.success ? 'Created' : 'Failed',
-                error: newProjectRes.error
-            })
+                details.push({
+                    status: 'failed',
+                    oldProjectId: project.id,
+                    oldProjectName: project.name,
+                    reason: 'exception',
+                })
+            }
         }
 
-        return NextResponse.json({
+        const created = details.filter((entry) => entry.status === 'created').length
+        const skipped = details.filter((entry) => entry.status === 'skipped').length
+        const failed = details.filter((entry) => entry.status === 'failed').length
+
+        // Operational hygiene tasks that can run opportunistically with cron.
+        await cleanupExpiredRateLimits().catch(() => undefined)
+
+        return apiOk({
             success: true,
             processed: projectsToRollover.length,
-            details: results
+            created,
+            skipped,
+            failed,
+            details,
         })
-
     } catch (error) {
-        console.error("Rollover failed:", error)
-        return NextResponse.json(
-            { success: false, error: "Internal Server Error" },
-            { status: 500 }
-        )
+        return apiInternalError(error)
     }
+}
+
+export async function GET() {
+    return apiMethodNotAllowed(['POST'])
 }

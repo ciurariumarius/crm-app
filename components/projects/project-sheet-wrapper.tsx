@@ -49,11 +49,16 @@ export function ProjectSheetWrapper({ projects, allServices, children }: Project
         <ProjectSheetContext.Provider value={{ openProject, closeProject, currentProject: selectedProject }}>
             {children}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && closeProject()}>
-                <SheetContent side="right" className="w-[90vw] sm:max-w-none p-0 border-l border-border bg-background shadow-2xl">
+                <SheetContent
+                    side="right"
+                    showCloseButton={false}
+                    className="w-[92vw] sm:max-w-[860px] 2xl:max-w-[980px] p-0 border-l border-border bg-white/90 backdrop-blur-[12px] shadow-[var(--shadow-drawer)] flex flex-col overflow-hidden rounded-l-[12px]"
+                >
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}
                             allServices={allServices}
+                            onClose={closeProject}
                             onUpdate={(updated) => {
                                 setSelectedProject(updated)
                             }}

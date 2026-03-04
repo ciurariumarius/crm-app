@@ -5,6 +5,7 @@ import path from "path"
 import Papa from "papaparse"
 
 const prisma = new PrismaClient()
+const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
 const CSV_PATH = path.join(process.cwd(), "temp_imports", "projects.csv")
 
@@ -40,6 +41,12 @@ async function importNotionProjects() {
 
     console.log(`📊 Processing ${records.length} records...`)
 
+    await prisma.tenant.upsert({
+        where: { id: DEFAULT_TENANT_ID },
+        update: { name: "Default Tenant" },
+        create: { id: DEFAULT_TENANT_ID, name: "Default Tenant" },
+    })
+
     for (const row of records) {
         const projectName = row["Project Name"] || "Unnamed Project"
         try {
@@ -68,16 +75,16 @@ async function importNotionProjects() {
 
             // 3. Sync Partner
             const partner = await prisma.partner.upsert({
-                where: { name: cleanPartnerName },
+                where: { tenantId_name: { tenantId: DEFAULT_TENANT_ID, name: cleanPartnerName } },
                 update: {},
-                create: { name: cleanPartnerName, internalNotes: "Notion Import" }
+                create: { tenantId: DEFAULT_TENANT_ID, name: cleanPartnerName, internalNotes: "Notion Import" }
             })
 
             // 4. Sync Site
             const site = await prisma.site.upsert({
-                where: { domainName: domainName },
+                where: { tenantId_domainName: { tenantId: DEFAULT_TENANT_ID, domainName: domainName } },
                 update: { partnerId: partner.id },
-                create: { partnerId: partner.id, domainName: domainName }
+                create: { tenantId: DEFAULT_TENANT_ID, partnerId: partner.id, domainName: domainName }
             })
 
             // 5. Parse & Sync Services
@@ -92,9 +99,10 @@ async function importNotionProjects() {
             const serviceIds: string[] = []
             for (const sName of serviceNames) {
                 const s = await prisma.service.upsert({
-                    where: { serviceName: sName },
+                    where: { tenantId_serviceName: { tenantId: DEFAULT_TENANT_ID, serviceName: sName } },
                     update: {},
                     create: {
+                        tenantId: DEFAULT_TENANT_ID,
                         serviceName: sName,
                         isRecurring: isSubscription,
                         standardTasks: "[]"
@@ -104,8 +112,9 @@ async function importNotionProjects() {
             }
 
             // 6. Create Project
-            const project = await (prisma.project as any).create({
+            const project = await prisma.project.create({
                 data: {
+                    tenantId: DEFAULT_TENANT_ID,
                     siteId: site.id,
                     status: status,
                     paymentStatus: paymentStatus,
@@ -120,7 +129,7 @@ async function importNotionProjects() {
                 const tasks = taskList.split(/,|\n/).map((t: string) => t.trim()).filter(Boolean)
                 for (const tName of tasks) {
                     await prisma.task.create({
-                        data: { projectId: project.id, name: tName, status: "Done" }
+                        data: { tenantId: DEFAULT_TENANT_ID, projectId: project.id, name: tName, status: "Completed" }
                     })
                 }
             }
@@ -129,6 +138,7 @@ async function importNotionProjects() {
             if (timeMinutes > 0) {
                 await prisma.timeLog.create({
                     data: {
+                        tenantId: DEFAULT_TENANT_ID,
                         projectId: project.id,
                         description: `Imported from Notion: ${projectName}`,
                         startTime: createdAt,

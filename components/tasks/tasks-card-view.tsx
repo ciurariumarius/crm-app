@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight, Plus, Lightbulb } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 
@@ -136,26 +136,21 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
     )
 
     const getStatusStyle = (status: string) => {
-        if (status === "Active") return "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
-        if (status === "Paused") return "bg-amber-500 text-white shadow-sm shadow-amber-500/20"
-        if (status === "Completed") return "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20"
-        return "bg-muted text-muted-foreground"
+        if (status === "Active") return "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20"
+        if (status === "Paused") return "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
+        if (status === "Completed") return "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+        return "bg-muted text-muted-foreground border border-border"
     }
 
     const getUrgencyIcon = (urgency: string) => {
         if (urgency === "Urgent") return <Zap className="h-3 w-3 fill-current" />
-        if (urgency === "Medium") return <ArrowRight className="h-3 w-3" strokeWidth={3} />
-        if (urgency === "Idea") return <Target className="h-3 w-3" />
-        return <ArrowRight className="h-3 w-3 text-muted-foreground/80" strokeWidth={2} />
+        if (urgency === "Idea") return <Lightbulb className="h-3 w-3" />
+        return <ArrowRight className="h-3 w-3" strokeWidth={3} />
     }
 
     const renderGridView = () => (
         <div className={cn(
-            "grid grid-cols-1 md:grid-cols-2 gap-6",
-            cols === 2 ? "xl:grid-cols-2 2xl:grid-cols-2" :
-                cols === 3 ? "xl:grid-cols-3 2xl:grid-cols-3" :
-                    cols === 4 ? "xl:grid-cols-4 2xl:grid-cols-4" :
-                        "xl:grid-cols-3 2xl:grid-cols-4"
+            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
         )}>
             {tasks.map((task) => {
                 const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
@@ -169,143 +164,123 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 const isDueToday = task.deadline && isToday(new Date(task.deadline))
                 const activeHighlight = isRunning ? "text-blue-600" : "text-foreground"
 
+                // Extract domain, services for subtitle
+                const domainName = task.project?.site?.domainName || task.project?.name || "No Project"
+                const services = task.project?.services || []
+                const isRecurring = services.some((s: any) => s.isRecurring)
+
+                const serviceName = services.length > 0
+                    ? services.map((s: any) => s.serviceName).join(" + ")
+                    : "No Service"
+
                 return (
                     <div
                         key={task.id}
                         className={cn(
-                            "group relative flex flex-col bg-card text-card-foreground rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border hover:border-border/80",
-                            selectedIds.includes(task.id) ? "border-primary ring-2 ring-primary/20" : "border-border/30"
+                            "group relative flex flex-col bg-card rounded-xl p-5 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 cursor-pointer min-h-[160px]",
+                            selectedIds.includes(task.id) ? "ring-2 ring-primary/20 border-primary" : ""
                         )}
                         onClick={() => setSelectedTask(task)}
                     >
                         {selectedIds.includes(task.id) && (
-                            <div className="absolute top-6 right-16 z-10" onClick={(e) => { e.stopPropagation(); toggleSelect(task.id) }}>
+                            <div className="absolute top-5 right-12 z-10" onClick={(e) => { e.stopPropagation(); toggleSelect(task.id) }}>
                                 <Checkbox checked className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
                             </div>
                         )}
 
-                        {/* Top Header Row */}
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                {task.urgency && (
-                                    <div className={cn(
-                                        "px-3 py-1.5 flex items-center gap-1.5 rounded-full border text-[9px] font-black tracking-widest uppercase",
-                                        task.urgency === "Urgent" ? "border-rose-500 text-rose-500" :
-                                            task.urgency === "Medium" ? "border-blue-500 text-blue-500" :
-                                                task.urgency === "Idea" ? "border-indigo-500 text-indigo-500" :
-                                                    "border-border/60 text-muted-foreground/80 bg-background shadow-xs hover:border-border transition-colors"
-                                    )}>
-                                        {getUrgencyIcon(task.urgency)} {task.urgency}
-                                    </div>
-                                )}
-                                {task.deadline && (
-                                    <div className={cn(
-                                        "px-3 py-1.5 flex items-center gap-1.5 rounded-full text-[9px] font-black tracking-[0.15em] uppercase border",
-                                        isOverdue || isDueToday ? "bg-[#dc2626] text-white border-[#dc2626] shadow-sm shadow-red-500/20" : "bg-muted border-transparent text-muted-foreground/80"
-                                    )}>
-                                        <Target className="h-3 w-3" /> DUE: {isDueToday ? "TODAY, 18:00" : format(new Date(task.deadline), "MMM dd, yyyy")}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2">
+                        <div className="flex justify-between items-start mb-1.5">
+                            <h3 className={cn("text-[15px] font-bold text-foreground leading-snug break-words pr-2 line-clamp-2", task.status === "Completed" && "line-through opacity-50")}>
+                                {task.name}
+                            </h3>
+                            <div className="shrink-0 -mt-1 -mr-2">
                                 {renderTaskActionMenu(task)}
                             </div>
                         </div>
 
-                        {/* Title and Project */}
-                        <h3 className={cn("text-xl md:text-2xl font-black leading-tight tracking-tight mb-2 text-foreground break-words text-wrap", task.status === "Completed" && "line-through opacity-50")}>
-                            {task.name}
-                        </h3>
-                        {task.project && (
-                            <div className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 mb-2 whitespace-normal break-words">
-                                {task.project.name || task.project.site?.domainName}
+                        <div className="flex flex-col gap-1.5 mb-5 mt-2">
+                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 break-words whitespace-normal leading-tight">{domainName}</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 break-words whitespace-normal">
+                                    {serviceName}
+                                </span>
+                                {isRecurring && task.project?.createdAt && (
+                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-medium shrink-0">
+                                        {format(new Date(task.project.createdAt), "MMM yyyy")}
+                                    </span>
+                                )}
                             </div>
-                        )}
+                        </div>
+
                         {task.description && (
-                            <p className="text-sm md:text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                            <p className="text-xs text-muted-foreground line-clamp-2 mb-4">
                                 {task.description}
                             </p>
                         )}
 
                         <div className="flex-1" />
 
-                        {/* Footer Controls */}
-                        <div className="flex items-end justify-between mt-6">
-                            <div className="flex items-center gap-6">
-                                <div className="bg-muted/40 dark:bg-zinc-900/50 rounded-full p-1.5 flex items-center gap-1 border border-border/50" onClick={e => e.stopPropagation()}>
-                                    <button
-                                        className={cn(
-                                            "h-10 w-12 rounded-full flex items-center justify-center transition-all",
-                                            isRunning ? "bg-blue-600 text-white shadow-md shadow-blue-500/20" : "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm hover:scale-[1.02]"
-                                        )}
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            if (isRunning) {
-                                                handlePauseTimer()
-                                            } else if (isPaused) {
-                                                handleResumeTimer()
-                                            } else {
-                                                handleStartTimer(task)
-                                            }
-                                        }}
-                                    >
-                                        {isRunning ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
-                                    </button>
-
-                                    {isActiveTimerThisTask && (
-                                        <button
-                                            className="h-10 w-10 rounded-full flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-all border border-transparent"
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                e.stopPropagation()
-                                                handleStopTimer()
-                                            }}
-                                        >
-                                            <Square className="h-4 w-4 fill-current" />
-                                        </button>
-                                    )}
-
-                                    <button
-                                        className="h-10 w-10 rounded-full flex items-center justify-center bg-transparent hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-emerald-500 transition-all"
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            updateTask(task.id, { status: "Completed" })
-                                            toast.success("Task completed")
-                                        }}
-                                    >
-                                        <CheckCircle2 className="h-5 w-5" />
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-col items-start pt-1">
-                                    <div className="text-xl md:text-2xl font-black tracking-tight flex items-baseline gap-1">
-                                        <span className={activeHighlight}>{timeString}</span>
-                                        {task.estimatedMinutes && (
-                                            <span className="text-muted-foreground/30 text-xs md:text-sm font-bold">/ {Math.floor(task.estimatedMinutes / 60)}h{task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}</span>
-                                        )}
-                                    </div>
-                                    <div className="text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground/40 mt-0.5">Spent / Est</div>
-                                </div>
-                            </div>
-
-                            <div className={cn("px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.15em]", getStatusStyle(task.status))}>
+                        {/* Bottom Badges */}
+                        <div className="flex items-center flex-wrap gap-2 mt-auto pt-4 border-t border-border/60">
+                            {/* Status */}
+                            <span className={cn(
+                                "px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border",
+                                task.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20" :
+                                    task.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20" :
+                                        task.status === "Completed" ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20" :
+                                            "bg-muted text-muted-foreground border-border"
+                            )}>
+                                {task.status === "Active" && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                                {task.status === "Paused" && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+                                {task.status === "Completed" && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
                                 {task.status}
-                            </div>
+                            </span>
+
+                            {/* Priority */}
+                            {task.urgency && task.urgency !== "Normal" && (
+                                <span className={cn(
+                                    "px-2.5 py-1 rounded-md text-xs font-medium border",
+                                    task.urgency === "Urgent" ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20" :
+                                        task.urgency === "Idea" ? "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20" :
+                                            "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20"
+                                )}>
+                                    {task.urgency}
+                                </span>
+                            )}
+
+                            {/* Date/Deadline */}
+                            {task.deadline && (
+                                <span className={cn(
+                                    "px-2.5 py-1 bg-muted text-muted-foreground border border-border/60 rounded-md text-xs font-medium flex items-center gap-1.5",
+                                    (isDueToday || isOverdue) && "border-rose-200 bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
+                                )}>
+                                    <CalendarIcon className="h-3 w-3 opacity-50" />
+                                    {isDueToday ? "Today" : format(new Date(task.deadline), "MMM dd")}
+                                </span>
+                            )}
                         </div>
                     </div>
                 )
             })}
+
+            {/* Quick Add Task Card */}
+            <div
+                className="border-2 border-dashed border-border/60 rounded-xl flex flex-col items-center justify-center text-center p-6 text-muted-foreground hover:bg-muted/30 hover:border-border cursor-pointer transition-all min-h-[160px] group"
+                onClick={() => setCreateTaskOpen(true)}
+            >
+                <div className="rounded-full bg-primary/5 p-3 mb-3 text-primary group-hover:scale-110 transition-transform">
+                    <Plus className="h-6 w-6" />
+                </div>
+                <p className="font-bold text-sm text-foreground mb-1">Quick add task...</p>
+                <p className="text-[11px] font-medium text-muted-foreground">Organize your workflow instantly</p>
+            </div>
         </div>
     )
 
     const renderListView = () => (
         <div className="flex flex-col gap-3">
-            <div className="hidden lg:grid grid-cols-[auto_1fr_auto_auto_auto] gap-6 text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] px-8 py-2">
-                <div className="flex items-center gap-6 w-36">
+            <div className="hidden lg:grid grid-cols-[auto_1fr_auto_auto_auto] gap-6 text-xs font-semibold text-muted-foreground px-8 py-2 border-b border-border/40 pb-3">
+                <div className="flex items-center gap-6 w-16">
                     <span className="w-8 text-center">PRI</span>
-                    <span>CREATED</span>
                 </div>
                 <div>TASK / PROJECT / DESCRIPTION</div>
                 <div className="w-24 text-center">STATUS</div>
@@ -330,20 +305,15 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         <div
                             key={task.id}
                             className={cn(
-                                "group flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 bg-white dark:bg-zinc-900 rounded-[24px] p-6 lg:px-8 shadow-sm hover:shadow-md hover:-translate-y-0.5 border border-border/40 hover:border-border/80 transition-all duration-300 cursor-pointer relative overflow-hidden",
+                                "group flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 bg-card rounded-xl p-6 lg:px-8 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 cursor-pointer relative overflow-hidden",
                                 selectedIds.includes(task.id) && "border-primary ring-2 ring-primary/20 bg-primary/5"
                             )}
                             onClick={() => setSelectedTask(task)}
                         >
                             {/* Mobile only elements implicitly stacked, Desktop uses precise widths */}
-                            <div className="flex items-center gap-6 lg:w-36 shrink-0">
+                            <div className="flex items-center gap-6 lg:w-16 shrink-0">
                                 <div className="w-8 flex justify-center" title={task.urgency}>
                                     {getUrgencyIcon(task.urgency)}
-                                </div>
-                                <div className="text-xs font-medium text-muted-foreground/60 flex items-center gap-1.5 whitespace-nowrap">
-                                    <CalendarIcon className="w-3.5 h-3.5" />
-                                    <span className="hidden lg:inline">{format(new Date(task.createdAt), "MMM dd")}</span>
-                                    <span className="inline lg:hidden">{format(new Date(task.createdAt), "MMM dd, yyyy")}</span>
                                 </div>
                             </div>
 
@@ -351,11 +321,31 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                 <h3 className={cn("text-base font-bold text-foreground/90 break-words whitespace-normal", task.status === "Completed" && "line-through opacity-50")}>
                                     {task.name}
                                 </h3>
-                                {task.project && (
-                                    <div className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 break-words whitespace-normal mt-1">
-                                        {task.project.name || task.project.site?.domainName}
-                                    </div>
-                                )}
+                                {task.project && (() => {
+                                    const domainName = task.project?.site?.domainName || task.project?.name || "No Project"
+                                    const services = task.project?.services || []
+                                    const isRecurring = services.some((s: any) => s.isRecurring)
+
+                                    const serviceName = services.length > 0
+                                        ? services.map((s: any) => s.serviceName).join(" + ")
+                                        : "No Service"
+
+                                    return (
+                                        <div className="flex flex-col gap-1 mt-1">
+                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 break-words whitespace-normal leading-tight">{domainName}</span>
+                                            <div className="flex items-center gap-2 flex-wrap mt-1">
+                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 break-words whitespace-normal">
+                                                    {serviceName}
+                                                </span>
+                                                {isRecurring && task.project?.createdAt && (
+                                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-[10px] font-medium shrink-0">
+                                                        {format(new Date(task.project.createdAt), "MMM yyyy")}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
                                 {task.description && (
                                     <p className="text-sm text-muted-foreground/70 truncate mt-1.5 hidden lg:block">
                                         {task.description}
@@ -365,7 +355,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
 
                             <div className="flex items-center justify-between lg:justify-end gap-6 lg:w-auto shrink-0 mt-4 lg:mt-0">
                                 <div className="w-auto lg:w-24 flex lg:justify-center shrink-0">
-                                    <div className={cn("px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest", getStatusStyle(task.status))}>
+                                    <div className={cn("px-2.5 py-1 rounded-md text-xs font-medium", getStatusStyle(task.status))}>
                                         {task.status}
                                     </div>
                                 </div>
@@ -389,7 +379,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                                 <span className="text-muted-foreground/40 text-[11px] font-medium">/ {Math.floor(task.estimatedMinutes / 60)}h {task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}</span>
                                             )}
                                         </div>
-                                        <div className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/30">Spent / Est</div>
+                                        <div className="text-xs font-medium text-muted-foreground mt-0.5">Spent / Est</div>
                                     </div>
                                     <div className="flex items-center gap-1.5 bg-muted/30 rounded-xl p-1 border border-border/40">
                                         <button

@@ -6,14 +6,16 @@ import { GlobalCreateProjectDialog } from "@/components/projects/global-create-p
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
 export default async function SiteDetailPage({ params }: { params: Promise<{ partnerId: string, siteId: string }> }) {
+    const session = await requireTenantContext()
     const { partnerId, siteId } = await params
 
-    const sitePromise = prisma.site.findUnique({
-        where: { id: siteId },
+    const sitePromise = prisma.site.findFirst({
+        where: { id: siteId, tenantId: session.tenantId, partnerId },
         include: {
             projects: {
                 include: {
@@ -29,11 +31,13 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
     })
 
     const servicesPromise = prisma.service.findMany({
+        where: { tenantId: session.tenantId },
         select: { id: true, serviceName: true, isRecurring: true, baseFee: true },
         orderBy: { serviceName: "asc" },
     })
 
     const partnersPromise = prisma.partner.findMany({
+        where: { tenantId: session.tenantId },
         include: { sites: { select: { id: true, domainName: true } } }
     })
 

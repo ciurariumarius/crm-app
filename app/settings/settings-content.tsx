@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Shield, Key, QrCode, User as UserIcon, Link as LinkIcon, Save, Loader2 } from "lucide-react"
 import QRCode from "qrcode"
-import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { PageHeader } from "@/components/layout/page-header"
+import Image from "next/image"
 
 interface UserData {
     name: string | null
@@ -22,6 +23,7 @@ export function SettingsContent({ user }: { user: UserData }) {
     const [qrCodeUrl, setQrCodeUrl] = useState("")
     const [twoFactorSecret, setTwoFactorSecret] = useState("")
     const [token, setToken] = useState("")
+    const [disablePassword, setDisablePassword] = useState("")
     const [is2FAEnabled, setIs2FAEnabled] = useState(user.twoFactorEnabled)
 
     const handleProfileUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -92,11 +94,16 @@ export function SettingsContent({ user }: { user: UserData }) {
     }
 
     const handleDisable2FA = async () => {
+        if (!disablePassword) {
+            toast.error("Current password is required to disable 2FA")
+            return
+        }
         setLoading(true)
-        const result = await disableTwoFactor()
+        const result = await disableTwoFactor(disablePassword)
         if (result.success) {
             toast.success("Two-Factor Authentication Disabled")
             setIs2FAEnabled(false)
+            setDisablePassword("")
         } else {
             toast.error(result.error || "Failed to disable 2FA")
         }
@@ -105,17 +112,10 @@ export function SettingsContent({ user }: { user: UserData }) {
 
     return (
         <div className="max-w-4xl mx-auto flex flex-col gap-6">
-            <div className="flex h-10 items-center justify-between gap-4">
-                <div className="flex flex-col gap-1 pr-12 md:pr-0 h-full">
-                    <div className="flex items-center gap-3">
-                        <MobileMenuTrigger />
-                        <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
-                            Settings
-                        </h1>
-                    </div>
-                </div>
-            </div>
-            <p className="text-muted-foreground pl-14 md:pl-0 -mt-4">Manage your profile, password, and security preferences.</p>
+            <PageHeader
+                title="Settings"
+                subtitle="Manage your profile, password, and security preferences."
+            />
 
             <div className="grid grid-cols-1 gap-8">
                 {/* Profile Card */}
@@ -192,7 +192,14 @@ export function SettingsContent({ user }: { user: UserData }) {
                                 </div>
                                 <h3 className="text-lg font-bold text-emerald-500">2FA is Enabled</h3>
                                 <p className="text-sm text-muted-foreground">Your account is secured with a secondary authenticator app.</p>
-                                <Button variant="destructive" onClick={handleDisable2FA} disabled={loading} className="mt-4">
+                                <Input
+                                    type="password"
+                                    value={disablePassword}
+                                    onChange={(e) => setDisablePassword(e.target.value)}
+                                    placeholder="Current password"
+                                    className="mt-2"
+                                />
+                                <Button variant="destructive" onClick={handleDisable2FA} disabled={loading || !disablePassword} className="mt-2">
                                     Disable 2FA
                                 </Button>
                             </div>
@@ -211,7 +218,7 @@ export function SettingsContent({ user }: { user: UserData }) {
                                         <h3 className="font-bold">1. Scan QR Code</h3>
                                         <p className="text-xs text-muted-foreground">Use Google Authenticator or Authy to scan this code.</p>
                                         <div className="bg-white p-4 rounded-xl inline-block shadow-md">
-                                            <img src={qrCodeUrl} alt="2FA QR Code" className="w-48 h-48 mx-auto" />
+                                            <Image src={qrCodeUrl} alt="2FA QR Code" width={192} height={192} className="w-48 h-48 mx-auto" unoptimized />
                                         </div>
                                         <p className="text-[10px] font-mono select-all bg-muted p-2 rounded">{twoFactorSecret}</p>
 

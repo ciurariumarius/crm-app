@@ -96,7 +96,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                             {task.name}
                                         </span>
                                         {task.description && (
-                                            <span className="text-[10px] text-muted-foreground line-clamp-1">
+                                            <span className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                                                 {task.description}
                                             </span>
                                         )}
@@ -104,12 +104,12 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)}>
                                     <div className="flex flex-col gap-1 max-w-[200px]">
-                                        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                                        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/70">
                                             <Users className="h-3 w-3 opacity-50 shrink-0" />
                                             <span className="truncate">{task.project.site.partner.name}</span>
                                         </div>
-                                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground/40 font-black flex items-center gap-2">
-                                            <Globe className="h-3 w-3 opacity-30 shrink-0" />
+                                        <div className="text-xs text-muted-foreground/60 font-medium flex items-center gap-2">
+                                            <Globe className="h-3 w-3 opacity-40 shrink-0" />
                                             <span className="truncate">{task.project.site.domainName}</span>
                                         </div>
                                     </div>
@@ -121,21 +121,21 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                         disabled={updatingId === task.id}
                                     >
                                         <SelectTrigger className={cn(
-                                            "h-8 text-[10px] font-black uppercase tracking-widest border-none bg-transparent hover:bg-muted/50 p-1 w-[120px]",
-                                            task.status === "Completed" ? "text-emerald-500" :
-                                                task.status === "Active" ? "text-blue-500" : "text-orange-500"
+                                            "h-8 text-xs font-medium border-none bg-transparent hover:bg-muted/50 p-1 w-[120px]",
+                                            task.status === "Completed" ? "text-emerald-600" :
+                                                task.status === "Active" ? "text-blue-600" : "text-amber-600"
                                         )}>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Active" className="text-[10px] font-black uppercase tracking-widest text-blue-500">ACTIVE</SelectItem>
-                                            <SelectItem value="Paused" className="text-[10px] font-black uppercase tracking-widest text-orange-500">PAUSED</SelectItem>
-                                            <SelectItem value="Completed" className="text-[10px] font-black uppercase tracking-widest text-emerald-500">COMPLETED</SelectItem>
+                                            <SelectItem value="Active" className="text-xs font-medium text-blue-600">Active</SelectItem>
+                                            <SelectItem value="Paused" className="text-xs font-medium text-amber-600">Paused</SelectItem>
+                                            <SelectItem value="Completed" className="text-xs font-medium text-emerald-600">Completed</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)}>
-                                    <div className="flex items-center gap-2 text-[10px] font-bold">
+                                    <div className="flex items-center gap-2 text-xs font-medium">
                                         <CalendarIcon className={cn(
                                             "h-3 w-3",
                                             task.deadline && new Date(task.deadline) < new Date() && task.status !== "Completed" ? "text-rose-500" : "text-muted-foreground"
@@ -162,13 +162,13 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                         if (!hasTimeLogs && !useFallback) {
                                             if (task.estimatedMinutes) {
                                                 return (
-                                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold opacity-60">
+                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium opacity-80">
                                                         <Target className="h-3 w-3 opacity-50" />
-                                                        <span>Est: {task.estimatedMinutes >= 60 ? `${Math.floor(task.estimatedMinutes / 60)}h ${task.estimatedMinutes % 60}m` : `${task.estimatedMinutes}m`}</span>
+                                                        <span>Est: {task.estimatedMinutes >= 60 ? `${Math.floor(task.estimatedMinutes / 60)}h ${task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}` : `${task.estimatedMinutes}m`}</span>
                                                     </div>
                                                 )
                                             }
-                                            return <span className="text-[10px] text-muted-foreground/30 italic">No tracking</span>
+                                            return <span className="text-xs text-muted-foreground/50 italic">No tracking</span>
                                         }
 
                                         const displaySeconds = useFallback ? (task.estimatedMinutes * 60) : totalSeconds
@@ -177,8 +177,8 @@ export function TasksTable({ tasks }: TasksTableProps) {
 
                                         return (
                                             <div className={cn(
-                                                "flex items-center gap-2 text-[10px] font-bold",
-                                                useFallback ? "text-amber-600" : (timerState.taskId === task.id && timerState.isRunning ? "text-primary animate-pulse" : "text-emerald-600")
+                                                "flex items-center gap-2 text-xs font-medium",
+                                                useFallback ? "text-amber-600" : (timerState.taskId === task.id && timerState.isRunning ? "text-primary animate-pulse font-bold" : "text-emerald-600")
                                             )}>
                                                 {useFallback ? <Target className="h-3 w-3 opacity-50" /> : <Clock className="h-3 w-3 opacity-50" />}
                                                 <span>{hours}h {mins}m {useFallback ? "(Est)" : ""}</span>
@@ -187,7 +187,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                     })()}
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)}>
-                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                                         <Clock className="h-3 w-3 opacity-50" />
                                         {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
                                     </div>

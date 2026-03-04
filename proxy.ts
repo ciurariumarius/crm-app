@@ -14,7 +14,7 @@ const isProtectedRoute = (path: string) => {
     return true
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // Ignore non-protected routes
@@ -33,6 +33,10 @@ export async function middleware(request: NextRequest) {
     const session = await decrypt(sessionCookie)
 
     if (!session) {
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    if (!session.userId || !session.tenantId) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 

@@ -13,6 +13,7 @@ export function MobileMenuTrigger() {
             size="icon"
             className="md:hidden bg-card border border-border shrink-0 z-40"
             onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Open navigation menu"
         >
             <Menu className="h-6 w-6" />
         </Button>

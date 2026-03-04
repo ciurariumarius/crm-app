@@ -55,8 +55,12 @@ export function CreateServiceDialog() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="icon" className="h-10 w-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center flex-shrink-0" title="New Service">
-                    <Plus className="h-5 w-5" strokeWidth={2.5} />
+                <Button
+                    className="header-action-button"
+                    title="New Service"
+                >
+                    <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
+                    <span className="header-action-label">New Service</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

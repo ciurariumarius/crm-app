@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { requireAuth } from "@/lib/auth"
+import { requireTenantContext } from "@/lib/tenant"
+import { getActionErrorMessage } from "@/lib/action-errors"
+import { logSessionAuditEvent } from "@/lib/audit"
+import { z } from "zod"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/tasks")
@@ -13,46 +16,112 @@ function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?
     if (sitePartnerId && siteId) revalidatePath(`/vault/${sitePartnerId}/${siteId}`)
 }
 
+const TaskStatusSchema = z.enum(["Active", "Paused", "Completed"])
+const TaskUrgencySchema = z.enum(["Low", "Normal", "High", "Urgent"])
+const TaskIdSchema = z.string().uuid()
+const TaskIdsSchema = z.array(TaskIdSchema).max(500)
+const ProjectIdSchema = z.string().uuid()
+
+const AddTaskSchema = z.object({
+    projectId: z.string().uuid(),
+    name: z.string().trim().min(1, "Task name is required").max(255),
+    options: z.object({
+        deadline: z.date().optional(),
+        status: TaskStatusSchema.optional(),
+        urgency: TaskUrgencySchema.optional(),
+        estimatedMinutes: z.number().int().min(0).max(100000).optional(),
+    }).optional(),
+})
+
+const UpdateTaskSchema = z.object({
+    taskId: z.string().uuid(),
+    name: z.string().trim().min(1).max(255).optional(),
+    description: z.string().max(10000).optional(),
+    status: TaskStatusSchema.optional(),
+    urgency: TaskUrgencySchema.optional(),
+    isCompleted: z.boolean().optional(),
+    deadline: z.union([z.date(), z.null()]).optional(),
+    estimatedMinutes: z.union([z.number().int().min(0).max(100000), z.null()]).optional(),
+})
+
 export async function addTask(projectId: string, name: string, options?: { deadline?: Date, status?: string, urgency?: string, estimatedMinutes?: number }) {
     try {
-        await requireAuth()
+        const session = await requireTenantContext()
+        const validated = AddTaskSchema.parse({ projectId, name, options })
+        const project = await prisma.project.findFirst({
+            where: { id: validated.projectId, tenantId: session.tenantId },
+            select: { id: true },
+        })
+        if (!project) {
+            await logSessionAuditEvent(session, {
+                action: "TASK_CREATE_FAILED",
+                success: false,
+                details: `projectId=${validated.projectId}; reason=project_not_found`,
+            })
+            return { success: false, error: "Project not found" }
+        }
         const task = await prisma.task.create({
             data: {
-                projectId,
-                name,
-                status: options?.status || "Active",
-                urgency: options?.urgency || "Normal",
-                deadline: options?.deadline,
-                estimatedMinutes: options?.estimatedMinutes
+                tenantId: session.tenantId,
+                projectId: validated.projectId,
+                name: validated.name,
+                status: validated.options?.status || "Active",
+                urgency: validated.options?.urgency || "Normal",
+                deadline: validated.options?.deadline,
+                estimatedMinutes: validated.options?.estimatedMinutes
             },
             include: { project: { include: { site: true } } }
         })
-        revalidateTaskPaths(projectId, task.project?.site?.partnerId, task.project?.siteId)
+        await logSessionAuditEvent(session, {
+            action: "TASK_CREATED",
+            details: `taskId=${task.id}; projectId=${validated.projectId}`,
+        })
+        revalidateTaskPaths(validated.projectId, task.project?.site?.partnerId, task.project?.siteId)
         return { success: true }
     } catch (error) {
         console.error("Add task failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to add task" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to add task") }
     }
 }
 
 export async function toggleTaskStatus(taskId: string, currentStatus: string, projectId: string) {
     try {
-        await requireAuth()
-        const isCompleted = currentStatus === "Completed"
+        const session = await requireTenantContext()
+        const validatedTaskId = TaskIdSchema.parse(taskId)
+        const validatedProjectId = ProjectIdSchema.parse(projectId)
+        const validatedCurrentStatus = TaskStatusSchema.parse(currentStatus)
+        const isCompleted = validatedCurrentStatus === "Completed"
         const newStatus = isCompleted ? "Active" : "Completed"
 
+        const taskEntity = await prisma.task.findFirst({
+            where: { id: validatedTaskId, tenantId: session.tenantId },
+            select: { id: true },
+        })
+        if (!taskEntity) {
+            await logSessionAuditEvent(session, {
+                action: "TASK_STATUS_TOGGLE_FAILED",
+                success: false,
+                details: `taskId=${validatedTaskId}; reason=not_found`,
+            })
+            return { success: false, error: "Task not found" }
+        }
+
         const task = await prisma.task.update({
-            where: { id: taskId },
+            where: { id: taskEntity.id },
             data: {
                 status: newStatus,
             },
             include: { project: { include: { site: true } } }
         })
-        revalidateTaskPaths(projectId, task.project.site.partnerId, task.project.siteId)
+        await logSessionAuditEvent(session, {
+            action: "TASK_STATUS_TOGGLED",
+            details: `taskId=${validatedTaskId}; from=${validatedCurrentStatus}; to=${newStatus}`,
+        })
+        revalidateTaskPaths(validatedProjectId, task.project.site.partnerId, task.project.siteId)
         return { success: true }
     } catch (error) {
         console.error("Toggle task status failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to toggle task status" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to toggle task status") }
     }
 }
 
@@ -64,10 +133,11 @@ export async function updateTask(taskId: string, data: {
     isCompleted?: boolean
     deadline?: Date | null
     estimatedMinutes?: number | null
-}) {
+    }) {
     try {
-        await requireAuth()
-        const { isCompleted, ...restData } = data
+        const session = await requireTenantContext()
+        const validated = UpdateTaskSchema.parse({ taskId, ...data })
+        const { isCompleted, taskId: validatedTaskId, ...restData } = validated
         const updateData: Prisma.TaskUpdateInput = { ...restData }
 
         if (isCompleted === true) {
@@ -76,56 +146,99 @@ export async function updateTask(taskId: string, data: {
             updateData.status = "Active"
         }
 
+        const existingTask = await prisma.task.findFirst({
+            where: { id: validatedTaskId, tenantId: session.tenantId },
+            select: { id: true },
+        })
+        if (!existingTask) {
+            await logSessionAuditEvent(session, {
+                action: "TASK_UPDATE_FAILED",
+                success: false,
+                details: `taskId=${validatedTaskId}; reason=not_found`,
+            })
+            return { success: false, error: "Task not found" }
+        }
+
         const task = await prisma.task.update({
-            where: { id: taskId },
+            where: { id: existingTask.id },
             data: updateData,
             include: { project: { include: { site: true } } }
+        })
+        await logSessionAuditEvent(session, {
+            action: "TASK_UPDATED",
+            details: `taskId=${task.id}; projectId=${task.projectId}`,
         })
         revalidateTaskPaths(task.projectId, task.project.site.partnerId, task.project.siteId)
         return { success: true }
     } catch (error) {
         console.error("Update task failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to update task" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to update task") }
     }
 }
 
 export async function deleteTask(taskId: string, projectId: string) {
     try {
-        await requireAuth()
-        const task = await prisma.task.delete({
-            where: { id: taskId },
+        const session = await requireTenantContext()
+        const validatedTaskId = TaskIdSchema.parse(taskId)
+        const validatedProjectId = ProjectIdSchema.parse(projectId)
+        const task = await prisma.task.findFirst({
+            where: { id: validatedTaskId, tenantId: session.tenantId },
             include: { project: { include: { site: true } } }
         })
-        revalidateTaskPaths(projectId, task.project.site.partnerId, task.project.siteId)
+        if (!task) {
+            await logSessionAuditEvent(session, {
+                action: "TASK_DELETE_FAILED",
+                success: false,
+                details: `taskId=${validatedTaskId}; reason=not_found`,
+            })
+            return { success: false, error: "Task not found" }
+        }
+        await prisma.task.delete({ where: { id: task.id } })
+        await logSessionAuditEvent(session, {
+            action: "TASK_DELETED",
+            details: `taskId=${task.id}; projectId=${task.projectId}`,
+        })
+        revalidateTaskPaths(validatedProjectId, task.project.site.partnerId, task.project.siteId)
         return { success: true }
     } catch (error) {
         console.error("Delete task failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to delete task" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to delete task") }
     }
 }
 
 export async function deleteTasks(taskIds: string[]) {
     try {
-        await requireAuth()
-        if (taskIds.length === 0) return { success: true }
-        await prisma.task.deleteMany({
-            where: { id: { in: taskIds } }
+        const session = await requireTenantContext()
+        const validatedTaskIds = TaskIdsSchema.parse(taskIds)
+        if (validatedTaskIds.length === 0) return { success: true }
+        const deleted = await prisma.task.deleteMany({
+            where: { id: { in: validatedTaskIds }, tenantId: session.tenantId }
+        })
+        await logSessionAuditEvent(session, {
+            action: "TASKS_BULK_DELETED",
+            details: `requested=${validatedTaskIds.length}; deleted=${deleted.count}`,
         })
         revalidateTaskPaths()
         return { success: true }
     } catch (error) {
         console.error("Bulk delete tasks failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to delete tasks" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to delete tasks") }
     }
 }
 
 export async function updateTasksStatus(taskIds: string[], status: string) {
     try {
-        await requireAuth()
-        if (taskIds.length === 0) return { success: true }
-        await prisma.task.updateMany({
-            where: { id: { in: taskIds } },
-            data: { status }
+        const session = await requireTenantContext()
+        const validatedTaskIds = TaskIdsSchema.parse(taskIds)
+        const validatedStatus = TaskStatusSchema.parse(status)
+        if (validatedTaskIds.length === 0) return { success: true }
+        const updated = await prisma.task.updateMany({
+            where: { id: { in: validatedTaskIds }, tenantId: session.tenantId },
+            data: { status: validatedStatus }
+        })
+        await logSessionAuditEvent(session, {
+            action: "TASKS_BULK_STATUS_UPDATED",
+            details: `count=${updated.count}; status=${validatedStatus}`,
         })
         revalidatePath("/tasks")
         revalidatePath("/projects")
@@ -133,6 +246,6 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
         return { success: true }
     } catch (error) {
         console.error("Bulk update tasks status failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to update tasks" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to update tasks") }
     }
 }

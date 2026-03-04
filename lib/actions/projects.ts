@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { requireAuth } from "@/lib/auth"
+import { requireTenantContext } from "@/lib/tenant"
+import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
+import { logSessionAuditEvent } from "@/lib/audit"
 import { z } from "zod"
 
 function revalidateProjectPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
@@ -32,6 +34,10 @@ const UpdateProjectSchema = z.object({
     serviceIds: z.array(z.string().uuid()).optional(),
 })
 
+const ProjectIdSchema = z.string().uuid()
+const ProjectIdsSchema = z.array(ProjectIdSchema).max(200)
+const PaymentStatusSchema = z.enum(["Paid", "Unpaid"])
+
 export async function createProject(data: {
     siteId: string
     serviceIds: string[]
@@ -39,27 +45,47 @@ export async function createProject(data: {
     currentFee?: number
     status?: "Active" | "Paused" | "Completed"
     paymentStatus?: "Paid" | "Unpaid"
-}) {
+    }) {
     try {
-        await requireAuth()
+        const session = await requireTenantContext()
         const validated = CreateProjectSchema.parse(data)
 
         const services = await prisma.service.findMany({
-            where: { id: { in: validated.serviceIds } },
+            where: { id: { in: validated.serviceIds }, tenantId: session.tenantId },
         })
 
         if (services.length === 0) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_CREATE_FAILED",
+                success: false,
+                details: `siteId=${validated.siteId}; reason=no_services`,
+            })
             return { success: false, error: "No services found" }
+        }
+        if (services.length !== validated.serviceIds.length) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_CREATE_FAILED",
+                success: false,
+                details: `siteId=${validated.siteId}; reason=service_scope_mismatch`,
+            })
+            return { success: false, error: "One or more services are inaccessible" }
         }
 
         const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+            const site = await tx.site.findFirst({
+                where: { id: validated.siteId, tenantId: session.tenantId },
+                select: { id: true, domainName: true },
+            })
+            if (!site) {
+                throw new ActionError("SITE_NOT_FOUND", "Site not found")
+            }
+
             let projectName = validated.name
             if (!projectName) {
-                const site = await tx.site.findUnique({ where: { id: validated.siteId } })
                 const serviceNames = services.map((s) => s.serviceName).join(", ")
                 const isRecurring = services.some((s) => s.isRecurring)
 
-                projectName = `${site?.domainName || "Project"} - ${serviceNames}`
+                projectName = `${site.domainName} - ${serviceNames}`
                 if (isRecurring) {
                     const date = new Date()
                     const month = date.toLocaleString('en-US', { month: 'short' })
@@ -70,6 +96,7 @@ export async function createProject(data: {
 
             const project = await tx.project.create({
                 data: {
+                    tenantId: session.tenantId,
                     siteId: validated.siteId,
                     name: projectName,
                     services: {
@@ -89,7 +116,8 @@ export async function createProject(data: {
                     if (Array.isArray(tasks)) {
                         allStandardTasks = [...allStandardTasks, ...tasks]
                     }
-                } catch (e) {
+                } catch {
+                    // Ignore malformed service task templates to avoid blocking project creation.
                 }
             })
             const uniqueTasks = Array.from(new Set(allStandardTasks))
@@ -97,6 +125,7 @@ export async function createProject(data: {
             if (uniqueTasks.length > 0) {
                 await tx.task.createMany({
                     data: uniqueTasks.map((taskName) => ({
+                        tenantId: session.tenantId,
                         projectId: project.id,
                         name: taskName,
                         status: "Active",
@@ -112,25 +141,47 @@ export async function createProject(data: {
         }
         revalidatePath("/")
         revalidatePath("/projects")
+        await logSessionAuditEvent(session, {
+            action: "PROJECT_CREATED",
+            details: `projectId=${result.id}; siteId=${validated.siteId}`,
+        })
 
         return { success: true, data: result }
     } catch (error: unknown) {
         console.error("Create project failed:", error)
-        if (error instanceof z.ZodError) {
-            return { success: false, error: error.issues[0].message }
-        }
-        return { success: false, error: error instanceof Error ? error.message : "Failed to create project" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to create project") }
     }
 }
 
 export async function togglePaymentStatus(projectId: string, currentStatus: string) {
-    await requireAuth()
-    const newStatus = currentStatus === "Paid" ? "Unpaid" : "Paid"
-    await prisma.project.update({
-        where: { id: projectId },
-        data: { paymentStatus: newStatus },
-    })
-    revalidatePath("/ledger")
+    try {
+        const session = await requireTenantContext()
+        const validatedProjectId = ProjectIdSchema.parse(projectId)
+        const validatedCurrentStatus = PaymentStatusSchema.parse(currentStatus)
+        const newStatus = validatedCurrentStatus === "Paid" ? "Unpaid" : "Paid"
+
+        const updated = await prisma.project.updateMany({
+            where: { id: validatedProjectId, tenantId: session.tenantId },
+            data: { paymentStatus: newStatus },
+        })
+        if (updated.count === 0) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_PAYMENT_TOGGLE_FAILED",
+                success: false,
+                details: `projectId=${validatedProjectId}; reason=not_found`,
+            })
+            return { success: false, error: "Project not found" }
+        }
+
+        await logSessionAuditEvent(session, {
+            action: "PROJECT_PAYMENT_TOGGLED",
+            details: `projectId=${validatedProjectId}; from=${validatedCurrentStatus}; to=${newStatus}`,
+        })
+        revalidatePath("/ledger")
+        return { success: true }
+    } catch (error) {
+        return { success: false, error: getActionErrorMessage(error, "Failed to update payment status") }
+    }
 }
 
 export async function updateProject(projectId: string, data: {
@@ -141,9 +192,10 @@ export async function updateProject(projectId: string, data: {
     paidAt?: Date | string | null
     currentFee?: number
     serviceIds?: string[]
-}) {
+    }) {
     try {
-        await requireAuth()
+        const session = await requireTenantContext()
+        const validatedProjectId = ProjectIdSchema.parse(projectId)
         const updateData: Record<string, unknown> = {}
         if (data.name !== undefined) updateData.name = data.name === "" ? null : data.name
         if (data.description !== undefined) updateData.description = data.description
@@ -155,18 +207,26 @@ export async function updateProject(projectId: string, data: {
 
         const validated = UpdateProjectSchema.parse(updateData)
 
-        const { serviceIds, ...restValidated } = validated
+        const { ...restValidated } = validated
         const prismaUpdateData: Prisma.ProjectUpdateInput = { ...restValidated }
 
         if (validated.serviceIds) {
-            const projectInfo = await prisma.project.findUnique({
-                where: { id: projectId },
+            const projectInfo = await prisma.project.findFirst({
+                where: { id: validatedProjectId, tenantId: session.tenantId },
                 include: { site: true }
             })
 
             const newServices = await prisma.service.findMany({
-                where: { id: { in: validated.serviceIds } }
+                where: { id: { in: validated.serviceIds }, tenantId: session.tenantId }
             })
+            if (newServices.length !== validated.serviceIds.length) {
+                await logSessionAuditEvent(session, {
+                    action: "PROJECT_UPDATE_FAILED",
+                    success: false,
+                    details: `projectId=${validatedProjectId}; reason=service_scope_mismatch`,
+                })
+                return { success: false, error: "One or more services are inaccessible" }
+            }
 
             if (projectInfo && projectInfo.site && newServices.length > 0) {
                 const serviceNames = newServices.map((s) => s.serviceName).join(", ")
@@ -187,61 +247,97 @@ export async function updateProject(projectId: string, data: {
             }
         }
 
+        const existingProject = await prisma.project.findFirst({
+            where: { id: validatedProjectId, tenantId: session.tenantId },
+            select: { id: true },
+        })
+        if (!existingProject) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_UPDATE_FAILED",
+                success: false,
+                details: `projectId=${validatedProjectId}; reason=not_found`,
+            })
+            return { success: false, error: "Project not found" }
+        }
+
         const project = await prisma.project.update({
-            where: { id: projectId },
+            where: { id: existingProject.id },
             data: prismaUpdateData,
             include: { site: true }
         })
 
+        await logSessionAuditEvent(session, {
+            action: "PROJECT_UPDATED",
+            details: `projectId=${validatedProjectId}`,
+        })
         revalidateProjectPaths(projectId, project.site.partnerId, project.siteId)
         return { success: true }
     } catch (error: unknown) {
         console.error("Update project failed:", error)
-        if (error instanceof z.ZodError) {
-            return { success: false, error: error.issues[0].message }
-        }
-        return { success: false, error: error instanceof Error ? error.message : "Failed to update project" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to update project") }
     }
 }
 
 export async function deleteProject(projectId: string) {
     try {
-        await requireAuth()
-        const project = await prisma.project.delete({
-            where: { id: projectId },
+        const session = await requireTenantContext()
+        const validatedProjectId = ProjectIdSchema.parse(projectId)
+        const project = await prisma.project.findFirst({
+            where: { id: validatedProjectId, tenantId: session.tenantId },
             include: { site: true }
+        })
+        if (!project) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_DELETE_FAILED",
+                success: false,
+                details: `projectId=${validatedProjectId}; reason=not_found`,
+            })
+            return { success: false, error: "Project not found" }
+        }
+        await prisma.project.delete({ where: { id: project.id } })
+        await logSessionAuditEvent(session, {
+            action: "PROJECT_DELETED",
+            details: `projectId=${project.id}`,
         })
         revalidateProjectPaths(projectId, project.site.partnerId, project.siteId)
         return { success: true }
     } catch (error) {
         console.error("Delete project failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to delete project" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to delete project") }
     }
 }
 
 export async function deleteProjects(projectIds: string[]) {
     try {
-        await requireAuth()
-        if (projectIds.length === 0) return { success: true }
+        const session = await requireTenantContext()
+        const validatedProjectIds = ProjectIdsSchema.parse(projectIds)
+        if (validatedProjectIds.length === 0) return { success: true }
 
-        await prisma.project.deleteMany({
+        const deleted = await prisma.project.deleteMany({
             where: {
-                id: { in: projectIds }
+                id: { in: validatedProjectIds },
+                tenantId: session.tenantId,
             }
         })
 
+        await logSessionAuditEvent(session, {
+            action: "PROJECTS_BULK_DELETED",
+            details: `requested=${validatedProjectIds.length}; deleted=${deleted.count}`,
+        })
         revalidateProjectPaths()
         return { success: true }
     } catch (error) {
         console.error("Bulk delete projects failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to delete projects" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to delete projects") }
     }
 }
 
 export async function getProjectDetails(projectId: string) {
     try {
-        const project = await prisma.project.findUnique({
-            where: { id: projectId },
+        const session = await requireTenantContext()
+        const validatedProjectId = ProjectIdSchema.parse(projectId)
+        const project = await prisma.project.findFirst({
+            where: { id: validatedProjectId, tenantId: session.tenantId },
             include: {
                 services: true,
                 site: {
@@ -279,6 +375,6 @@ export async function getProjectDetails(projectId: string) {
         return { success: true, data: JSON.parse(JSON.stringify(project)) }
     } catch (error) {
         console.error("Get project details failed:", error)
-        return { success: false, error: "Failed to fetch project details" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to fetch project details") }
     }
 }

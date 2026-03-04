@@ -11,6 +11,7 @@ import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
 import { Card } from "@/components/ui/card"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
@@ -19,6 +20,7 @@ export default async function VaultPage({
 }: {
     searchParams: Promise<{ page?: string; tab?: string; sortBy?: string; order?: string }>
 }) {
+    const session = await requireTenantContext()
     const params = await searchParams
     const activeTab = params.tab || "partners"
     const sortBy = params.sortBy || "name"
@@ -30,6 +32,7 @@ export default async function VaultPage({
 
     // Fetch partners with site projects and billing data
     const partnersRaw = await prisma.partner.findMany({
+        where: { tenantId: session.tenantId },
         include: {
             _count: {
                 select: { sites: true },
@@ -71,6 +74,7 @@ export default async function VaultPage({
 
     // Fetch sites with pagination
     const sitesPromise = prisma.site.findMany({
+        where: { tenantId: session.tenantId },
         skip,
         take: pageSize,
         include: {
@@ -82,7 +86,7 @@ export default async function VaultPage({
         orderBy: { createdAt: "desc" }
     })
 
-    const totalSitesPromise = prisma.site.count()
+    const totalSitesPromise = prisma.site.count({ where: { tenantId: session.tenantId } })
 
     const [sitesRaw, totalSites] = await Promise.all([
         sitesPromise,
@@ -106,7 +110,7 @@ export default async function VaultPage({
                 <div className="flex h-10 items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <MobileMenuTrigger />
-                        <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
+                        <h1 className="page-title flex items-center h-full">
                             Partners
                         </h1>
                     </div>
@@ -115,7 +119,7 @@ export default async function VaultPage({
                             <Link
                                 href={`/vault?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
                                 className={cn(
-                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-[0.1em]",
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-semibold uppercase tracking-wide",
                                     sortBy === "name"
                                         ? "bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
                                         : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
@@ -128,7 +132,7 @@ export default async function VaultPage({
                             <Link
                                 href={`/vault?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
                                 className={cn(
-                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-[10px] font-bold uppercase tracking-[0.1em]"
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-semibold uppercase tracking-wide"
                                 )}
                             >
                                 {order === "asc" ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
@@ -143,7 +147,7 @@ export default async function VaultPage({
                     <Link
                         href={`/vault?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
                         className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-[0.1em]",
+                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-semibold uppercase tracking-wide",
                             sortBy === "name"
                                 ? "bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
                                 : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
@@ -156,7 +160,7 @@ export default async function VaultPage({
                     <Link
                         href={`/vault?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
                         className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-[10px] font-bold uppercase tracking-[0.1em]"
+                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-semibold uppercase tracking-wide"
                         )}
                     >
                         {order === "asc" ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}

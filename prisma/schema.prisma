@@ -10,110 +10,162 @@ datasource db {
   url      = "file:../dev.db"
 }
 
-model Partner {
+model Tenant {
   id        String   @id @default(uuid())
-  name      String   @unique
-  businessName String? @map("business_name")
-  isMainJob Boolean  @default(false) @map("is_main_job")
-  emailPrimary String? @map("email_primary")
-  emailSecondary String? @map("email_secondary")
-  phone     String?
-  internalNotes String? @map("internal_notes")
+  name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sites Site[]
+  users            User[]
+  partners         Partner[]
+  sites            Site[]
+  services         Service[]
+  projects         Project[]
+  tasks            Task[]
+  timeLogs         TimeLog[]
+  auditLogs        AuditLog[]
+  projectRollovers ProjectRollover[]
 
+  @@map("tenants")
+}
+
+model Partner {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  name           String
+  businessName   String?  @map("business_name")
+  isMainJob      Boolean  @default(false) @map("is_main_job")
+  emailPrimary   String?  @map("email_primary")
+  emailSecondary String?  @map("email_secondary")
+  phone          String?
+  internalNotes  String?  @map("internal_notes")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sites  Site[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@index([tenantId])
   @@map("partners")
 }
 
 model Site {
-  id           String   @id @default(uuid())
-  partnerId    String   @map("partner_id")
-  name         String?  // Optional custom name override
-  domainName   String   @map("domain_name") @unique
-  gtmId        String?  @map("gtm_id")
-  googleAdsId  String?  @map("google_ads_id")
-  driveLink    String?  @map("drive_link")
-  
+  id          String  @id @default(uuid())
+  tenantId    String  @map("tenant_id")
+  partnerId   String  @map("partner_id")
+  name        String? // Optional custom name override
+  domainName  String  @map("domain_name")
+  gtmId       String? @map("gtm_id")
+  googleAdsId String? @map("google_ads_id")
+  driveLink   String? @map("drive_link")
+
   // Marketing Vault stored as JSON
   // Structure: { headlines: string[], brandNotes: string, competitors: string[] }
-  marketingVault String? @map("marketing_vault") 
+  marketingVault String? @map("marketing_vault")
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  partner  Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  partner  Partner   @relation(fields: [tenantId, partnerId], references: [tenantId, id], onDelete: Cascade)
   projects Project[]
 
+  @@unique([tenantId, id])
+  @@unique([tenantId, domainName])
+  @@index([tenantId])
+  @@index([partnerId])
   @@map("sites")
 }
 
 model Service {
-  id            String   @id @default(uuid())
-  serviceName   String   @unique @map("service_name")
-  isRecurring   Boolean  @default(false) @map("is_recurring") // Recurring (PPC) vs One-time (GTM)
-  
+  id          String  @id @default(uuid())
+  tenantId    String  @map("tenant_id")
+  serviceName String  @map("service_name")
+  isRecurring Boolean @default(false) @map("is_recurring") // Recurring (PPC) vs One-time (GTM)
+
   // Stored as JSON string due to SQLite limitation on scalar arrays
   standardTasks String   @map("standard_tasks") // JSON array of strings
   sopLink       String?  @map("sop_link")
   baseFee       Decimal? @map("base_fee")
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projects Project[]
 
+  @@unique([tenantId, serviceName])
+  @@index([tenantId])
   @@map("service_library")
 }
 
 model Project {
-  id            String   @id @default(uuid())
-  siteId        String   @map("site_id")
-  name          String?  // Optional custom name override
-  description   String?  // Optional rich text content
+  id          String  @id @default(uuid())
+  tenantId    String  @map("tenant_id")
+  siteId      String  @map("site_id")
+  name        String? // Optional custom name override
+  description String? // Optional rich text content
 
-  
-  status        String   @default("Active") // Active, Paused, Completed
-  paymentStatus String   @default("Unpaid") @map("payment_status") // Paid, Unpaid
+  status        String    @default("Active") // Active, Paused, Completed
+  paymentStatus String    @default("Unpaid") @map("payment_status") // Paid, Unpaid
   paidAt        DateTime? @map("paid_at")
-  currentFee    Decimal? @map("current_fee")
+  currentFee    Decimal?  @map("current_fee")
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  services  Service[]
-  tasks     Task[]
-  timeLogs  TimeLog[]
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site              Site              @relation(fields: [tenantId, siteId], references: [tenantId, id], onDelete: Cascade)
+  services          Service[]
+  tasks             Task[]
+  timeLogs          TimeLog[]
+  rolloversAsSource ProjectRollover[] @relation("ProjectRolloverSource")
+  rolloversAsTarget ProjectRollover[] @relation("ProjectRolloverTarget")
 
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status, updatedAt])
+  @@index([tenantId, paymentStatus, updatedAt])
   @@map("projects")
 }
 
 model Task {
-  id          String    @id @default(uuid())
-  projectId   String    @map("project_id")
-  name        String
-  description String?
-  status      String    @default("Active") // Active, Paused, Completed
-  urgency     String    @default("Normal")  // Low, Normal, High, Urgent
-  deadline    DateTime?
-  estimatedMinutes Int? @map("estimated_minutes")
+  id               String    @id @default(uuid())
+  tenantId         String    @map("tenant_id")
+  projectId        String    @map("project_id")
+  name             String
+  description      String?
+  status           String    @default("Active") // Active, Paused, Completed
+  urgency          String    @default("Normal") // Low, Normal, High, Urgent
+  deadline         DateTime?
+  estimatedMinutes Int?      @map("estimated_minutes")
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  timeLogs    TimeLog[]
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project  Project   @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade)
+  timeLogs TimeLog[]
 
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([tenantId, projectId])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, urgency, deadline])
   @@map("tasks")
 }
 
 model TimeLog {
-  id              String    @id @default(uuid())
-  projectId       String    @map("project_id")
-  taskId          String?   @map("task_id") // Optional: can log to project generally
-  
+  id        String  @id @default(uuid())
+  tenantId  String  @map("tenant_id")
+  projectId String  @map("project_id")
+  taskId    String? @map("task_id") // Optional: can log to project generally
+
   description     String?
   startTime       DateTime  @map("start_time")
   endTime         DateTime? @map("end_time")
@@ -121,16 +173,23 @@ model TimeLog {
   isPaused        Boolean   @default(false) @map("is_paused")
   source          String    @default("MANUAL") // MANUAL, TIMER
 
-  createdAt       DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade)
   task    Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([taskId])
+  @@index([tenantId, startTime])
+  @@index([tenantId, isPaused, endTime])
   @@map("time_logs")
 }
 
 model User {
   id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
   username         String   @unique
   name             String?
   profilePic       String?  @map("profile_pic")
@@ -140,6 +199,57 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@map("users")
 }
 
+model RateLimitEntry {
+  key       String   @id
+  count     Int      @default(0)
+  resetAt   DateTime @map("reset_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([resetAt])
+  @@map("rate_limit_entries")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  tenantId    String?  @map("tenant_id")
+  actorUserId String?  @map("actor_user_id")
+  action      String
+  success     Boolean  @default(true)
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  details     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([actorUserId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model ProjectRollover {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  sourceProjectId String   @map("source_project_id")
+  newProjectId    String?  @map("new_project_id")
+  targetYear      Int      @map("target_year")
+  targetMonth     Int      @map("target_month")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceProject Project  @relation("ProjectRolloverSource", fields: [tenantId, sourceProjectId], references: [tenantId, id], onDelete: Cascade)
+  newProject    Project? @relation("ProjectRolloverTarget", fields: [newProjectId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, sourceProjectId, targetYear, targetMonth])
+  @@index([tenantId, targetYear, targetMonth])
+  @@map("project_rollovers")
+}

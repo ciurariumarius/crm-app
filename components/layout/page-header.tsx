@@ -1,0 +1,32 @@
+import * as React from "react"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { cn } from "@/lib/utils"
+
+interface PageHeaderProps {
+    title: string
+    subtitle?: string
+    actions?: React.ReactNode
+    className?: string
+    titleClassName?: string
+}
+
+export function PageHeader({
+    title,
+    subtitle,
+    actions,
+    className,
+    titleClassName,
+}: PageHeaderProps) {
+    return (
+        <div className={cn("flex flex-col gap-2", className)}>
+            <div className="flex min-h-10 items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                    <MobileMenuTrigger />
+                    <h1 className={cn("page-title", titleClassName)}>{title}</h1>
+                </div>
+                {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+            </div>
+            {subtitle ? <p className="page-subtitle">{subtitle}</p> : null}
+        </div>
+    )
+}

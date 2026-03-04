@@ -1,11 +1,12 @@
 import prisma from "@/lib/prisma"
-import { Globe, Search as SearchIcon, Plus, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search as SearchIcon, ChevronLeft, ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { SitesTable } from "@/components/vault/sites-table"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { PageHeader } from "@/components/layout/page-header"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
@@ -14,17 +15,19 @@ export default async function SitesPage({
 }: {
     searchParams: Promise<{ q?: string; page?: string }>
 }) {
+    const session = await requireTenantContext()
     const { q, page: pageStr } = await searchParams
     const page = parseInt(pageStr || "1")
     const pageSize = 10
     const skip = (page - 1) * pageSize
 
     const where = q ? {
+        tenantId: session.tenantId,
         OR: [
             { domainName: { contains: q } },
             { partner: { name: { contains: q } } }
         ]
-    } : {}
+    } : { tenantId: session.tenantId }
 
     // Fetch sites with pagination
     const sitesPromise = prisma.site.findMany({
@@ -44,6 +47,7 @@ export default async function SitesPage({
 
     // Fetch partners for the "Add Site" dialog selection
     const partnersPromise = prisma.partner.findMany({
+        where: { tenantId: session.tenantId },
         select: { id: true, name: true },
         orderBy: { name: "asc" }
     })
@@ -60,18 +64,7 @@ export default async function SitesPage({
 
     return (
         <div className="flex flex-col gap-6 pb-20">
-            <div className="flex h-10 items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <MobileMenuTrigger />
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
-                        Sites
-                    </h1>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <CreateSiteDialog partners={partners as any} />
-                </div>
-            </div>
+            <PageHeader title="Sites" actions={<CreateSiteDialog partners={partners as any} />} />
 
             {/* Filters & Search - Modern Layout */}
             <div className="flex flex-col md:flex-row gap-4">

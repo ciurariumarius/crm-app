@@ -65,7 +65,7 @@ export default function LoginPage() {
                     <h1 className="text-3xl font-bold uppercase tracking-tight text-foreground">
                         Pixelist<span className="text-primary">.</span>
                     </h1>
-                    <p className="text-xs uppercase tracking-widest text-muted-foreground/50 mt-2 font-black">Authorized Access Only</p>
+                    <p className="text-sm tracking-wide text-muted-foreground/70 mt-2 font-semibold">Authorized access only</p>
                 </div>
 
                 <div className="bg-card/50 backdrop-blur-xl border border-border rounded-3xl p-8 shadow-2xl">
@@ -88,7 +88,7 @@ export default function LoginPage() {
                             )}
 
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auth Code</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Auth Code</Label>
                                 <Input
                                     type="text"
                                     placeholder="000 000"
@@ -126,7 +126,7 @@ export default function LoginPage() {
                             )}
 
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Username</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Username</Label>
                                 <div className="relative">
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                                     <Input
@@ -140,7 +140,7 @@ export default function LoginPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Password</Label>
+                                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Password</Label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                                     <Input
@@ -156,6 +156,9 @@ export default function LoginPage() {
                             <Button type="submit" className="w-full h-12 rounded-xl font-bold tracking-wide mt-4" disabled={loading}>
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
                             </Button>
+                            <p className="text-xs text-center text-muted-foreground mt-2">
+                                Forgot password? Contact your administrator.
+                            </p>
                         </form>
                     )}
                 </div>

@@ -2,190 +2,295 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { format, formatDistanceToNow } from "date-fns"
+import {
+    AlertCircle,
+    Check,
+    Clock3,
+    Cloud,
+    FolderOpen,
+    Globe,
+    Loader2,
+    Pause,
+    Play,
+    Plus,
+    Square,
+    Trash2,
+    X,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue
+    SelectValue,
 } from "@/components/ui/select"
-import {
-    Globe,
-    Users,
-    Clock,
-    CheckCircle2,
-    Calendar,
-    Expand,
-    Trash2,
-    Pencil,
-    Loader2,
-    AlertCircle,
-    Check,
-    FolderOpen,
-    Target,
-    Play,
-    Pause,
-    Square
-} from "lucide-react"
-import {
-    SheetHeader,
-    SheetTitle,
-} from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 import { ProjectTasks } from "@/components/projects/project-tasks"
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
-import { formatDistanceToNow, format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { updateProject } from "@/lib/actions/projects"
+import { cn, formatProjectName } from "@/lib/utils"
+import { updateProject, deleteProject } from "@/lib/actions/projects"
+import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-
 import { useTimer } from "@/components/providers/timer-provider"
-import { deleteProject } from "@/lib/actions/projects"
-import { logTime } from "@/lib/actions/time"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { Separator } from "@/components/ui/separator"
-import { formatProjectName } from "@/lib/utils"
+import { TimeLogSheet } from "@/components/time/time-log-sheet"
 import { ProjectWithDetails } from "@/types"
 import { Service, Site } from "@prisma/client"
+
+type UpdateProjectPayload = {
+    name?: string
+    description?: string | null
+    status?: "Active" | "Paused" | "Completed"
+    paymentStatus?: "Paid" | "Unpaid"
+    paidAt?: Date | string | null
+    currentFee?: number | null
+    serviceIds?: string[]
+}
 
 interface ProjectSheetContentProps {
     project: ProjectWithDetails
     allServices: Service[]
     onUpdate?: (updatedProject: ProjectWithDetails) => void
     onOpenSite?: (site: Site) => void
+    standalone?: boolean
+    onClose?: () => void
 }
 
-export function ProjectSheetContent({ project: initialProject, allServices, onUpdate, onOpenSite }: ProjectSheetContentProps) {
+function toDate(value: Date | string | null | undefined) {
+    if (!value) return null
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatClock(totalSeconds: number) {
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return [hours, minutes, seconds].map((unit) => String(unit).padStart(2, "0")).join(":")
+}
+
+function formatDurationLabel(totalSeconds: number) {
+    if (!totalSeconds) return "0s"
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+
+    if (hours > 0) return `${hours}h ${minutes}m`
+    if (minutes > 0) return `${minutes}m ${seconds}s`
+    return `${seconds}s`
+}
+
+function formatBottomDate(value: Date | null) {
+    if (!value) return "—"
+    return format(value, "d MMM. yy, HH:mm")
+}
+
+export function ProjectSheetContent({
+    project: initialProject,
+    allServices,
+    onUpdate,
+    onOpenSite: _onOpenSite,
+    standalone = false,
+    onClose,
+}: ProjectSheetContentProps) {
     const [project, setProject] = React.useState<ProjectWithDetails>(initialProject)
     const [localName, setLocalName] = React.useState("")
-    const [isEditingServices, setIsEditingServices] = React.useState(false)
-    const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+    const [amountInput, setAmountInput] = React.useState("")
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
+    const [isEditingServices, setIsEditingServices] = React.useState(false)
     const [description, setDescription] = React.useState("")
+    const [updatingId, setUpdatingId] = React.useState<string | null>(null)
     const [isDeleting, setIsDeleting] = React.useState(false)
     const [isManualTimeOpen, setIsManualTimeOpen] = React.useState(false)
     const [manualMinutes, setManualMinutes] = React.useState("")
     const [manualNotes, setManualNotes] = React.useState("")
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
+    const [selectedTimeLog, setSelectedTimeLog] = React.useState<any | null>(null)
+    const [isTimeLogSheetOpen, setIsTimeLogSheetOpen] = React.useState(false)
+
+    const skipDescriptionSaveRef = React.useRef(true)
+
     const router = useRouter()
+    const {
+        timerState,
+        startTimer: globalStartTimer,
+        stopTimer: globalStopTimer,
+        pauseTimer: globalPauseTimer,
+        resumeTimer: globalResumeTimer,
+    } = useTimer()
 
-    const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
-
-    // Sync state when prop changes
     React.useEffect(() => {
         setProject(initialProject)
     }, [initialProject])
 
-    // Sync localName & description
     React.useEffect(() => {
-        if (project) {
-            setLocalName(project.name || formatProjectName(project))
-            setDescription((project as any).description || "")
-        }
+        setLocalName(project.name || formatProjectName(project))
+        setDescription(project.description || "")
+        setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
+        skipDescriptionSaveRef.current = true
     }, [project])
 
-    // Auto-save logic
-    const isInitialMount = React.useRef(true)
+    const handleUpdate = React.useCallback(
+        async (data: UpdateProjectPayload) => {
+            setUpdatingId(project.id)
+            try {
+                const result = await updateProject(project.id, data as any)
+                if (!result.success) {
+                    toast.error(result.error || "Update failed")
+                    return
+                }
+
+                let updatedProject: ProjectWithDetails = project
+
+                if (data.serviceIds) {
+                    const nextServices = allServices.filter((service) => data.serviceIds?.includes(service.id))
+                    updatedProject = { ...project, services: nextServices }
+                } else {
+                    const nextPaidAt =
+                        data.paidAt !== undefined
+                            ? data.paidAt
+                                ? toDate(data.paidAt)
+                                : null
+                            : project.paidAt
+
+                    updatedProject = {
+                        ...project,
+                        ...(data.name !== undefined ? { name: data.name } : {}),
+                        ...(data.description !== undefined ? { description: data.description } : {}),
+                        ...(data.status !== undefined ? { status: data.status } : {}),
+                        ...(data.paymentStatus !== undefined ? { paymentStatus: data.paymentStatus } : {}),
+                        ...(data.paidAt !== undefined ? { paidAt: nextPaidAt } : {}),
+                        ...(data.currentFee !== undefined ? { currentFee: data.currentFee } : {}),
+                    } as ProjectWithDetails
+                }
+
+                setProject(updatedProject)
+                onUpdate?.(updatedProject)
+                router.refresh()
+            } catch {
+                toast.error("Update failed")
+            } finally {
+                setUpdatingId(null)
+            }
+        },
+        [allServices, onUpdate, project, router]
+    )
+
     React.useEffect(() => {
-        if (isInitialMount.current) {
-            isInitialMount.current = false
+        if (skipDescriptionSaveRef.current) {
+            skipDescriptionSaveRef.current = false
             return
         }
 
-        if (!project) return
+        if (description === (project.description || "")) {
+            return
+        }
 
         const timer = setTimeout(() => {
-            if (description !== ((project as any).description || "")) {
-                handleUpdate({ description })
-            }
-        }, 1000)
+            void handleUpdate({ description })
+        }, 900)
 
         return () => clearTimeout(timer)
-    }, [description])
-
-    const handleUpdate = async (data: any) => {
-        setUpdatingId(project.id)
-        try {
-            const result = await updateProject(project.id, data)
-            if (result.success) {
-                toast.success("Project updated")
-
-                let updated
-                if (data.serviceIds) {
-                    const newServices = allServices.filter(s => data.serviceIds.includes(s.id))
-                    updated = { ...project, services: newServices }
-                } else {
-                    updated = { ...project, ...data }
-                }
-
-                setProject(updated)
-                if (onUpdate) onUpdate(updated)
-                router.refresh()
-            } else {
-                toast.error(result.error || "Update failed")
-            }
-        } catch (error) {
-            toast.error("Update failed")
-        } finally {
-            setUpdatingId(null)
-        }
-    }
+    }, [description, project.description, handleUpdate])
 
     const toggleService = (serviceId: string) => {
         const currentServices = project.services || []
-        const currentIds = currentServices.map((s: any) => s.id)
+        const currentIds = currentServices.map((service) => service.id)
+
         let nextIds: string[]
 
         if (currentIds.includes(serviceId)) {
-            // Remove service (ensure at least one remains)
             if (currentIds.length === 1) {
-                toast.error("Project must have at least one service.")
+                toast.error("Project must keep at least one service")
                 return
             }
-            nextIds = currentIds.filter((id: string) => id !== serviceId)
+            nextIds = currentIds.filter((id) => id !== serviceId)
         } else {
-            // Add service
-            const serviceToAdd = allServices.find(s => s.id === serviceId)
-            if (!serviceToAdd) return
+            const selectedService = allServices.find((service) => service.id === serviceId)
+            if (!selectedService) return
 
-            // If project is empty or we are forcing a switch
-            if (currentServices.length === 0) {
-                nextIds = [serviceId]
-            } else {
-                // Check if same kind as first existing service
-                const firstService = currentServices[0]
-                if (serviceToAdd.isRecurring !== firstService.isRecurring) {
-                    toast.error(`Type Mismatch: This project is ${firstService.isRecurring ? 'Recurring' : 'One-time'}. You cannot mix types. To switch, remove existing services first.`, {
-                        icon: <AlertCircle className="h-4 w-4 text-rose-500" />
+            if (currentServices.length > 0) {
+                const isCurrentRecurring = currentServices[0]?.isRecurring
+                if (selectedService.isRecurring !== isCurrentRecurring) {
+                    toast.error("Recurring and one-time services cannot be mixed", {
+                        icon: <AlertCircle className="h-4 w-4 text-rose-500" />,
                     })
                     return
                 }
-                nextIds = [...currentIds, serviceId]
             }
+
+            nextIds = [...currentIds, serviceId]
         }
 
-        handleUpdate({ serviceIds: nextIds })
+        void handleUpdate({ serviceIds: nextIds })
+    }
+
+    const commitTitle = () => {
+        const next = localName.trim()
+        const current = project.name || formatProjectName(project)
+
+        if (!next) {
+            setLocalName(current)
+            setIsEditingTitle(false)
+            return
+        }
+
+        if (next !== current) {
+            void handleUpdate({ name: next })
+        }
+
+        setIsEditingTitle(false)
+    }
+
+    const handleAmountBlur = () => {
+        const rawValue = amountInput.trim()
+        if (!rawValue) {
+            if (project.currentFee !== null) {
+                void handleUpdate({ currentFee: null })
+            }
+            return
+        }
+
+        const parsed = Number.parseInt(rawValue, 10)
+        if (Number.isNaN(parsed)) {
+            setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
+            return
+        }
+
+        if (parsed !== Number(project.currentFee ?? 0)) {
+            void handleUpdate({ currentFee: parsed })
+        }
+
+        setAmountInput(String(parsed))
     }
 
     const handleDelete = async () => {
-        if (!project) return
-        if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) return
+        if (!window.confirm("Delete this project permanently?")) {
+            return
+        }
+
         setIsDeleting(true)
         try {
             const result = await deleteProject(project.id)
-            if (result.success) {
-                toast.success("Project deleted")
-                router.push("/projects")
-                router.refresh()
-            } else {
+            if (!result.success) {
                 toast.error(result.error || "Failed to delete project")
+                return
             }
-        } catch (error) {
+
+            toast.success("Project deleted")
+            onClose?.()
+
+            if (standalone) {
+                router.push("/projects")
+            }
+
+            router.refresh()
+        } catch {
             toast.error("Failed to delete project")
         } finally {
             setIsDeleting(false)
@@ -193,328 +298,294 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
     }
 
     const handleManualLog = async () => {
-        const mins = Number(manualMinutes)
-        if (!manualMinutes || isNaN(mins) || mins <= 0) {
+        const minutes = Number(manualMinutes)
+        if (!manualMinutes || Number.isNaN(minutes) || minutes <= 0) {
             toast.error("Please enter a valid number of minutes")
             return
         }
+
         setIsLoggingTime(true)
         try {
-            const res = await logTime({
+            const now = new Date()
+            const response = await logTime({
                 projectId: project.id,
-                durationSeconds: mins * 60,
+                durationSeconds: minutes * 60,
                 description: manualNotes || undefined,
-                startTime: new Date(Date.now() - (mins * 60 * 1000)), // Simulate it ended now
-                endTime: new Date()
+                startTime: new Date(now.getTime() - minutes * 60 * 1000),
+                endTime: now,
             })
-            if (res.success) {
-                toast.success("Time logged")
-                setIsManualTimeOpen(false)
-                setManualMinutes("")
-                setManualNotes("")
-                router.refresh()
-            } else {
-                toast.error(res.error || "Failed to log time")
+
+            if (!response.success) {
+                toast.error(response.error || "Failed to log time")
+                return
             }
-        } catch (error) {
+
+            toast.success("Time logged")
+            setManualMinutes("")
+            setManualNotes("")
+            setIsManualTimeOpen(false)
+            router.refresh()
+        } catch {
             toast.error("Failed to log time")
         } finally {
             setIsLoggingTime(false)
         }
     }
 
+    const isTimerForProject = timerState.projectId === project.id && !timerState.taskId
+    const logsSeconds = (project.timeLogs || []).reduce((sum, log) => sum + (log.durationSeconds || 0), 0)
+    const runningSeconds = isTimerForProject ? timerState.elapsedSeconds : 0
+    const totalTrackedSeconds = logsSeconds + runningSeconds
+    const timerPrimaryLabel =
+        isTimerForProject && timerState.isRunning
+            ? "Pause"
+            : isTimerForProject
+                ? "Resume"
+                : "Start"
+
+    const handleTimerPrimaryAction = () => {
+        if (isTimerForProject) {
+            if (timerState.isRunning) {
+                void globalPauseTimer()
+            } else {
+                void globalResumeTimer()
+            }
+            return
+        }
+
+        void globalStartTimer(project.id, undefined, project.name || formatProjectName(project))
+    }
+
+    const recentLogs = [...(project.timeLogs || [])].sort((a, b) => {
+        const left = toDate(a.startTime)?.getTime() || 0
+        const right = toDate(b.startTime)?.getTime() || 0
+        return right - left
+    })
+
+    const recurringServices = allServices.filter((service) => service.isRecurring)
+    const oneTimeServices = allServices.filter((service) => !service.isRecurring)
+    const createdAt = toDate(project.createdAt)
+    const updatedAt = toDate(project.updatedAt)
+    const createdTimestamp = createdAt || updatedAt || new Date()
+    const lastUpdatedTimestamp =
+        createdAt && updatedAt && updatedAt.getTime() > createdAt.getTime()
+            ? updatedAt
+            : null
+    const timeLogProjects = React.useMemo(
+        () => [{ id: project.id, displayName: localName || formatProjectName(project) }],
+        [project.id, localName, project]
+    )
+    const timeLogTasks = React.useMemo(
+        () =>
+            (project.tasks || []).map((task: any) => ({
+                id: task.id,
+                name: task.name,
+                projectId: task.projectId || project.id,
+            })),
+        [project.tasks, project.id]
+    )
+
     return (
         <TaskSheetWrapper tasks={project.tasks || []} project={project}>
-            <div className="h-full bg-background sm:rounded-l-2xl overflow-y-auto custom-scrollbar">
-                <SheetHeader className="p-8 border-b bg-muted/20 relative shrink-0">
+            <div className="relative flex h-full flex-col overflow-hidden bg-[#f7f9fc]">
+                {!standalone && onClose && (
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="absolute right-8 top-8 z-20 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                        aria-label="Close project"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                )}
 
-                    <div className="space-y-4 pr-12">
+                <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
+                    <div className="space-y-8 pb-20">
+                        <div className="space-y-3 pr-14">
+                            {isEditingTitle ? (
+                                <Textarea
+                                    value={localName}
+                                    onChange={(event) => setLocalName(event.target.value)}
+                                    className="min-h-[52px] resize-none border-none bg-transparent p-0 text-3xl font-black leading-tight tracking-tight text-slate-900 focus-visible:ring-0 sm:text-4xl"
+                                    rows={1}
+                                    autoFocus
+                                    onBlur={commitTitle}
+                                    onKeyDown={(event) => {
+                                        if (event.key === "Enter" && !event.shiftKey) {
+                                            event.preventDefault()
+                                            commitTitle()
+                                        }
+                                        if (event.key === "Escape") {
+                                            setLocalName(project.name || formatProjectName(project))
+                                            setIsEditingTitle(false)
+                                        }
+                                    }}
+                                    onInput={(event) => {
+                                        const target = event.target as HTMLTextAreaElement
+                                        target.style.height = "auto"
+                                        target.style.height = `${target.scrollHeight}px`
+                                    }}
+                                />
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditingTitle(true)}
+                                    className="text-left"
+                                >
+                                    <h1 className="text-3xl font-black leading-tight tracking-tight text-slate-900 sm:text-4xl">
+                                        {localName || formatProjectName(project)}
+                                        <span className="pl-3 text-blue-500">/ {format(toDate(project.createdAt) || new Date(), "MMMM yyyy")}</span>
+                                    </h1>
+                                </button>
+                            )}
 
-                        <SheetTitle className="group relative">
-                            <div className="space-y-4">
-                                <div className="relative">
-                                    {isEditingTitle ? (
-                                        <Textarea
-                                            value={localName}
-                                            onChange={(e) => setLocalName(e.target.value)}
-                                            className="text-2xl md:text-3xl font-black tracking-tight border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto min-h-[40px] resize-none leading-tight overflow-hidden pr-24"
-                                            placeholder="Project Name"
-                                            rows={1}
-                                            autoFocus
-                                            onBlur={() => {
-                                                if (localName !== (project.name || formatProjectName(project))) {
-                                                    handleUpdate({ name: localName })
-                                                }
-                                                setIsEditingTitle(false)
-                                            }}
-                                            onInput={(e) => {
-                                                const target = e.target as HTMLTextAreaElement
-                                                target.style.height = 'auto'
-                                                target.style.height = `${target.scrollHeight}px`
-                                            }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault()
-                                                    if (localName !== (project.name || formatProjectName(project))) {
-                                                        handleUpdate({ name: localName })
-                                                    }
-                                                    setIsEditingTitle(false)
-                                                }
-                                                if (e.key === 'Escape') {
-                                                    setLocalName(project.name || formatProjectName(project))
-                                                    setIsEditingTitle(false)
-                                                }
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl md:text-3xl font-black tracking-tight leading-tight">
-                                                {localName || formatProjectName(project)}
-                                            </span>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-muted-foreground hover:text-foreground"
-                                                onClick={() => setIsEditingTitle(true)}
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    )}
-                                    {updatingId === project.id && (
-                                        <div className="absolute right-0 top-1.5">
-                                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </SheetTitle>
-                    </div>
-                </SheetHeader>
-
-                <div className="p-8 pt-8 pb-0 space-y-6">
-                    {/* Controls Row */}
-                    <div className="flex flex-col gap-4">
-                        <div className="flex flex-wrap items-center gap-2.5">
-                            {/* Status Select */}
-                            <Select
-                                value={project.status}
-                                onValueChange={(val) => handleUpdate({ status: val })}
-                            >
-                                <SelectTrigger className={cn(
-                                    "h-9 w-auto min-w-[130px] border-none transition-all shadow-none focus:ring-1 p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
-                                    project.status === "Active" ? "bg-emerald-600 text-white hover:bg-emerald-700" :
-                                        project.status === "Paused" ? "bg-orange-500 text-white hover:bg-orange-600" :
-                                            "bg-blue-600 text-white hover:bg-blue-700"
-                                )}>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Active" className="text-xs font-bold">ACTIVE</SelectItem>
-                                    <SelectItem value="Paused" className="text-xs font-bold">PAUSED</SelectItem>
-                                    <SelectItem value="Completed" className="text-xs font-bold">COMPLETED</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            {/* Payment Status Select */}
-                            <Select
-                                value={project.paymentStatus}
-                                onValueChange={(val) => {
-                                    const updates: any = { paymentStatus: val }
-                                    if (val === "Paid" && !project.paidAt) {
-                                        updates.paidAt = new Date()
-                                    } else if (val === "Unpaid") {
-                                        updates.paidAt = null
-                                    }
-                                    handleUpdate(updates)
-                                }}
-                            >
-                                <SelectTrigger className={cn(
-                                    "h-9 w-auto min-w-[130px] border-none shadow-none focus:ring-1 transition-all p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
-                                    project.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
-                                        "bg-rose-100 text-rose-700 hover:bg-rose-200"
-                                )}>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Paid" className="text-xs font-bold text-emerald-600">PAID</SelectItem>
-                                    <SelectItem value="Unpaid" className="text-xs font-bold text-rose-600">UNPAID</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            {/* Total Time Badge & Timer Controls */}
-                            <div className="flex items-center gap-2">
-                                {(() => {
-                                    const logsDuration = project.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
-                                    const currentTimerDuration = timerState.projectId === project.id && !timerState.taskId ? timerState.elapsedSeconds : 0
-                                    const totalSeconds = logsDuration + currentTimerDuration
-
-                                    const hours = Math.floor(totalSeconds / 3600)
-                                    const mins = Math.floor((totalSeconds % 3600) / 60)
-
-                                    // A timer is active specifically on this project IF the projectId matches AND there is no specific sub-task being timed
-                                    const isActiveTimerThisProject = timerState.projectId === project.id && !timerState.taskId
-                                    const isRunning = isActiveTimerThisProject && timerState.isRunning
-                                    const isPaused = isActiveTimerThisProject && !timerState.isRunning
-
-                                    return (
-                                        <div className="flex items-center gap-2 h-9">
-                                            <div className={cn(
-                                                "flex items-center gap-2 h-full text-[10px] font-black tracking-widest px-4 rounded-full border transition-all",
-                                                isRunning ? "bg-primary text-primary-foreground border-primary/20 animate-pulse shadow-lg shadow-primary/20" : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
-                                            )}>
-                                                <Clock className="h-3 w-3" strokeWidth={3} />
-                                                <span>{hours}H {mins}M WORKED</span>
-                                            </div>
-
-                                            <button
-                                                className={cn(
-                                                    "h-9 w-9 rounded-full flex items-center justify-center transition-all border",
-                                                    isRunning ? "bg-amber-500/20 text-amber-600 border-amber-500/20" : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border-transparent shadow-sm"
-                                                )}
-                                                onClick={(e) => {
-                                                    e.preventDefault()
-                                                    e.stopPropagation()
-                                                    if (isRunning) {
-                                                        globalPauseTimer()
-                                                    } else if (isPaused) {
-                                                        globalResumeTimer()
-                                                    } else {
-                                                        // Start timer without a specific task
-                                                        globalStartTimer(project.id, undefined, project.name || formatProjectName(project))
-                                                    }
-                                                }}
-                                            >
-                                                {isRunning ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-1" />}
-                                            </button>
-
-                                            {isActiveTimerThisProject && (
-                                                <button
-                                                    className="h-9 w-9 rounded-full flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all border border-transparent shadow-sm"
-                                                    onClick={(e) => {
-                                                        e.preventDefault()
-                                                        e.stopPropagation()
-                                                        globalStopTimer()
-                                                    }}
-                                                >
-                                                    <Square className="h-3.5 w-3.5 fill-current" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    )
-                                })()}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* FINANCIALS & SERVICES */}
-                    <div className="space-y-6 pt-4">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Financials & Operations</label>
+                            <p className="text-sm font-medium text-slate-400">
+                                Created {formatDistanceToNow(toDate(project.createdAt) || new Date(), { addSuffix: true })}
+                                {updatingId === project.id && <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin" />}
+                            </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Contract Fee */}
-                            <div className="group relative bg-muted/30 border border-border rounded-xl p-4 transition-all hover:bg-muted/50">
-                                <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1 block">Price</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground/50">RON</span>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-4">
+                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-600">Project Status</p>
+                                <Select
+                                    value={project.status}
+                                    onValueChange={(value) => void handleUpdate({ status: value as UpdateProjectPayload["status"] })}
+                                >
+                                    <SelectTrigger className="mt-1 h-auto border-none bg-transparent p-0 text-left text-xl font-black tracking-tight text-emerald-700 shadow-none focus:ring-0 sm:text-2xl">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Active">Active</SelectItem>
+                                        <SelectItem value="Paused">Paused</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-4">
+                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-rose-600">Payment Status</p>
+                                <Select
+                                    value={project.paymentStatus}
+                                    onValueChange={(value) => {
+                                        const updates: UpdateProjectPayload = {
+                                            paymentStatus: value as UpdateProjectPayload["paymentStatus"],
+                                        }
+
+                                        if (value === "Paid" && !project.paidAt) {
+                                            updates.paidAt = new Date()
+                                        }
+
+                                        if (value === "Unpaid") {
+                                            updates.paidAt = null
+                                        }
+
+                                        void handleUpdate(updates)
+                                    }}
+                                >
+                                    <SelectTrigger className="mt-1 h-auto border-none bg-transparent p-0 text-left text-xl font-black tracking-tight text-rose-700 shadow-none focus:ring-0 sm:text-2xl">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Paid">Paid</SelectItem>
+                                        <SelectItem value="Unpaid">Unpaid</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_2fr]">
+                            <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Amount</p>
+                                <div className="mt-2 flex items-end gap-2">
                                     <Input
                                         type="number"
-                                        defaultValue={project.currentFee ? Number(project.currentFee) : ""}
-                                        className="h-8 bg-transparent border-none focus-visible:ring-0 shadow-none font-black text-xl pl-12"
-                                        onBlur={(e) => {
-                                            const val = parseFloat(e.target.value)
-                                            if (project.currentFee && val !== Number(project.currentFee)) {
-                                                handleUpdate({ currentFee: val })
-                                            }
-                                        }}
+                                        step={1}
+                                        value={amountInput}
+                                        onChange={(event) => setAmountInput(event.target.value)}
+                                        onBlur={handleAmountBlur}
+                                        className="h-auto border-none bg-transparent p-0 text-3xl font-black tracking-tight text-slate-900 shadow-none focus-visible:ring-0 sm:text-4xl"
+                                        placeholder="0"
                                     />
+                                    <span className="pb-2 text-lg font-bold text-slate-400">RON</span>
                                 </div>
                             </div>
 
-                            {/* Services List Display */}
-                            <div className="group relative bg-muted/30 border border-border rounded-xl p-4 transition-all hover:bg-muted/50 flex flex-col justify-center">
-                                <div className="flex items-center justify-between mb-2">
-                                    <label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">Active Services</label>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-5 px-2 text-[9px] font-bold uppercase tracking-widest bg-background/50 hover:bg-background border border-border/50 rounded-full text-muted-foreground hover:text-primary transition-all"
-                                        onClick={() => setIsEditingServices(!isEditingServices)}
+                            <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Active Services</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditingServices((current) => !current)}
+                                        className="rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.1em] text-slate-500 hover:border-slate-400"
                                     >
-                                        {isEditingServices ? "Close Catalog" : "Edit Services"}
-                                    </Button>
+                                        + Add
+                                    </button>
                                 </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {project.services?.map((s: any) => (
-                                        <Badge key={s.id} className="bg-primary/10 text-primary border border-primary/20 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-none">
-                                            {s.serviceName}
-                                        </Badge>
-                                    )) || <span className="text-[10px] text-muted-foreground/40 font-medium italic">No services</span>}
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {project.services?.map((service) => (
+                                        <button
+                                            key={service.id}
+                                            type="button"
+                                            onClick={() => toggleService(service.id)}
+                                            className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.08em] text-blue-600"
+                                        >
+                                            {service.serviceName}
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Service Catalog Dropdown */}
                         {isEditingServices && (
-                            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
-                                <div className="flex justify-between items-center border-b border-border pb-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                                        Service Catalog
-                                    </span>
-                                    <div className="px-2 py-0.5 rounded-md bg-primary/5 border border-primary/20 text-[9px] font-bold uppercase tracking-widest text-primary">
-                                        {project.services?.[0]?.isRecurring ? "Subscription" : "One-Time"} Mode
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-                                    <div className="space-y-2">
-                                        <div className="text-[9px] font-bold uppercase text-indigo-600/60 flex items-center gap-2 px-1 tracking-widest">
-                                            RECURRING
-                                        </div>
-                                        <div className="space-y-1">
-                                            {allServices.filter(s => s.isRecurring).map(s => {
-                                                const isSelected = project.services?.some((ps: any) => ps.id === s.id)
+                            <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                                <div className="grid gap-5 md:grid-cols-2">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-indigo-500">Recurring</p>
+                                        <div className="mt-2 space-y-2">
+                                            {recurringServices.map((service) => {
+                                                const isSelected = project.services?.some((item) => item.id === service.id)
                                                 return (
                                                     <button
-                                                        key={s.id}
-                                                        onClick={() => toggleService(s.id)}
+                                                        key={service.id}
+                                                        type="button"
+                                                        onClick={() => toggleService(service.id)}
                                                         className={cn(
-                                                            "w-full flex items-center justify-between p-2 rounded-lg border text-left transition-all",
+                                                            "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
                                                             isSelected
-                                                                ? "bg-primary/10 border-primary/40 text-primary font-bold"
-                                                                : "bg-muted/30 border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
+                                                                ? "border-blue-300 bg-blue-50 text-blue-700"
+                                                                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
                                                         )}
                                                     >
-                                                        <span className="text-[10px] font-medium">{s.serviceName}</span>
-                                                        {isSelected && <Check className="h-3 w-3" strokeWidth={2.5} />}
+                                                        {service.serviceName}
+                                                        {isSelected && <Check className="h-4 w-4" />}
                                                     </button>
                                                 )
                                             })}
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <div className="text-[9px] font-bold uppercase text-emerald-600/60 flex items-center gap-2 px-1 tracking-widest">
-                                            ONE-TIME
-                                        </div>
-                                        <div className="space-y-1">
-                                            {allServices.filter(s => !s.isRecurring).map(s => {
-                                                const isSelected = project.services?.some((ps: any) => ps.id === s.id)
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-500">One-Time</p>
+                                        <div className="mt-2 space-y-2">
+                                            {oneTimeServices.map((service) => {
+                                                const isSelected = project.services?.some((item) => item.id === service.id)
                                                 return (
                                                     <button
-                                                        key={s.id}
-                                                        onClick={() => toggleService(s.id)}
+                                                        key={service.id}
+                                                        type="button"
+                                                        onClick={() => toggleService(service.id)}
                                                         className={cn(
-                                                            "w-full flex items-center justify-between p-2 rounded-lg border text-left transition-all",
+                                                            "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
                                                             isSelected
-                                                                ? "bg-primary/10 border-primary/40 text-primary font-bold"
-                                                                : "bg-muted/30 border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
+                                                                ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                                                                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
                                                         )}
                                                     >
-                                                        <span className="text-[10px] font-medium">{s.serviceName}</span>
-                                                        {isSelected && <Check className="h-3 w-3" strokeWidth={2.5} />}
+                                                        {service.serviceName}
+                                                        {isSelected && <Check className="h-4 w-4" />}
                                                     </button>
                                                 )
                                             })}
@@ -523,164 +594,227 @@ export function ProjectSheetContent({ project: initialProject, allServices, onUp
                                 </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* TASKS SECTION */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tasks</label>
-                        </div>
-                        <ProjectTasks
-                            projectId={project.id}
-                            initialTasks={project.tasks || []}
-                        />
-                    </div>
+                        <section className="space-y-4">
+                            <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Project Tasks</h2>
+                            <ProjectTasks projectId={project.id} initialTasks={project.tasks || []} />
+                        </section>
 
-                    {/* DESCRIPTION & NOTES */}
-                    <div className="space-y-3 pt-4">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Project. notes.</label>
-                        </div>
-                        <RichTextEditor
-                            value={description}
-                            onChange={setDescription}
-                            placeholder="Add scope details, overall technical notes, or reference links here..."
-                        />
-                    </div>
+                        <section className="space-y-4">
+                            <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Notes & Documentation</h2>
 
-                    {/* RECENT TIME LOGS SECTION */}
-                    {/* Always show section to allow manual tracking even if 0 logs */}
-                    <div className="space-y-4 pt-8">
-                        <Separator className="bg-muted/10" />
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                <Clock className="h-3 w-3" />
-                                Recent Project Time Logs
-                            </h4>
-                            <div className="flex items-center gap-3">
-                                <div className="text-[10px] uppercase font-bold text-muted-foreground/60">
-                                    {project.timeLogs?.length || 0} Sessions
+                            <RichTextEditor
+                                value={description}
+                                onChange={setDescription}
+                                placeholder="Add scope details, technical notes, or client requests..."
+                            />
+                        </section>
+
+                        <section className="space-y-4">
+                            <div className="rounded-2xl bg-[radial-gradient(circle_at_top_right,_#1f4ed8_0%,_#0c1533_30%,_#091127_100%)] px-5 py-4 text-white shadow-lg">
+                                <div className="flex flex-wrap items-center justify-between gap-5">
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300">Project Timer</p>
+                                        <div className="mt-1 flex flex-wrap items-end gap-3">
+                                            <span className="text-3xl font-black leading-none tabular-nums sm:text-4xl">{formatClock(totalTrackedSeconds)}</span>
+                                            <span className={cn(
+                                                "pb-1 text-[13px] font-black uppercase",
+                                                isTimerForProject && timerState.isRunning ? "text-emerald-300" : "text-slate-300"
+                                            )}>
+                                                {isTimerForProject && timerState.isRunning ? "Working" : isTimerForProject ? "Paused" : "Ready"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2.5">
+                                        <Button
+                                            type="button"
+                                            onClick={handleTimerPrimaryAction}
+                                            className="h-10 rounded-full bg-white px-5 text-sm font-semibold text-slate-800 hover:bg-slate-100 transition-all active:scale-[0.98]"
+                                        >
+                                            {isTimerForProject && timerState.isRunning ? (
+                                                <Pause className="mr-2 h-3.5 w-3.5 fill-current" />
+                                            ) : (
+                                                <Play className="mr-2 h-3.5 w-3.5 fill-current" />
+                                            )}
+                                            {timerPrimaryLabel}
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            disabled={!isTimerForProject}
+                                            onClick={() => void globalStopTimer()}
+                                            className="h-10 w-10 rounded-full bg-blue-500 text-white shadow-[0_0_28px_rgba(59,130,246,0.55)] hover:bg-blue-400 disabled:cursor-not-allowed disabled:bg-blue-500/40 transition-all active:scale-[0.98]"
+                                        >
+                                            <Square className="h-3.5 w-3.5 fill-current" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Button variant="outline" size="sm" className="h-6 text-[10px] font-bold px-2 rounded-md" onClick={() => setIsManualTimeOpen(!isManualTimeOpen)}>
-                                    {isManualTimeOpen ? "Cancel" : "Add Time"}
+                            </div>
+                        </section>
+
+                        <section className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                    <Clock3 className="h-3.5 w-3.5" />
+                                    Recent Time Logs
+                                </h2>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsManualTimeOpen((current) => !current)}
+                                    className="h-8 rounded-xl border border-slate-200 bg-slate-100 px-3 text-xs font-black uppercase tracking-[0.08em] text-slate-600 hover:bg-slate-200"
+                                >
+                                    <Plus className="mr-1 h-3.5 w-3.5" />
+                                    Add Time
                                 </Button>
                             </div>
-                        </div>
 
-                        {isManualTimeOpen && (
-                            <div className="p-4 bg-muted/20 border border-border rounded-xl space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Add Manual Time Setup</div>
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        placeholder="Minutes (e.g. 30)"
-                                        type="number"
-                                        value={manualMinutes}
-                                        onChange={(e) => setManualMinutes(e.target.value)}
-                                        className="h-9 font-bold bg-background text-sm"
-                                    />
-                                    <Button
-                                        disabled={isLoggingTime || !manualMinutes}
-                                        onClick={handleManualLog}
-                                        className="h-9 px-4 font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-xs"
-                                    >
-                                        {isLoggingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log Time"}
-                                    </Button>
+                            {isManualTimeOpen && (
+                                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                    <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
+                                        <Input
+                                            type="number"
+                                            value={manualMinutes}
+                                            onChange={(event) => setManualMinutes(event.target.value)}
+                                            placeholder="Minutes"
+                                            className="h-10 rounded-xl border-slate-200"
+                                        />
+                                        <Input
+                                            value={manualNotes}
+                                            onChange={(event) => setManualNotes(event.target.value)}
+                                            placeholder="Optional note"
+                                            className="h-10 rounded-xl border-slate-200"
+                                        />
+                                        <Button
+                                            onClick={handleManualLog}
+                                            disabled={isLoggingTime || !manualMinutes}
+                                            className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500"
+                                        >
+                                            {isLoggingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Input
-                                    placeholder="Note (optional)"
-                                    value={manualNotes}
-                                    onChange={(e) => setManualNotes(e.target.value)}
-                                    className="h-8 text-xs bg-background"
-                                />
-                            </div>
-                        )}
+                            )}
 
-                        {project.timeLogs && project.timeLogs.length > 0 && (
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                                {[...project.timeLogs].sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((log: any) => {
-                                    const sessionH = Math.floor(log.durationSeconds / 3600)
-                                    const sessionM = Math.floor((log.durationSeconds % 3600) / 60)
-                                    const sessionS = log.durationSeconds % 60
+                            <div className="space-y-2">
+                                {recentLogs.length === 0 && (
+                                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
+                                        No time logged for this project yet.
+                                    </div>
+                                )}
 
-                                    // If a task is associated, we could potentially grab the task name.
-                                    // But since timeLogs on project might be fetched with only relationIds, we just show standard info.
+                                {recentLogs.map((log) => {
+                                    const start = toDate(log.startTime)
+                                    const end = toDate(log.endTime)
                                     return (
-                                        <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-bold text-foreground">
-                                                    {format(new Date(log.startTime), "MMM do, yyyy")}
+                                        <button
+                                            type="button"
+                                            key={log.id}
+                                            onClick={() => {
+                                                setSelectedTimeLog(log)
+                                                setIsTimeLogSheetOpen(true)
+                                            }}
+                                            className="w-full text-left rounded-3xl border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-300 hover:bg-slate-50"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <p className="text-lg font-bold text-slate-700">
+                                                        {start ? format(start, "MMM do, yyyy") : "Unknown date"}
+                                                    </p>
+                                                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                                                        <span>
+                                                            {start ? format(start, "HH:mm") : "--:--"} - {end ? format(end, "HH:mm") : "Ongoing"}
+                                                        </span>
+                                                        {(log as any).task?.name && (
+                                                            <Badge className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em] text-emerald-700">
+                                                                {(log as any).task.name}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <span className="text-lg font-black text-slate-600">
+                                                    {formatDurationLabel(log.durationSeconds || 0)}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest flex items-center gap-2">
-                                                    {format(new Date(log.startTime), "HH:mm")} - {log.endTime ? format(new Date(log.endTime), "HH:mm") : "Ongoing"}
-                                                    {log.task?.name ? <span className="text-primary px-1.5 py-0.5 rounded-md bg-primary/10 tracking-tighter truncate max-w-[200px]" title={log.task.name}>{log.task.name}</span> : log.taskId ? <span className="text-primary px-1.5 py-0.5 rounded-md bg-primary/10 tracking-tighter">Task Attached</span> : null}
-                                                </span>
-                                                {log.notes && (
-                                                    <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
-                                                        {log.notes}
-                                                    </span>
-                                                )}
                                             </div>
-                                            <div className="text-sm font-black text-foreground tabular-nums opacity-80">
-                                                {sessionH > 0 && `${sessionH}h `}{sessionM > 0 && `${sessionM}m `}{sessionS}s
-                                            </div>
-                                        </div>
+                                        </button>
                                     )
                                 })}
                             </div>
-                        )}
-                    </div>
+                        </section>
 
-                    {/* CONTEXT & ASSETS */}
-                    <div className="space-y-4 pt-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Context & Assets</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Link
-                                href={`/vault/${project.site.partner.id}`}
-                                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
-                            >
-                                <div className="space-y-1">
-                                    <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Partner</div>
-                                    <div className="font-semibold text-xs text-foreground/80 group-hover:text-foreground transition-colors">{project.site.partner.name}</div>
-                                </div>
-                                <FolderOpen className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
-                            </Link>
+                        <section className="space-y-4">
+                            <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Context & Assets</h2>
 
-                            <Link
-                                href={`/vault/${project.site.partner.id}/${project.site.id}`}
-                                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group shadow-sm"
-                            >
-                                <div className="space-y-1">
-                                    <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Domain</div>
-                                    <div className="font-semibold text-xs text-foreground/80 tracking-tight group-hover:text-foreground transition-colors">{project.site.domainName}</div>
-                                </div>
-                                <Globe className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all" strokeWidth={1.5} />
-                            </Link>
-                        </div>
-                    </div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Link
+                                    href={`/vault/${project.site.partner.id}`}
+                                    className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-[var(--shadow-card)] transition hover:border-slate-300"
+                                >
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Partner</p>
+                                    <div className="mt-1 flex items-center justify-between gap-3">
+                                        <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
+                                            {project.site.partner.name}
+                                        </p>
+                                        <FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+                                    </div>
+                                </Link>
 
-                    {/* FOOTER */}
-                    <div className="p-6 border-t bg-muted/20 flex justify-between items-center text-xs text-muted-foreground/60">
-                        <div>
-                            <span>Created {format(new Date(project.createdAt), "MMM d, yyyy")}</span>
-                            {project.updatedAt && (
-                                <span className="ml-3 pl-3 border-l border-border/50">
-                                    Updated {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2">
+                                <Link
+                                    href={`/vault/${project.site.partner.id}/${project.site.id}`}
+                                    className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-[var(--shadow-card)] transition hover:border-slate-300"
+                                >
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Domain</p>
+                                    <div className="mt-1 flex items-center justify-between gap-3">
+                                        <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
+                                            {project.site.domainName}
+                                        </p>
+                                        <Globe className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+                                    </div>
+                                </Link>
+                            </div>
+                        </section>
+
+                        <section>
                             <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-md bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 transition-colors"
+                                type="button"
                                 onClick={handleDelete}
                                 disabled={isDeleting}
+                                className="h-11 rounded-xl bg-rose-50 px-4 text-sm font-semibold text-rose-600 hover:bg-rose-100"
                             >
-                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                Delete Project
                             </Button>
-                        </div>
+                        </section>
                     </div>
                 </div>
+
+                <div className="sticky bottom-0 flex flex-col gap-1 border-t border-slate-200 bg-white/95 px-6 py-3 text-[11px] font-semibold text-slate-500 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                    <span># Project ID: {project.id.split("-")[0]}</span>
+                    <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                        <span>Created: {formatBottomDate(createdTimestamp)}</span>
+                        <span className="inline-flex items-center gap-1.5">
+                            Last updated: {formatBottomDate(lastUpdatedTimestamp)}
+                            <Cloud className="h-3.5 w-3.5" />
+                        </span>
+                    </div>
+                </div>
+
+                <TimeLogSheet
+                    log={selectedTimeLog}
+                    open={isTimeLogSheetOpen}
+                    onOpenChange={(open) => {
+                        setIsTimeLogSheetOpen(open)
+                        if (!open) {
+                            setSelectedTimeLog(null)
+                            router.refresh()
+                        }
+                    }}
+                    projects={timeLogProjects}
+                    tasks={timeLogTasks}
+                />
             </div>
         </TaskSheetWrapper>
     )

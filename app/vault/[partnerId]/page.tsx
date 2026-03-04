@@ -7,14 +7,16 @@ import { ExternalLink, Globe, Plus } from "lucide-react"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { SitesListView } from "@/components/vault/sites-list-view"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
 export default async function PartnerDetailPage({ params }: { params: Promise<{ partnerId: string }> }) {
+    const session = await requireTenantContext()
     const { partnerId } = await params
 
-    const partnerPromise = prisma.partner.findUnique({
-        where: { id: partnerId },
+    const partnerPromise = prisma.partner.findFirst({
+        where: { id: partnerId, tenantId: session.tenantId },
         include: {
             sites: {
                 include: {
@@ -26,11 +28,13 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
     })
 
     const servicesPromise = prisma.service.findMany({
+        where: { tenantId: session.tenantId },
         select: { id: true, serviceName: true, isRecurring: true, baseFee: true },
         orderBy: { serviceName: "asc" }
     })
 
     const partnersPromise = prisma.partner.findMany({
+        where: { tenantId: session.tenantId },
         include: { sites: { select: { id: true, domainName: true } } }
     })
 
@@ -54,7 +58,7 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
 
             <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-2">
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">{partner.name}</h1>
+                    <h1 className="page-title">{partner.name}</h1>
 
                 </div>
                 <div className="flex items-center gap-2">

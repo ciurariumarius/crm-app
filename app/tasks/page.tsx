@@ -1,25 +1,53 @@
 import prisma from "@/lib/prisma"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, TrendingUp, CheckSquare, Zap, Target } from "lucide-react"
 import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { formatProjectName } from "@/lib/utils"
-import Link from "next/link"
-import { cn } from "@/lib/utils"
 import { TasksViewToggle } from "@/components/tasks/tasks-view-toggle"
-import { Search } from "lucide-react"
+import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
+import Link from "next/link"
+import { Prisma } from "@prisma/client"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
+const PAGE_SIZE = 30
+
+function buildSort(sort: string): Prisma.TaskOrderByWithRelationInput[] {
+    switch (sort) {
+        case "oldest":
+            return [{ createdAt: "asc" }]
+        case "updated":
+            return [{ updatedAt: "desc" }]
+        case "name_asc":
+            return [{ name: "asc" }]
+        case "name_desc":
+            return [{ name: "desc" }]
+        case "newest":
+        default:
+            return [{ createdAt: "desc" }]
+    }
+}
+
 export default async function TasksPage({
-    searchParams
+    searchParams,
 }: {
-    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; projectId?: string; urgency?: string; sort?: string; view?: string; cols?: string }>
+    searchParams: Promise<{
+        q?: string
+        status?: string
+        partnerId?: string
+        projectId?: string
+        urgency?: string
+        sort?: string
+        view?: string
+        cols?: string
+        page?: string
+    }>
 }) {
+    const session = await requireTenantContext()
     const params = await searchParams
-    const q = params.q
+    const q = params.q?.trim()
     const statusFilter = params.status || "Active"
     const partnerId = params.partnerId
     const projectId = params.projectId
@@ -27,133 +55,143 @@ export default async function TasksPage({
     const sort = params.sort || "newest"
     const view = (params.view as "grid" | "list") || "grid"
     const cols = Number(params.cols) || 3
+    const page = Math.max(1, Number(params.page) || 1)
 
-    // Fetch all tasks with project and partner info for metrics and filtering
-    const allTasksPromise = prisma.task.findMany({
-        include: {
-            project: {
-                include: {
-                    services: true,
-                    site: {
-                        include: {
-                            partner: true
-                        }
-                    }
-                }
+    const where: Prisma.TaskWhereInput = { tenantId: session.tenantId }
+
+    if (statusFilter !== "All") {
+        where.status = statusFilter
+    }
+
+    if (projectId && projectId !== "all") {
+        where.projectId = projectId
+    } else if (partnerId && partnerId !== "all") {
+        where.project = { site: { partnerId } }
+    }
+
+    if (urgencyFilter !== "all") {
+        where.urgency = urgencyFilter
+    }
+
+    if (q) {
+        where.OR = [
+            { name: { contains: q } },
+            { description: { contains: q } },
+            { project: { name: { contains: q } } },
+            { project: { site: { domainName: { contains: q } } } },
+            { project: { site: { partner: { name: { contains: q } } } } },
+        ]
+    }
+
+    const [tasksRaw, totalTasks, allServicesRaw, activeTimerRaw, allProjectsRaw] = await Promise.all([
+        prisma.task.findMany({
+            where,
+            include: {
+                project: {
+                    include: {
+                        services: true,
+                        site: {
+                            include: {
+                                partner: true,
+                            },
+                        },
+                    },
+                },
+                timeLogs: true,
             },
-            timeLogs: true
-        },
-        orderBy: {
-            updatedAt: "desc"
-        }
-    })
-
-    const servicesPromise = prisma.service.findMany({
-        orderBy: { serviceName: "asc" }
-    })
-
-    // Fetch all projects for the "Add Task" dropdown
-    const activeProjectsPromise = prisma.project.findMany({
-        select: {
-            id: true,
-            name: true,
-            status: true,
-            site: { select: { domainName: true } },
-            services: { select: { serviceName: true, isRecurring: true } },
-            createdAt: true
-        },
-        orderBy: { updatedAt: "desc" }
-    })
-
-    const [allTasks, allServicesRaw, activeTimerRaw, activeProjectsRaw] = await Promise.all([
-        allTasksPromise,
-        servicesPromise,
-        prisma.timeLog.findFirst({
-            where: { endTime: null },
-            include: { task: true, project: true }
+            orderBy: buildSort(sort),
+            skip: (page - 1) * PAGE_SIZE,
+            take: PAGE_SIZE,
         }),
-        activeProjectsPromise
+        prisma.task.count({ where }),
+        prisma.service.findMany({ where: { tenantId: session.tenantId }, orderBy: { serviceName: "asc" } }),
+        prisma.timeLog.findFirst({
+            where: { endTime: null, tenantId: session.tenantId },
+            include: { task: true, project: true },
+        }),
+        prisma.project.findMany({
+            where: { tenantId: session.tenantId },
+            select: {
+                id: true,
+                name: true,
+                status: true,
+                site: {
+                    select: {
+                        domainName: true,
+                        partner: { select: { id: true, name: true } },
+                    },
+                },
+                services: { select: { serviceName: true, isRecurring: true } },
+                createdAt: true,
+            },
+            orderBy: { updatedAt: "desc" },
+        }),
     ])
 
     const allServices = JSON.parse(JSON.stringify(allServicesRaw))
     const initialActiveTimer = JSON.parse(JSON.stringify(activeTimerRaw))
-    const activeProjects = JSON.parse(JSON.stringify(activeProjectsRaw))
+    const activeProjects = JSON.parse(JSON.stringify(allProjectsRaw))
 
-    // Calculate metrics based on ALL tasks
-    const activeTasksCount = allTasks.filter((t: any) => t.status === "Active").length
-    const pausedTasksCount = allTasks.filter((t: any) => t.status === "Paused").length
-    const completedTasksCount = allTasks.filter((t: any) => t.status === "Completed").length
+    const activeTasksCount = await prisma.task.count({ where: { tenantId: session.tenantId, status: "Active" } })
 
-    // Helper to evaluate filters optionally skipping a specific filter
-    const filterTaskBase = (task: any, skip: 'partner' | 'project' | 'none' = 'none') => {
-        if (statusFilter && statusFilter !== "All" && task.status !== statusFilter) return false
-        if (skip !== 'partner' && partnerId && partnerId !== "all" && task.project.site.partner.id !== partnerId) return false
-        if (skip !== 'project' && projectId && projectId !== "all" && task.project.id !== projectId) return false
-        if (urgencyFilter && urgencyFilter !== "all" && task.urgency !== urgencyFilter) return false
-        if (q) {
-            const searchLower = q.toLowerCase()
-            const matchesName = task.name.toLowerCase().includes(searchLower)
-            const matchesProject = (task.project.name || task.project.site.domainName).toLowerCase().includes(searchLower)
-            const matchesPartner = task.project.site.partner.name.toLowerCase().includes(searchLower)
-            if (!matchesName && !matchesProject && !matchesPartner) return false
+    const serializedTasks = JSON.parse(JSON.stringify(tasksRaw))
+    const projectsList = allProjectsRaw
+        .map((project) => ({ id: project.id, name: formatProjectName(project) }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+
+    const partnersMap = new Map()
+    allProjectsRaw.forEach((p: any) => {
+        if (p.site?.partner) {
+            partnersMap.set(p.site.partner.id, { id: p.site.partner.id, name: p.site.partner.name })
         }
-        return true
-    }
-
-    // Apply filters to tasks for the display
-    let filteredTasks = allTasks.filter((t: any) => filterTaskBase(t, 'none')).sort((a: any, b: any) => {
-        if (sort === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        if (sort === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        if (sort === "updated") return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        if (sort === "name_asc") return a.name.localeCompare(b.name)
-        if (sort === "name_desc") return b.name.localeCompare(a.name)
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
+    const partnersList = Array.from(partnersMap.values()).sort((a, b) => a.name.localeCompare(b.name))
 
-    // Serialize to plain object
-    const serializedTasks = JSON.parse(JSON.stringify(filteredTasks))
+    const totalPages = Math.max(1, Math.ceil(totalTasks / PAGE_SIZE))
+    const prevPage = page > 1 ? page - 1 : null
+    const nextPage = page < totalPages ? page + 1 : null
 
-    // Extract unique partners and projects for filters (Adaptive)
-    const partnersList = Array.from(new Set(allTasks.filter((t: any) => filterTaskBase(t, 'partner')).map((t: any) => JSON.stringify({ id: t.project.site.partner.id, name: t.project.site.partner.name }))))
-        .map((s) => JSON.parse(s as string))
-        .sort((a: any, b: any) => a.name.localeCompare(b.name))
-
-    const projectsList = Array.from(new Set(allTasks.filter((t: any) => filterTaskBase(t, 'project')).map((t: any) => JSON.stringify({ id: t.project.id, name: formatProjectName(t.project) }))))
-        .map((s) => JSON.parse(s as string))
-        .sort((a: any, b: any) => a.name.localeCompare(b.name))
+    const buildPageHref = (targetPage: number) => {
+        const next = new URLSearchParams()
+        if (q) next.set("q", q)
+        if (statusFilter) next.set("status", statusFilter)
+        if (partnerId) next.set("partnerId", partnerId)
+        if (projectId) next.set("projectId", projectId)
+        if (urgencyFilter) next.set("urgency", urgencyFilter)
+        if (sort) next.set("sort", sort)
+        if (view) next.set("view", view)
+        if (cols) next.set("cols", String(cols))
+        next.set("page", String(targetPage))
+        return `/tasks?${next.toString()}`
+    }
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div className="flex flex-col gap-2 w-full md:w-auto">
-                    <div className="flex items-center justify-between w-full md:w-auto">
-                        <div className="flex items-center gap-3">
-                            <MobileMenuTrigger />
-                            <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground md:pl-0 leading-none flex items-center h-full">
-                                Tasks
-                            </h1>
-                        </div>
-                        {/* Mobile Only Header Actions */}
-                        <div className="flex md:hidden items-center gap-2">
-                            <TasksViewToggle currentView={view} />
-                            <CreateTaskButton projects={activeProjects} />
-                        </div>
-                    </div>
-                    {/* Subtitle */}
-                    <div className="text-[10px] font-extrabold tracking-widest uppercase text-muted-foreground/60 flex items-center gap-2 md:pl-0 ml-1 md:ml-0.5 mt-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        {activeTasksCount} ACTIVE TASK{activeTasksCount !== 1 ? 'S' : ''}
-                    </div>
+            {/* Header Row */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3 w-full md:w-auto md:min-w-[180px] shrink-0">
+                    <MobileMenuTrigger />
+                    <h1 className="page-title">
+                        Tasks
+                    </h1>
                 </div>
 
-                {/* Desktop Header Actions */}
-                <div className="hidden md:flex items-center gap-3 self-end md:self-auto">
+                <div className="w-full md:flex-1 md:max-w-2xl px-0 md:px-4 shrink-0 transition-all">
+                    <TasksSearchInput />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 w-full md:w-auto md:min-w-[180px] shrink-0">
+                    <TasksViewToggle currentView={view} />
                     <CreateTaskButton projects={activeProjects} />
                 </div>
             </div>
 
             <div className="space-y-4">
-                <TasksToolbar partners={partnersList} projects={projectsList} currentView={view} />
+                <TasksToolbar
+                    projects={projectsList}
+                    partners={partnersList}
+                    totalTasks={totalTasks}
+                />
                 <TasksCardView
                     tasks={serializedTasks}
                     allServices={allServices}
@@ -162,7 +200,31 @@ export default async function TasksPage({
                     view={view}
                     cols={cols}
                 />
+
+                <div className="flex justify-center w-full py-4">
+                    <CreateTaskButton projects={activeProjects} />
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm mt-4">
+                    <span className="text-muted-foreground">Page {page} of {totalPages} · {totalTasks} tasks</span>
+                    <div className="flex items-center gap-2">
+                        {prevPage ? (
+                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(prevPage)}>
+                                Previous
+                            </Link>
+                        ) : (
+                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                        )}
+                        {nextPage ? (
+                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(nextPage)}>
+                                Next
+                            </Link>
+                        ) : (
+                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                        )}
+                    </div>
+                </div>
             </div>
-        </div >
+        </div>
     )
 }

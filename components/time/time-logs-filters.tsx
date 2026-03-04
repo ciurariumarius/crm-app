@@ -39,7 +39,7 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
         if (searchParams.get("q") !== searchTerm) {
             setSearchTerm(searchParams.get("q") || "")
         }
-    }, [searchParams])
+    }, [searchParams, searchTerm])
 
     // Update URL on search
     React.useEffect(() => {
@@ -52,6 +52,7 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
             } else {
                 params.delete("q")
             }
+            params.delete("page")
             router.replace(`/time?${params.toString()}`)
         }
     }, [debouncedSearch, router, searchParams])
@@ -71,6 +72,7 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
             // If setting project, clear partner as project implies partner
             if (key === "projectId") params.delete("partnerId")
         }
+        params.delete("page")
         router.push(`/time?${params.toString()}`)
     }
 
@@ -82,38 +84,33 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
         ? projects.filter(p => p.site.partnerId === currentPartner)
         : projects
 
-    const FilterContent = () => (
+    const filterContent = (
         <>
-            {/* Partner & Project Pills */}
             <div className="flex xl:items-center flex-col xl:flex-row gap-4 xl:gap-1 xl:p-1 xl:bg-muted/30 rounded-full w-full xl:w-auto">
-
                 <div className="flex flex-col w-full xl:w-auto">
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 xl:hidden px-2">Partner</div>
-                    {/* Partner Dropdown */}
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 xl:hidden px-2">Partner</div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button className={cn(
-                                "px-4 py-3 xl:py-1.5 text-xs xl:text-[10px] font-bold rounded-xl xl:rounded-full transition-all duration-200 flex items-center justify-between xl:justify-center gap-2 w-full xl:w-auto bg-muted/30 xl:bg-transparent",
-                                currentPartner !== "all"
-                                    ? "xl:bg-background shadow-sm text-foreground ring-1 ring-border/50 xl:ring-0"
-                                    : "text-muted-foreground hover:text-foreground"
+                                "px-4 py-3 xl:py-1.5 text-xs font-semibold rounded-xl xl:rounded-full transition-all duration-200 flex items-center justify-between xl:justify-center gap-2 w-full xl:w-auto bg-muted/30 xl:bg-transparent",
+                                currentPartner !== "all" ? "xl:bg-background shadow-sm text-foreground ring-1 ring-border/50 xl:ring-0" : "text-muted-foreground hover:text-foreground"
                             )}>
                                 <div className="flex items-center gap-2 min-w-0">
                                     <Users className="w-4 h-4 xl:w-3 xl:h-3 shrink-0" />
                                     <span className="truncate max-w-[200px] xl:max-w-[100px]">
-                                        {partners.find(p => p.id === currentPartner)?.name || "ALL PARTNERS"}
+                                        {partners.find((p) => p.id === currentPartner)?.name || "All Partners"}
                                     </span>
                                 </div>
                                 <ChevronDown className="w-4 h-4 xl:w-3 xl:h-3 opacity-50 shrink-0" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-[280px] xl:w-[200px] max-h-[300px] overflow-y-auto bg-popover/95 backdrop-blur-sm z-50 p-1">
-                            <DropdownMenuItem onSelect={() => updateFilter("partnerId", "all")} className="text-xs xl:text-[10px] font-bold uppercase tracking-wider py-3 xl:py-2 cursor-pointer">
+                            <DropdownMenuItem onSelect={() => updateFilter("partnerId", "all")} className="text-xs font-semibold py-3 xl:py-2 cursor-pointer">
                                 All Partners
                             </DropdownMenuItem>
                             {partners.map((p) => (
-                                <DropdownMenuItem key={p.id} onSelect={() => updateFilter("partnerId", p.id)} className="text-xs xl:text-[10px] font-bold uppercase tracking-wider py-3 xl:py-2 cursor-pointer">
-                                    {p.name.toUpperCase()}
+                                <DropdownMenuItem key={p.id} onSelect={() => updateFilter("partnerId", p.id)} className="text-xs font-semibold py-3 xl:py-2 cursor-pointer">
+                                    {p.name}
                                 </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
@@ -124,39 +121,35 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
                 <div className="w-px h-6 bg-border/40 mx-2 hidden xl:block" />
 
                 <div className="flex flex-col w-full xl:w-auto">
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 xl:hidden px-2">Project</div>
-                    {/* Project Dropdown */}
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 xl:hidden px-2">Project</div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button className={cn(
-                                "px-4 py-3 xl:py-1.5 text-xs xl:text-[10px] font-bold rounded-xl xl:rounded-full transition-all duration-200 flex items-center justify-between xl:justify-center gap-2 w-full xl:w-auto bg-muted/30 xl:bg-transparent",
-                                currentProject !== "all"
-                                    ? "xl:bg-background shadow-sm text-foreground ring-1 ring-border/50 xl:ring-0"
-                                    : "text-muted-foreground hover:text-foreground"
+                                "px-4 py-3 xl:py-1.5 text-xs font-semibold rounded-xl xl:rounded-full transition-all duration-200 flex items-center justify-between xl:justify-center gap-2 w-full xl:w-auto bg-muted/30 xl:bg-transparent",
+                                currentProject !== "all" ? "xl:bg-background shadow-sm text-foreground ring-1 ring-border/50 xl:ring-0" : "text-muted-foreground hover:text-foreground"
                             )}>
                                 <div className="flex items-center gap-2 min-w-0">
                                     <Briefcase className="w-4 h-4 xl:w-3 xl:h-3 shrink-0" />
                                     <span className="truncate max-w-[200px] xl:max-w-[150px]">
-                                        {projects.find(p => p.id === currentProject)?.displayName || "ALL PROJECTS"}
+                                        {projects.find((p) => p.id === currentProject)?.displayName || "All Projects"}
                                     </span>
                                 </div>
                                 <ChevronDown className="w-4 h-4 xl:w-3 xl:h-3 opacity-50 shrink-0" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-[320px] xl:w-[300px] max-h-[350px] overflow-y-auto bg-popover/95 backdrop-blur-sm z-50 p-1">
-                            <DropdownMenuItem onSelect={() => updateFilter("projectId", "all")} className="text-xs xl:text-[10px] font-bold uppercase tracking-wider py-3 xl:py-2 cursor-pointer">
-                                ALL PROJECTS
+                            <DropdownMenuItem onSelect={() => updateFilter("projectId", "all")} className="text-xs font-semibold py-3 xl:py-2 cursor-pointer">
+                                All Projects
                             </DropdownMenuItem>
                             {filteredProjects.map((p) => (
-                                <DropdownMenuItem key={p.id} onSelect={() => updateFilter("projectId", p.id)} className="text-xs xl:text-[10px] font-bold uppercase tracking-wider py-3 xl:py-2 cursor-pointer">
-                                    {p.displayName.toUpperCase()}
+                                <DropdownMenuItem key={p.id} onSelect={() => updateFilter("projectId", p.id)} className="text-xs font-semibold py-3 xl:py-2 cursor-pointer">
+                                    {p.displayName}
                                 </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
             </div>
-
             <div className="pb-8 xl:hidden" />
         </>
     )
@@ -222,7 +215,7 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
                                     </SheetTitle>
                                 </SheetHeader>
                                 <div className="p-6 overflow-y-auto w-full max-w-md mx-auto h-full space-y-4">
-                                    <FilterContent />
+                                    {filterContent}
                                 </div>
                             </div>
                         </SheetContent>
@@ -232,7 +225,7 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
 
             {/* Desktop Filters (Pills) */}
             <div className="hidden xl:flex items-center gap-2 w-auto px-2">
-                <FilterContent />
+                {filterContent}
             </div>
         </div>
     )

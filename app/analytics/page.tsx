@@ -2,31 +2,54 @@ import prisma from "@/lib/prisma"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart3, TrendingUp, DollarSign, Clock, Briefcase, Users } from "lucide-react"
 import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
-import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { PageHeader } from "@/components/layout/page-header"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
 export default async function AnalyticsPage() {
+    const session = await requireTenantContext()
     // Run all queries in parallel
-    const [projects, totalTimeAgg, projectCounts] = await Promise.all([
-        // Projects with services and partner info (no timeLogs - we use aggregate instead)
+    const [projects, totalTimeAgg, projectCounts, timeByProject] = await Promise.all([
+        // Projects with only data needed for analytics math
         prisma.project.findMany({
-            include: {
-                services: true,
-                site: { include: { partner: true } },
-                timeLogs: { select: { durationSeconds: true } },
-                tasks: { select: { id: true } }
-            }
+            where: { tenantId: session.tenantId },
+            select: {
+                id: true,
+                status: true,
+                paymentStatus: true,
+                currentFee: true,
+                services: {
+                    select: {
+                        serviceName: true,
+                        isRecurring: true,
+                    }
+                },
+                site: {
+                    select: {
+                        partner: {
+                            select: { name: true }
+                        }
+                    }
+                },
+            },
         }),
         // Total time across all projects via aggregate
         prisma.timeLog.aggregate({
-            _sum: { durationSeconds: true }
+            _sum: { durationSeconds: true },
+            where: { tenantId: session.tenantId },
         }),
         // Project counts by status via groupBy
         prisma.project.groupBy({
+            where: { tenantId: session.tenantId },
             by: ['status'],
             _count: { _all: true }
-        })
+        }),
+        prisma.timeLog.groupBy({
+            where: { tenantId: session.tenantId },
+            by: ['projectId'],
+            _sum: { durationSeconds: true },
+        }),
     ])
 
     // Calculate statistics
@@ -40,6 +63,9 @@ export default async function AnalyticsPage() {
 
     const totalTimeSeconds = totalTimeAgg._sum.durationSeconds || 0
     const totalHours = Math.round(totalTimeSeconds / 3600)
+    const timeByProjectMap = new Map(
+        timeByProject.map((entry) => [entry.projectId, entry._sum.durationSeconds || 0])
+    )
 
     // Partner statistics
     const partnerStats = projects.reduce((acc: any, project: any) => {
@@ -54,7 +80,7 @@ export default async function AnalyticsPage() {
         }
         acc[partnerName].projects++
         acc[partnerName].revenue += Number(project.currentFee) || 0
-        acc[partnerName].hours += project.timeLogs.reduce((sum: number, log: any) => sum + (log.durationSeconds || 0), 0) / 3600
+        acc[partnerName].hours += (timeByProjectMap.get(project.id) || 0) / 3600
         return acc
     }, {} as Record<string, { name: string; projects: number; revenue: number; hours: number }>)
 
@@ -93,14 +119,7 @@ export default async function AnalyticsPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex h-10 items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <MobileMenuTrigger />
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
-                        Analytics
-                    </h1>
-                </div>
-            </div>
+            <PageHeader title="Analytics" />
 
             {/* Key Metrics */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

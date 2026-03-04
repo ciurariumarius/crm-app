@@ -1,267 +1,421 @@
 import prisma from "@/lib/prisma"
 import Link from "next/link"
-import { Briefcase, Globe, Users, Search as SearchIcon, Filter, X, CreditCard, CheckCircle2, AlertCircle, Plus, LayoutGrid, List } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { formatDistanceToNow, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subYears } from "date-fns"
+import {
+    CalendarDays,
+    ChevronDown,
+    Grid2x2,
+    List,
+    Search,
+    SlidersHorizontal,
+    Users,
+} from "lucide-react"
+import {
+    endOfMonth,
+    endOfYear,
+    startOfMonth,
+    startOfYear,
+    subMonths,
+    subYears,
+} from "date-fns"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
-import { ProjectsTable } from "@/components/projects/projects-table"
-import { ProjectsToolbar } from "@/components/projects/projects-toolbar"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { cn } from "@/lib/utils"
-
+import { requireTenantContext } from "@/lib/tenant"
+import { Prisma } from "@prisma/client"
+import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
+import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
 
 export const dynamic = "force-dynamic"
 
-export default async function MasterProjectsPage({
-    searchParams
+const PAGE_SIZE = 24
+
+const statusOptions = [
+    { label: "Active", value: "Active" },
+    { label: "Paused", value: "Paused" },
+    { label: "Completed", value: "Completed" },
+    { label: "All", value: "All" },
+]
+
+const paymentOptions = [
+    { label: "All", value: "All" },
+    { label: "Paid", value: "Paid" },
+    { label: "Unpaid", value: "Unpaid" },
+]
+
+const recurringOptions = [
+    { label: "All", value: "All" },
+    { label: "Monthly", value: "Recurring" },
+    { label: "One-time", value: "OneTime" },
+]
+
+const periodOptions = [
+    { label: "All Time", value: "all_time" },
+    { label: "This Month", value: "this_month" },
+    { label: "Last Month", value: "last_month" },
+    { label: "This Year", value: "this_year" },
+    { label: "Last Year", value: "last_year" },
+]
+
+export default async function ProjectsPage({
+    searchParams,
 }: {
-    searchParams: Promise<{ q?: string; status?: string; partnerId?: string; payment?: string; recurring?: string; period?: string; layout?: string }>
+    searchParams: Promise<{
+        q?: string
+        status?: string
+        partnerId?: string
+        payment?: string
+        recurring?: string
+        period?: string
+        layout?: string
+        page?: string
+    }>
 }) {
+    const session = await requireTenantContext()
     const params = await searchParams
     const queryStatus = params.status || "Active"
-    const q = params.q
+    const q = params.q?.trim()
     const partnerId = params.partnerId
     const payment = params.payment || "All"
     const recurring = params.recurring || "All"
     const period = params.period || "all_time"
-    const layout = params.layout || "grid"
+    const layout = params.layout || "list"
+    const page = Math.max(1, Number(params.page) || 1)
 
-    let dateFilter: any = {}
     const now = new Date()
+    let dateFilter: Prisma.ProjectWhereInput = {}
 
     if (period === "this_month") {
         dateFilter = {
             createdAt: {
                 gte: startOfMonth(now),
-                lte: endOfMonth(now)
-            }
+                lte: endOfMonth(now),
+            },
         }
     } else if (period === "last_month") {
         const lastMonth = subMonths(now, 1)
         dateFilter = {
             createdAt: {
                 gte: startOfMonth(lastMonth),
-                lte: endOfMonth(lastMonth)
-            }
+                lte: endOfMonth(lastMonth),
+            },
         }
     } else if (period === "this_year") {
         dateFilter = {
             createdAt: {
                 gte: startOfYear(now),
-                lte: endOfYear(now)
-            }
+                lte: endOfYear(now),
+            },
         }
     } else if (period === "last_year") {
         const lastYear = subYears(now, 1)
         dateFilter = {
             createdAt: {
                 gte: startOfYear(lastYear),
-                lte: endOfYear(lastYear)
-            }
+                lte: endOfYear(lastYear),
+            },
         }
     }
 
-    // Fetch partner details if we have a partnerId filter
-    const filteredPartner = partnerId
-        ? await prisma.partner.findUnique({ where: { id: partnerId } })
-        : null
+    const projectWhere: Prisma.ProjectWhereInput = {
+        AND: [
+            { tenantId: session.tenantId },
+            queryStatus === "All" ? {} : { status: queryStatus },
+            payment === "All" ? {} : { paymentStatus: payment },
+            partnerId ? { site: { partnerId } } : {},
+            recurring === "Recurring" ? { services: { some: { isRecurring: true } } } :
+                recurring === "OneTime" ? { services: { some: { isRecurring: false } } } : {},
+            dateFilter,
+            q ? {
+                OR: [
+                    { name: { contains: q } },
+                    { site: { domainName: { contains: q } } },
+                    { services: { some: { serviceName: { contains: q } } } },
+                    { site: { partner: { name: { contains: q } } } },
+                ],
+            } : {},
+        ],
+    }
 
-    // Fetch all projects with expanded details for the table view
-    const projectsPromise = prisma.project.findMany({
-        where: {
-            AND: [
-                queryStatus === "All" ? {} : { status: queryStatus },
-                payment === "All" ? {} : { paymentStatus: payment },
-                partnerId ? { site: { partnerId } } : {},
-                recurring === "Recurring" ? { services: { some: { isRecurring: true } } } :
-                    recurring === "OneTime" ? { services: { some: { isRecurring: false } } } : {},
-                dateFilter,
-                q ? {
-                    OR: [
-                        { name: { contains: q } },
-                        { site: { domainName: { contains: q } } },
-                        { services: { some: { serviceName: { contains: q } } } },
-                        { site: { partner: { name: { contains: q } } } }
-                    ]
-                } : {}
-            ]
-        },
-        include: {
-            site: {
-                include: {
-                    partner: true
-                }
+    const [projectsRaw, totalProjects, partnersFullRaw, servicesRaw] = await Promise.all([
+        prisma.project.findMany({
+            where: projectWhere,
+            include: {
+                site: {
+                    include: {
+                        partner: true,
+                    },
+                },
+                services: true,
+                tasks: {
+                    orderBy: { createdAt: "asc" },
+                    include: { timeLogs: true },
+                },
+                timeLogs: {
+                    orderBy: { startTime: "desc" },
+                    include: { task: true },
+                },
+                _count: {
+                    select: {
+                        tasks: true,
+                    },
+                },
             },
-            services: true,
-            tasks: {
-                include: {
-                    timeLogs: true
-                }
+            orderBy: { updatedAt: "desc" },
+            skip: (page - 1) * PAGE_SIZE,
+            take: PAGE_SIZE,
+        }),
+        prisma.project.count({ where: projectWhere }),
+        prisma.partner.findMany({
+            where: { tenantId: session.tenantId },
+            include: {
+                sites: {
+                    select: { id: true, domainName: true },
+                },
             },
-            timeLogs: {
-                orderBy: { startTime: "desc" },
-                include: { task: true }
-            },
-            _count: {
-                select: { tasks: true }
-            }
-        },
-        orderBy: { updatedAt: "desc" }
-    })
-
-    // Fetch data for context
-    const partnersPromise = prisma.partner.findMany({
-        select: { id: true, name: true },
-        orderBy: { name: "asc" }
-    })
-
-    // Reuse partnersPromise for the dialog as well
-    const partnersFullPromise = prisma.partner.findMany({
-        include: {
-            sites: {
-                select: { id: true, domainName: true }
-            }
-        },
-        orderBy: { name: "asc" }
-    })
-
-    const servicesPromise = prisma.service.findMany({
-        orderBy: { serviceName: "asc" }
-    })
-
-    const [projectsRaw, partnersListRaw, partnersFullRaw, servicesRaw] = await Promise.all([
-        projectsPromise,
-        partnersPromise,
-        partnersFullPromise,
-        servicesPromise
+            orderBy: { name: "asc" },
+        }),
+        prisma.service.findMany({
+            where: { tenantId: session.tenantId },
+            orderBy: { serviceName: "asc" },
+        }),
     ])
 
-    const projects = JSON.parse(JSON.stringify(projectsRaw))
-    const partnersList = JSON.parse(JSON.stringify(partnersListRaw))
-    const partnersFull = JSON.parse(JSON.stringify(partnersFullRaw))
-    const services = JSON.parse(JSON.stringify(servicesRaw))
+    const partnersList = partnersFullRaw.map((partner) => ({ id: partner.id, name: partner.name }))
+    const filteredPartner = partnersList.find((partner) => partner.id === partnerId)
 
-    const periodsLabel: Record<string, string> = {
-        this_month: "This Month",
-        last_month: "Last Month",
-        this_year: "This Year",
-        last_year: "Last Year",
-        all_time: "All Time"
+    const projects = projectsRaw.map((project) => {
+        const completedTasks = project.tasks.filter((task) => task.status === "Completed").length
+        const secondsLogged = project.timeLogs.reduce((sum, log) => sum + (log.durationSeconds ?? 0), 0)
+        const isRecurring = project.services.some((service) => service.isRecurring)
+        const serviceLabel = project.services.map((service) => service.serviceName).join(" + ") || "No service"
+        return {
+            ...project,
+            completedTasks,
+            secondsLogged,
+            isRecurring,
+            serviceLabel,
+            amount: Number(project.currentFee ?? 0),
+        }
+    })
+
+    const projectsForClient = JSON.parse(JSON.stringify(projects))
+    const partnersForClient = JSON.parse(JSON.stringify(partnersFullRaw))
+    const servicesForClient = JSON.parse(JSON.stringify(servicesRaw))
+
+    const totalPages = Math.max(1, Math.ceil(totalProjects / PAGE_SIZE))
+    const prevPage = page > 1 ? page - 1 : null
+    const nextPage = page < totalPages ? page + 1 : null
+
+    const buildHref = (overrides: Record<string, string | null | undefined>) => {
+        const next = new URLSearchParams()
+        if (q) next.set("q", q)
+        if (queryStatus) next.set("status", queryStatus)
+        if (partnerId) next.set("partnerId", partnerId)
+        if (payment) next.set("payment", payment)
+        if (recurring) next.set("recurring", recurring)
+        if (period) next.set("period", period)
+        if (layout) next.set("layout", layout)
+        next.set("page", String(page))
+
+        for (const [key, value] of Object.entries(overrides)) {
+            if (value === null || value === undefined || value === "") {
+                next.delete(key)
+            } else {
+                next.set(key, value)
+            }
+        }
+
+        if (!next.get("page")) {
+            next.set("page", "1")
+        }
+
+        return `/projects?${next.toString()}`
     }
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div className="flex items-center justify-between w-full md:w-auto">
-                    <div className="flex items-center gap-3">
+        <ProjectSheetWrapper projects={projectsForClient} allServices={servicesForClient}>
+            <div className="space-y-6">
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div className="flex items-center gap-3 min-w-[180px]">
                         <MobileMenuTrigger />
-                        <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground md:pl-0 leading-none flex items-center h-full">
-                            Projects
-                        </h1>
+                        <h1 className="page-title text-slate-900">Projects</h1>
                     </div>
-                    {/* Mobile Only Header Actions */}
-                    <div className="flex md:hidden items-center gap-2">
-                        <div className="flex items-center p-1 bg-white dark:bg-zinc-900 rounded-[14px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border/60 h-10 px-1">
-                            <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=list`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'list' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
-                                <List className={cn("w-4 h-4", layout === 'list' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+
+                    <form className="relative flex-1 min-w-0" action="/projects" method="get">
+                        {queryStatus && <input type="hidden" name="status" value={queryStatus} />}
+                        {payment && <input type="hidden" name="payment" value={payment} />}
+                        {recurring && <input type="hidden" name="recurring" value={recurring} />}
+                        {period && <input type="hidden" name="period" value={period} />}
+                        {partnerId && <input type="hidden" name="partnerId" value={partnerId} />}
+                        {layout && <input type="hidden" name="layout" value={layout} />}
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <input
+                            name="q"
+                            defaultValue={q || ""}
+                            placeholder="Search projects, clients or campaigns..."
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm shadow-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                        />
+                    </form>
+
+                    <div className="flex items-center gap-3">
+                        <div className="hidden sm:flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                            <Link
+                                href={buildHref({ layout: "list", page: "1" })}
+                                className={cn(
+                                    "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
+                                    layout === "list" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
+                                )}
+                            >
+                                <List className="h-4 w-4" />
                             </Link>
-                            <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=grid`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'grid' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
-                                <LayoutGrid className={cn("w-4 h-4", layout === 'grid' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                            <Link
+                                href={buildHref({ layout: "grid", page: "1" })}
+                                className={cn(
+                                    "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
+                                    layout === "grid" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
+                                )}
+                            >
+                                <Grid2x2 className="h-4 w-4" />
                             </Link>
                         </div>
+
                         <CreateProjectButton
-                            partners={partnersFull as any}
-                            services={services as any}
+                            variant="full"
+                            label="Add Project"
+                            partners={partnersForClient}
+                            services={servicesForClient}
                         />
                     </div>
                 </div>
 
-                {/* Subtitle Space (hidden on mobile, aligned on desktop) */}
-                <div className="hidden md:flex flex-col gap-2">
-                    <div className="hidden md:flex h-10 w-10"></div>
-                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 md:px-4 md:py-3 shadow-sm">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                        <div className="inline-flex items-center gap-1 rounded-xl bg-slate-50 p-1">
+                            {statusOptions.map((option) => (
+                                <Link
+                                    key={option.value}
+                                    href={buildHref({ status: option.value, page: "1" })}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-lg text-[11px] uppercase tracking-[0.12em] font-semibold transition-colors",
+                                        queryStatus === option.value
+                                            ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                                            : "text-slate-500 hover:text-slate-900"
+                                    )}
+                                >
+                                    {option.label}
+                                </Link>
+                            ))}
+                        </div>
 
-                {/* Desktop Header Actions */}
-                <div className="hidden md:flex items-center gap-3 self-end md:self-auto">
-                    {/* Layout Toggle */}
-                    <div className="hidden md:flex items-center p-1 bg-white dark:bg-zinc-900 rounded-[14px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border/60 h-10 px-1">
-                        <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=list`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'list' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
-                            <List className={cn("w-4 h-4", layout === 'list' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
-                        </Link>
-                        <Link prefetch={false} scroll={false} href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}&layout=grid`} className={cn("p-1.5 rounded-lg transition-colors group", layout === 'grid' ? "bg-muted shadow-sm" : "hover:bg-muted/50")}>
-                            <LayoutGrid className={cn("w-4 h-4", layout === 'grid' ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")} />
-                        </Link>
+                        <div className="inline-flex items-center gap-1 rounded-xl bg-slate-50 p-1">
+                            {paymentOptions.map((option) => (
+                                <Link
+                                    key={option.value}
+                                    href={buildHref({ payment: option.value, page: "1" })}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-lg text-[11px] uppercase tracking-[0.12em] font-semibold transition-colors",
+                                        payment === option.value
+                                            ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                                            : "text-slate-500 hover:text-slate-900"
+                                    )}
+                                >
+                                    {option.label}
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="inline-flex items-center gap-1 rounded-xl bg-slate-50 p-1">
+                            {recurringOptions.map((option) => (
+                                <Link
+                                    key={option.value}
+                                    href={buildHref({ recurring: option.value, page: "1" })}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-lg text-[11px] uppercase tracking-[0.12em] font-semibold transition-colors",
+                                        recurring === option.value
+                                            ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                                            : "text-slate-500 hover:text-slate-900"
+                                    )}
+                                >
+                                    {option.label}
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="ml-auto flex items-center gap-2">
+                            <details className="group relative">
+                                <summary className="list-none inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 cursor-pointer hover:bg-slate-50">
+                                    <Users className="h-4 w-4 text-slate-400" />
+                                    <span>{filteredPartner?.name || "Partner"}</span>
+                                    <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
+                                </summary>
+                                <div className="absolute right-0 top-12 z-20 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                    <Link href={buildHref({ partnerId: null, page: "1" })} className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
+                                        All partners
+                                    </Link>
+                                    <div className="my-1 h-px bg-slate-100" />
+                                    {partnersList.map((partner) => (
+                                        <Link
+                                            key={partner.id}
+                                            href={buildHref({ partnerId: partner.id, page: "1" })}
+                                            className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                                        >
+                                            {partner.name}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </details>
+
+                            <details className="group relative">
+                                <summary className="list-none inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 cursor-pointer hover:bg-slate-50">
+                                    <CalendarDays className="h-4 w-4 text-slate-400" />
+                                    <span>{periodOptions.find((option) => option.value === period)?.label || "Date"}</span>
+                                    <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
+                                </summary>
+                                <div className="absolute right-0 top-12 z-20 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                    {periodOptions.map((option) => (
+                                        <Link
+                                            key={option.value}
+                                            href={buildHref({ period: option.value, page: "1" })}
+                                            className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                                        >
+                                            {option.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </details>
+
+                            <div className="inline-flex h-10 items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-slate-500 font-semibold px-2">
+                                <SlidersHorizontal className="h-3.5 w-3.5" />
+                                {totalProjects} results
+                            </div>
+                        </div>
                     </div>
-                    <CreateProjectButton
-                        partners={partnersFull as any}
-                        services={services as any}
-                    />
                 </div>
             </div>
 
-            {/* Unified Filter Toolbar */}
-            <ProjectsToolbar partners={partnersList} />
+            <ProjectsBoardRows projects={projectsForClient} layout={layout as "grid" | "list"} />
 
-            {/* Active Filter Chips */}
-            {(partnerId || q || payment !== "All" || recurring !== "All" || period !== "all_time") && (
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                    <span className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground/40 mr-2">Filters Active:</span>
-                    {partnerId && filteredPartner && (
-                        <Link
-                            href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}`}
-                            className="flex items-center gap-2 px-3 py-1 bg-primary/5 text-primary border border-primary/20 rounded-xl text-xs font-bold uppercase tracking-[0.15em] hover:bg-primary/10 transition-colors"
-                        >
-                            Partner: {filteredPartner.name}
-                            <X className="h-3 w-3" />
+            <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
+                <span className="text-muted-foreground">Page {page} of {totalPages} · {totalProjects} projects</span>
+                <div className="flex items-center gap-2">
+                    {prevPage ? (
+                        <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(prevPage) })}>
+                            Previous
                         </Link>
+                    ) : (
+                        <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
                     )}
-                    {period !== "all_time" && (
-                        <Link
-                            href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=all_time${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                            className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl text-xs font-bold uppercase tracking-[0.15em] hover:bg-blue-100 transition-colors"
-                        >
-                            Date: {periodsLabel[period]}
-                            <X className="h-3 w-3" />
+                    {nextPage ? (
+                        <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(nextPage) })}>
+                            Next
                         </Link>
-                    )}
-                    {recurring !== "All" && (
-                        <Link
-                            href={`/projects?status=${queryStatus}&payment=${payment}&recurring=All&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                            className="flex items-center gap-2 px-3 py-1 bg-violet-50 text-violet-600 border border-violet-200 rounded-xl text-xs font-bold uppercase tracking-[0.15em] hover:bg-violet-100 transition-colors"
-                        >
-                            Type: {recurring === "Recurring" ? "Recurring" : "One-Time"}
-                            <X className="h-3 w-3" />
-                        </Link>
-                    )}
-                    {payment !== "All" && (
-                        <Link
-                            href={`/projects?status=${queryStatus}&payment=All&recurring=${recurring}&period=${period}${q ? `&q=${q}` : ""}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                            className={cn(
-                                "flex items-center gap-2 px-3 py-1 border rounded-xl text-xs font-bold uppercase tracking-[0.15em] transition-colors",
-                                payment === "Paid" ? "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100" : "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"
-                            )}
-                        >
-                            {payment === "Paid" ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                            Payment: {payment}
-                            <X className="h-3 w-3" />
-                        </Link>
-                    )}
-                    {q && (
-                        <Link
-                            href={`/projects?status=${queryStatus}&payment=${payment}&recurring=${recurring}&period=${period}${partnerId ? `&partnerId=${partnerId}` : ""}`}
-                            className="flex items-center gap-2 px-3 py-1 bg-muted/50 text-muted-foreground border border-border rounded-xl text-xs font-bold uppercase tracking-[0.15em] hover:bg-muted transition-colors"
-                        >
-                            Search: {q}
-                            <X className="h-3 w-3" />
-                        </Link>
+                    ) : (
+                        <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
                     )}
                 </div>
-            )}
-
-            <ProjectsTable projects={projects} allServices={services} layout={layout as "grid" | "list"} />
-        </div>
+            </div>
+            </div>
+        </ProjectSheetWrapper>
     )
 }

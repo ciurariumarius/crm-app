@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { requireAuth } from "@/lib/auth"
+import { requireTenantContext } from "@/lib/tenant"
+import { getActionErrorMessage } from "@/lib/action-errors"
+import { logSessionAuditEvent } from "@/lib/audit"
+import { z } from "zod"
 
 function revalidateTimePaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/time")
@@ -12,6 +15,38 @@ function revalidateTimePaths(projectId?: string, sitePartnerId?: string, siteId?
     if (projectId) revalidatePath(`/projects/${projectId}`)
     if (sitePartnerId && siteId) revalidatePath(`/vault/${sitePartnerId}/${siteId}`)
 }
+
+const TimeLogFiltersSchema = z.object({
+    projectId: z.string().uuid().optional().or(z.literal("all")),
+    partnerId: z.string().uuid().optional().or(z.literal("all")),
+    q: z.string().trim().max(200).optional(),
+    take: z.number().int().min(1).max(200).optional(),
+    skip: z.number().int().min(0).optional(),
+}).optional()
+
+const TimeLogIdSchema = z.string().uuid()
+const TimeLogIdsSchema = z.array(TimeLogIdSchema).max(1000)
+const ProjectIdSchema = z.string().uuid()
+const TaskIdSchema = z.string().uuid()
+
+const LogTimeInputSchema = z.object({
+    projectId: ProjectIdSchema,
+    taskId: TaskIdSchema.optional(),
+    description: z.string().max(2000).optional(),
+    startTime: z.date().optional(),
+    endTime: z.date().optional(),
+    durationSeconds: z.number().int().min(0).max(86400 * 365).optional(),
+})
+
+const UpdateTimeLogInputSchema = z.object({
+    projectId: ProjectIdSchema.optional(),
+    taskId: TaskIdSchema.nullable().optional(),
+    description: z.string().max(2000).optional(),
+    startTime: z.date().optional(),
+    endTime: z.date().optional(),
+    durationSeconds: z.number().int().min(0).max(86400 * 365).optional(),
+    source: z.enum(["MANUAL", "TIMER"]).optional(),
+})
 
 export async function logTime(data: {
     projectId: string
@@ -22,72 +57,109 @@ export async function logTime(data: {
     durationSeconds?: number
 }) {
     try {
-        await requireAuth()
+        const session = await requireTenantContext()
+        const validated = LogTimeInputSchema.parse(data)
+        const project = await prisma.project.findFirst({
+            where: { id: validated.projectId, tenantId: session.tenantId },
+            select: { id: true },
+        })
+        if (!project) {
+            await logSessionAuditEvent(session, {
+                action: "TIME_LOG_CREATE_FAILED",
+                success: false,
+                details: `projectId=${validated.projectId}; reason=project_not_found`,
+            })
+            return { success: false, error: "Project not found" }
+        }
+        if (validated.taskId) {
+            const task = await prisma.task.findFirst({
+                where: { id: validated.taskId, tenantId: session.tenantId, projectId: validated.projectId },
+                select: { id: true },
+            })
+            if (!task) {
+                await logSessionAuditEvent(session, {
+                    action: "TIME_LOG_CREATE_FAILED",
+                    success: false,
+                    details: `projectId=${validated.projectId}; taskId=${validated.taskId}; reason=task_not_found`,
+                })
+                return { success: false, error: "Task not found for this project" }
+            }
+        }
         const log = await prisma.timeLog.create({
             data: {
-                projectId: data.projectId,
-                taskId: data.taskId,
-                description: data.description,
-                startTime: data.startTime || new Date(),
-                endTime: data.endTime,
-                durationSeconds: data.durationSeconds,
+                tenantId: session.tenantId,
+                projectId: validated.projectId,
+                taskId: validated.taskId,
+                description: validated.description,
+                startTime: validated.startTime || new Date(),
+                endTime: validated.endTime,
+                durationSeconds: validated.durationSeconds,
             },
             include: { project: { include: { site: true } } }
         })
-        revalidateTimePaths(data.projectId, log.project.site.partnerId, log.project.siteId)
+        await logSessionAuditEvent(session, {
+            action: "TIME_LOG_CREATED",
+            details: `timeLogId=${log.id}; projectId=${validated.projectId}`,
+        })
+        revalidateTimePaths(validated.projectId, log.project.site.partnerId, log.project.siteId)
         return { success: true }
     } catch (error) {
         console.error("Log time failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to log time" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to log time") }
     }
 }
 
 export async function getTimeLogs(filters?: { projectId?: string, partnerId?: string, q?: string, take?: number, skip?: number }) {
     try {
-        const where: Prisma.TimeLogWhereInput = {}
+        const session = await requireTenantContext()
+        const validatedFilters = TimeLogFiltersSchema.parse(filters)
+        const where: Prisma.TimeLogWhereInput = { tenantId: session.tenantId }
 
-        if (filters?.q) {
-            where.description = { contains: filters.q }
+        if (validatedFilters?.q) {
+            where.description = { contains: validatedFilters.q }
         }
 
-        if (filters?.projectId && filters.projectId !== "all") {
-            where.projectId = filters.projectId
-        } else if (filters?.partnerId && filters.partnerId !== "all") {
+        if (validatedFilters?.projectId && validatedFilters.projectId !== "all") {
+            where.projectId = validatedFilters.projectId
+        } else if (validatedFilters?.partnerId && validatedFilters.partnerId !== "all") {
             where.project = {
-                site: { partnerId: filters.partnerId }
+                site: { partnerId: validatedFilters.partnerId }
             }
         }
 
-        const logs = await prisma.timeLog.findMany({
-            where,
-            include: {
-                project: {
-                    include: {
-                        site: {
-                            select: {
-                                domainName: true
-                            }
-                        },
-                        services: {
-                            select: {
-                                serviceName: true,
-                                isRecurring: true
+        const [logs, total] = await Promise.all([
+            prisma.timeLog.findMany({
+                where,
+                include: {
+                    project: {
+                        include: {
+                            site: {
+                                select: {
+                                    domainName: true
+                                }
+                            },
+                            services: {
+                                select: {
+                                    serviceName: true,
+                                    isRecurring: true
+                                }
                             }
                         }
-                    }
+                    },
+                    task: true
                 },
-                task: true
-            },
-            orderBy: {
-                startTime: 'desc'
-            },
-            take: filters?.take || 100,
-            skip: filters?.skip || 0
-        })
-        return { success: true, data: logs }
+                orderBy: {
+                    startTime: 'desc'
+                },
+                take: validatedFilters?.take || 100,
+                skip: validatedFilters?.skip || 0
+            }),
+            prisma.timeLog.count({ where }),
+        ])
+        return { success: true, data: logs, total }
     } catch (error) {
         console.error("Get time logs failed:", error)
-        return { success: false, error: "Failed to fetch time logs" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to fetch time logs"), total: 0 }
     }
 }
 
@@ -101,18 +173,65 @@ export async function updateTimeLog(logId: string, data: {
     source?: "MANUAL" | "TIMER"
 }) {
     try {
-        await requireAuth()
+        const session = await requireTenantContext()
+        const validatedLogId = TimeLogIdSchema.parse(logId)
+        const validatedData = UpdateTimeLogInputSchema.parse(data)
+        const existingLog = await prisma.timeLog.findFirst({
+            where: { id: validatedLogId, tenantId: session.tenantId },
+            select: { id: true },
+        })
+        if (!existingLog) {
+            await logSessionAuditEvent(session, {
+                action: "TIME_LOG_UPDATE_FAILED",
+                success: false,
+                details: `timeLogId=${validatedLogId}; reason=not_found`,
+            })
+            return { success: false, error: "Time log not found" }
+        }
+        if (validatedData.projectId) {
+            const project = await prisma.project.findFirst({
+                where: { id: validatedData.projectId, tenantId: session.tenantId },
+                select: { id: true },
+            })
+            if (!project) {
+                await logSessionAuditEvent(session, {
+                    action: "TIME_LOG_UPDATE_FAILED",
+                    success: false,
+                    details: `timeLogId=${validatedLogId}; projectId=${validatedData.projectId}; reason=project_not_found`,
+                })
+                return { success: false, error: "Project not found" }
+            }
+        }
+        if (validatedData.taskId) {
+            const task = await prisma.task.findFirst({
+                where: { id: validatedData.taskId, tenantId: session.tenantId },
+                select: { id: true },
+            })
+            if (!task) {
+                await logSessionAuditEvent(session, {
+                    action: "TIME_LOG_UPDATE_FAILED",
+                    success: false,
+                    details: `timeLogId=${validatedLogId}; taskId=${validatedData.taskId}; reason=task_not_found`,
+                })
+                return { success: false, error: "Task not found" }
+            }
+        }
         const log = await prisma.timeLog.update({
-            where: { id: logId },
+            where: { id: existingLog.id },
             data: {
-                projectId: data.projectId,
-                taskId: data.taskId,
-                description: data.description,
-                startTime: data.startTime,
-                endTime: data.endTime,
-                durationSeconds: data.durationSeconds,
+                projectId: validatedData.projectId,
+                taskId: validatedData.taskId,
+                description: validatedData.description,
+                startTime: validatedData.startTime,
+                endTime: validatedData.endTime,
+                durationSeconds: validatedData.durationSeconds,
+                source: validatedData.source,
             },
             include: { project: { include: { site: true } } }
+        })
+        await logSessionAuditEvent(session, {
+            action: "TIME_LOG_UPDATED",
+            details: `timeLogId=${log.id}; projectId=${log.projectId}`,
         })
         revalidatePath("/time")
         revalidatePath(`/projects/${log.projectId}`)
@@ -120,15 +239,30 @@ export async function updateTimeLog(logId: string, data: {
         return { success: true }
     } catch (error) {
         console.error("Update time log failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to update time log" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to update time log") }
     }
 }
 
 export async function deleteTimeLog(logId: string) {
     try {
-        await requireAuth()
-        const log = await prisma.timeLog.delete({
-            where: { id: logId }
+        const session = await requireTenantContext()
+        const validatedLogId = TimeLogIdSchema.parse(logId)
+        const log = await prisma.timeLog.findFirst({
+            where: { id: validatedLogId, tenantId: session.tenantId },
+            select: { id: true, projectId: true },
+        })
+        if (!log) {
+            await logSessionAuditEvent(session, {
+                action: "TIME_LOG_DELETE_FAILED",
+                success: false,
+                details: `timeLogId=${validatedLogId}; reason=not_found`,
+            })
+            return { success: false, error: "Time log not found" }
+        }
+        await prisma.timeLog.delete({ where: { id: log.id } })
+        await logSessionAuditEvent(session, {
+            action: "TIME_LOG_DELETED",
+            details: `timeLogId=${log.id}; projectId=${log.projectId}`,
         })
         revalidatePath("/time")
         revalidatePath(`/projects/${log.projectId}`)
@@ -136,32 +270,70 @@ export async function deleteTimeLog(logId: string) {
         return { success: true }
     } catch (error) {
         console.error("Delete time log failed:", error)
-        return { success: false, error: error instanceof Error ? error.message : "Failed to delete time log" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to delete time log") }
     }
 }
 
 export async function deleteTimeLogs(logIds: string[]) {
     try {
-        await requireAuth()
-        await prisma.timeLog.deleteMany({
+        const session = await requireTenantContext()
+        const validatedLogIds = TimeLogIdsSchema.parse(logIds)
+        if (validatedLogIds.length === 0) {
+            return { success: true }
+        }
+        const deleted = await prisma.timeLog.deleteMany({
             where: {
-                id: { in: logIds }
+                id: { in: validatedLogIds },
+                tenantId: session.tenantId,
             }
+        })
+        await logSessionAuditEvent(session, {
+            action: "TIME_LOGS_BULK_DELETED",
+            details: `requested=${validatedLogIds.length}; deleted=${deleted.count}`,
         })
         revalidatePath("/time")
         revalidatePath("/")
         return { success: true }
     } catch (error) {
         console.error("Bulk delete time logs failed:", error)
-        return { success: false, error: "Failed to delete time logs" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to delete time logs") }
     }
 }
 
 export async function startTimer(projectId: string, taskId?: string, description?: string) {
     try {
-        await requireAuth()
+        const session = await requireTenantContext()
+        const validatedProjectId = ProjectIdSchema.parse(projectId)
+        const validatedTaskId = taskId ? TaskIdSchema.parse(taskId) : undefined
+        const validatedDescription = description ? z.string().max(2000).parse(description) : undefined
+        const project = await prisma.project.findFirst({
+            where: { id: validatedProjectId, tenantId: session.tenantId },
+            select: { id: true },
+        })
+        if (!project) {
+            await logSessionAuditEvent(session, {
+                action: "TIME_TIMER_START_FAILED",
+                success: false,
+                details: `projectId=${validatedProjectId}; reason=project_not_found`,
+            })
+            return { success: false, error: "Project not found" }
+        }
+        if (validatedTaskId) {
+            const task = await prisma.task.findFirst({
+                where: { id: validatedTaskId, tenantId: session.tenantId, projectId: validatedProjectId },
+                select: { id: true },
+            })
+            if (!task) {
+                await logSessionAuditEvent(session, {
+                    action: "TIME_TIMER_START_FAILED",
+                    success: false,
+                    details: `projectId=${validatedProjectId}; taskId=${validatedTaskId}; reason=task_not_found`,
+                })
+                return { success: false, error: "Task not found for this project" }
+            }
+        }
         const activeTimer = await prisma.timeLog.findFirst({
-            where: { endTime: null }
+            where: { endTime: null, tenantId: session.tenantId }
         })
 
         if (activeTimer) {
@@ -177,15 +349,16 @@ export async function startTimer(projectId: string, taskId?: string, description
         }
 
         await prisma.timeLog.updateMany({
-            where: { isPaused: true },
+            where: { isPaused: true, tenantId: session.tenantId },
             data: { isPaused: false }
         })
 
         const log = await prisma.timeLog.create({
             data: {
-                projectId,
-                taskId,
-                description,
+                tenantId: session.tenantId,
+                projectId: validatedProjectId,
+                taskId: validatedTaskId,
+                description: validatedDescription,
                 startTime: new Date(),
                 endTime: null,
                 durationSeconds: null
@@ -193,19 +366,23 @@ export async function startTimer(projectId: string, taskId?: string, description
             include: { project: { include: { site: true } } }
         })
 
-        revalidateTimePaths(projectId)
+        await logSessionAuditEvent(session, {
+            action: "TIME_TIMER_STARTED",
+            details: `timeLogId=${log.id}; projectId=${validatedProjectId}`,
+        })
+        revalidateTimePaths(validatedProjectId)
         return { success: true, data: log }
     } catch (error) {
         console.error("Start timer failed:", error)
-        return { success: false, error: "Failed to start timer" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to start timer") }
     }
 }
 
 export async function stopTimer() {
     try {
-        await requireAuth()
+        const session = await requireTenantContext()
         const activeTimer = await prisma.timeLog.findFirst({
-            where: { endTime: null }
+            where: { endTime: null, tenantId: session.tenantId }
         })
 
         if (activeTimer) {
@@ -219,9 +396,13 @@ export async function stopTimer() {
                     durationSeconds
                 }
             })
+            await logSessionAuditEvent(session, {
+                action: "TIME_TIMER_STOPPED",
+                details: `timeLogId=${activeTimer.id}; mode=running`,
+            })
         } else {
             const pausedTimer = await prisma.timeLog.findFirst({
-                where: { isPaused: true },
+                where: { isPaused: true, tenantId: session.tenantId },
                 orderBy: { endTime: "desc" }
             })
 
@@ -230,7 +411,16 @@ export async function stopTimer() {
                     where: { id: pausedTimer.id },
                     data: { isPaused: false }
                 })
+                await logSessionAuditEvent(session, {
+                    action: "TIME_TIMER_STOPPED",
+                    details: `timeLogId=${pausedTimer.id}; mode=paused`,
+                })
             } else {
+                await logSessionAuditEvent(session, {
+                    action: "TIME_TIMER_STOP_FAILED",
+                    success: false,
+                    details: "reason=no_active_or_paused_timer",
+                })
                 return { success: false, error: "No active or paused timer found" }
             }
         }
@@ -239,18 +429,23 @@ export async function stopTimer() {
         return { success: true }
     } catch (error) {
         console.error("Stop timer failed:", error)
-        return { success: false, error: "Failed to stop timer" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to stop timer") }
     }
 }
 
 export async function pauseTimer() {
     try {
-        await requireAuth()
+        const session = await requireTenantContext()
         const activeTimer = await prisma.timeLog.findFirst({
-            where: { endTime: null }
+            where: { endTime: null, tenantId: session.tenantId }
         })
 
         if (!activeTimer) {
+            await logSessionAuditEvent(session, {
+                action: "TIME_TIMER_PAUSE_FAILED",
+                success: false,
+                details: "reason=no_active_timer",
+            })
             return { success: false, error: "No active timer found" }
         }
 
@@ -266,22 +461,32 @@ export async function pauseTimer() {
             }
         })
 
+        await logSessionAuditEvent(session, {
+            action: "TIME_TIMER_PAUSED",
+            details: `timeLogId=${activeTimer.id}`,
+        })
         revalidateTimePaths()
         return { success: true }
     } catch (error) {
         console.error("Pause timer failed:", error)
-        return { success: false, error: "Failed to pause timer" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to pause timer") }
     }
 }
 
 export async function resumeTimer() {
     try {
+        const session = await requireTenantContext()
         const pausedTimer = await prisma.timeLog.findFirst({
-            where: { isPaused: true },
+            where: { isPaused: true, tenantId: session.tenantId },
             orderBy: { endTime: "desc" }
         })
 
         if (!pausedTimer) {
+            await logSessionAuditEvent(session, {
+                action: "TIME_TIMER_RESUME_FAILED",
+                success: false,
+                details: "reason=no_paused_timer",
+            })
             return { success: false, error: "No paused timer found" }
         }
 
@@ -298,18 +503,23 @@ export async function resumeTimer() {
             include: { project: { include: { site: true } } }
         })
 
+        await logSessionAuditEvent(session, {
+            action: "TIME_TIMER_RESUMED",
+            details: `timeLogId=${log.id}; projectId=${log.projectId}`,
+        })
         revalidateTimePaths()
         return { success: true, data: log }
     } catch (error) {
         console.error("Resume timer failed:", error)
-        return { success: false, error: "Failed to resume timer" }
+        return { success: false, error: getActionErrorMessage(error, "Failed to resume timer") }
     }
 }
 
 export async function getActiveTimer() {
     try {
+        const session = await requireTenantContext()
         const activeTimer = await prisma.timeLog.findFirst({
-            where: { endTime: null },
+            where: { endTime: null, tenantId: session.tenantId },
             include: {
                 task: true,
                 project: {
@@ -325,7 +535,7 @@ export async function getActiveTimer() {
         }
 
         const pausedTimer = await prisma.timeLog.findFirst({
-            where: { isPaused: true },
+            where: { isPaused: true, tenantId: session.tenantId },
             orderBy: { endTime: "desc" },
             include: {
                 task: true,
@@ -342,7 +552,7 @@ export async function getActiveTimer() {
         }
 
         return { success: true, data: null, status: "idle" }
-    } catch (error) {
+    } catch {
         return { success: false, error: "Failed to fetch active timer" }
     }
 }

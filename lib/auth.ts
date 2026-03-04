@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import type { JWTPayload } from "jose";
 
 const secretKey = process.env.JWT_SECRET;
 if (!secretKey) {
@@ -10,7 +11,15 @@ const key = new TextEncoder().encode(secretKey);
 
 export const SESSION_COOKIE_NAME = "crm_session";
 
-export async function encrypt(payload: any) {
+export type SessionPayload = JWTPayload & {
+    userId: string;
+    username: string;
+    tenantId: string;
+    twoFactorVerified: boolean;
+    expires?: Date;
+};
+
+export async function encrypt(payload: JWTPayload) {
     return await new SignJWT(payload)
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
@@ -18,20 +27,20 @@ export async function encrypt(payload: any) {
         .sign(key);
 }
 
-export async function decrypt(input: string): Promise<any> {
+export async function decrypt<T = JWTPayload>(input: string): Promise<T | null> {
     try {
         const { payload } = await jwtVerify(input, key, {
             algorithms: ["HS256"],
         });
-        return payload;
-    } catch (error) {
+        return payload as T;
+    } catch {
         return null;
     }
 }
 
-export async function createSession(userId: string, username: string, twoFactorVerified: boolean = false) {
+export async function createSession(userId: string, username: string, tenantId: string, twoFactorVerified: boolean = false) {
     const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    const session = await encrypt({ userId, username, twoFactorVerified, expires });
+    const session = await encrypt({ userId, username, tenantId, twoFactorVerified, expires });
 
     const cookieStore = await cookies();
     cookieStore.set(SESSION_COOKIE_NAME, session, {
@@ -47,14 +56,14 @@ export async function getSession() {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!sessionCookie) return null;
-    return await decrypt(sessionCookie);
+    return await decrypt<SessionPayload>(sessionCookie);
 }
 
 export async function updateSession(request: NextRequest) {
     const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
     if (!sessionCookie) return null;
 
-    const parsed = await decrypt(sessionCookie);
+    const parsed = await decrypt<SessionPayload>(sessionCookie);
     if (!parsed) return null;
 
     parsed.expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // refresh 7 days
@@ -81,7 +90,7 @@ export async function destroySession() {
 
 export async function requireAuth() {
     const session = await getSession();
-    if (!session || !session.userId) {
+    if (!session || !session.userId || !session.tenantId) {
         throw new Error("Unauthorized");
     }
     return session;

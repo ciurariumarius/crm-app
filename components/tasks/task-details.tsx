@@ -239,15 +239,15 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     <SelectTrigger className={cn(
                                         "h-9 w-auto min-w-[130px] border-none shadow-none focus:ring-1 transition-all p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
                                         urgency === "Urgent" ? "bg-rose-600 text-white hover:bg-rose-700" :
-                                            urgency === "Idea" ? "bg-indigo-600 text-white hover:bg-indigo-700" :
+                                            urgency === "Idea" ? "bg-sky-600 text-white hover:bg-sky-700" :
                                                 "bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20"
                                     )}>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Normal" className="text-xs font-bold">NORMAL</SelectItem>
                                         <SelectItem value="Urgent" className="text-xs font-bold text-rose-600">URGENT</SelectItem>
-                                        <SelectItem value="Idea" className="text-xs font-bold text-indigo-600">IDEA</SelectItem>
+                                        <SelectItem value="Normal" className="text-xs font-bold">NORMAL</SelectItem>
+                                        <SelectItem value="Idea" className="text-xs font-bold text-sky-600">IDEA</SelectItem>
                                     </SelectContent>
                                 </Select>
 

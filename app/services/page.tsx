@@ -1,12 +1,15 @@
 import prisma from "@/lib/prisma"
 import { CreateServiceDialog } from "@/components/services/create-service-dialog"
-import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { PageHeader } from "@/components/layout/page-header"
 import { ServicesListView } from "@/components/services/services-list-view"
+import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
 
 export default async function ServicesPage() {
+    const session = await requireTenantContext()
     const servicesRaw = await prisma.service.findMany({
+        where: { tenantId: session.tenantId },
         orderBy: { createdAt: "desc" },
         include: {
             projects: {
@@ -19,15 +22,7 @@ export default async function ServicesPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex h-10 items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <MobileMenuTrigger />
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground md:pl-0 leading-none flex items-center h-full">
-                        Services
-                    </h1>
-                </div>
-                <CreateServiceDialog />
-            </div>
+            <PageHeader title="Services" actions={<CreateServiceDialog />} />
 
             <ServicesListView services={services} />
         </div>

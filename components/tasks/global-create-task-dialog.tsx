@@ -221,8 +221,8 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Normal" className="font-bold">NORMAL</SelectItem>
                                                 <SelectItem value="Urgent" className="font-bold">URGENT</SelectItem>
+                                                <SelectItem value="Normal" className="font-bold">NORMAL</SelectItem>
                                                 <SelectItem value="Idea" className="font-bold">IDEA</SelectItem>
                                             </SelectContent>
                                         </Select>
