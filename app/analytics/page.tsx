@@ -63,8 +63,8 @@ export default async function AnalyticsPage() {
 
     const totalTimeSeconds = totalTimeAgg._sum.durationSeconds || 0
     const totalHours = Math.round(totalTimeSeconds / 3600)
-    const timeByProjectMap = new Map(
-        timeByProject.map((entry) => [entry.projectId, entry._sum.durationSeconds || 0])
+    const timeByProjectMap = new Map<string, number>(
+        timeByProject.map((entry: any) => [entry.projectId, Number(entry._sum.durationSeconds) || 0])
     )
 
     // Partner statistics

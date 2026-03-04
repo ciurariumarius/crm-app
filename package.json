@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@prisma/client": "^7.4.2",
+    "@prisma/client": "^6.19.2",
     "@tiptap/extension-placeholder": "^3.20.0",
     "@tiptap/react": "^3.19.0",
     "@tiptap/starter-kit": "^3.19.0",
@@ -52,7 +52,7 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "prisma": "^7.4.2",
+    "prisma": "^6.19.2",
     "shadcn": "^3.8.4",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
