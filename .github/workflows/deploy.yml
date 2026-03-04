@@ -39,6 +39,7 @@ jobs:
             
             # Update Prisma ORM (if database schema changed)
             npx prisma generate
+            npx prisma migrate resolve --rolled-back 20260303170000_add_tenant_model || true
             npx prisma migrate deploy
             
             # Build the Next.js application
