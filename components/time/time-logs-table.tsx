@@ -193,10 +193,10 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                         aria-label="Select all"
                                     />
                                 </TableHead>
-                                <TableHead className="w-[120px] font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Time</TableHead>
-                                <TableHead className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Context</TableHead>
-                                <TableHead className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Description</TableHead>
-                                <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest text-muted-foreground pr-8">Duration</TableHead>
+                                <TableHead className="w-[120px] font-semibold text-xs text-muted-foreground">Time</TableHead>
+                                <TableHead className="font-semibold text-xs text-muted-foreground">Context</TableHead>
+                                <TableHead className="font-semibold text-xs text-muted-foreground">Description</TableHead>
+                                <TableHead className="text-right font-semibold text-xs text-muted-foreground pr-8">Duration</TableHead>
                                 <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -221,7 +221,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                         {/* Date Header */}
                                         <TableRow key={dateKey} className="bg-muted/50 hover:bg-muted/50 sticky top-0 z-10 backdrop-blur-sm supports-[backdrop-filter]:bg-muted/40">
                                             <TableCell colSpan={6} className="py-2 px-4 shadow-sm border-b border-border/60">
-                                                <span className="font-bold text-xs uppercase tracking-wider text-foreground/80">
+                                                <span className="font-semibold text-xs text-muted-foreground/80">
                                                     {isToday(new Date(dateKey)) ? "Today" : isYesterday(new Date(dateKey)) ? "Yesterday" : format(new Date(dateKey), "MMM d, yyyy")}
                                                 </span>
                                             </TableCell>

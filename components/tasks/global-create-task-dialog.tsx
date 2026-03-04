@@ -100,9 +100,9 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                     <div className="flex-1 overflow-y-auto p-8 py-6 space-y-6 scrollbar-thin scrollbar-thumb-primary/10">
                         <div className="space-y-3 flex flex-col">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Target Project</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground/80">Target Project</Label>
                                 <div className="flex items-center gap-2">
-                                    <Label htmlFor="show-completed" className="text-[10px] uppercase font-bold text-muted-foreground/40 cursor-pointer tracking-wider">Search in completed</Label>
+                                    <Label htmlFor="show-completed" className="text-xs font-medium text-muted-foreground/60 cursor-pointer">Search in completed</Label>
                                     <Switch
                                         id="show-completed"
                                         checked={showCompleted}
@@ -156,7 +156,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                                         </div>
                                                         {p.status !== "Active" && (
                                                             <Badge variant="outline" className={cn(
-                                                                "text-[9px] font-black uppercase ml-2 flex-shrink-0 px-1.5 py-0 h-4 border-dashed",
+                                                                "text-xs font-medium ml-2 flex-shrink-0 px-2 py-0.5 border-dashed",
                                                                 p.status === "Completed" ? "text-blue-500 border-blue-500/30" : "text-amber-500 border-amber-500/30"
                                                             )}>
                                                                 {p.status}
@@ -172,10 +172,10 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                         </div>
 
                         <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Task Name</Label>
+                            <Label className="text-xs font-semibold text-muted-foreground/80">Task Name</Label>
                             <Input
                                 placeholder="ex. Verificare dataLayer"
-                                className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold"
+                                className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold rounded-xl"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 required
@@ -202,9 +202,9 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                             <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-3">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</Label>
+                                        <Label className="text-xs font-semibold text-muted-foreground/80">Status</Label>
                                         <Select value={status} onValueChange={setStatus}>
-                                            <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold">
+                                            <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold rounded-xl">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -215,9 +215,9 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                         </Select>
                                     </div>
                                     <div className="space-y-3">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Priority</Label>
+                                        <Label className="text-xs font-semibold text-muted-foreground/80">Priority</Label>
                                         <Select value={urgency} onValueChange={setUrgency}>
-                                            <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold">
+                                            <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold rounded-xl">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -231,13 +231,13 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-3 flex flex-col">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Deadline</Label>
+                                        <Label className="text-xs font-semibold text-muted-foreground/80">Deadline</Label>
                                         <Popover open={openPopover} onOpenChange={setOpenPopover}>
                                             <PopoverTrigger asChild>
                                                 <Button
                                                     variant="outline"
                                                     className={cn(
-                                                        "pl-3 text-left font-bold w-full justify-start h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20",
+                                                        "pl-3 text-left font-bold w-full justify-start h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 rounded-xl",
                                                         !deadline && "text-muted-foreground font-normal"
                                                     )}
                                                     type="button"
@@ -246,7 +246,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                                     {deadline ? format(deadline, "PPP") : <span>Pick a date</span>}
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
+                                            <PopoverContent className="w-auto p-0 rounded-xl" align="start">
                                                 <Calendar
                                                     mode="single"
                                                     selected={deadline}
@@ -260,11 +260,11 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                         </Popover>
                                     </div>
                                     <div className="space-y-3">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Est. Time (min)</Label>
+                                        <Label className="text-xs font-semibold text-muted-foreground/80">Est. Time (min)</Label>
                                         <Input
                                             type="number"
                                             placeholder="ex. 60"
-                                            className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold"
+                                            className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold rounded-xl"
                                             value={estimatedMinutes}
                                             onChange={(e) => setEstimatedMinutes(e.target.value)}
                                         />

@@ -10,7 +10,7 @@ INSERT INTO "tenants" ("id", "name", "createdAt", "updatedAt") VALUES ('00000000
 -- RedefineTables
 PRAGMA defer_foreign_keys=ON;
 PRAGMA foreign_keys=OFF;
-CREATE TABLE "new_audit_logs" (
+CREATE TABLE "audit_logs" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "tenant_id" TEXT,
     "actor_user_id" TEXT,
@@ -22,9 +22,6 @@ CREATE TABLE "new_audit_logs" (
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "audit_logs_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
-INSERT INTO "new_audit_logs" ("action", "actor_user_id", "created_at", "details", "id", "ip_address", "success", "tenant_id", "user_agent") SELECT "action", "actor_user_id", "created_at", "details", "id", "ip_address", "success", '00000000-0000-0000-0000-000000000001', "user_agent" FROM "audit_logs";
-DROP TABLE "audit_logs";
-ALTER TABLE "new_audit_logs" RENAME TO "audit_logs";
 CREATE INDEX "audit_logs_tenant_id_idx" ON "audit_logs"("tenant_id");
 CREATE INDEX "audit_logs_actor_user_id_idx" ON "audit_logs"("actor_user_id");
 CREATE INDEX "audit_logs_action_idx" ON "audit_logs"("action");
@@ -158,7 +155,7 @@ CREATE INDEX "time_logs_task_id_idx" ON "time_logs"("task_id");
 CREATE INDEX "time_logs_start_time_idx" ON "time_logs"("start_time");
 CREATE INDEX "time_logs_end_time_idx" ON "time_logs"("end_time");
 CREATE INDEX "time_logs_is_paused_idx" ON "time_logs"("is_paused");
-CREATE TABLE "new_users" (
+CREATE TABLE "users" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "tenant_id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
@@ -171,11 +168,16 @@ CREATE TABLE "new_users" (
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-INSERT INTO "new_users" ("createdAt", "id", "name", "password_hash", "profile_pic", "tenant_id", "two_factor_enabled", "two_factor_secret", "updatedAt", "username") SELECT "createdAt", "id", "name", "password_hash", "profile_pic", '00000000-0000-0000-0000-000000000001', "two_factor_enabled", "two_factor_secret", "updatedAt", "username" FROM "users";
-DROP TABLE "users";
-ALTER TABLE "new_users" RENAME TO "users";
 CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 CREATE INDEX "users_tenant_id_idx" ON "users"("tenant_id");
 PRAGMA foreign_keys=ON;
 PRAGMA defer_foreign_keys=OFF;
 
+CREATE TABLE "rate_limit_entries" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "count" INTEGER NOT NULL DEFAULT 0,
+    "reset_at" DATETIME NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" DATETIME NOT NULL
+);
+CREATE INDEX "rate_limit_entries_reset_at_idx" ON "rate_limit_entries"("reset_at");

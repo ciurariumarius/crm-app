@@ -40,9 +40,9 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
         <>
             <Card className="flex flex-col bento-card p-0 overflow-hidden shadow-sm">
                 <CardHeader className="py-6 px-8 flex flex-row items-center justify-between bg-card/80">
-                    <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-muted-foreground">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
                         <CheckSquare className="h-4 w-4 text-primary" />
-                        <span>One Time Projects</span>
+                        <span>One-Time Projects</span>
                     </CardTitle>
                     <div className="flex items-center gap-3">
                         {totalPages > 1 && (
@@ -56,7 +56,7 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </Button>
-                                <span className="text-[10px] font-bold tabular-nums text-muted-foreground/60 px-1">
+                                <span className="text-xs font-semibold tabular-nums text-muted-foreground/60 px-1">
                                     {currentPage} / {totalPages}
                                 </span>
                                 <Button
@@ -72,7 +72,7 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
                         )}
                         <div className="flex items-center gap-2">
                             <Link href="/projects">
-                                <Button variant="secondary" size="sm" className="h-7 text-[10px] uppercase font-bold px-3 rounded-full">
+                                <Button variant="secondary" size="sm" className="h-7 text-xs font-medium px-3 rounded-lg border">
                                     View All
                                     <ArrowRight className="ml-1 h-3 w-3" />
                                 </Button>
@@ -90,7 +90,7 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-4 flex-1">
                     {projects.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center gap-2 text-[12px] text-muted-foreground/50 text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border mx-4">
+                        <div className="flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground/50 text-center py-12 bg-muted/30 rounded-xl border border-dashed border-border mx-4">
                             <FolderOpen className="h-8 w-8 opacity-20" />
                             <span>No active one-time projects.</span>
                         </div>
@@ -103,10 +103,10 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
                             >
                                 <div className="flex flex-col justify-center gap-1.5 min-w-0 flex-1 pr-4">
                                     <div className="text-sm font-bold text-foreground/80 group-hover:text-foreground transition-colors break-words leading-tight">{project.siteName}</div>
-                                    <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground/60">
+                                    <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground">
                                         <div className="flex items-center gap-1.5">
                                             <Clock className="h-3 w-3 opacity-40 group-hover:text-primary transition-colors" strokeWidth={1.5} />
-                                            <span className="font-mono text-[10px] font-bold">
+                                            <span className="font-mono text-xs font-semibold">
                                                 {Math.floor(project.hoursLogged)}h {Math.round((project.hoursLogged % 1) * 60)}m
                                             </span>
                                         </div>
@@ -118,12 +118,12 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
                                 </div>
                                 <div className="flex items-center gap-4 shrink-0">
                                     <Badge className={cn(
-                                        "border-none text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-md shrink-0",
+                                        "text-xs font-medium px-3 py-1.5 rounded-lg border shrink-0",
                                         project.paymentStatus === "Paid"
-                                            ? "bg-emerald-100 text-emerald-700"
-                                            : "bg-rose-100 text-rose-700"
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                            : "bg-rose-50 text-rose-700 border-rose-200"
                                     )}>
-                                        {project.paymentStatus === "Paid" ? "PAID" : "UNPAID"}
+                                        {project.paymentStatus === "Paid" ? "Paid" : "Unpaid"}
                                     </Badge>
                                     <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-all group-hover:translate-x-1 opacity-0 group-hover:opacity-100" strokeWidth={1.5} />
                                 </div>
@@ -133,9 +133,9 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
                     {/* Shadow Project (Create New) */}
                     <div
                         onClick={() => setCreateProjectOpen(true)}
-                        className="group flex items-center justify-center px-6 py-3 min-h-[60px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 cursor-pointer text-muted-foreground hover:text-primary"
+                        className="group flex items-center justify-center px-6 py-3 min-h-[60px] rounded-xl border border-dashed border-muted-foreground/40 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 cursor-pointer text-muted-foreground hover:text-primary"
                     >
-                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
                             <Plus className="h-4 w-4" strokeWidth={2} />
                             <span>Add New Project</span>
                         </div>

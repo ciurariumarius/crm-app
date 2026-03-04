@@ -191,9 +191,9 @@ export function GlobalCreateProjectDialog({
             <DialogContent className="w-[95vw] sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
                 <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
                     <DialogHeader className="p-8 pb-5 border-b">
-                        <DialogTitle className="text-2xl flex items-center gap-3 font-bold tracking-tight">
-                            <Sparkles className="h-6 w-6 text-primary" />
-                            ADD NEW PROJECT
+                        <DialogTitle className="text-xl flex items-center gap-3 font-semibold tracking-tight">
+                            <Sparkles className="h-5 w-5 text-primary" />
+                            Add New Project
                         </DialogTitle>
                         <DialogDescription className="font-medium">
                             Bundle services into a single project template.
@@ -204,7 +204,7 @@ export function GlobalCreateProjectDialog({
                         {/* 1. Partner Selection */}
                         {!defaultPartnerId && (
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">
+                                <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/80">
                                     01. Target Partner
                                 </Label>
                                 <Select value={partnerId} onValueChange={handlePartnerChange}>
@@ -224,13 +224,13 @@ export function GlobalCreateProjectDialog({
                         {(partnerId || defaultPartnerId) && !defaultSiteId && (
                             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex justify-between items-center">
-                                    <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">
+                                    <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/80">
                                         02. Target Site
                                     </Label>
                                     <Button
                                         type="button"
                                         variant="ghost"
-                                        className="h-auto p-0 text-[10px] font-black uppercase tracking-tighter text-primary/60 hover:text-primary"
+                                        className="h-auto p-0 text-xs font-semibold text-primary/60 hover:text-primary"
                                         onClick={() => setShowQuickAddSite(!showQuickAddSite)}
                                     >
                                         {showQuickAddSite ? "Back to list" : "+ Add site"}
@@ -285,7 +285,7 @@ export function GlobalCreateProjectDialog({
                         {(siteId || defaultSiteId) && (
                             <div className="space-y-4 pt-4 border-t border-dashed animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="space-y-3">
-                                    <Label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">
+                                    <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/80">
                                         03. Service Bundle {allowedKind !== null && `(${allowedKind ? 'Recurring' : 'One-time'})`}
                                     </Label>
 
@@ -328,7 +328,7 @@ export function GlobalCreateProjectDialog({
                                                         </span>
                                                         {isSelected && <Check className="h-3 w-3 text-primary shrink-0" />}
                                                     </div>
-                                                    <span className="text-[10px] font-mono text-muted-foreground/70">
+                                                    <span className="text-xs font-mono font-medium text-muted-foreground/70">
                                                         {parseFloat(s.baseFee?.toString() || "0")} RON
                                                     </span>
                                                     {isSelected && (
@@ -344,9 +344,9 @@ export function GlobalCreateProjectDialog({
                                     <div className="space-y-4 pt-4 border-t border-dashed animate-in zoom-in-95 duration-200">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="fee" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Total Fee (RON)</Label>
+                                                <Label htmlFor="fee" className="text-xs font-semibold text-muted-foreground/70">Total Fee (RON)</Label>
                                                 <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px] font-black">RON</span>
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-semibold">RON</span>
                                                     <Input
                                                         id="fee"
                                                         type="number"
@@ -359,9 +359,9 @@ export function GlobalCreateProjectDialog({
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-right block">Type</Label>
-                                                <div className="h-11 flex items-center justify-end px-4 bg-muted/20 rounded-xl text-xs font-black uppercase tracking-tighter text-primary">
-                                                    {allowedKind ? "RECURRING" : "ONE-TIME"}
+                                                <Label className="text-xs font-semibold text-muted-foreground/70 text-right block">Type</Label>
+                                                <div className="h-11 flex items-center justify-end px-4 bg-muted/20 rounded-xl text-xs font-semibold text-primary">
+                                                    {allowedKind ? "Recurring" : "One-time"}
                                                 </div>
                                             </div>
                                         </div>
@@ -377,8 +377,8 @@ export function GlobalCreateProjectDialog({
                                                         : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
                                                 )}
                                             >
-                                                <Label className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
-                                                    Mark as COMPLETED
+                                                <Label className="text-xs font-semibold cursor-pointer">
+                                                    Mark as Completed
                                                 </Label>
                                                 <div className={cn(
                                                     "h-5 w-5 rounded-md border flex items-center justify-center transition-all",
@@ -398,8 +398,8 @@ export function GlobalCreateProjectDialog({
                                                         : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
                                                 )}
                                             >
-                                                <Label className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
-                                                    Mark as PAID
+                                                <Label className="text-xs font-semibold cursor-pointer">
+                                                    Mark as Paid
                                                 </Label>
                                                 <div className={cn(
                                                     "h-5 w-5 rounded-md border flex items-center justify-center transition-all",
@@ -419,11 +419,11 @@ export function GlobalCreateProjectDialog({
                         <Button
                             type="submit"
                             disabled={loading || !siteId || selectedServiceIds.length === 0}
-                            className="w-full h-14 text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 rounded-xl"
+                            className="w-full h-14 text-sm font-semibold uppercase shadow-xl shadow-primary/20 rounded-xl"
                         >
-                            {loading ? "INITIALIZING..." : (
-                                <span className="flex items-center gap-2">
-                                    ADD NEW PROJECT <Check className="h-5 w-5" />
+                            {loading ? "Initializing..." : (
+                                <span className="flex items-center justify-center gap-2">
+                                    Add New Project <Check className="h-4 w-4" />
                                 </span>
                             )}
                         </Button>

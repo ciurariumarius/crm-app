@@ -223,7 +223,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         <div className="flex items-center flex-wrap gap-2 mt-auto pt-4 border-t border-border/60">
                             {/* Status */}
                             <span className={cn(
-                                "px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 border",
+                                "px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 border",
                                 task.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20" :
                                     task.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20" :
                                         task.status === "Completed" ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20" :
@@ -238,7 +238,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                             {/* Priority */}
                             {task.urgency && task.urgency !== "Normal" && (
                                 <span className={cn(
-                                    "px-2.5 py-1 rounded-md text-xs font-medium border",
+                                    "px-2.5 py-1 rounded-lg text-xs font-semibold border",
                                     task.urgency === "Urgent" ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20" :
                                         task.urgency === "Idea" ? "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20" :
                                             "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20"
@@ -250,10 +250,10 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                             {/* Date/Deadline */}
                             {task.deadline && (
                                 <span className={cn(
-                                    "px-2.5 py-1 bg-muted text-muted-foreground border border-border/60 rounded-md text-xs font-medium flex items-center gap-1.5",
+                                    "px-2.5 py-1 bg-muted text-muted-foreground border border-border/60 rounded-lg text-xs font-semibold flex items-center gap-1.5",
                                     (isDueToday || isOverdue) && "border-rose-200 bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
                                 )}>
-                                    <CalendarIcon className="h-3 w-3 opacity-50" />
+                                    <CalendarIcon className="h-3.5 w-3.5 opacity-50" />
                                     {isDueToday ? "Today" : format(new Date(task.deadline), "MMM dd")}
                                 </span>
                             )}
@@ -355,14 +355,14 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
 
                             <div className="flex items-center justify-between lg:justify-end gap-6 lg:w-auto shrink-0 mt-4 lg:mt-0">
                                 <div className="w-auto lg:w-24 flex lg:justify-center shrink-0">
-                                    <div className={cn("px-2.5 py-1 rounded-md text-xs font-medium", getStatusStyle(task.status))}>
+                                    <div className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold", getStatusStyle(task.status))}>
                                         {task.status}
                                     </div>
                                 </div>
 
                                 <div className="w-auto lg:w-32 flex lg:justify-center shrink-0">
                                     {task.deadline ? (
-                                        <div className={cn("flex items-center gap-1.5 text-xs font-bold tracking-tight", isOverdue || isDueToday ? "text-rose-500" : "text-muted-foreground")}>
+                                        <div className={cn("flex items-center gap-1.5 text-xs font-semibold tracking-tight", isOverdue || isDueToday ? "text-rose-500" : "text-muted-foreground")}>
                                             <Target className="w-3.5 h-3.5" />
                                             {isDueToday ? "Today, 18:00" : format(new Date(task.deadline), "MMM dd")}
                                         </div>
@@ -432,14 +432,14 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
             {selectedIds.length > 0 && (
                 <div className="flex items-center justify-between p-2 pl-4 bg-primary/5 border border-primary/20 rounded-2xl animate-in fade-in zoom-in duration-300 backdrop-blur-md">
                     <div className="flex items-center gap-6">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                        <span className="text-xs font-semibold text-primary">
                             {selectedIds.length} Selected
                         </span>
                         <div className="flex items-center gap-2">
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 text-[10px] font-bold uppercase tracking-wider bg-muted hover:bg-muted/80 border border-border"
+                                className="h-8 text-xs font-semibold bg-muted hover:bg-muted/80 border border-border"
                                 onClick={() => handleBulkStatusUpdate("Completed")}
                                 disabled={isBulkOperating}
                             >
@@ -448,7 +448,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 text-[10px] font-bold uppercase tracking-wider bg-muted hover:bg-muted/80 border border-border"
+                                className="h-8 text-xs font-semibold bg-muted hover:bg-muted/80 border border-border"
                                 onClick={() => handleBulkStatusUpdate("Active")}
                                 disabled={isBulkOperating}
                             >
@@ -460,7 +460,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 text-[10px] font-bold uppercase tracking-wider text-rose-500 hover:bg-rose-500/10"
+                            className="h-8 text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
                             onClick={handleBulkDelete}
                             disabled={isBulkOperating}
                         >

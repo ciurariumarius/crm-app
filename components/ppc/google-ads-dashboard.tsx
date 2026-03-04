@@ -150,7 +150,7 @@ function AccountGridCard({ account }: { account: AdsAccount }) {
                             {account.name}
                         </CardTitle>
                         <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider">
+                            <Badge variant="outline" className="text-xs font-medium">
                                 {account.currency}
                             </Badge>
                             <span className="text-xs text-muted-foreground font-medium">
@@ -168,7 +168,7 @@ function AccountGridCard({ account }: { account: AdsAccount }) {
             <CardContent className="flex-1 pb-6 space-y-6">
                 {/* Yesterday */}
                 <div className="space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Yesterday Performance</h4>
+                    <h4 className="text-xs font-semibold text-muted-foreground">Yesterday Performance</h4>
                     <div className="grid grid-cols-2 gap-4">
                         <MetricBlock label="Cost" value={account.yesterday.cost} delta={account.yesterday.costDelta} compact />
                         <MetricBlock label="ROAS" value={account.yesterday.roas} delta={account.yesterday.roasDelta} isRoas compact />
@@ -179,7 +179,7 @@ function AccountGridCard({ account }: { account: AdsAccount }) {
 
                 {/* 30 Days */}
                 <div className="space-y-3 pt-4 border-t border-border/50">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Last 30 Days</h4>
+                    <h4 className="text-xs font-semibold text-muted-foreground">Last 30 Days</h4>
                     <div className="grid grid-cols-2 gap-4">
                         <MetricBlock label="Cost" value={account.last30Days.cost} delta={account.last30Days.costDelta} compact />
                         <MetricBlock label="ROAS" value={account.last30Days.roas} delta={account.last30Days.roasDelta} isRoas compact highlight />
@@ -214,7 +214,7 @@ function MetricBlock({
 
     return (
         <div className={cn("flex flex-col", compact ? "gap-0.5" : "gap-1")}>
-            <span className="text-[10px] font-bold uppercase text-muted-foreground/70">{label}</span>
+            <span className="text-xs font-medium text-muted-foreground/80">{label}</span>
             <div className="flex items-baseline gap-2">
                 <span className={cn(
                     "font-bold text-foreground",
@@ -226,7 +226,7 @@ function MetricBlock({
                 </span>
                 {delta && (
                     <span className={cn(
-                        "flex items-center text-[10px] font-bold",
+                        "flex items-center text-xs font-semibold",
                         isNegative ? "text-rose-500" : "text-emerald-500"
                     )}>
                         {isNegative ? <TrendingDown className="h-3 w-3 mr-0.5" /> : <TrendingUp className="h-3 w-3 mr-0.5" />}

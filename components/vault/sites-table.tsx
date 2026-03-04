@@ -40,11 +40,11 @@ export function SitesTable({ sites }: SitesTableProps) {
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-muted/30 hover:bg-muted/30 border-none">
-                            <TableHead className="w-[300px] text-[10px] font-black uppercase tracking-widest py-4">Domain Asset</TableHead>
-                            <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Partner Entity</TableHead>
-                            <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Active Projects</TableHead>
-                            <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Analytics / Ads</TableHead>
-                            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-4">Created</TableHead>
+                            <TableHead className="w-[300px] text-xs font-semibold text-muted-foreground py-4">Domain Asset</TableHead>
+                            <TableHead className="text-xs font-semibold text-muted-foreground py-4">Partner Entity</TableHead>
+                            <TableHead className="text-xs font-semibold text-muted-foreground py-4">Active Projects</TableHead>
+                            <TableHead className="text-xs font-semibold text-muted-foreground py-4">Analytics / Ads</TableHead>
+                            <TableHead className="text-right text-xs font-semibold text-muted-foreground py-4">Created</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -63,9 +63,9 @@ export function SitesTable({ sites }: SitesTableProps) {
                                             <span className="font-bold text-sm tracking-tight group-hover/link:text-primary transition-colors">
                                                 {site.domainName}
                                             </span>
-                                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 font-medium">
+                                            <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground/60">
                                                 <ArrowUpRight className="h-2.5 w-2.5" />
-                                                CLICK TO OPEN VAULT
+                                                Click to open vault
                                             </div>
                                         </div>
                                     </div>
@@ -88,7 +88,7 @@ export function SitesTable({ sites }: SitesTableProps) {
                                         <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 font-bold px-2 py-0">
                                             {site._count.projects}
                                         </Badge>
-                                        <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground/40">Engagements</span>
+                                        <span className="text-xs font-medium text-muted-foreground/60">Engagements</span>
                                     </div>
                                 </TableCell>
 
@@ -97,13 +97,13 @@ export function SitesTable({ sites }: SitesTableProps) {
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-center gap-1.5 opacity-80">
                                                 <Fingerprint className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-[10px] font-mono font-bold">
+                                                <span className="text-xs font-mono font-semibold">
                                                     {site.gtmId || "NO-GTM"}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1.5 opacity-80">
                                                 <Target className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-[10px] font-mono font-bold">
+                                                <span className="text-xs font-mono font-semibold">
                                                     {site.googleAdsId || "NO-ADS"}
                                                 </span>
                                             </div>
@@ -116,7 +116,7 @@ export function SitesTable({ sites }: SitesTableProps) {
                                         <span className="text-xs font-bold text-muted-foreground/80">
                                             {format(new Date(site.createdAt), "dd MMM yyyy")}
                                         </span>
-                                        <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/30">
+                                        <span className="text-xs font-medium text-muted-foreground/50">
                                             System Entry
                                         </span>
                                     </div>
@@ -128,7 +128,7 @@ export function SitesTable({ sites }: SitesTableProps) {
                                 <TableCell colSpan={5} className="h-64 text-center">
                                     <div className="flex flex-col items-center gap-2 opacity-30">
                                         <Globe className="h-10 w-10 text-muted-foreground" />
-                                        <p className="text-sm font-black uppercase tracking-[0.2em]">No assets detected</p>
+                                        <p className="text-sm font-semibold text-muted-foreground">No assets detected</p>
                                     </div>
                                 </TableCell>
                             </TableRow>

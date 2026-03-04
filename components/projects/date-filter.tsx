@@ -39,7 +39,7 @@ export function DateFilter() {
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-[10px] font-bold tracking-widest uppercase outline-none shrink-0 snap-start">
+            <DropdownMenuTrigger className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-xs font-semibold outline-none shrink-0 snap-start">
                 <Calendar className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                 <span className={cn(period !== "all_time" ? "text-foreground" : "text-muted-foreground")}>
                     {period !== "all_time" ? currentLabel : "TIMELINE"}
@@ -51,7 +51,7 @@ export function DateFilter() {
                     <DropdownMenuItem
                         key={p.value}
                         onSelect={() => updatePeriod(p.value)}
-                        className="text-[10px] font-bold uppercase tracking-wider py-2 cursor-pointer"
+                        className="text-xs font-semibold py-2 cursor-pointer"
                     >
                         {p.label}
                     </DropdownMenuItem>

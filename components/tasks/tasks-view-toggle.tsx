@@ -62,7 +62,7 @@ export function TasksViewToggle({ currentView }: { currentView: string }) {
                                 key={c}
                                 onClick={() => setCols(c.toString())}
                                 className={cn(
-                                    "p-1.5 rounded-lg transition-all duration-200 text-[10px] font-bold w-6 h-6 flex items-center justify-center",
+                                    "p-1.5 rounded-lg transition-all duration-200 text-xs font-semibold w-6 h-6 flex items-center justify-center",
                                     colsTarget === c.toString() ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" : "text-muted-foreground/50 hover:text-foreground"
                                 )}
                             >

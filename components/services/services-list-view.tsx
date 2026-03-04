@@ -55,7 +55,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-3">
-                                        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Standard Checklist</div>
+                                        <div className="text-xs font-semibold text-muted-foreground/80">Standard Checklist</div>
                                         <ul className="text-xs space-y-1.5 list-none">
                                             {tasks.slice(0, 5).map((task, i) => (
                                                 <li key={i} className="flex items-center gap-2">

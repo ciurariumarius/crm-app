@@ -44,7 +44,7 @@ export function ProjectsBoardRows({
                             key={project.id}
                             type="button"
                             onClick={() => openDetails(project.id)}
-                            className="text-left rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-[var(--shadow-card)] transition duration-200 ease-in-out"
+                            className="text-left rounded-xl border border-border/60 bg-card p-5 shadow-sm hover:shadow-md hover:border-border/80 transition duration-200 ease-in-out"
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
@@ -52,10 +52,10 @@ export function ProjectsBoardRows({
                                     <p className="text-sm text-slate-500 truncate">{project.serviceLabel}</p>
                                 </div>
                                 <span className={cn(
-                                    "px-3 py-1 rounded-full text-[11px] font-semibold",
-                                    project.status === "Active" ? "bg-blue-50 text-blue-700" :
-                                        project.status === "Paused" ? "bg-amber-50 text-amber-700" :
-                                            "bg-slate-100 text-slate-700"
+                                    "px-3 py-1.5 rounded-lg text-xs font-medium border",
+                                    project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                        project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                            "bg-slate-50 text-slate-700 border-slate-200"
                                 )}>
                                     {project.status}
                                 </span>
@@ -63,25 +63,25 @@ export function ProjectsBoardRows({
 
                             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                                 <div>
-                                    <p className="text-slate-400 text-[11px] uppercase tracking-[0.12em]">Type</p>
+                                    <p className="text-slate-400 text-xs font-medium">Type</p>
                                     <p className="font-medium text-slate-700">{project.isRecurring ? "Monthly" : "One-time"}</p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-400 text-[11px] uppercase tracking-[0.12em]">Payment</p>
+                                    <p className="text-slate-400 text-xs font-medium">Payment</p>
                                     <p className={cn("font-medium", project.paymentStatus === "Paid" ? "text-emerald-700" : "text-rose-600")}>{project.paymentStatus}</p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-400 text-[11px] uppercase tracking-[0.12em]">Amount</p>
+                                    <p className="text-slate-400 text-xs font-medium">Amount</p>
                                     <p className="font-semibold text-slate-800">{currencyFormatter.format(project.amount)} RON</p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-400 text-[11px] uppercase tracking-[0.12em]">Time</p>
+                                    <p className="text-slate-400 text-xs font-medium">Time</p>
                                     <p className="font-medium text-slate-700">{formatDuration(project.secondsLogged)}</p>
                                 </div>
                             </div>
 
                             <div className="mt-4">
-                                <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                                <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-1">
                                     <span>Tasks</span>
                                     <span>{project.completedTasks}/{totalTasks}</span>
                                 </div>
@@ -101,10 +101,10 @@ export function ProjectsBoardRows({
             <section className="space-y-3">
                 <div className="flex items-center gap-3">
                     <span className="h-5 w-1 rounded-full bg-violet-500" />
-                    <h2 className="text-[12px] uppercase tracking-[0.25em] font-semibold text-slate-500">Monthly Projects</h2>
+                    <h2 className="text-xs font-semibold text-slate-500">Monthly Projects</h2>
                 </div>
 
-                <div className="hidden xl:grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] items-center px-5 text-[10px] uppercase tracking-[0.15em] text-slate-400 font-semibold">
+                <div className="hidden xl:grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] items-center px-5 text-xs text-slate-500 font-semibold gap-3">
                     <span>Project name / service</span>
                     <span>Status</span>
                     <span>Type</span>
@@ -130,29 +130,29 @@ export function ProjectsBoardRows({
                                 key={project.id}
                                 type="button"
                                 onClick={() => openDetails(project.id)}
-                                className="w-full text-left grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] gap-3 items-center rounded-xl border border-border bg-card px-5 py-4 shadow-sm hover:shadow-[var(--shadow-card)] hover:bg-[#F3F4F6] transition-all duration-200 ease-in-out"
+                                className="w-full text-left grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] gap-3 items-center rounded-xl border border-border/60 bg-card px-5 py-4 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
                             >
                                 <div className="min-w-0">
                                     <p className="font-semibold text-slate-900 truncate">{project.site.domainName}</p>
                                     <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
                                         <span className="truncate">{project.serviceLabel}</span>
-                                        <span className="text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 shrink-0">
+                                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 shrink-0">
                                             {format(new Date(project.createdAt), "MMMM yyyy")}
                                         </span>
                                     </div>
                                 </div>
                                 <span className={cn(
-                                    "px-3 py-1 rounded-full text-[11px] text-center font-semibold",
-                                    project.status === "Active" ? "bg-blue-50 text-blue-700" :
-                                        project.status === "Paused" ? "bg-amber-50 text-amber-700" :
-                                            "bg-slate-100 text-slate-700"
+                                    "px-3 py-1.5 rounded-lg text-xs text-center font-medium border",
+                                    project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                        project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                            "bg-slate-50 text-slate-700 border-slate-200"
                                 )}>
                                     {project.status}
                                 </span>
-                                <span className="px-3 py-1 rounded-full text-[11px] text-center font-semibold bg-violet-50 text-violet-700">Monthly</span>
+                                <span className="px-3 py-1.5 rounded-lg text-xs text-center font-medium border bg-violet-50 text-violet-700 border-violet-200">Monthly</span>
                                 <span className={cn(
-                                    "px-3 py-1 rounded-full text-[11px] text-center font-semibold",
-                                    project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
+                                    "px-3 py-1.5 rounded-lg text-xs text-center font-medium border",
+                                    project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
                                 )}>
                                     {project.paymentStatus}
                                 </span>
@@ -177,7 +177,7 @@ export function ProjectsBoardRows({
             <section className="space-y-3">
                 <div className="flex items-center gap-3">
                     <span className="h-5 w-1 rounded-full bg-emerald-500" />
-                    <h2 className="text-[12px] uppercase tracking-[0.25em] font-semibold text-slate-500">One-time Projects</h2>
+                    <h2 className="text-xs font-semibold text-slate-500">One-time Projects</h2>
                 </div>
 
                 <div className="space-y-2">
@@ -194,29 +194,29 @@ export function ProjectsBoardRows({
                                 key={project.id}
                                 type="button"
                                 onClick={() => openDetails(project.id)}
-                                className="w-full text-left grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] gap-3 items-center rounded-xl border border-border bg-card px-5 py-4 shadow-sm hover:shadow-[var(--shadow-card)] hover:bg-[#F3F4F6] transition-all duration-200 ease-in-out"
+                                className="w-full text-left grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] gap-3 items-center rounded-xl border border-border/60 bg-card px-5 py-4 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
                             >
                                 <div className="min-w-0">
                                     <p className="font-semibold text-slate-900 truncate">{project.site.domainName}</p>
                                     <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
                                         <span className="truncate">{project.serviceLabel}</span>
-                                        <span className="text-[10px] uppercase tracking-[0.12em] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600 shrink-0">
+                                        <span className="text-xs font-medium px-2 py-1 rounded-lg border bg-emerald-50 text-emerald-600 border-emerald-200 shrink-0">
                                             {format(new Date(project.createdAt), "MMMM yyyy")}
                                         </span>
                                     </div>
                                 </div>
                                 <span className={cn(
-                                    "px-3 py-1 rounded-full text-[11px] text-center font-semibold",
-                                    project.status === "Active" ? "bg-blue-50 text-blue-700" :
-                                        project.status === "Paused" ? "bg-amber-50 text-amber-700" :
-                                            "bg-slate-100 text-slate-700"
+                                    "px-3 py-1.5 rounded-lg text-xs text-center font-medium border",
+                                    project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                        project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                            "bg-slate-50 text-slate-700 border-slate-200"
                                 )}>
                                     {project.status}
                                 </span>
-                                <span className="px-3 py-1 rounded-full text-[11px] text-center font-semibold bg-emerald-50 text-emerald-700">One-time</span>
+                                <span className="px-3 py-1.5 rounded-lg text-xs font-medium text-center border bg-emerald-50 text-emerald-700 border-emerald-200">One-time</span>
                                 <span className={cn(
-                                    "px-3 py-1 rounded-full text-[11px] text-center font-semibold",
-                                    project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
+                                    "px-3 py-1.5 rounded-lg text-xs text-center font-medium border",
+                                    project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
                                 )}>
                                     {project.paymentStatus}
                                 </span>

@@ -155,7 +155,7 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
     )
 
     return (
-        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-[24px] xl:rounded-full p-2 shadow-sm border border-border/60 z-40 backdrop-blur-xl bg-card/80">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-card rounded-xl xl:rounded-full p-2 shadow-sm border border-border/60 z-40 backdrop-blur-xl bg-card/80">
             <div className="flex items-center justify-between w-full xl:w-auto gap-2">
                 {/* Search Toggle */}
                 <div className={cn(
@@ -206,8 +206,8 @@ export function TimeLogsFilters({ partners, projects }: TimeLogsFiltersProps) {
                                 Filters
                             </button>
                         </SheetTrigger>
-                        <SheetContent side="bottom" className="h-[85vh] rounded-t-[32px] p-0 z-[100]">
-                            <div className="flex flex-col h-full bg-background rounded-t-[32px] overflow-hidden">
+                        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 z-[100]">
+                            <div className="flex flex-col h-full bg-background rounded-t-2xl overflow-hidden">
                                 <SheetHeader className="p-6 border-b border-border/50 bg-card/50 backdrop-blur-xl shrink-0">
                                     <SheetTitle className="text-xl font-bold flex items-center gap-2">
                                         <Filter className="h-5 w-5 text-primary" />

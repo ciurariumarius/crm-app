@@ -85,7 +85,7 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
             <div className="p-6 border-b bg-muted/20 relative shrink-0">
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                             {site.partner && (
                                 <>
                                     <Link href={`/vault/${site.partner.id}`} className="flex items-center gap-1 hover:text-primary transition-colors">
@@ -143,7 +143,7 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
                 {/* Properties Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">GTM ID</Label>
+                        <Label className="text-xs font-semibold text-muted-foreground">GTM ID</Label>
                         <div className="flex items-center gap-2">
                             <Input
                                 value={formData.gtmId}
@@ -158,7 +158,7 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ads ID</Label>
+                        <Label className="text-xs font-semibold text-muted-foreground">Ads ID</Label>
                         <div className="flex items-center gap-2">
                             <Input
                                 value={formData.googleAdsId}
@@ -173,7 +173,7 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
                         </div>
                     </div>
                     <div className="space-y-1 col-span-full">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Drive Folder</Label>
+                        <Label className="text-xs font-semibold text-muted-foreground">Drive Folder</Label>
                         <div className="flex items-center gap-2">
                             <Input
                                 value={formData.driveLink}

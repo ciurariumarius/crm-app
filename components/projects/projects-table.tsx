@@ -111,7 +111,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
     }
 
     const renderHeader = () => (
-        <div className={cn("hidden md:flex items-center px-4 mb-3 text-[10px] font-extrabold pb-2 uppercase tracking-widest text-muted-foreground/40 w-full min-w-[1100px]", layout === "grid" && "hidden")}>
+        <div className={cn("hidden md:flex items-center px-4 mb-3 text-xs font-semibold pb-2 text-muted-foreground w-full min-w-[1100px]", layout === "grid" && "hidden")}>
             <div className="w-[120px] pl-2 shrink-0">Status</div>
             <div className="flex-1 min-w-[200px] shrink-0">Project name & url</div>
             <div className="w-[160px] shrink-0">Partner</div>
@@ -135,14 +135,14 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
             <div
                 key={project.id}
                 className={cn(
-                    "group relative flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 border border-border/40 hover:border-border/80 transition-all duration-300 cursor-pointer overflow-hidden",
+                    "group relative flex flex-col bg-white dark:bg-zinc-900 rounded-xl p-5 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 cursor-pointer overflow-hidden",
                     isMonthly ? "border-l-[6px] border-l-blue-600" : "border-l-[6px] border-l-emerald-500"
                 )}
                 onClick={() => setSelectedProject(project)}
             >
                 {/* 1. Top Section: Project Name */}
                 <div className="flex justify-between items-start mb-3">
-                    <span className={cn("text-xl md:text-2xl font-black leading-tight tracking-tight break-words text-wrap line-clamp-2", statusColor)}>
+                    <span className={cn("text-xl md:text-2xl font-bold leading-tight tracking-tight break-words text-wrap line-clamp-2", statusColor)}>
                         {formatProjectName(project)}
                     </span>
                 </div>
@@ -155,10 +155,10 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <DropdownMenuTrigger asChild>
                                 <button
                                     className={cn(
-                                        "flex items-center gap-1.5 px-4 py-2 sm:py-2.5 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all shadow-sm",
-                                        isActive ? "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20" :
-                                            isPaused ? "bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20" :
-                                                "bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm border",
+                                        isActive ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20" :
+                                            isPaused ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20" :
+                                                "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
                                     )}
                                     onClick={(e) => e.stopPropagation()}
                                 >
@@ -167,9 +167,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="rounded-xl">
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-[10px] font-bold text-blue-500 tracking-wider uppercase p-2 cursor-pointer">Active</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-[10px] font-bold text-amber-600 tracking-wider uppercase p-2 cursor-pointer">Paused</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-[10px] font-bold text-slate-500 tracking-wider uppercase p-2 cursor-pointer">Completed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-medium text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-medium text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-medium text-slate-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
@@ -179,24 +179,24 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <DropdownMenuTrigger asChild>
                                 <button className="focus:outline-none" onClick={(e) => e.stopPropagation()}>
                                     <div className={cn(
-                                        "flex items-center gap-1.5 px-4 py-2 sm:py-2.5 rounded-lg transition-all shadow-sm",
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all shadow-sm border",
                                         project.paymentStatus === "Paid"
-                                            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"
-                                            : "bg-rose-50 text-rose-500 dark:bg-rose-500/10"
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                                            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
                                     )}>
                                         <div className={cn(
                                             "h-2 w-2 rounded-full",
                                             project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
                                         )} />
-                                        <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest">
-                                            {project.paymentStatus === "Paid" ? "PAID" : "UNPAID"}
+                                        <span className="text-xs font-medium">
+                                            {project.paymentStatus === "Paid" ? "Paid" : "Unpaid"}
                                         </span>
                                     </div>
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="rounded-xl">
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest p-2 cursor-pointer">Paid</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-[10px] font-bold text-rose-500 uppercase tracking-widest p-2 cursor-pointer">Unpaid</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-medium text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-medium text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -212,9 +212,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                     handleUpdate(project.id, { currentFee: val })
                                 }
                             }}
-                            className="h-auto p-0 border-none bg-transparent hover:bg-muted/30 focus-visible:ring-0 text-lg sm:text-xl font-black text-right w-16 shadow-none -mb-0.5"
+                            className="h-auto p-0 border-none bg-transparent hover:bg-muted/30 focus-visible:ring-0 text-lg sm:text-xl font-semibold text-right w-16 shadow-none -mb-0.5"
                         />
-                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">RON</span>
+                        <span className="text-xs font-medium text-muted-foreground/60">RON</span>
                     </div>
                 </div>
 
@@ -235,7 +235,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
         return (
             <div
                 key={project.id}
-                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-[24px] p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 border border-border/40 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1100px]"
+                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1100px]"
                 onClick={() => setSelectedProject(project)}
             >
                 {/* 1. Status Pill */}
@@ -244,10 +244,10 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                         <DropdownMenuTrigger asChild>
                             <button
                                 className={cn(
-                                    "px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all",
-                                    isActive ? "bg-blue-50 text-blue-500 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20" :
-                                        isPaused ? "bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20" :
-                                            "bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                                    isActive ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/20" :
+                                        isPaused ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/20" :
+                                            "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:border-slate-700"
                                 )}
                                 onClick={(e) => e.stopPropagation()}
                             >
@@ -255,9 +255,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="rounded-xl">
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-[10px] font-bold text-blue-500 tracking-wider uppercase p-2 cursor-pointer">Active</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-[10px] font-bold text-amber-600 tracking-wider uppercase p-2 cursor-pointer">Paused</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-[10px] font-bold text-slate-500 tracking-wider uppercase p-2 cursor-pointer">Completed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-medium text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-medium text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-medium text-slate-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -265,7 +265,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                 {/* 2. Project Name & URL */}
                 <div className="flex-1 min-w-[200px] shrink-0 flex items-center">
                     <div className="flex flex-col pr-4">
-                        <span className={cn("text-base md:text-lg font-black tracking-tight line-clamp-2", statusColor)}>
+                        <span className={cn("text-base md:text-lg font-semibold tracking-tight line-clamp-2", statusColor)}>
                             {formatProjectName(project)}
                         </span>
                     </div>
@@ -273,16 +273,16 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
 
                 {/* 3. Partner Name */}
                 <div className="w-[160px] shrink-0 flex items-center pr-2">
-                    <span className="text-[13px] font-bold text-foreground truncate leading-snug" title={project.site.partner.name}>
+                    <span className="text-sm font-medium text-foreground truncate leading-snug" title={project.site.partner.name}>
                         {project.site.partner.name}
                     </span>
                 </div>
 
                 {/* Type Pill */}
                 <div className="w-[90px] shrink-0 flex items-center justify-center">
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-zinc-800/50 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 truncate w-full justify-center">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-zinc-800/50 rounded-lg text-xs font-medium text-slate-600 truncate w-full justify-center border border-slate-200 dark:border-slate-700">
                         <Sparkles className="h-3 w-3 text-amber-500 shrink-0 hidden md:block" />
-                        {isMonthly ? "MONTHLY" : "ONE-TIME"}
+                        {isMonthly ? "Monthly" : "One-Time"}
                     </div>
                 </div>
 
@@ -295,24 +295,24 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className={cn(
-                                    "flex items-center gap-2 px-4 py-2 rounded-full transition-all border border-transparent hover:border-border/30",
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border",
                                     project.paymentStatus === "Paid"
-                                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"
-                                        : "bg-rose-50 text-rose-500 dark:bg-rose-500/10"
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                                        : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
                                 )}>
                                     <div className={cn(
                                         "h-1.5 w-1.5 rounded-full",
                                         project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
                                     )} />
-                                    <span className="text-[11px] font-bold uppercase tracking-widest">
-                                        {project.paymentStatus === "Paid" ? "PAID" : "UNPAID"}
+                                    <span className="text-xs font-medium">
+                                        {project.paymentStatus === "Paid" ? "Paid" : "Unpaid"}
                                     </span>
                                 </div>
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="rounded-xl">
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest p-2 cursor-pointer">Paid</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-[10px] font-bold text-rose-500 uppercase tracking-widest p-2 cursor-pointer">Unpaid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-medium text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-medium text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -329,9 +329,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                     handleUpdate(project.id, { currentFee: val })
                                 }
                             }}
-                            className="h-10 text-base md:text-lg font-black bg-transparent border-transparent hover:bg-muted/50 focus:bg-muted/50 focus:ring-0 p-0 w-20 text-right cursor-text rounded transition-colors shadow-none -mb-0.5"
+                            className="h-10 text-base md:text-lg font-semibold bg-transparent border-transparent hover:bg-muted/50 focus:bg-muted/50 focus:ring-0 p-0 w-20 text-right cursor-text rounded transition-colors shadow-none -mb-0.5"
                         />
-                        <span className="text-[10px] text-muted-foreground/60 ml-1.5 font-bold uppercase tracking-widest mt-0.5">RON</span>
+                        <span className="text-xs text-muted-foreground/60 ml-1.5 font-medium mt-0.5">RON</span>
                     </div>
                 </div>
 
@@ -340,7 +340,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium" title="Time Tracked">
                             <Clock className="h-3.5 w-3.5 opacity-50" />
-                            <span className="font-mono text-[11px]">
+                            <span className="font-mono text-xs">
                                 {(() => {
                                     const totalSeconds = project.tasks?.reduce((acc: number, task: any) => {
                                         const taskLogs = task.timeLogs?.reduce((lAcc: number, log: any) => lAcc + (log.durationSeconds || 0), 0) || 0
@@ -352,7 +352,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 })()}
                             </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium" title="Tasks Completed">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium" title="Tasks Completed">
                             <CheckCircle2 className="h-3.5 w-3.5 opacity-50 text-emerald-500" />
                             <span>{project._count?.tasks || 0}</span>
                         </div>
@@ -361,7 +361,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
 
                 {/* 7. Created */}
                 <div className="w-[140px] shrink-0 flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground font-bold tracking-wide">
+                    <span className="text-xs text-muted-foreground font-medium">
                         {format(new Date(project.createdAt), "dd MMMM")}
                     </span>
 
@@ -393,9 +393,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <div className="h-5 w-1.5 rounded-full bg-blue-500 shadow-sm" />
-                            <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-foreground leading-none">Monthly Projects</span>
+                            <span className="text-xl md:text-2xl font-bold tracking-tight text-foreground leading-none">Monthly Projects</span>
                         </div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hidden md:block">
+                        <div className="text-xs font-semibold text-muted-foreground hidden md:block">
                             Subtotal: <span className="text-foreground">{recurringProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString('en-US')} RON</span>
                         </div>
                     </div>
@@ -419,7 +419,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     {/* Shadow Create Row */}
                     {layout === "list" && (
                         <div
-                            className="bg-primary/5 hover:bg-primary/20 border-2 border-dashed border-primary/20 hover:border-primary/50 text-white rounded-2xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1100px]"
+                            className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1100px]"
                             onClick={() => setCreateProjectOpen(true)}
                         >
                             <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
@@ -427,7 +427,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             </div>
                             <div className="flex-1 px-4 flex items-center gap-3">
                                 <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
-                                <span className="text-sm font-bold text-primary transition-colors uppercase tracking-widest">Add new project...</span>
+                                <span className="text-sm font-semibold text-primary transition-colors">Add new project...</span>
                             </div>
                         </div>
                     )}
@@ -440,9 +440,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <div className="h-5 w-1.5 rounded-full bg-emerald-500 shadow-sm" />
-                            <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-foreground leading-none">One-Time Projects</span>
+                            <span className="text-xl md:text-2xl font-bold tracking-tight text-foreground leading-none">One-Time Projects</span>
                         </div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hidden md:block">
+                        <div className="text-xs font-semibold text-muted-foreground hidden md:block">
                             Subtotal: <span className="text-foreground">{oneTimeProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString('en-US')} RON</span>
                         </div>
                     </div>
@@ -451,13 +451,13 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             {oneTimeProjects.map(p => renderGridCard(p, false))}
                             {/* Shadow Card */}
                             <div
-                                className="group/shadow bg-primary/5 hover:bg-primary/20 hover:border-primary/50 text-white border-2 border-dashed border-primary/20 rounded-3xl flex flex-col justify-center items-center h-[180px] transition-all cursor-pointer"
+                                className="group/shadow bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-white border border-dashed border-primary/30 rounded-xl flex flex-col justify-center items-center h-[180px] transition-all cursor-pointer"
                                 onClick={() => setCreateProjectOpen(true)}
                             >
-                                <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover/shadow:scale-110 group-hover/shadow:bg-primary/20 transition-all">
+                                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover/shadow:scale-110 group-hover/shadow:bg-primary/20 transition-all">
                                     <Plus className="h-6 w-6" strokeWidth={3} />
                                 </div>
-                                <span className="mt-3 text-[10px] font-black uppercase tracking-widest text-primary transition-colors">Start New Project</span>
+                                <span className="mt-3 text-xs font-semibold text-primary transition-colors">Start New Project</span>
                             </div>
                         </div>
                     ) : (
@@ -471,7 +471,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                     {oneTimeProjects.map(renderProjectCard)}
                                     {/* Shadow Create Row */}
                                     <div
-                                        className="bg-primary/5 hover:bg-primary/20 border-2 border-dashed border-primary/20 hover:border-primary/50 text-white rounded-2xl flex items-center p-4 transition-all cursor-pointer min-w-[1100px] mt-2 group/shadow"
+                                        className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer min-w-[1100px] mt-2 group/shadow"
                                         onClick={() => setCreateProjectOpen(true)}
                                     >
                                         <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
@@ -479,7 +479,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                         </div>
                                         <div className="flex-1 px-4 flex items-center gap-3">
                                             <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
-                                            <span className="text-sm font-bold text-primary transition-colors uppercase tracking-widest">Add new project...</span>
+                                            <span className="text-sm font-semibold text-primary transition-colors">Add new project...</span>
                                         </div>
                                     </div>
                                 </div>

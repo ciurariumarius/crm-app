@@ -31,15 +31,15 @@ export function QuickStart({ recentProjects }: QuickStartProps) {
                     <div className="flex items-center w-full justify-between relative z-10">
                         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 transition-transform duration-500 group-hover:rotate-[360deg]">
                             <Play className="h-4 w-4 fill-current" strokeWidth={0} />
+                            <div className="text-xs font-medium text-primary/60 group-hover:text-primary transition-colors">Fast Start</div>
                         </div>
-                        <div className="text-[9px] font-bold text-primary/40 uppercase tracking-[0.2em] group-hover:text-primary transition-colors">Fast Start</div>
                     </div>
 
                     <div className="space-y-2 w-full relative z-10">
                         <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">{project.name}</div>
                         <div className="flex flex-col gap-1">
-                            <div className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest truncate">{project.partnerName}</div>
-                            <div className="text-[10px] font-medium text-muted-foreground/40 truncate">{project.siteName}</div>
+                            <div className="text-xs font-medium text-muted-foreground/80 truncate">{project.partnerName}</div>
+                            <div className="text-xs font-medium text-muted-foreground/60 truncate">{project.siteName}</div>
                         </div>
                     </div>
 
@@ -48,9 +48,9 @@ export function QuickStart({ recentProjects }: QuickStartProps) {
                 </button>
             ))}
             {recentProjects.length === 0 && (
-                <div className="col-span-full text-center py-16 bg-muted/30 rounded-[32px] border border-dashed border-border">
-                    <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.3em]">No Active Projects</p>
-                    <p className="text-[11px] text-muted-foreground/30 mt-2 font-medium">Create a project to initialize the command interface.</p>
+                <div className="col-span-full text-center py-16 bg-muted/30 rounded-2xl border border-dashed border-border">
+                    <p className="text-sm font-semibold text-muted-foreground">No Active Projects</p>
+                    <p className="text-xs text-muted-foreground/60 mt-2 font-medium">Create a project to initialize the command interface.</p>
                 </div>
             )}
         </div>

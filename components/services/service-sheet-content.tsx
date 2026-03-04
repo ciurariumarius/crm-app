@@ -63,7 +63,7 @@ export function ServiceSheetContent({ service, onUpdate }: ServiceSheetContentPr
             {/* Header */}
             <div className="p-6 border-b bg-muted/20 shrink-0 space-y-4">
                 <div className="flex items-center justify-between">
-                    <Badge variant={formData.isRecurring === "true" ? "default" : "secondary"} className="uppercase tracking-widest text-[10px]">
+                    <Badge variant={formData.isRecurring === "true" ? "default" : "secondary"} className="text-xs font-medium px-2 py-0.5">
                         {formData.isRecurring === "true" ? "Recurring" : "One-Time"}
                     </Badge>
                     <Link href={`/services/${service.id}`} className="transition-all hover:text-primary">
@@ -86,7 +86,7 @@ export function ServiceSheetContent({ service, onUpdate }: ServiceSheetContentPr
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Type</Label>
+                        <Label className="text-xs font-semibold text-muted-foreground">Type</Label>
                         <Select
                             value={formData.isRecurring}
                             onValueChange={(val) => setFormData({ ...formData, isRecurring: val })}
@@ -102,7 +102,7 @@ export function ServiceSheetContent({ service, onUpdate }: ServiceSheetContentPr
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Base Fee</Label>
+                        <Label className="text-xs font-semibold text-muted-foreground">Base Fee</Label>
                         <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">RON</span>
                             <Input
@@ -118,7 +118,7 @@ export function ServiceSheetContent({ service, onUpdate }: ServiceSheetContentPr
                 </div>
 
                 <div className="space-y-3">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
                         <CheckCircle2 className="h-3 w-3" /> Standard Tasks (Template)
                     </Label>
                     <Textarea
@@ -127,7 +127,7 @@ export function ServiceSheetContent({ service, onUpdate }: ServiceSheetContentPr
                         value={formData.standardTasks}
                         onChange={(e) => setFormData({ ...formData, standardTasks: e.target.value })}
                     />
-                    <p className="text-[10px] text-muted-foreground italic">
+                    <p className="text-xs text-muted-foreground">
                         These tasks will be automatically added when you create a new project with this service.
                     </p>
                 </div>

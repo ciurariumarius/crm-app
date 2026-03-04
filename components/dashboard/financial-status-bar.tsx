@@ -55,7 +55,7 @@ export function FinancialStatusBar({
                     </span>
                     {mom && (
                         <div className="flex gap-1.5">
-                            <div className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50/50 px-1.5 py-0.5 rounded-sm uppercase tracking-wide">
+                            <div className="flex items-center gap-0.5 text-xs font-semibold text-emerald-600 bg-emerald-50/50 px-2 py-0.5 rounded-lg border border-emerald-100">
                                 {mom} MOM
                             </div>
                         </div>
@@ -70,12 +70,12 @@ export function FinancialStatusBar({
                             style={{ width: `${collectionRate}%` }}
                         />
                     </div>
-                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                    <div className="flex justify-between text-xs font-semibold text-muted-foreground mt-1">
                         <span>
-                            COLLECTED ({collectionRate.toFixed(0)}%)
+                            Collected ({collectionRate.toFixed(0)}%)
                         </span>
                         <span className="text-muted-foreground/80">
-                            {formatCurrency(totalPending)} PENDING
+                            {formatCurrency(totalPending)} Pending
                         </span>
                     </div>
                 </div>
@@ -107,7 +107,7 @@ export function FinancialStatusBar({
                 </div>
 
                 {/* Bottom Label */}
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mt-1">
+                <span className="text-xs font-semibold text-muted-foreground mt-1">
                     Revenue Type
                 </span>
             </div>
@@ -140,7 +140,7 @@ export function FinancialStatusBar({
                         {activePartners.slice(0, 3).map((partner) => {
                             const percent = totalRevenue > 0 ? (partner.value / totalRevenue) * 100 : 0
                             return (
-                                <div key={partner.name} className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                                <div key={partner.name} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: partner.fill }} />
                                     <span>{partner.name}</span>
                                     <span className="text-muted-foreground/60">{percent.toFixed(0)}%</span>

@@ -60,8 +60,8 @@ export function PartnerRevenueChart({ data }: RevenueChartProps) {
 
     if (chartData.length === 0) {
         return (
-            <div className="flex items-center justify-center h-[300px] opacity-20 italic bg-muted/5 rounded-3xl border-2 border-dashed">
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-2">Status:</span>
+            <div className="flex items-center justify-center h-[300px] opacity-20 italic bg-muted/5 rounded-2xl border-2 border-dashed">
+                <span className="text-xs font-semibold text-muted-foreground mr-2">Status:</span>
                 Aggregate more projects to see analysis.
             </div>
         )
@@ -108,7 +108,7 @@ export function PartnerRevenueChart({ data }: RevenueChartProps) {
                             <tspan
                                 x="50%"
                                 dy="-0.5em"
-                                className="text-[10px] font-black uppercase tracking-[0.2em] opacity-30"
+                                className="text-xs font-bold text-muted-foreground"
                             >
                                 GLOBAL RON
                             </tspan>
@@ -137,19 +137,19 @@ export function PartnerRevenueChart({ data }: RevenueChartProps) {
                                 style={{ backgroundColor: COLORS[index % COLORS.length] }}
                             />
                             <div className="flex flex-col">
-                                <span className="text-xs font-black uppercase italic tracking-tight truncate max-w-[120px]">
+                                <span className="text-sm font-semibold truncate max-w-[120px]">
                                     {item.name}
                                 </span>
-                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                                <span className="text-xs font-medium text-muted-foreground">
                                     Partner Entity
                                 </span>
                             </div>
                         </div>
                         <div className="text-right">
-                            <div className="text-sm font-black italic tabular-nums leading-none">
-                                {item.revenue.toLocaleString()} <span className="text-[9px] font-bold opacity-30 not-italic">RON</span>
+                            <div className="text-sm font-semibold tabular-nums leading-none">
+                                {item.revenue.toLocaleString()} <span className="text-xs font-medium text-muted-foreground ml-1">RON</span>
                             </div>
-                            <div className="text-[9px] font-bold text-primary italic uppercase tracking-widest mt-1">
+                            <div className="text-xs font-medium text-primary mt-1">
                                 {((item.revenue / totalRevenue) * 100).toFixed(1)}%
                             </div>
                         </div>

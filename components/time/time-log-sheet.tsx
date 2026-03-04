@@ -125,14 +125,14 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     {/* Read-only Meta */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 p-3 rounded-xl border border-border">
                         <div className="flex flex-col">
-                            <span className="font-semibold uppercase tracking-wider text-[10px] opacity-60">Created</span>
+                            <span className="text-xs font-semibold text-muted-foreground/80">Created</span>
                             <span>{format(new Date(log.createdAt), "PP pp")}</span>
                         </div>
                         <div className="h-8 w-[1px] bg-border mx-2" />
                         <div className="flex flex-col items-end">
-                            <span className="font-semibold uppercase tracking-wider text-[10px] opacity-60">ID</span>
+                            <span className="text-xs font-semibold text-muted-foreground/80">ID</span>
                             <span className="font-mono">{log.id.slice(0, 8)}...</span>
                         </div>
                     </div>

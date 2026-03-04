@@ -149,39 +149,39 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                             {optimisticTasks.map((task) => (
                                 <div
                                     key={task.id}
-                                    className="group relative flex flex-col bg-card hover:bg-card/80 p-5 rounded-3xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 h-[220px]"
+                                    className="group relative flex flex-col bg-card hover:bg-card/80 p-5 rounded-2xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 h-[220px]"
                                 >
                                     {/* Top Row: Badges & Menu */}
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex flex-wrap items-center gap-2">
                                             {task.urgency === "Urgent" && (
-                                                <Badge variant="secondary" className="h-6 px-2.5 text-[10px] font-black tracking-wider text-white bg-amber-500 hover:bg-amber-600 rounded-md uppercase border-none shadow-sm shadow-amber-500/20">
-                                                    URGENT
+                                                <Badge variant="secondary" className="px-2.5 py-1 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg border-none shadow-sm shadow-amber-500/20">
+                                                    Urgent
                                                 </Badge>
                                             )}
                                             {task.deadline && (
                                                 <div className={cn(
-                                                    "text-[10px] flex items-center gap-1 font-bold px-2 py-1 rounded-md shadow-sm transition-colors",
+                                                    "text-xs flex items-center gap-1 font-semibold px-2 py-1 rounded-lg shadow-sm transition-colors",
                                                     getDeadlineColor(new Date(task.deadline)).includes("text-rose")
                                                         ? "bg-rose-500 text-white shadow-rose-500/20"
                                                         : isToday(new Date(task.deadline))
                                                             ? "bg-orange-500 text-white shadow-orange-500/20"
                                                             : "bg-muted/50 text-muted-foreground"
                                                 )}>
-                                                    <Clock className="h-3 w-3" strokeWidth={2.5} />
+                                                    <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
                                                     {getDeadlineText(new Date(task.deadline))}
                                                 </div>
                                             )}
                                             {task.estimatedMinutes && (
-                                                <div className="text-[10px] flex items-center gap-1.5 font-bold px-2 py-1 rounded-md bg-muted/50 text-muted-foreground border border-muted/60" title="Estimated Time">
-                                                    <Target className="h-3 w-3" strokeWidth={2.5} />
+                                                <div className="text-xs flex items-center gap-1.5 font-semibold px-2 py-1 rounded-lg bg-muted/50 text-muted-foreground border border-muted/60" title="Estimated Time">
+                                                    <Target className="h-3.5 w-3.5" strokeWidth={2.5} />
                                                     {task.estimatedMinutes}m
                                                 </div>
                                             )}
                                             {/* Total Time Spent */}
                                             {task.timeLogs && task.timeLogs.length > 0 && (
-                                                <div className="text-[10px] flex items-center gap-1.5 font-bold px-2 py-1 rounded-md bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/10 dark:text-blue-300 dark:border-blue-900/20" title="Time Spent">
-                                                    <History className="h-3 w-3" strokeWidth={2.5} />
+                                                <div className="text-xs flex items-center gap-1.5 font-semibold px-2 py-1 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/10 dark:text-blue-300 dark:border-blue-900/20" title="Time Spent">
+                                                    <History className="h-3.5 w-3.5" strokeWidth={2.5} />
                                                     {(() => {
                                                         const totalSeconds = task.timeLogs.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0)
                                                         const hours = Math.floor(totalSeconds / 3600)
@@ -205,10 +205,10 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                     <div className="flex items-end justify-between mt-auto pt-4">
                                         {/* Project Info */}
                                         <div className="flex flex-col gap-1 max-w-[65%]">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 truncate">
+                                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 truncate">
                                                 {task.project.site?.domainName || task.project.name}
                                             </span>
-                                            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 truncate">
+                                            <span className="text-xs font-medium text-muted-foreground/60 truncate">
                                                 {task.project.services && task.project.services.length > 0
                                                     ? task.project.services.map((s: any) => s.serviceName).join(" + ")
                                                     : "General Operations"}
@@ -288,12 +288,12 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                             {/* Shadow Task (Create New) */}
                             <div
                                 onClick={() => setCreateTaskOpen(true)}
-                                className="group flex flex-col items-center justify-center h-[220px] rounded-[32px] border-2 border-dashed border-muted-foreground/20 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 cursor-pointer"
+                                className="group flex flex-col items-center justify-center h-[220px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 cursor-pointer"
                             >
                                 <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-0 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
                                     <Plus className="h-8 w-8 text-muted-foreground group-hover:text-current" strokeWidth={1.5} />
                                 </div>
-                                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-emerald-500 transition-colors mt-3">
+                                <span className="text-sm font-semibold text-muted-foreground group-hover:text-emerald-500 transition-colors mt-3">
                                     Add New Task
                                 </span>
                             </div>

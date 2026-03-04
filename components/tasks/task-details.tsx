@@ -210,7 +210,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     </div>
                                 </div>
                                 {name !== task.name && (
-                                    <div className="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">
+                                    <div className="text-xs font-semibold text-primary animate-pulse">
                                         Unsaved Name Change
                                     </div>
                                 )}
@@ -221,7 +221,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                             <div className="flex flex-wrap items-center gap-2.5">
                                 <Select value={status} onValueChange={(val) => setStatus(val)}>
                                     <SelectTrigger className={cn(
-                                        "h-9 w-auto min-w-[130px] border-none transition-all shadow-none focus:ring-1 p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
+                                        "h-9 w-auto min-w-[130px] border-none transition-all shadow-none focus:ring-1 p-0 px-4 rounded-full text-xs font-semibold [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
                                         status === "Active" ? "bg-blue-600 text-white hover:bg-blue-700" :
                                             status === "Paused" ? "bg-orange-500 text-white hover:bg-orange-600" :
                                                 "bg-emerald-600 text-white hover:bg-emerald-700"
@@ -229,15 +229,15 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Active" className="text-xs font-bold">ACTIVE</SelectItem>
-                                        <SelectItem value="Paused" className="text-xs font-bold">PAUSED</SelectItem>
-                                        <SelectItem value="Completed" className="text-xs font-bold">COMPLETED</SelectItem>
+                                        <SelectItem value="Active" className="text-xs font-medium">Active</SelectItem>
+                                        <SelectItem value="Paused" className="text-xs font-medium">Paused</SelectItem>
+                                        <SelectItem value="Completed" className="text-xs font-medium">Completed</SelectItem>
                                     </SelectContent>
                                 </Select>
 
                                 <Select value={urgency} onValueChange={(val) => setUrgency(val)}>
                                     <SelectTrigger className={cn(
-                                        "h-9 w-auto min-w-[130px] border-none shadow-none focus:ring-1 transition-all p-0 px-4 rounded-full text-[10px] font-black tracking-widest uppercase [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
+                                        "h-9 w-auto min-w-[130px] border-none shadow-none focus:ring-1 transition-all p-0 px-4 rounded-full text-xs font-semibold [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
                                         urgency === "Urgent" ? "bg-rose-600 text-white hover:bg-rose-700" :
                                             urgency === "Idea" ? "bg-sky-600 text-white hover:bg-sky-700" :
                                                 "bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20"
@@ -245,9 +245,9 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Urgent" className="text-xs font-bold text-rose-600">URGENT</SelectItem>
-                                        <SelectItem value="Normal" className="text-xs font-bold">NORMAL</SelectItem>
-                                        <SelectItem value="Idea" className="text-xs font-bold text-sky-600">IDEA</SelectItem>
+                                        <SelectItem value="Urgent" className="text-xs font-medium text-rose-600">Urgent</SelectItem>
+                                        <SelectItem value="Normal" className="text-xs font-medium">Normal</SelectItem>
+                                        <SelectItem value="Idea" className="text-xs font-medium text-sky-600">Idea</SelectItem>
                                     </SelectContent>
                                 </Select>
 
@@ -270,13 +270,13 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                         return (
                                             <div className="flex items-center gap-2 h-9">
                                                 <div className={cn(
-                                                    "flex items-center gap-2 h-full text-[10px] font-black tracking-widest px-4 rounded-full border transition-all",
+                                                    "flex items-center gap-2 h-full text-xs font-semibold px-4 rounded-full border transition-all",
                                                     useFallback
                                                         ? "bg-amber-500/10 text-amber-700 border-amber-500/20"
                                                         : (isRunning ? "bg-primary text-primary-foreground border-primary/20 animate-pulse shadow-lg shadow-primary/20" : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20")
                                                 )}>
-                                                    <Clock className="h-3 w-3" strokeWidth={3} />
-                                                    <span>{hours}H {mins}M {useFallback ? "EST" : "WORKED"}</span>
+                                                    <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                                    <span>{hours}h {mins}m {useFallback ? "est" : "worked"}</span>
                                                 </div>
 
                                                 <button
@@ -327,13 +327,13 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Deadline Tracking</label>
+                            <label className="text-xs font-semibold text-muted-foreground/80">Deadline Tracking</label>
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
                                         className={cn(
-                                            "w-full justify-start text-left font-bold h-12 text-sm bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20",
+                                            "w-full justify-start text-left font-bold h-12 text-sm bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 rounded-xl",
                                             !deadline && "text-muted-foreground/40"
                                         )}
                                     >
@@ -341,7 +341,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                         {deadline ? format(deadline, "PPP") : <span>Set Deadline</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                                <PopoverContent className="w-auto p-0 rounded-xl pointer-events-auto" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={deadline}
@@ -352,20 +352,20 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                             </Popover>
                         </div>
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Estimated Time (min)</label>
+                            <label className="text-xs font-semibold text-muted-foreground/80">Estimated Time (min)</label>
                             <Input
                                 type="number"
                                 placeholder="ex. 60"
                                 value={estimatedMinutes}
                                 onChange={(e) => setEstimatedMinutes(e.target.value)}
-                                className="h-12 text-sm font-bold bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20"
+                                className="h-12 text-sm font-bold bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 rounded-xl"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-3 pt-4">
                         <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description / Technical Notes</label>
+                            <label className="text-xs font-semibold text-muted-foreground/80">Description / Technical Notes</label>
                         </div>
                         <RichTextEditor
                             value={description}
@@ -378,11 +378,11 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 h-12 px-6 font-black uppercase tracking-widest text-[10px] gap-2 rounded-xl"
+                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 h-12 px-6 font-semibold text-sm gap-2 rounded-xl"
                             onClick={handleDelete}
                             disabled={isDeleting}
                         >
-                            {isDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                             Delete Task
                         </Button>
                     </div>
@@ -392,11 +392,11 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         <div className="space-y-4 pt-8">
                             <Separator className="bg-muted/10" />
                             <div className="flex items-center justify-between">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                    <Clock className="h-3 w-3" />
+                                <h4 className="text-xs font-semibold text-muted-foreground/80 flex items-center gap-2">
+                                    <Clock className="h-3.5 w-3.5" />
                                     Time Logs
                                 </h4>
-                                <div className="text-[10px] uppercase font-bold text-muted-foreground/60">
+                                <div className="text-xs font-medium text-muted-foreground/60">
                                     {task.timeLogs.length} Sessions
                                 </div>
                             </div>
@@ -411,7 +411,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                                 <span className="text-xs font-bold text-foreground">
                                                     {format(new Date(log.startTime), "MMM do, yyyy")}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                                                <span className="text-xs font-medium text-muted-foreground/60">
                                                     {format(new Date(log.startTime), "HH:mm")} - {log.endTime ? format(new Date(log.endTime), "HH:mm") : "Ongoing"}
                                                 </span>
                                                 {log.notes && (
@@ -420,7 +420,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-sm font-black text-foreground tabular-nums">
+                                            <div className="text-sm font-bold text-foreground tabular-nums">
                                                 {sessionH > 0 && `${sessionH}h `}{sessionM > 0 && `${sessionM}m `}{sessionS}s
                                             </div>
                                         </div>
@@ -437,11 +437,11 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                             <Clock className="h-5 w-5" />
                         </div>
                         <div>
-                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Creation Date</div>
+                            <div className="text-xs font-medium text-muted-foreground/80">Creation Date</div>
                             <div className="text-sm font-bold">{format(new Date(task.createdAt), "MMMM do, yyyy")}</div>
                         </div>
                     </div>
-                    <div className="text-[10px] font-mono font-medium text-muted-foreground opacity-40 italic text-right">
+                    <div className="text-xs font-mono font-medium text-muted-foreground opacity-40 italic text-right">
                         Ref ID: {task.id.slice(0, 8)}
                     </div>
                 </div>

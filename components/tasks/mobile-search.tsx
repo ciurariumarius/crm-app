@@ -48,10 +48,10 @@ export function MobileSearch() {
                     <Search className="h-4 w-4 text-muted-foreground shrink-0 mr-2" />
                     <Input
                         autoFocus
-                        placeholder="FIND TASK..."
+                        placeholder="Find task..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="h-full bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-[10px] sm:text-xs font-bold tracking-widest uppercase transition-all duration-300 w-full px-0 text-foreground"
+                        className="h-full bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/60 text-xs font-semibold transition-all duration-300 w-full px-0 text-foreground"
                     />
                     <button
                         onClick={() => {
