@@ -81,8 +81,8 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
     const [isDataOpen, setIsDataOpen] = useState(true)
     const [isPPCOpen, setIsPPCOpen] = useState(true)
 
-    const displayName = user?.name || user?.username || "Admin User"
-    const displayRole = "Administrator"
+    const displayName = user?.name || user?.username || "Admin"
+    const displayRole = "Owner"
     const initials = displayName.substring(0, 2).toUpperCase()
 
     const handleLogout = async () => {
