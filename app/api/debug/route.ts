@@ -10,8 +10,8 @@ export async function GET() {
         );
         debugInfo.tables = tables.map(r => r.name);
 
-        const usersInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(users)");
-        debugInfo.users_columns = usersInfo.map(c => `${c.name} (${c.type})`);
+        const projsInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(projects)");
+        debugInfo.projects_columns = projsInfo.map(c => `${c.name} (${c.type})`);
 
         const tasksInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(tasks)");
         debugInfo.tasks_columns = tasksInfo.map(c => `${c.name} (${c.type})`);
@@ -29,7 +29,7 @@ export async function GET() {
     );
 
     return new NextResponse(
-        "DATABASE_URL: " + (process.env.DATABASE_URL || "not set") + "\n\n" + responseText,
+        responseText,
         { headers: { "Content-Type": "application/json" } }
     );
 }
