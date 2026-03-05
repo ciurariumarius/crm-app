@@ -1,34 +1,31 @@
 import { NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
 import prisma from "@/lib/prisma";
 
-const execAsync = promisify(exec);
-
 export async function GET() {
-    let dbTest: string;
+    let debugInfo = "";
+
     try {
         const tables = await prisma.$queryRawUnsafe<{ name: string }[]>(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
         );
-        dbTest = "Tables in connected DB: " + tables.map((r: any) => r.name).join(", ");
-    } catch (e: any) {
-        dbTest = "DB Error: " + e.message;
-    }
+        debugInfo += "Tables: " + tables.map((r: any) => r.name).join(", ") + "\n\n";
 
-    let dbFilePath = "unknown";
-    try {
-        // Get the actual file path of the connected DB
-        const result = await prisma.$queryRawUnsafe<any[]>("PRAGMA database_list");
-        dbFilePath = JSON.stringify(result);
+        const userSchema = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(users)");
+        debugInfo += "Users table columns: " + userSchema.map(c => c.name).join(", ") + "\n\n";
+
+        const auditSchema = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(audit_logs)");
+        debugInfo += "Audit logs columns: " + auditSchema.map(c => c.name).join(", ") + "\n\n";
+
+        const userCount = await prisma.$queryRawUnsafe<any[]>("SELECT COUNT(*) as count FROM users");
+        debugInfo += "User count: " + userCount[0].count + "\n\n";
+
     } catch (e: any) {
-        dbFilePath = "PRAGMA error: " + e.message;
+        debugInfo += "DB Error: " + e.message + "\n\n";
     }
 
     return new NextResponse(
         "DATABASE_URL env: " + (process.env.DATABASE_URL || "not set") + "\n\n" +
-        dbTest + "\n\n" +
-        "DB file path (PRAGMA): " + dbFilePath,
+        debugInfo,
         { headers: { "Content-Type": "text/plain" } }
     );
 }
