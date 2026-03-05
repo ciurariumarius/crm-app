@@ -33,6 +33,9 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             
+            echo "--- VERIFYING FILE SYNC ---"
+            head -n 20 app/api/debug/route.ts
+            
             echo "--- INSTALLING DEPENDENCIES ---"
             npm install || npm install --legacy-peer-deps
             
