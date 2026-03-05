@@ -37,10 +37,10 @@ jobs:
             rm -rf node_modules package-lock.json || true
             npm install --include=dev
             
-            # Find the actual database file location and apply all schema changes
-            npx prisma generate
-            # Force-create all missing tables using absolute path
-            DATABASE_URL="file:/home/${{ secrets.SERVER_USER }}/htdocs/dev.db" npx prisma db push --accept-data-loss
+            # Update Prisma ORM (force sync schema to fix missing tables)
+            # The app uses DATABASE_URL=file:./dev.db so the DB is in the app folder
+            DATABASE_URL="file:/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro/dev.db" npx prisma generate
+            DATABASE_URL="file:/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro/dev.db" npx prisma db push --accept-data-loss
             
             # Build the Next.js application
             npm run build
