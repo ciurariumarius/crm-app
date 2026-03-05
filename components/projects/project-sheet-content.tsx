@@ -193,7 +193,7 @@ export function ProjectSheetContent({
 
         const timer = setTimeout(() => {
             void handleUpdate({ description })
-        }, 900)
+        }, 400)
 
         return () => clearTimeout(timer)
     }, [description, project.description, handleUpdate])

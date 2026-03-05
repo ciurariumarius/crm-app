@@ -26,20 +26,12 @@ jobs:
             
             cd "$SITE_PATH"
             
-            echo "--- SERVER INFO ---"
-            hostname -I
-            pwd
-            whoami
-            
             echo "--- CLEANING PREVIOUS BUILD ---"
             rm -rf .next
             
             echo "--- PULLING LATEST CODE ---"
             git fetch origin main
             git reset --hard origin/main
-            
-            echo "--- VERIFYING FILE SYNC ---"
-            head -n 20 app/api/debug/route.ts
             
             echo "--- INSTALLING DEPENDENCIES ---"
             npm install || npm install --legacy-peer-deps

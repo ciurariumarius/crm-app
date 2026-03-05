@@ -113,7 +113,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             ) {
                 handleUpdate()
             }
-        }, 1000)
+        }, 400)
 
         return () => clearTimeout(timer)
     }, [name, description, status, urgency, deadline, estimatedMinutes])
