@@ -36,9 +36,54 @@ jobs:
             npm install --include=dev
             
             # Update Prisma ORM (force sync schema to fix missing tables)
-            # The app uses DATABASE_URL=file:./dev.db so the DB is in the app folder
-            DATABASE_URL="file:/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro/dev.db" npx prisma generate
-            DATABASE_URL="file:/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro/dev.db" npx prisma db push --accept-data-loss
+            # The app DB is at ./dev.db in the app folder
+            APP_DB="./dev.db"
+            
+            # Create missing tables directly via sqlite3
+            sqlite3 "$APP_DB" "
+              CREATE TABLE IF NOT EXISTS tenants (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+              );
+              INSERT OR IGNORE INTO tenants (id, name) SELECT DISTINCT tenant_id, 'Default' FROM users WHERE tenant_id IS NOT NULL LIMIT 1;
+              
+              CREATE TABLE IF NOT EXISTS rate_limit_entries (
+                key TEXT PRIMARY KEY,
+                count INTEGER NOT NULL DEFAULT 0,
+                reset_at DATETIME NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+              );
+              
+              CREATE TABLE IF NOT EXISTS audit_logs (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                actor_user_id TEXT,
+                action TEXT NOT NULL,
+                success INTEGER NOT NULL DEFAULT 1,
+                ip_address TEXT,
+                user_agent TEXT,
+                details TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+              );
+
+              CREATE TABLE IF NOT EXISTS project_rollovers (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                source_project_id TEXT NOT NULL,
+                new_project_id TEXT,
+                target_year INTEGER NOT NULL,
+                target_month INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+              );
+              
+              -- Add missing columns to existing tables
+              ALTER TABLE projects ADD COLUMN description TEXT;
+            " 2>/dev/null || true
+            
+            DATABASE_URL="file:./dev.db" npx prisma generate
             
             # Build the Next.js application
             npm run build
