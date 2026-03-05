@@ -64,7 +64,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
             setEstimatedMinutes(task.estimatedMinutes?.toString() || "")
         }
-    }, [task])
+    }, [task?.id])
 
     const handleUpdate = async () => {
         if (!task) return

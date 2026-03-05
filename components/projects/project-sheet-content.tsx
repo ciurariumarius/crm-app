@@ -133,7 +133,7 @@ export function ProjectSheetContent({
         setDescription(project.description || "")
         setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
         skipDescriptionSaveRef.current = true
-    }, [project])
+    }, [project.id])
 
     const handleUpdate = React.useCallback(
         async (data: UpdateProjectPayload) => {

@@ -36,7 +36,7 @@ const AddTaskSchema = z.object({
 const UpdateTaskSchema = z.object({
     taskId: z.string().uuid(),
     name: z.string().trim().min(1).max(255).optional(),
-    description: z.string().max(10000).optional(),
+    description: z.string().max(50000).optional(),
     status: TaskStatusSchema.optional(),
     urgency: TaskUrgencySchema.optional(),
     isCompleted: z.boolean().optional(),
@@ -133,7 +133,7 @@ export async function updateTask(taskId: string, data: {
     isCompleted?: boolean
     deadline?: Date | null
     estimatedMinutes?: number | null
-    }) {
+}) {
     try {
         const session = await requireTenantContext()
         const validated = UpdateTaskSchema.parse({ taskId, ...data })
