@@ -5,7 +5,7 @@ import { decrypt, SESSION_COOKIE_NAME } from './lib/auth'
 // Protected routes configuration
 const isProtectedRoute = (path: string) => {
     // Everything is protected except /login, /api/auth, and public assets
-    const publicPaths = ['/login', '/manifest.json', '/sw.js']
+    const publicPaths = ['/login', '/manifest.json', '/sw.js', '/api/debug']
     if (publicPaths.some(p => path.startsWith(p))) return false
 
     // Allow static assets, images, icons, next build files
