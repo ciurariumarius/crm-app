@@ -37,11 +37,10 @@ jobs:
             rm -rf node_modules package-lock.json || true
             npm install --include=dev
             
-            # Update Prisma ORM (force sync schema to fix missing tables)
-            # Use explicit absolute path so prisma finds the correct SQLite file
-            export DATABASE_URL="file:/home/${{ secrets.SERVER_USER }}/htdocs/dev.db"
+            # Find the actual database file location and apply all schema changes
             npx prisma generate
-            npx prisma db push --accept-data-loss
+            # Force-create all missing tables using absolute path
+            DATABASE_URL="file:/home/${{ secrets.SERVER_USER }}/htdocs/dev.db" npx prisma db push --accept-data-loss
             
             # Build the Next.js application
             npm run build
