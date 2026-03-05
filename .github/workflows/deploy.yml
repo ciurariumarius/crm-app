@@ -21,13 +21,8 @@ jobs:
             set -e
             SITE_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
             DB_PATH="$SITE_PATH/dev.db"
-            # Find the actual PM2 path dynamically just in case version changed
-            PM2_BIN=$(find /home/${{ secrets.SERVER_USER }}/.nvm -name pm2 -type f | head -1 || which pm2)
             
             cd "$SITE_PATH"
-            
-            echo "--- CLEANING PREVIOUS BUILD ---"
-            rm -rf .next
             
             echo "--- PULLING LATEST CODE ---"
             git fetch origin main
@@ -40,24 +35,15 @@ jobs:
             npx prisma generate
             
             echo "--- BUILDING APPLICATION ---"
-            # Increase memory limit to avoid OOM
             export NODE_OPTIONS="--max-old-space-size=2048"
             npm run build
             
-            echo "--- VERIFYING BUILD SUCCESS ---"
-            if [ ! -d ".next" ]; then
-              echo "FATAL ERROR: .next directory was not created after build!"
-              exit 1
-            fi
-            
             echo "--- RESTARTING PM2 PROCESS ---"
-            ( $PM2_BIN delete pixelist-crm || true )
+            # Find the actual PM2 path dynamically
+            PM2_BIN=$(find /home/${{ secrets.SERVER_USER }}/.nvm -name pm2 -type f | head -1 || which pm2) || echo "pm2"
+            
+            $PM2_BIN delete pixelist-crm || true
             DATABASE_URL="file:$DB_PATH" $PM2_BIN start npx --name "pixelist-crm" -- next start -p 3000
             
-            # Expose status for diagnosis
-            echo "Capturing status to public file..."
-            $PM2_BIN status > "$SITE_PATH/public/diag-pm2.txt"
-            $PM2_BIN logs pixelist-crm --lines 100 --nostream > "$SITE_PATH/public/diag-logs.txt"
-
             $PM2_BIN save || true
             echo "--- DEPLOYMENT COMPLETED SUCCESSFULLY ---"
