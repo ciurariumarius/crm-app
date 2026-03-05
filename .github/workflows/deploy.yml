@@ -3,7 +3,7 @@ name: Deploy to CloudPanel
 on:
   push:
     branches:
-      - main # Trigger deployment when pushing to the main branch
+      - main
 
 jobs:
   deploy:
@@ -18,45 +18,41 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           port: 22
           script: |
+            set -e
             SITE_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
-            DB_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro/dev.db"
-            export DATABASE_URL="file:$DB_PATH"
-            cd "$SITE_PATH" || exit 1
+            DB_PATH="$SITE_PATH/dev.db"
+            PM2_BIN="/home/${{ secrets.SERVER_USER }}/.nvm/versions/node/v22.22.0/bin/pm2"
             
-            # Pull code
+            cd "$SITE_PATH"
+            
+            echo "--- CLEANUP ---"
+            rm -rf .next
+            
+            echo "--- PULL ---"
             git fetch origin main
             git reset --hard origin/main
             
-            # Dependencies
-            npm install --include=dev || true
+            echo "--- INSTALL ---"
+            npm install || npm install --legacy-peer-deps
             
-            # Prisma
+            echo "--- PRISMA ---"
             npx prisma generate
             
-            # Manual Migration for critical missing tables
-            echo "Ensuring tables exist..."
-            sqlite3 "$DB_PATH" "
-              CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-              CREATE TABLE IF NOT EXISTS rate_limit_entries (key TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, reset_at DATETIME NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-              CREATE TABLE IF NOT EXISTS audit_logs (id TEXT PRIMARY KEY, tenant_id TEXT, actor_user_id TEXT, action TEXT NOT NULL, success INTEGER NOT NULL DEFAULT 1, ip_address TEXT, user_agent TEXT, details TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-            " || true
+            echo "--- BUILD ---"
+            # Limit memory for Next build to prevent OOM
+            NODE_OPTIONS="--max-old-space-size=2048" npm run build
             
-            # Build
-            npm run build
-            # Define PM2 absolute path for reliability
-            PM2_BIN="/home/${{ secrets.SERVER_USER }}/htdocs/../.nvm/versions/node/v22.22.0/bin/pm2"
+            echo "--- VERIFY BUILD ---"
+            if [ ! -d ".next" ]; then
+              echo "ERROR: .next directory was not created!"
+              exit 1
+            fi
+            ls -la .next | head -n 10
             
-            echo "Restarting application..."
+            echo "--- RESTART PM2 ---"
             ( $PM2_BIN delete pixelist-crm || true )
-            DATABASE_URL="file:$DB_PATH" $PM2_BIN start npm --name "pixelist-crm" -- start
-            
-            # Expose logs for diagnosis
-            echo "Capturing logs to public file..."
-            $PM2_BIN status > "$SITE_PATH/public/diag-status.txt"
-            $PM2_BIN logs pixelist-crm --lines 200 --nostream > "$SITE_PATH/public/diag-logs.txt"
-            netstat -tan | grep 3000 > "$SITE_PATH/public/diag-net.txt" || true
+            # Start directly with npx next start to be sure
+            DATABASE_URL="file:$DB_PATH" $PM2_BIN start npx --name "pixelist-crm" -- next start -p 3000
             
             $PM2_BIN save || true
-            echo "Deployment finished."
-
-
+            echo "--- DEPLOY SUCCESS ---"
