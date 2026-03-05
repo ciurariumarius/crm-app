@@ -12,18 +12,25 @@ export async function GET() {
 
         // Check columns in users
         const usersInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(users)");
-        debugInfo += "Users schema: " + usersInfo.map(c => `${c.name} (${c.type})`).join(", ") + "\n\n";
+        debugInfo += "Users columns: " + usersInfo.map(c => c.name).join(", ") + "\n\n";
 
         // Check columns in tasks
         const tasksInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(tasks)");
-        debugInfo += "Tasks schema: " + tasksInfo.map(c => `${c.name} (${c.type})`).join(", ") + "\n\n";
+        debugInfo += "Tasks columns: " + tasksInfo.map(c => c.name).join(", ") + "\n\n";
+
+        // Check columns in projects
+        const projectsInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(projects)");
+        debugInfo += "Projects columns: " + projectsInfo.map(c => c.name).join(", ") + "\n\n";
+
+        const userCount = await prisma.$queryRawUnsafe<any[]>("SELECT COUNT(*) as count FROM users");
+        debugInfo += "User count in DB: " + userCount[0].count + "\n\n";
 
     } catch (e: any) {
         debugInfo += "DB Error: " + e.message + "\n\n";
     }
 
     return new NextResponse(
-        "DATABASE_URL env: " + (process.env.DATABASE_URL || "not set") + "\n\n" +
+        "DATABASE_URL: " + (process.env.DATABASE_URL || "not set") + "\n\n" +
         debugInfo,
         { headers: { "Content-Type": "text/plain" } }
     );
