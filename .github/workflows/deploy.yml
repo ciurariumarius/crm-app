@@ -46,18 +46,17 @@ jobs:
             # Define PM2 absolute path for reliability
             PM2_BIN="/home/${{ secrets.SERVER_USER }}/htdocs/../.nvm/versions/node/v22.22.0/bin/pm2"
             
-            # Restart the Next.js app
+            echo "Restarting application..."
             ( $PM2_BIN delete pixelist-crm || true )
             DATABASE_URL="file:$DB_PATH" $PM2_BIN start npm --name "pixelist-crm" -- start
             
-            # Final Check
-            $PM2_BIN save || true
-            echo "--- PM2 STATUS ---"
-            $PM2_BIN status
-            echo "--- PM2 LOGS (TAIL 100) ---"
-            $PM2_BIN logs pixelist-crm --lines 100 --nostream
+            # Expose logs for diagnosis
+            echo "Capturing logs to public file..."
+            $PM2_BIN status > "$SITE_PATH/public/diag-status.txt"
+            $PM2_BIN logs pixelist-crm --lines 200 --nostream > "$SITE_PATH/public/diag-logs.txt"
+            netstat -tan | grep 3000 > "$SITE_PATH/public/diag-net.txt" || true
             
-            echo "--- NETWORK STATUS (PORT 3000) ---"
-            netstat -tan | grep 3000 || true
-            ss -lntu | grep 3000 || true
+            $PM2_BIN save || true
+            echo "Deployment finished."
+
 
