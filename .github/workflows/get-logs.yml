@@ -13,7 +13,16 @@ jobs:
           port: 22
           script: |
             SITE_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
-            cd "$SITE_PATH"
-            pm2 status > public/pm2_status.txt
-            pm2 logs --lines 100 --nostream > public/pm2_logs.txt
-            pm2 logs --lines 100 --err --nostream > public/pm2_errors.txt
+            cd "$SITE_PATH" || exit 1
+            
+            # Find PM2 path
+            PM2_EXE=$(which pm2 || find /home/${{ secrets.SERVER_USER }}/.nvm -name pm2 -type f | head -1 || echo "pm2")
+            echo "Using PM2 at: $PM2_EXE"
+            
+            # Capture stats
+            $PM2_EXE status > public/pm2_status.txt 2>&1 || true
+            $PM2_EXE show pixelist-crm > public/pm2_show.txt 2>&1 || true
+            $PM2_EXE logs pixelist-crm --lines 100 --nostream > public/pm2_logs.txt 2>&1 || true
+            $PM2_EXE logs pixelist-crm --lines 100 --err --nostream > public/pm2_errors.txt 2>&1 || true
+            
+            echo "Logs captured to public/ folder"
