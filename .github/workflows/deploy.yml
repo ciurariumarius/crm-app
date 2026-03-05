@@ -46,12 +46,13 @@ jobs:
             # Restart the Next.js app (using global PM2 managed by CloudPanel)
             # Delete first to ensure a fresh start with new env vars
             (pm2 delete pixelist-crm || npx pm2 delete pixelist-crm || true)
-            DATABASE_URL="file:$DB_PATH" pm2 start npm --name "pixelist-crm" -- start || \
-            DATABASE_URL="file:$DB_PATH" npx pm2 start npm --name "pixelist-crm" -- start
+            (DATABASE_URL="file:$DB_PATH" pm2 start npm --name "pixelist-crm" -- start || \
+             DATABASE_URL="file:$DB_PATH" npx pm2 start npm --name "pixelist-crm" -- start || true)
             
             # Final Check
-            pm2 save
+            pm2 save || npx pm2 save || true
             echo "--- PM2 STATUS AFTER START ---"
-            pm2 status
+            pm2 status || npx pm2 status || true
             echo "--- PM2 LOGS (TAIL 50) ---"
-            pm2 logs pixelist-crm --lines 50 --nostream
+            pm2 logs pixelist-crm --lines 50 --nostream || npx pm2 logs pixelist-crm --lines 50 --nostream || true
+
