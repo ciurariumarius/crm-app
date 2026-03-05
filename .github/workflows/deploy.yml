@@ -37,9 +37,9 @@ jobs:
             rm -rf node_modules package-lock.json || true
             npm install --include=dev
             
-            # Update Prisma ORM (if database schema changed)
+            # Update Prisma ORM (force sync schema to fix missing tables)
             npx prisma generate
-            npx prisma migrate deploy
+            npx prisma db push --accept-data-loss
             
             # Build the Next.js application
             npm run build
