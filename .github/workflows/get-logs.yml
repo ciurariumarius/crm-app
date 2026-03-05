@@ -12,4 +12,6 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           port: 22
           script: |
-            pm2 logs --lines 100 --err --nostream
+            cd /home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro
+            pm2 logs --lines 200 --err --nostream > public/pm2_logs.txt
+            pm2 logs --lines 200 --nostream > public/pm2_logs_full.txt
