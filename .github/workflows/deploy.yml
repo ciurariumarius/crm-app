@@ -21,38 +21,39 @@ jobs:
             set -e
             SITE_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
             DB_PATH="$SITE_PATH/dev.db"
-            PM2_BIN="/home/${{ secrets.SERVER_USER }}/.nvm/versions/node/v22.22.0/bin/pm2"
+            # Find the actual PM2 path dynamically just in case version changed
+            PM2_BIN=$(find /home/${{ secrets.SERVER_USER }}/.nvm -name pm2 -type f | head -1 || which pm2)
             
             cd "$SITE_PATH"
             
-            echo "--- CLEANUP ---"
+            echo "--- CLEANING PREVIOUS BUILD ---"
             rm -rf .next
             
-            echo "--- PULL ---"
+            echo "--- PULLING LATEST CODE ---"
             git fetch origin main
             git reset --hard origin/main
             
-            echo "--- INSTALL ---"
+            echo "--- INSTALLING DEPENDENCIES ---"
             npm install || npm install --legacy-peer-deps
             
-            echo "--- PRISMA ---"
+            echo "--- GENERATING PRISMA CLIENT ---"
             npx prisma generate
             
-            echo "--- BUILD ---"
-            # Limit memory for Next build to prevent OOM
-            NODE_OPTIONS="--max-old-space-size=2048" npm run build
+            echo "--- BUILDING APPLICATION ---"
+            # Increase memory limit to avoid OOM
+            export NODE_OPTIONS="--max-old-space-size=2048"
+            npm run build
             
-            echo "--- VERIFY BUILD ---"
+            echo "--- VERIFYING BUILD SUCCESS ---"
             if [ ! -d ".next" ]; then
-              echo "ERROR: .next directory was not created!"
+              echo "FATAL ERROR: .next directory was not created after build!"
               exit 1
             fi
-            ls -la .next | head -n 10
             
-            echo "--- RESTART PM2 ---"
+            echo "--- RESTARTING PM2 PROCESS ---"
             ( $PM2_BIN delete pixelist-crm || true )
-            # Start directly with npx next start to be sure
+            # Start directly with npx next start to be safe
             DATABASE_URL="file:$DB_PATH" $PM2_BIN start npx --name "pixelist-crm" -- next start -p 3000
             
             $PM2_BIN save || true
-            echo "--- DEPLOY SUCCESS ---"
+            echo "--- DEPLOYMENT COMPLETED SUCCESSFULLY ---"
