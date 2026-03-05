@@ -55,8 +55,12 @@ jobs:
             
             echo "--- RESTARTING PM2 PROCESS ---"
             ( $PM2_BIN delete pixelist-crm || true )
-            # Start directly with npx next start to be safe
             DATABASE_URL="file:$DB_PATH" $PM2_BIN start npx --name "pixelist-crm" -- next start -p 3000
             
+            # Expose status for diagnosis
+            echo "Capturing status to public file..."
+            $PM2_BIN status > "$SITE_PATH/public/diag-pm2.txt"
+            $PM2_BIN logs pixelist-crm --lines 100 --nostream > "$SITE_PATH/public/diag-logs.txt"
+
             $PM2_BIN save || true
             echo "--- DEPLOYMENT COMPLETED SUCCESSFULLY ---"
