@@ -38,6 +38,8 @@ jobs:
             npm install --include=dev
             
             # Update Prisma ORM (force sync schema to fix missing tables)
+            # Use explicit absolute path so prisma finds the correct SQLite file
+            export DATABASE_URL="file:/home/${{ secrets.SERVER_USER }}/htdocs/dev.db"
             npx prisma generate
             npx prisma db push --accept-data-loss
             
