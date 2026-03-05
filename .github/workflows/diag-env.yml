@@ -1,0 +1,25 @@
+name: Diag Environment
+on: [push, workflow_dispatch]
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Environment Diag
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: 22
+          script: |
+            SITE_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
+            cd "$SITE_PATH"
+            echo "--- .env ---"
+            cat .env | grep -v PASSWORD | grep -v SECRET | grep -v KEY
+            echo "--- PM2 ENV ---"
+            PM2_EXE=$(which pm2 || find /home/${{ secrets.SERVER_USER }}/.nvm -name pm2 -type f | head -1 || echo "pm2")
+            $PM2_EXE env pixelist-crm
+            echo "--- PORT CHECK ---"
+            netstat -tulpn | grep -E ":3000|:80|:443" || true
+            echo "--- FOLDER LS ---"
+            ls -la
