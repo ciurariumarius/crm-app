@@ -1,4 +1,5 @@
 "use client"
+import * as React from "react"
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -33,6 +34,12 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         },
         immediatelyRender: false,
     })
+
+    React.useEffect(() => {
+        if (editor && value !== editor.getHTML()) {
+            editor.commands.setContent(value)
+        }
+    }, [value, editor])
 
     if (!editor) {
         return null

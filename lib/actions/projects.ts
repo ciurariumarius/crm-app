@@ -45,7 +45,7 @@ export async function createProject(data: {
     currentFee?: number
     status?: "Active" | "Paused" | "Completed"
     paymentStatus?: "Paid" | "Unpaid"
-    }) {
+}) {
     try {
         const session = await requireTenantContext()
         const validated = CreateProjectSchema.parse(data)
@@ -192,7 +192,7 @@ export async function updateProject(projectId: string, data: {
     paidAt?: Date | string | null
     currentFee?: number
     serviceIds?: string[]
-    }) {
+}) {
     try {
         const session = await requireTenantContext()
         const validatedProjectId = ProjectIdSchema.parse(projectId)
@@ -205,6 +205,7 @@ export async function updateProject(projectId: string, data: {
         if (data.currentFee !== undefined) updateData.currentFee = data.currentFee
         if (data.serviceIds !== undefined) updateData.serviceIds = data.serviceIds
 
+        console.log(`[projects] Updating project ${projectId}`, updateData)
         const validated = UpdateProjectSchema.parse(updateData)
 
         const { ...restValidated } = validated
