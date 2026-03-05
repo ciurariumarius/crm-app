@@ -18,8 +18,29 @@ async function getRequestContext() {
     return { ipAddress, userAgent }
 }
 
+const RATE_LIMIT_FALLBACK_WINDOW_MS = 15 * 60 * 1000
+
+function allowRequestWhenRateLimitUnavailable() {
+    return {
+        allowed: true,
+        remaining: Number.MAX_SAFE_INTEGER,
+        resetAt: new Date(Date.now() + RATE_LIMIT_FALLBACK_WINDOW_MS),
+    }
+}
+
+async function checkRateLimitSafe(
+    key: string,
+    options?: { windowMs?: number; maxAttempts?: number }
+) {
+    try {
+        return await checkRateLimit(key, options)
+    } catch (error) {
+        console.error(`[auth] rate limit check failed for key "${key}"`, error)
+        return allowRequestWhenRateLimitUnavailable()
+    }
+}
+
 export async function loginUser(formData: FormData) {
-    const { ipAddress, userAgent } = await getRequestContext()
     const data = Object.fromEntries(formData.entries())
     const username = data.username as string
     const password = data.password as string
@@ -28,30 +49,32 @@ export async function loginUser(formData: FormData) {
         return { success: false, error: "Username and password required" }
     }
 
-    const ipRl = await checkRateLimit(`login_ip:${ipAddress}`, { maxAttempts: 50 })
-    if (!ipRl.allowed) {
-        await logAuditEvent({
-            action: "AUTH_LOGIN_IP_RATE_LIMITED",
-            success: false,
-            ipAddress,
-            userAgent,
-        })
-        return { success: false, error: "Too many login attempts from this network. Please try again later." }
-    }
-
-    const rl = await checkRateLimit(`login:${username}:${ipAddress}`)
-    if (!rl.allowed) {
-        await logAuditEvent({
-            action: "AUTH_LOGIN_RATE_LIMITED",
-            success: false,
-            ipAddress,
-            userAgent,
-            details: `username=${username}`,
-        })
-        return { success: false, error: "Too many login attempts. Please try again later." }
-    }
-
     try {
+        const { ipAddress, userAgent } = await getRequestContext()
+
+        const ipRl = await checkRateLimitSafe(`login_ip:${ipAddress}`, { maxAttempts: 50 })
+        if (!ipRl.allowed) {
+            await logAuditEvent({
+                action: "AUTH_LOGIN_IP_RATE_LIMITED",
+                success: false,
+                ipAddress,
+                userAgent,
+            })
+            return { success: false, error: "Too many login attempts from this network. Please try again later." }
+        }
+
+        const rl = await checkRateLimitSafe(`login:${username}:${ipAddress}`)
+        if (!rl.allowed) {
+            await logAuditEvent({
+                action: "AUTH_LOGIN_RATE_LIMITED",
+                success: false,
+                ipAddress,
+                userAgent,
+                details: `username=${username}`,
+            })
+            return { success: false, error: "Too many login attempts. Please try again later." }
+        }
+
         const user = await prisma.user.findUnique({ where: { username } })
         if (!user) {
             await logAuditEvent({
@@ -107,8 +130,9 @@ export async function loginUser(formData: FormData) {
         })
         return { success: true }
 
-    } catch {
-        return { success: false, error: "Login failed" }
+    } catch (error) {
+        console.error("[auth] loginUser failed", error)
+        return { success: false, error: "Login failed. Please try again." }
     }
 }
 
@@ -127,7 +151,7 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
         const userId = challenge.userId as string
         const challengeTenantId = challenge.tenantId as string | undefined
 
-        const ipRl = await checkRateLimit(`2fa_ip:${ipAddress}`, { maxAttempts: 100 })
+        const ipRl = await checkRateLimitSafe(`2fa_ip:${ipAddress}`, { maxAttempts: 100 })
         if (!ipRl.allowed) {
             await logAuditEvent({
                 action: "AUTH_2FA_IP_RATE_LIMITED",
@@ -140,7 +164,7 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
             return { success: false, error: "Too many verification attempts from this network. Please try again later." }
         }
 
-        const rl = await checkRateLimit(`2fa:${userId}:${ipAddress}`)
+        const rl = await checkRateLimitSafe(`2fa:${userId}:${ipAddress}`)
         if (!rl.allowed) {
             await logAuditEvent({
                 action: "AUTH_2FA_RATE_LIMITED",

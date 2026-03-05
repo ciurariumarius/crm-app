@@ -43,15 +43,15 @@ jobs:
             
             # Build
             npm run build
+            # Restart the Next.js app (using global PM2 managed by CloudPanel)
+            # Delete first to ensure a fresh start with new env vars
+            (pm2 delete pixelist-crm || npx pm2 delete pixelist-crm || true)
+            DATABASE_URL="file:$DB_PATH" pm2 start npm --name "pixelist-crm" -- start || \
+            DATABASE_URL="file:$DB_PATH" npx pm2 start npm --name "pixelist-crm" -- start
             
-            # Restart
-            pm2 restart all || npx pm2 restart all
-            
-            # CAPTURE LOGS TO CONSOLE
-            echo "--- PM2 STATUS ---"
+            # Final Check
+            pm2 save
+            echo "--- PM2 STATUS AFTER START ---"
             pm2 status
-            echo "--- PM2 ERROR LOGS (LAST 50 LINES) ---"
-            pm2 logs pixelist-crm --lines 50 --err --nostream
-            echo "--- PM2 OUT LOGS (LAST 50 LINES) ---"
-            pm2 logs pixelist-crm --lines 50 --out --nostream
-            echo "--- END LOGS ---"
+            echo "--- PM2 LOGS (TAIL 50) ---"
+            pm2 logs pixelist-crm --lines 50 --nostream
