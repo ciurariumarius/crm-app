@@ -23,19 +23,24 @@ export default function LoginPage() {
         setLoading(true)
         setError("")
 
-        const formData = new FormData(e.currentTarget)
-        const result = await loginUser(formData)
+        try {
+            const formData = new FormData(e.currentTarget)
+            const result = await loginUser(formData)
 
-        if (result.success) {
-            if (result.requiresTwoFactor) {
-                setRequiresTwoFactor(true)
-                setChallengeToken(result.challengeToken!)
-                setLoading(false)
+            if (result.success) {
+                if (result.requiresTwoFactor) {
+                    setRequiresTwoFactor(true)
+                    setChallengeToken(result.challengeToken!)
+                    setLoading(false)
+                } else {
+                    window.location.href = "/"
+                }
             } else {
-                window.location.href = "/"
+                setError(result.error || "Login failed")
+                setLoading(false)
             }
-        } else {
-            setError(result.error || "Login failed")
+        } catch (err: any) {
+            setError(err.message || "An unexpected server error occurred.")
             setLoading(false)
         }
     }
