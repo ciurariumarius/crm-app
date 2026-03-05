@@ -18,36 +18,39 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }} # Your Site User password (or use ssh_key instead)
           port: 22                             # Default SSH port
           script: |
-            # Navigate to the site folder (Update the domain to your actual folder name!)
-            cd /home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro || exit 1
+            set -e # Stop script on first error
+
+            # Define variables
+            SITE_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
+            DB_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro/dev.db"
+            export DATABASE_URL="file:$DB_PATH"
+
+            # Navigate to the site folder
+            cd "$SITE_PATH"
             
             # Configure Git to trust the workspace folder
-            git config --global --add safe.directory /home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro
+            git config --global --add safe.directory "$SITE_PATH"
 
-            # Stop the app first to release any open file locks (like Prisma engines)
+            # Stop the app first
             pm2 stop all || npx pm2 stop all || true
 
-            # Forcefully pull the latest code from GitHub, discarding local changes
+            # Pull the latest code
             git fetch origin main
             git reset --hard origin/main
             
-            # Clear node_modules to avoid ENOTEMPTY and Permission errors, then reinstall
+            # Reinstall dependencies
             rm -rf node_modules package-lock.json || true
             npm install --include=dev
             
-            # Update Prisma ORM (force sync schema to fix missing tables)
-            # The app DB is at ./dev.db in the app folder
-            APP_DB="./dev.db"
-            
-            # Create missing tables directly via sqlite3
-            sqlite3 "$APP_DB" "
+            # Update Prisma ORM
+            echo "Directly creating missing tables if needed..."
+            sqlite3 "$DB_PATH" "
               CREATE TABLE IF NOT EXISTS tenants (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
               );
-              INSERT OR IGNORE INTO tenants (id, name) SELECT DISTINCT tenant_id, 'Default' FROM users WHERE tenant_id IS NOT NULL LIMIT 1;
               
               CREATE TABLE IF NOT EXISTS rate_limit_entries (
                 key TEXT PRIMARY KEY,
@@ -78,15 +81,17 @@ jobs:
                 target_month INTEGER NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
               );
-              
-              -- Add missing columns to existing tables
-              ALTER TABLE projects ADD COLUMN description TEXT;
-            " 2>/dev/null || true
+            " || true
             
-            DATABASE_URL="file:./dev.db" npx prisma generate
+            # Add missing description column if it doesn't exist
+            sqlite3 "$DB_PATH" "ALTER TABLE projects ADD COLUMN description TEXT;" || true
+
+            # Now sync everything with Prisma
+            npx prisma generate
+            npx prisma db push --accept-data-loss
             
             # Build the Next.js application
             npm run build
             
-            # Restart the Next.js app (using global PM2 managed by CloudPanel)
+            # Restart the Next.js app
             pm2 restart all || npx pm2 restart all
