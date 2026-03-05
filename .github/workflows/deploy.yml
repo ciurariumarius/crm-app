@@ -26,6 +26,11 @@ jobs:
             
             cd "$SITE_PATH"
             
+            echo "--- SERVER INFO ---"
+            hostname -I
+            pwd
+            whoami
+            
             echo "--- CLEANING PREVIOUS BUILD ---"
             rm -rf .next
             
