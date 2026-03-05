@@ -39,11 +39,11 @@ jobs:
             npm run build
             
             echo "--- RESTARTING PM2 PROCESS ---"
-            # Find the actual PM2 path dynamically
-            PM2_BIN=$(find /home/${{ secrets.SERVER_USER }}/.nvm -name pm2 -type f | head -1 || which pm2) || echo "pm2"
+            export NVM_DIR="/home/${{ secrets.SERVER_USER }}/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
-            $PM2_BIN delete pixelist-crm || true
-            DATABASE_URL="file:$DB_PATH" $PM2_BIN start npx --name "pixelist-crm" -- next start -p 3000
+            pm2 delete pixelist-crm || true
+            DATABASE_URL="file:$DB_PATH" pm2 start npx --name "pixelist-crm" -- next start -p 3000
             
-            $PM2_BIN save || true
+            pm2 save || true
             echo "--- DEPLOYMENT COMPLETED SUCCESSFULLY ---"
