@@ -5,25 +5,30 @@ import prisma from "@/lib/prisma";
 
 const execAsync = promisify(exec);
 
-export async function GET(request: Request) {
+export async function GET() {
     let dbTest: string;
     try {
-        const tables = await prisma.$queryRawUnsafe<{name:string}[]>(
+        const tables = await prisma.$queryRawUnsafe<{ name: string }[]>(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
         );
-        dbTest = "Tables: " + tables.map((r: any) => r.name).join(", ");
+        dbTest = "Tables in connected DB: " + tables.map((r: any) => r.name).join(", ");
     } catch (e: any) {
         dbTest = "DB Error: " + e.message;
     }
 
+    let dbFilePath = "unknown";
     try {
-        const { stdout: path } = await execAsync("which pm2");
-        return new NextResponse(dbTest + "\nPM2 Path: " + path, {
-            headers: { "Content-Type": "text/plain" },
-        });
+        // Get the actual file path of the connected DB
+        const result = await prisma.$queryRawUnsafe<any[]>("PRAGMA database_list");
+        dbFilePath = JSON.stringify(result);
     } catch (e: any) {
-        return new NextResponse(dbTest, {
-            headers: { "Content-Type": "text/plain" },
-        });
+        dbFilePath = "PRAGMA error: " + e.message;
     }
+
+    return new NextResponse(
+        "DATABASE_URL env: " + (process.env.DATABASE_URL || "not set") + "\n\n" +
+        dbTest + "\n\n" +
+        "DB file path (PRAGMA): " + dbFilePath,
+        { headers: { "Content-Type": "text/plain" } }
+    );
 }
