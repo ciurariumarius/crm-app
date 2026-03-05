@@ -13,5 +13,5 @@ jobs:
           port: 22
           script: |
             cd /home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro
-            pm2 logs --lines 200 --err --nostream > public/pm2_logs.txt
-            pm2 logs --lines 200 --nostream > public/pm2_logs_full.txt
+            npx pm2 logs --lines 1000 --err --nostream > public/pm2_err.txt || pm2 logs --lines 1000 --err --nostream > public/pm2_err.txt || true
+            npx pm2 logs --lines 1000 --nostream > public/pm2_out.txt || pm2 logs --lines 1000 --nostream > public/pm2_out.txt || true
