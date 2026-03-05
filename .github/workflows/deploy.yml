@@ -43,16 +43,21 @@ jobs:
             
             # Build
             npm run build
-            # Restart the Next.js app (using global PM2 managed by CloudPanel)
-            # Delete first to ensure a fresh start with new env vars
-            (pm2 delete pixelist-crm || npx pm2 delete pixelist-crm || true)
-            (DATABASE_URL="file:$DB_PATH" pm2 start npm --name "pixelist-crm" -- start || \
-             DATABASE_URL="file:$DB_PATH" npx pm2 start npm --name "pixelist-crm" -- start || true)
+            # Define PM2 absolute path for reliability
+            PM2_BIN="/home/${{ secrets.SERVER_USER }}/htdocs/../.nvm/versions/node/v22.22.0/bin/pm2"
+            
+            # Restart the Next.js app
+            ( $PM2_BIN delete pixelist-crm || true )
+            DATABASE_URL="file:$DB_PATH" $PM2_BIN start npm --name "pixelist-crm" -- start
             
             # Final Check
-            pm2 save || npx pm2 save || true
-            echo "--- PM2 STATUS AFTER START ---"
-            pm2 status || npx pm2 status || true
-            echo "--- PM2 LOGS (TAIL 50) ---"
-            pm2 logs pixelist-crm --lines 50 --nostream || npx pm2 logs pixelist-crm --lines 50 --nostream || true
+            $PM2_BIN save || true
+            echo "--- PM2 STATUS ---"
+            $PM2_BIN status
+            echo "--- PM2 LOGS (TAIL 100) ---"
+            $PM2_BIN logs pixelist-crm --lines 100 --nostream
+            
+            echo "--- NETWORK STATUS (PORT 3000) ---"
+            netstat -tan | grep 3000 || true
+            ss -lntu | grep 3000 || true
 
