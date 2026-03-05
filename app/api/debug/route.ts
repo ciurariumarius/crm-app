@@ -6,8 +6,9 @@ const execAsync = promisify(exec);
 
 export async function GET(request: Request) {
     try {
-        const { stdout, stderr } = await execAsync("npx pm2 logs --lines 500 --nostream");
-        return new NextResponse(stdout + "\n--- STDERR ---\n" + stderr, {
+        const { stdout: stdout1, stderr: stderr1 } = await execAsync("npx pm2 status");
+        const { stdout: stdout2, stderr: stderr2 } = await execAsync("which pm2");
+        return new NextResponse("npx pm2 status:\n" + stdout1 + stderr1 + "\n\nwhich pm2:\n" + stdout2 + stderr2, {
             headers: { "Content-Type": "text/plain" },
         });
     } catch (e: any) {
