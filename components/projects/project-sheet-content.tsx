@@ -112,9 +112,6 @@ export function ProjectSheetContent({
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [selectedTimeLog, setSelectedTimeLog] = React.useState<any | null>(null)
     const [isTimeLogSheetOpen, setIsTimeLogSheetOpen] = React.useState(false)
-
-    const skipDescriptionSaveRef = React.useRef(true)
-
     const router = useRouter()
     const {
         timerState,
@@ -132,7 +129,6 @@ export function ProjectSheetContent({
         setLocalName(project.name || formatProjectName(project))
         setDescription(project.description || "")
         setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
-        skipDescriptionSaveRef.current = true
     }, [project.id])
 
     const handleUpdate = React.useCallback(
@@ -181,18 +177,17 @@ export function ProjectSheetContent({
         [allServices, onUpdate, project, router]
     )
 
+    const isInitialMount = React.useRef(true)
     React.useEffect(() => {
-        if (skipDescriptionSaveRef.current) {
-            skipDescriptionSaveRef.current = false
-            return
-        }
-
-        if (description === (project.description || "")) {
+        if (isInitialMount.current) {
+            isInitialMount.current = false
             return
         }
 
         const timer = setTimeout(() => {
-            void handleUpdate({ description })
+            if (description !== (project.description || "")) {
+                void handleUpdate({ description })
+            }
         }, 400)
 
         return () => clearTimeout(timer)
