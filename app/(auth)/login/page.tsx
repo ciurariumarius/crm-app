@@ -32,7 +32,7 @@ export default function LoginPage() {
                 setChallengeToken(result.challengeToken!)
                 setLoading(false)
             } else {
-                router.push("/")
+                window.location.href = "/"
             }
         } else {
             setError(result.error || "Login failed")
@@ -48,7 +48,7 @@ export default function LoginPage() {
         const result = await verifyTwoFactor(challengeToken, token)
 
         if (result.success) {
-            router.push("/")
+            window.location.href = "/"
         } else {
             setError(result.error || "Invalid code")
             setLoading(false)
