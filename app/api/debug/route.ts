@@ -2,36 +2,34 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
-    let debugInfo = "";
+    let debugInfo: any = {};
 
     try {
-        const tables = await prisma.$queryRawUnsafe<{ name: string }[]>(
+        const tables: any[] = await prisma.$queryRawUnsafe(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
         );
-        debugInfo += "Tables: " + tables.map((r: any) => r.name).join(", ") + "\n\n";
+        debugInfo.tables = tables.map(r => r.name);
 
-        // Check columns in users
         const usersInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(users)");
-        debugInfo += "Users columns: " + usersInfo.map(c => c.name).join(", ") + "\n\n";
+        debugInfo.users_columns = usersInfo.map(c => `${c.name} (${c.type})`);
 
-        // Check columns in tasks
         const tasksInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(tasks)");
-        debugInfo += "Tasks columns: " + tasksInfo.map(c => c.name).join(", ") + "\n\n";
+        debugInfo.tasks_columns = tasksInfo.map(c => `${c.name} (${c.type})`);
 
-        // Check columns in projects
-        const projectsInfo = await prisma.$queryRawUnsafe<any[]>("PRAGMA table_info(projects)");
-        debugInfo += "Projects columns: " + projectsInfo.map(c => c.name).join(", ") + "\n\n";
-
-        const userCount = await prisma.$queryRawUnsafe<any[]>("SELECT COUNT(*) as count FROM users");
-        debugInfo += "User count in DB: " + userCount[0].count + "\n\n";
+        const userCount: any[] = await prisma.$queryRawUnsafe("SELECT COUNT(*) as count FROM users");
+        debugInfo.user_count = userCount[0].count;
 
     } catch (e: any) {
-        debugInfo += "DB Error: " + e.message + "\n\n";
+        debugInfo.error = e.message;
     }
 
+    const responseText = JSON.stringify(debugInfo, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value,
+        2
+    );
+
     return new NextResponse(
-        "DATABASE_URL: " + (process.env.DATABASE_URL || "not set") + "\n\n" +
-        debugInfo,
-        { headers: { "Content-Type": "text/plain" } }
+        "DATABASE_URL: " + (process.env.DATABASE_URL || "not set") + "\n\n" + responseText,
+        { headers: { "Content-Type": "application/json" } }
     );
 }
