@@ -186,168 +186,168 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
 
                 {/* Tasks Grid */}
                 <div className="p-1 flex-1 overflow-visible">
-                    {filteredTasks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground/50 gap-2 border-2 border-dashed border-muted/50 rounded-xl">
-                            <CheckCircle2 className="h-8 w-8 opacity-20" />
-                            <span className="text-xs font-medium">
-                                {filter === "overdue" ? "No overdue tasks!" : filter === "urgent" ? "No urgent tasks!" : "All clear for today!"}
-                            </span>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {filteredTasks.map((task) => (
-                                <div
-                                    key={task.id}
-                                    className="group relative flex flex-col bg-card hover:bg-card/80 p-5 rounded-2xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 h-[220px]"
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {filteredTasks.map((task) => (
+                            <div
+                                key={task.id}
+                                className="group relative flex flex-col bg-card hover:bg-card/80 p-5 rounded-2xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 h-[220px]"
+                            >
+                                {/* Top Row: Badges & Menu */}
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {task.urgency === "Urgent" && (
+                                            <Badge variant="secondary" className="px-2.5 py-1 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg border-none shadow-sm shadow-amber-500/20">
+                                                Urgent
+                                            </Badge>
+                                        )}
+                                        {task.deadline && (
+                                            <div className={cn(
+                                                "text-xs flex items-center gap-1 font-semibold px-2 py-1 rounded-lg shadow-sm transition-colors",
+                                                getDeadlineColor(new Date(task.deadline)).includes("text-rose")
+                                                    ? "bg-rose-500 text-white shadow-rose-500/20"
+                                                    : isToday(new Date(task.deadline))
+                                                        ? "bg-orange-500 text-white shadow-orange-500/20"
+                                                        : "bg-muted/50 text-muted-foreground"
+                                            )}>
+                                                <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                                {getDeadlineText(new Date(task.deadline))}
+                                            </div>
+                                        )}
+                                        {task.estimatedMinutes && (
+                                            <div className="text-xs flex items-center gap-1.5 font-semibold px-2 py-1 rounded-lg bg-muted/50 text-muted-foreground border border-muted/60" title="Estimated Time">
+                                                <Target className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                                {task.estimatedMinutes}m
+                                            </div>
+                                        )}
+                                        {/* Total Time Spent */}
+                                        {task.timeLogs && task.timeLogs.length > 0 && (
+                                            <div className="text-xs flex items-center gap-1.5 font-semibold px-2 py-1 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/10 dark:text-blue-300 dark:border-blue-900/20" title="Time Spent">
+                                                <History className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                                {(() => {
+                                                    const totalSeconds = task.timeLogs.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0)
+                                                    const hours = Math.floor(totalSeconds / 3600)
+                                                    const minutes = Math.floor((totalSeconds % 3600) / 60)
+                                                    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Middle: Task Name */}
+                                <h4
+                                    className="text-base font-bold leading-snug mb-4 line-clamp-3 cursor-pointer hover:text-primary transition-colors text-foreground/90 group-hover:text-foreground"
+                                    onClick={() => openTask(task.id)}
                                 >
-                                    {/* Top Row: Badges & Menu */}
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            {task.urgency === "Urgent" && (
-                                                <Badge variant="secondary" className="px-2.5 py-1 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg border-none shadow-sm shadow-amber-500/20">
-                                                    Urgent
-                                                </Badge>
-                                            )}
-                                            {task.deadline && (
-                                                <div className={cn(
-                                                    "text-xs flex items-center gap-1 font-semibold px-2 py-1 rounded-lg shadow-sm transition-colors",
-                                                    getDeadlineColor(new Date(task.deadline)).includes("text-rose")
-                                                        ? "bg-rose-500 text-white shadow-rose-500/20"
-                                                        : isToday(new Date(task.deadline))
-                                                            ? "bg-orange-500 text-white shadow-orange-500/20"
-                                                            : "bg-muted/50 text-muted-foreground"
-                                                )}>
-                                                    <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                                    {getDeadlineText(new Date(task.deadline))}
-                                                </div>
-                                            )}
-                                            {task.estimatedMinutes && (
-                                                <div className="text-xs flex items-center gap-1.5 font-semibold px-2 py-1 rounded-lg bg-muted/50 text-muted-foreground border border-muted/60" title="Estimated Time">
-                                                    <Target className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                                    {task.estimatedMinutes}m
-                                                </div>
-                                            )}
-                                            {/* Total Time Spent */}
-                                            {task.timeLogs && task.timeLogs.length > 0 && (
-                                                <div className="text-xs flex items-center gap-1.5 font-semibold px-2 py-1 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/10 dark:text-blue-300 dark:border-blue-900/20" title="Time Spent">
-                                                    <History className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                                    {(() => {
-                                                        const totalSeconds = task.timeLogs.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0)
-                                                        const hours = Math.floor(totalSeconds / 3600)
-                                                        const minutes = Math.floor((totalSeconds % 3600) / 60)
-                                                        return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
-                                                    })()}
-                                                </div>
-                                            )}
-                                        </div>
+                                    {task.name}
+                                </h4>
+
+                                {/* Bottom: Project & Actions */}
+                                <div className="flex items-end justify-between mt-auto pt-4">
+                                    {/* Project Info */}
+                                    <div className="flex flex-col gap-1 max-w-[65%]">
+                                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 truncate">
+                                            {task.project.site?.domainName || task.project.name}
+                                        </span>
+                                        <span className="text-xs font-medium text-muted-foreground/60 truncate">
+                                            {task.project.services && task.project.services.length > 0
+                                                ? task.project.services.map((s: any) => s.serviceName).join(" + ")
+                                                : "General Operations"}
+                                        </span>
                                     </div>
 
-                                    {/* Middle: Task Name */}
-                                    <h4
-                                        className="text-base font-bold leading-snug mb-4 line-clamp-3 cursor-pointer hover:text-primary transition-colors text-foreground/90 group-hover:text-foreground"
-                                        onClick={() => openTask(task.id)}
-                                    >
-                                        {task.name}
-                                    </h4>
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2">
+                                        {(() => {
+                                            const isActive = timerState.taskId === task.id
+                                            const isRunning = isActive && timerState.isRunning
+                                            const isPaused = isActive && !timerState.isRunning && timerState.elapsedSeconds > 0
 
-                                    {/* Bottom: Project & Actions */}
-                                    <div className="flex items-end justify-between mt-auto pt-4">
-                                        {/* Project Info */}
-                                        <div className="flex flex-col gap-1 max-w-[65%]">
-                                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 truncate">
-                                                {task.project.site?.domainName || task.project.name}
-                                            </span>
-                                            <span className="text-xs font-medium text-muted-foreground/60 truncate">
-                                                {task.project.services && task.project.services.length > 0
-                                                    ? task.project.services.map((s: any) => s.serviceName).join(" + ")
-                                                    : "General Operations"}
-                                            </span>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-2">
-                                            {/* Timer Button */}
-                                            {(() => {
-                                                const isActive = timerState.taskId === task.id
-                                                const isRunning = isActive && timerState.isRunning
-                                                const isPaused = isActive && !timerState.isRunning && timerState.elapsedSeconds > 0
-
-                                                if (isRunning) {
-                                                    return (
-                                                        <Button
-                                                            size="icon"
-                                                            className="h-10 w-10 text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
-                                                            onClick={(e) => {
-                                                                e.preventDefault()
-                                                                pauseTimer()
-                                                                toast.success("Timer paused")
-                                                            }}
-                                                        >
-                                                            <Pause className="h-4 w-4 fill-current" />
-                                                        </Button>
-                                                    )
-                                                }
-
-                                                if (isPaused) {
-                                                    return (
-                                                        <Button
-                                                            size="icon"
-                                                            className="h-10 w-10 text-white bg-amber-500 hover:bg-amber-600 rounded-xl shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
-                                                            onClick={(e) => {
-                                                                e.preventDefault()
-                                                                resumeTimer()
-                                                                toast.success("Timer resumed")
-                                                            }}
-                                                        >
-                                                            <Play className="h-4 w-4 fill-current ml-0.5" />
-                                                        </Button>
-                                                    )
-                                                }
-
+                                            if (isRunning) {
                                                 return (
                                                     <Button
-                                                        variant="ghost"
                                                         size="icon"
-                                                        className="h-10 w-10 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl transition-all"
+                                                        className="h-10 w-10 text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
                                                         onClick={(e) => {
                                                             e.preventDefault()
-                                                            startTimer(task.projectId, task.id, task.name)
-                                                            toast.success("Timer started")
+                                                            pauseTimer()
+                                                            toast.success("Timer paused")
                                                         }}
                                                     >
-                                                        <Play className="h-5 w-5 ml-1" />
+                                                        <Pause className="h-4 w-4 fill-current" />
                                                     </Button>
                                                 )
-                                            })()}
+                                            }
 
-                                            {/* Complete Button */}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-10 w-10 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl transition-all"
-                                                onClick={() => handleComplete(task.id)}
-                                            >
-                                                <CheckCircle2 className="h-5 w-5" />
-                                            </Button>
-                                        </div>
+                                            if (isPaused) {
+                                                return (
+                                                    <Button
+                                                        size="icon"
+                                                        className="h-10 w-10 text-white bg-amber-500 hover:bg-amber-600 rounded-xl shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
+                                                        onClick={(e) => {
+                                                            e.preventDefault()
+                                                            resumeTimer()
+                                                            toast.success("Timer resumed")
+                                                        }}
+                                                    >
+                                                        <Play className="h-4 w-4 fill-current ml-0.5" />
+                                                    </Button>
+                                                )
+                                            }
+
+                                            return (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-10 w-10 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl transition-all"
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        startTimer(task.projectId, task.id, task.name)
+                                                        toast.success("Timer started")
+                                                    }}
+                                                >
+                                                    <Play className="h-5 w-5 ml-1" />
+                                                </Button>
+                                            )
+                                        })()}
+
+                                        {/* Complete Button */}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-10 w-10 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl transition-all"
+                                            onClick={() => handleComplete(task.id)}
+                                        >
+                                            <CheckCircle2 className="h-5 w-5" />
+                                        </Button>
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+                        ))}
 
-                            {/* Shadow Task (Create New) */}
-                            <div
-                                onClick={() => setCreateTaskOpen(true)}
-                                className="group flex flex-col items-center justify-center h-[220px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 cursor-pointer"
-                            >
-                                <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-0 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
-                                    <Plus className="h-8 w-8 text-muted-foreground group-hover:text-current" strokeWidth={1.5} />
-                                </div>
-                                <span className="text-sm font-semibold text-muted-foreground group-hover:text-emerald-500 transition-colors mt-3">
-                                    Add New Task
+                        {/* Empty State Message and Add New Task Card */}
+                        {filteredTasks.length === 0 && (
+                            <div className="flex flex-col items-center justify-center h-[220px] text-muted-foreground/50 gap-2 border-2 border-dashed border-muted/50 rounded-2xl bg-muted/5">
+                                <CheckCircle2 className="h-8 w-8 opacity-20" />
+                                <span className="text-xs font-medium">
+                                    {filter === "overdue" ? "No overdue tasks!" : filter === "urgent" ? "No urgent tasks!" : "All clear for today!"}
                                 </span>
                             </div>
+                        )}
+
+                        {/* Shadow Task (Create New) */}
+                        <div
+                            onClick={() => setCreateTaskOpen(true)}
+                            className="group flex flex-col items-center justify-center h-[220px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 cursor-pointer"
+                        >
+                            <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-0 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                                <Plus className="h-8 w-8 text-muted-foreground group-hover:text-current" strokeWidth={1.5} />
+                            </div>
+                            <span className="text-sm font-semibold text-muted-foreground group-hover:text-emerald-500 transition-colors mt-3">
+                                Add New Task
+                            </span>
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
             <GlobalCreateTaskDialog

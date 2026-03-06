@@ -35,75 +35,71 @@ export default async function Home() {
   try {
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 
-    // Run all independent queries in parallel
-    ;[activeProjects, timeLogsThisMonth, recentProjects, upcomingTasks, partners, services] = await Promise.all([
-      // Active + unpaid projects
-      prisma.project.findMany({
-        where: {
-          tenantId: session.tenantId,
-          OR: [
-            { status: "Active" },
-            { paymentStatus: "Unpaid" }
-          ]
-        },
-        orderBy: { updatedAt: "desc" },
-        include: {
-          services: true,
-          site: { include: { partner: true } },
-          timeLogs: { where: { startTime: { gte: startOfMonth } } },
-          _count: { select: { tasks: { where: { status: "Completed" } } } },
-          tasks: true
-        },
-      }),
-      // Monthly time aggregate
-      prisma.timeLog.aggregate({
-        _sum: { durationSeconds: true },
-        where: { startTime: { gte: startOfMonth }, tenantId: session.tenantId }
-      }),
-      // Recent projects
-      prisma.project.findMany({
-        where: { tenantId: session.tenantId },
-        take: 4,
-        orderBy: { updatedAt: "desc" },
-        include: {
-          services: true,
-          site: { include: { partner: true } },
-        },
-      }),
-      // Upcoming tasks
-      prisma.task.findMany({
-        where: {
-          tenantId: session.tenantId,
-          status: { not: 'Completed' },
-          OR: [
-            { urgency: 'Urgent' },
-            { deadline: { lte: new Date(new Date().setHours(23, 59, 59, 999)) } }
-          ]
-        },
-        orderBy: [
-          { urgency: 'desc' },
-          { deadline: 'asc' }
-        ],
-        take: 20,
-        include: {
-          project: {
-            include: {
-              site: { include: { partner: true } },
-              services: true
-            }
+      // Run all independent queries in parallel
+      ;[activeProjects, timeLogsThisMonth, recentProjects, upcomingTasks, partners, services] = await Promise.all([
+        // Active + unpaid projects
+        prisma.project.findMany({
+          where: {
+            tenantId: session.tenantId,
+            OR: [
+              { status: "Active" },
+              { paymentStatus: "Unpaid" }
+            ]
           },
-          timeLogs: { select: { durationSeconds: true } }
-        }
-      }),
-      // Partners
-      prisma.partner.findMany({
-        where: { tenantId: session.tenantId },
-        include: { sites: { select: { id: true, domainName: true } } },
-        orderBy: { name: "asc" }
-      }),
-      // Services
-      prisma.service.findMany({ where: { tenantId: session.tenantId }, orderBy: { serviceName: "asc" } })
-    ])
+          orderBy: { updatedAt: "desc" },
+          include: {
+            services: true,
+            site: { include: { partner: true } },
+            timeLogs: { where: { startTime: { gte: startOfMonth } } },
+            _count: { select: { tasks: { where: { status: "Completed" } } } },
+            tasks: true
+          },
+        }),
+        // Monthly time aggregate
+        prisma.timeLog.aggregate({
+          _sum: { durationSeconds: true },
+          where: { startTime: { gte: startOfMonth }, tenantId: session.tenantId }
+        }),
+        // Recent projects
+        prisma.project.findMany({
+          where: { tenantId: session.tenantId },
+          take: 4,
+          orderBy: { updatedAt: "desc" },
+          include: {
+            services: true,
+            site: { include: { partner: true } },
+          },
+        }),
+        // Upcoming tasks
+        prisma.task.findMany({
+          where: {
+            tenantId: session.tenantId,
+            status: { not: 'Completed' }
+          },
+          orderBy: [
+            { urgency: 'desc' },
+            { deadline: 'asc' }
+          ],
+          take: 20,
+          include: {
+            project: {
+              include: {
+                site: { include: { partner: true } },
+                services: true
+              }
+            },
+            timeLogs: { select: { durationSeconds: true } }
+          }
+        }),
+        // Partners
+        prisma.partner.findMany({
+          where: { tenantId: session.tenantId },
+          include: { sites: { select: { id: true, domainName: true } } },
+          orderBy: { name: "asc" }
+        }),
+        // Services
+        prisma.service.findMany({ where: { tenantId: session.tenantId }, orderBy: { serviceName: "asc" } })
+      ])
   } catch (error) {
     dashboardQueryFailed = true
     console.error("[dashboard] failed to load homepage data", error)
