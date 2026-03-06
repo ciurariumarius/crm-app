@@ -111,16 +111,17 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
     }
 
     const renderHeader = () => (
-        <div className={cn("hidden md:flex items-center px-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground w-full min-w-[1200px]", layout === "grid" && "hidden")}>
-            <div className="w-[90px] pl-2 shrink-0 text-center">Status</div>
-            <div className="flex-1 min-w-[300px] shrink-0">Project name & url</div>
+        <div className={cn("hidden md:flex items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground w-full min-w-[1240px] gap-6", layout === "grid" && "hidden")}>
+            <div className="flex-1 min-w-[320px] shrink-0">Project name & url</div>
+            <div className="w-[100px] shrink-0 text-center">Status</div>
             <div className="w-[130px] shrink-0">Partner</div>
-            <div className="w-[75px] shrink-0 text-center">Type</div>
-            <div className="w-[90px] shrink-0 text-center">Payment</div>
-            <div className="w-[110px] shrink-0 pl-6">Amount</div>
+            <div className="w-[90px] shrink-0 text-center">Type</div>
+            <div className="w-[100px] shrink-0 text-center">Payment</div>
+            <div className="w-[110px] shrink-0 text-right pr-6">Amount</div>
             <div className="w-[100px] shrink-0 text-center">Tasks</div>
-            <div className="w-[120px] shrink-0 text-right pr-4">Last Edited</div>
-            <div className="w-[80px] shrink-0 text-right pr-4">Created</div>
+            <div className="w-[90px] shrink-0 text-center">Time</div>
+            <div className="w-[120px] shrink-0 text-right">Last Edited</div>
+            <div className="w-[100px] shrink-0 text-right pr-4">Created</div>
         </div>
     )
 
@@ -236,11 +237,20 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
         return (
             <div
                 key={project.id}
-                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1200px]"
+                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1240px] gap-6 px-6"
                 onClick={() => setSelectedProject(project)}
             >
-                {/* 1. Status Pill */}
-                <div className="w-[90px] shrink-0 flex justify-center">
+                {/* 1. Project Name & URL */}
+                <div className="flex-1 min-w-[320px] shrink-0 flex items-center">
+                    <div className="flex flex-col pr-4">
+                        <span className={cn("text-base md:text-lg font-semibold tracking-tight line-clamp-2", statusColor)}>
+                            {formatProjectName(project)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* 2. Status Pill */}
+                <div className="w-[100px] shrink-0 flex justify-center">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
@@ -263,15 +273,6 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     </DropdownMenu>
                 </div>
 
-                {/* 2. Project Name & URL */}
-                <div className="flex-1 min-w-[200px] shrink-0 flex items-center">
-                    <div className="flex flex-col pr-4">
-                        <span className={cn("text-base md:text-lg font-semibold tracking-tight line-clamp-2", statusColor)}>
-                            {formatProjectName(project)}
-                        </span>
-                    </div>
-                </div>
-
                 {/* 3. Partner Name */}
                 <div className="w-[130px] shrink-0 flex items-center pr-2">
                     <span className="text-sm font-medium text-foreground truncate leading-snug" title={project.site.partner.name}>
@@ -279,15 +280,15 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     </span>
                 </div>
 
-                {/* Type Pill */}
-                <div className="w-[75px] shrink-0 flex items-center justify-center">
+                {/* 4. Type Pill */}
+                <div className="w-[90px] shrink-0 flex items-center justify-center">
                     <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-zinc-800/50 rounded-lg text-[10px] font-bold uppercase tracking-tight text-slate-600 truncate w-full justify-center border border-slate-200 dark:border-slate-700">
                         {isMonthly ? "Monthly" : "One-Time"}
                     </div>
                 </div>
 
-                {/* 4. Payment */}
-                <div className="w-[90px] shrink-0 flex items-center justify-center">
+                {/* 5. Payment */}
+                <div className="w-[100px] shrink-0 flex items-center justify-center">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
@@ -313,8 +314,8 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     </DropdownMenu>
                 </div>
 
-                {/* 5. Amount */}
-                <div className="w-[110px] shrink-0 flex items-center justify-start pl-6">
+                {/* 6. Amount */}
+                <div className="w-[110px] shrink-0 flex items-center justify-end pr-6">
                     <div className="relative group/fee flex items-baseline">
                         <Input
                             type="number"
@@ -331,7 +332,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     </div>
                 </div>
 
-                {/* 6. Tasks Pi */}
+                {/* 7. Tasks Pi */}
                 <div className="w-[100px] shrink-0 flex items-center justify-center">
                     {(() => {
                         const totalTasks = project._count?.tasks || 0
@@ -361,15 +362,30 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     })()}
                 </div>
 
-                {/* 7. Last Edited */}
-                <div className="w-[120px] shrink-0 flex items-center justify-end pr-4">
-                    <span className="text-xs text-muted-foreground font-medium text-right">
+                {/* 8. Time Tracking */}
+                <div className="w-[90px] shrink-0 flex items-center justify-center">
+                    <span className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight">
+                        {(() => {
+                            const totalSeconds = project.tasks?.reduce((acc: number, task: any) => {
+                                const taskLogs = task.timeLogs?.reduce((lAcc: number, log: any) => lAcc + (log.durationSeconds || 0), 0) || 0
+                                return acc + taskLogs
+                            }, 0) || 0
+                            const h = Math.floor(totalSeconds / 3600)
+                            const m = Math.floor((totalSeconds % 3600) / 60)
+                            return `${h}h ${m}m`
+                        })()}
+                    </span>
+                </div>
+
+                {/* 9. Last Edited */}
+                <div className="w-[120px] shrink-0 flex items-center justify-end">
+                    <span className="text-[11px] text-muted-foreground font-medium text-right">
                         {project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}
                     </span>
                 </div>
 
-                {/* 8. Created */}
-                <div className="w-[80px] shrink-0 flex items-center justify-end pr-4">
+                {/* 10. Created */}
+                <div className="w-[100px] shrink-0 flex items-center justify-end pr-4">
                     <span className="text-[11px] text-muted-foreground/60 font-medium text-right">
                         {format(new Date(project.createdAt), "dd MMM")}
                     </span>
@@ -428,7 +444,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     {/* Shadow Create Row */}
                     {layout === "list" && (
                         <div
-                            className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1200px]"
+                            className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1240px]"
                             onClick={() => setCreateProjectOpen(true)}
                         >
                             <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">

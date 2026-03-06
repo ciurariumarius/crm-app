@@ -104,12 +104,12 @@ export function ProjectsBoardRows({
                     <h2 className="text-xs font-semibold text-slate-500">Monthly Projects</h2>
                 </div>
 
-                <div className="hidden xl:grid xl:grid-cols-[minmax(300px,3fr)_100px_85px_95px_110px_80px_90px_130px_110px_90px] items-center px-5 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-3">
+                <div className="hidden xl:grid xl:grid-cols-[minmax(320px,3fr)_100px_90px_100px_110px_80px_90px_140px_120px_100px] items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-6">
                     <span>Project name / service</span>
                     <span className="text-center">Status</span>
                     <span className="text-center">Type</span>
                     <span className="text-center">Payment</span>
-                    <span>Amount</span>
+                    <span className="text-right pr-6">Amount</span>
                     <span className="text-center">Tasks</span>
                     <span className="text-center">Time</span>
                     <span>Partner</span>
@@ -131,7 +131,7 @@ export function ProjectsBoardRows({
                                 key={project.id}
                                 type="button"
                                 onClick={() => openDetails(project.id)}
-                                className="w-full text-left grid xl:grid-cols-[minmax(300px,3fr)_100px_85px_95px_110px_80px_90px_130px_110px_90px] gap-3 items-center rounded-xl border border-border/60 bg-card px-5 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
+                                className="w-full text-left grid xl:grid-cols-[minmax(320px,3fr)_100px_90px_100px_110px_80px_90px_140px_120px_100px] gap-6 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
                             >
                                 <div className="min-w-0">
                                     <p className="font-semibold text-slate-900 truncate">{project.site.domainName}</p>
@@ -157,7 +157,7 @@ export function ProjectsBoardRows({
                                 )}>
                                     {project.paymentStatus}
                                 </span>
-                                <span className="font-semibold text-slate-800">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-xs">RON</span></span>
+                                <span className="font-bold text-slate-800 text-right pr-6">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[10px]">RON</span></span>
                                 <div className="flex items-center justify-center">
                                     <div className="relative h-8 w-8">
                                         <svg className="h-full w-full" viewBox="0 0 36 36">
@@ -209,7 +209,7 @@ export function ProjectsBoardRows({
                                 key={project.id}
                                 type="button"
                                 onClick={() => openDetails(project.id)}
-                                className="w-full text-left grid xl:grid-cols-[minmax(300px,3fr)_100px_85px_95px_110px_80px_90px_130px_110px_90px] gap-3 items-center rounded-xl border border-border/60 bg-card px-5 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
+                                className="w-full text-left grid xl:grid-cols-[minmax(320px,3fr)_100px_90px_100px_110px_80px_90px_140px_120px_100px] gap-6 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
                             >
                                 <div className="min-w-0">
                                     <p className="font-semibold text-slate-900 truncate">{project.site.domainName}</p>
@@ -235,7 +235,7 @@ export function ProjectsBoardRows({
                                 )}>
                                     {project.paymentStatus}
                                 </span>
-                                <span className="font-semibold text-slate-800">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-xs">RON</span></span>
+                                <span className="font-bold text-slate-800 text-right pr-6">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[10px]">RON</span></span>
                                 <div className="flex items-center justify-center">
                                     <div className="relative h-8 w-8">
                                         <svg className="h-full w-full" viewBox="0 0 36 36">
