@@ -111,17 +111,17 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
     }
 
     const renderHeader = () => (
-        <div className={cn("hidden md:flex items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground w-full min-w-[1240px] gap-6", layout === "grid" && "hidden")}>
+        <div className={cn("hidden md:flex items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground w-full min-w-[1280px] gap-5", layout === "grid" && "hidden")}>
             <div className="flex-1 min-w-[320px] shrink-0">Project name & url</div>
-            <div className="w-[100px] shrink-0 text-center">Status</div>
-            <div className="w-[130px] shrink-0">Partner</div>
-            <div className="w-[90px] shrink-0 text-center">Type</div>
-            <div className="w-[100px] shrink-0 text-center">Payment</div>
-            <div className="w-[110px] shrink-0 text-right pr-6">Amount</div>
-            <div className="w-[100px] shrink-0 text-center">Tasks</div>
-            <div className="w-[90px] shrink-0 text-center">Time</div>
-            <div className="w-[120px] shrink-0 text-right">Last Edited</div>
-            <div className="w-[100px] shrink-0 text-right pr-4">Created</div>
+            <div className="w-[80px] shrink-0 text-center">Status</div>
+            <div className="w-[70px] shrink-0 text-center">Type</div>
+            <div className="w-[85px] shrink-0 text-center">Payment</div>
+            <div className="w-[90px] shrink-0 text-right pr-4">Amount</div>
+            <div className="w-[60px] shrink-0 text-center">Tasks</div>
+            <div className="w-[75px] shrink-0 text-center">Time</div>
+            <div className="w-[100px] shrink-0 truncate">Partner</div>
+            <div className="w-[100px] shrink-0 text-right">Last Edited</div>
+            <div className="w-[70px] shrink-0 text-right">Created</div>
         </div>
     )
 
@@ -237,7 +237,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
         return (
             <div
                 key={project.id}
-                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1240px] gap-6 px-6"
+                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1280px] gap-5 px-6"
                 onClick={() => setSelectedProject(project)}
             >
                 {/* 1. Project Name & URL */}
@@ -250,19 +250,19 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                 </div>
 
                 {/* 2. Status Pill */}
-                <div className="w-[100px] shrink-0 flex justify-center">
+                <div className="w-[80px] shrink-0 flex justify-center">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
                                 className={cn(
-                                    "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all border",
+                                    "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all border min-w-[70px]",
                                     isActive ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/20" :
                                         isPaused ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/20" :
                                             "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:border-slate-700"
                                 )}
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {project.status}
+                                {project.status.substring(0, 6)}
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="rounded-xl">
@@ -273,22 +273,15 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     </DropdownMenu>
                 </div>
 
-                {/* 3. Partner Name */}
-                <div className="w-[130px] shrink-0 flex items-center pr-2">
-                    <span className="text-sm font-medium text-foreground truncate leading-snug" title={project.site.partner.name}>
-                        {project.site.partner.name}
-                    </span>
-                </div>
-
-                {/* 4. Type Pill */}
-                <div className="w-[90px] shrink-0 flex items-center justify-center">
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-zinc-800/50 rounded-lg text-[10px] font-bold uppercase tracking-tight text-slate-600 truncate w-full justify-center border border-slate-200 dark:border-slate-700">
+                {/* 3. Type Pill */}
+                <div className="w-[70px] shrink-0 flex items-center justify-center">
+                    <div className="flex items-center gap-1.5 px-1.5 py-1 bg-slate-50 dark:bg-zinc-800/50 rounded-lg text-[9px] font-bold uppercase tracking-tight text-slate-600 truncate w-full justify-center border border-slate-200 dark:border-slate-700">
                         {isMonthly ? "Monthly" : "One-Time"}
                     </div>
                 </div>
 
-                {/* 5. Payment */}
-                <div className="w-[100px] shrink-0 flex items-center justify-center">
+                {/* 4. Payment */}
+                <div className="w-[85px] shrink-0 flex items-center justify-center">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
@@ -296,13 +289,13 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className={cn(
-                                    "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all border",
+                                    "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all border min-w-[75px] justify-center",
                                     project.paymentStatus === "Paid"
                                         ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
                                         : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
                                 )}>
                                     <span className="text-[10px] font-bold uppercase tracking-tight">
-                                        {project.paymentStatus === "Paid" ? "Paid" : "Unpaid"}
+                                        {project.paymentStatus}
                                     </span>
                                 </div>
                             </button>
@@ -314,8 +307,8 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     </DropdownMenu>
                 </div>
 
-                {/* 6. Amount */}
-                <div className="w-[110px] shrink-0 flex items-center justify-end pr-6">
+                {/* 5. Amount */}
+                <div className="w-[90px] shrink-0 flex items-center justify-end">
                     <div className="relative group/fee flex items-baseline">
                         <Input
                             type="number"
@@ -326,14 +319,14 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                     handleUpdate(project.id, { currentFee: val })
                                 }
                             }}
-                            className="h-10 text-base md:text-lg font-semibold bg-transparent border-transparent hover:bg-muted/50 focus:bg-muted/50 focus:ring-0 p-0 w-20 text-right cursor-text rounded transition-colors shadow-none -mb-0.5"
+                            className="h-10 text-base md:text-lg font-semibold bg-transparent border-transparent hover:bg-muted/50 focus:bg-muted/50 focus:ring-0 p-0 w-16 text-right cursor-text rounded transition-colors shadow-none -mb-0.5"
                         />
-                        <span className="text-xs text-muted-foreground/60 ml-1 font-medium mt-0.5">RON</span>
+                        <span className="text-xs text-muted-foreground/60 ml-0.5 font-medium mt-0.5">RON</span>
                     </div>
                 </div>
 
-                {/* 7. Tasks Pi */}
-                <div className="w-[100px] shrink-0 flex items-center justify-center">
+                {/* 6. Tasks Pi */}
+                <div className="w-[60px] shrink-0 flex items-center justify-center">
                     {(() => {
                         const totalTasks = project._count?.tasks || 0
                         const completedTasks = project.completedTasks || 0
@@ -362,9 +355,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     })()}
                 </div>
 
-                {/* 8. Time Tracking */}
-                <div className="w-[90px] shrink-0 flex items-center justify-center">
-                    <span className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight">
+                {/* 7. Time Tracking */}
+                <div className="w-[75px] shrink-0 flex items-center justify-center">
+                    <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight">
                         {(() => {
                             const totalSeconds = project.tasks?.reduce((acc: number, task: any) => {
                                 const taskLogs = task.timeLogs?.reduce((lAcc: number, log: any) => lAcc + (log.durationSeconds || 0), 0) || 0
@@ -377,15 +370,22 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     </span>
                 </div>
 
+                {/* 8. Partner Name */}
+                <div className="w-[100px] shrink-0 flex items-center">
+                    <span className="text-sm font-medium text-foreground truncate leading-snug" title={project.site?.partner?.name || "No Partner"}>
+                        {project.site?.partner?.name || "-"}
+                    </span>
+                </div>
+
                 {/* 9. Last Edited */}
-                <div className="w-[120px] shrink-0 flex items-center justify-end">
+                <div className="w-[100px] shrink-0 flex items-center justify-end">
                     <span className="text-[11px] text-muted-foreground font-medium text-right">
                         {project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}
                     </span>
                 </div>
 
                 {/* 10. Created */}
-                <div className="w-[100px] shrink-0 flex items-center justify-end pr-4">
+                <div className="w-[70px] shrink-0 flex items-center justify-end">
                     <span className="text-[11px] text-muted-foreground/60 font-medium text-right">
                         {format(new Date(project.createdAt), "dd MMM")}
                     </span>
@@ -397,7 +397,6 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             className="h-8 w-8 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-border/40 text-muted-foreground hover:text-rose-500 hover:border-rose-200 transition-colors"
                             onClick={(e) => {
                                 e.stopPropagation()
-                                // TODO: Implement delete or confirm dialog
                             }}
                         >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -433,8 +432,8 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <div className="grid grid-cols-1 gap-4 md:hidden">
                                 {recurringProjects.map(p => renderGridCard(p, true))}
                             </div>
-                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar">
-                                <div className="min-w-[800px] flex flex-col gap-2">
+                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
+                                <div className="min-w-[1280px] flex flex-col gap-2">
                                     {renderHeader()}
                                     {recurringProjects.map(renderProjectCard)}
                                 </div>
@@ -490,19 +489,19 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <div className="grid grid-cols-1 gap-4 md:hidden">
                                 {oneTimeProjects.map(p => renderGridCard(p, false))}
                             </div>
-                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar">
-                                <div className="min-w-[800px] flex flex-col gap-2">
+                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
+                                <div className="min-w-[1240px] flex flex-col gap-2">
                                     {renderHeader()}
                                     {oneTimeProjects.map(renderProjectCard)}
                                     {/* Shadow Create Row */}
                                     <div
-                                        className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer min-w-[1200px] mt-2 group/shadow"
+                                        className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer min-w-[1280px] mt-2 group/shadow"
                                         onClick={() => setCreateProjectOpen(true)}
                                     >
                                         <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
                                             <div className="h-6 w-16 bg-primary/20 rounded-full animate-pulse" />
                                         </div>
-                                        <div className="flex-1 px-4 flex items-center gap-3">
+                                        <div className="flex-1 px-4 flex items-center gap-3 text-slate-900">
                                             <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
                                             <span className="text-sm font-semibold text-primary transition-colors">Add new project...</span>
                                         </div>

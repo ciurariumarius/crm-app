@@ -1,0 +1,10 @@
+#!/usr/bin/expect -f
+spawn ssh -o StrictHostKeyChecking=no populatia-crm@193.203.162.155 id
+expect {
+    "password:" {
+        send "RkUgJreXlf1CvUYCUt3N\r"
+        exp_continue
+    }
+    eof {
+    }
+}

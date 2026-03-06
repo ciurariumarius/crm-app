@@ -97,175 +97,193 @@ export function ProjectsBoardRows({
     }
 
     return (
-        <div className="space-y-7">
-            <section className="space-y-3">
-                <div className="flex items-center gap-3">
-                    <span className="h-5 w-1 rounded-full bg-violet-500" />
-                    <h2 className="text-xs font-semibold text-slate-500">Monthly Projects</h2>
-                </div>
+        <div className="space-y-7 overflow-x-auto pb-4 hidescrollbar">
+            <div className="min-w-[1280px] space-y-7">
+                <section className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <span className="h-5 w-1 rounded-full bg-violet-500" />
+                        <h2 className="text-xs font-semibold text-slate-500">Monthly Projects</h2>
+                    </div>
 
-                <div className="hidden xl:grid xl:grid-cols-[minmax(320px,3fr)_100px_90px_100px_110px_80px_90px_140px_120px_100px] items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-6">
-                    <span>Project name / service</span>
-                    <span className="text-center">Status</span>
-                    <span className="text-center">Type</span>
-                    <span className="text-center">Payment</span>
-                    <span className="text-right pr-6">Amount</span>
-                    <span className="text-center">Tasks</span>
-                    <span className="text-center">Time</span>
-                    <span>Partner</span>
-                    <span className="text-right">Last Edited</span>
-                    <span className="text-right">Created</span>
-                </div>
+                    <div className="hidden md:grid grid-cols-[minmax(320px,3.5fr)_80px_70px_85px_90px_60px_75px_100px_100px_70px] items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-5">
+                        <span>Project name / service</span>
+                        <span className="text-center">Status</span>
+                        <span className="text-center">Type</span>
+                        <span className="text-center">Payment</span>
+                        <span className="text-right">Amount</span>
+                        <span className="text-center">Tasks</span>
+                        <span className="text-center">Time</span>
+                        <span>Partner</span>
+                        <span className="text-right">Last Edited</span>
+                        <span className="text-right">Created</span>
+                    </div>
 
-                <div className="space-y-2">
-                    {monthlyProjects.length === 0 && (
-                        <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
-                            No monthly projects match current filters.
-                        </div>
-                    )}
-                    {monthlyProjects.map((project) => {
-                        const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
-                        const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
-                        return (
-                            <button
-                                key={project.id}
-                                type="button"
-                                onClick={() => openDetails(project.id)}
-                                className="w-full text-left grid xl:grid-cols-[minmax(320px,3fr)_100px_90px_100px_110px_80px_90px_140px_120px_100px] gap-6 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
-                            >
-                                <div className="min-w-0">
-                                    <p className="font-semibold text-slate-900 truncate">{project.site.domainName}</p>
-                                    <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
-                                        <span className="truncate">{project.serviceLabel}</span>
-                                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 shrink-0">
-                                            {format(new Date(project.createdAt), "MMMM yyyy")}
-                                        </span>
-                                    </div>
-                                </div>
-                                <span className={cn(
-                                    "px-2 py-1 rounded-lg text-[11px] text-center font-bold border uppercase tracking-tight",
-                                    project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                        project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                            "bg-slate-50 text-slate-700 border-slate-200"
-                                )}>
-                                    {project.status}
-                                </span>
-                                <span className="px-2 py-1 rounded-lg text-[11px] text-center font-bold border bg-violet-50 text-violet-700 border-violet-200 uppercase tracking-tight">Monthly</span>
-                                <span className={cn(
-                                    "px-2 py-1 rounded-lg text-[11px] text-center font-bold border uppercase tracking-tight",
-                                    project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
-                                )}>
-                                    {project.paymentStatus}
-                                </span>
-                                <span className="font-bold text-slate-800 text-right pr-6">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[10px]">RON</span></span>
-                                <div className="flex items-center justify-center">
-                                    <div className="relative h-8 w-8">
-                                        <svg className="h-full w-full" viewBox="0 0 36 36">
-                                            <circle className="stroke-slate-100" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
-                                            <circle
-                                                className="stroke-blue-600 transition-all duration-500"
-                                                strokeWidth="3"
-                                                strokeDasharray={`${progress}, 100`}
-                                                strokeLinecap="round"
-                                                fill="transparent"
-                                                r="16"
-                                                cx="18"
-                                                cy="18"
-                                                transform="rotate(-90 18 18)"
-                                            />
-                                        </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <span className="text-[9px] font-bold text-slate-700">{project.completedTasks}/{totalTasks}</span>
+                    <div className="space-y-2">
+                        {monthlyProjects.length === 0 && (
+                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
+                                No monthly projects match current filters.
+                            </div>
+                        )}
+                        {monthlyProjects.map((project) => {
+                            const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
+                            const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
+                            return (
+                                <button
+                                    key={project.id}
+                                    type="button"
+                                    onClick={() => openDetails(project.id)}
+                                    className="w-full text-left grid grid-cols-[minmax(320px,3.5fr)_80px_70px_85px_90px_60px_75px_100px_100px_70px] gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/5 transition-all duration-200 ease-in-out"
+                                >
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
+                                        <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
+                                            <span className="truncate">{project.serviceLabel}</span>
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
+                                                {format(new Date(project.createdAt), "MMM yyyy")}
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
-                                <span className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 text-center uppercase tracking-tight">{formatDuration(project.secondsLogged)}</span>
-                                <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
-                                <span className="text-[11px] font-medium text-slate-500 text-right">{project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}</span>
-                                <span className="text-[11px] font-medium text-slate-400 text-right">{format(new Date(project.createdAt), "dd MMM")}</span>
-                            </button>
-                        )
-                    })}
-                </div>
-            </section>
-
-            <section className="space-y-3">
-                <div className="flex items-center gap-3">
-                    <span className="h-5 w-1 rounded-full bg-emerald-500" />
-                    <h2 className="text-xs font-semibold text-slate-500">One-time Projects</h2>
-                </div>
-
-                <div className="space-y-2">
-                    {oneTimeProjects.length === 0 && (
-                        <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
-                            No one-time projects match current filters.
-                        </div>
-                    )}
-                    {oneTimeProjects.map((project) => {
-                        const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
-                        const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
-                        return (
-                            <button
-                                key={project.id}
-                                type="button"
-                                onClick={() => openDetails(project.id)}
-                                className="w-full text-left grid xl:grid-cols-[minmax(320px,3fr)_100px_90px_100px_110px_80px_90px_140px_120px_100px] gap-6 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
-                            >
-                                <div className="min-w-0">
-                                    <p className="font-semibold text-slate-900 truncate">{project.site.domainName}</p>
-                                    <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
-                                        <span className="truncate">{project.serviceLabel}</span>
-                                        <span className="text-xs font-medium px-2 py-1 rounded-lg border bg-emerald-50 text-emerald-600 border-emerald-200 shrink-0">
-                                            {format(new Date(project.createdAt), "MMMM yyyy")}
+                                    <div className="flex justify-center">
+                                        <span className={cn(
+                                            "px-2 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[70px]",
+                                            project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                                project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                                    "bg-slate-50 text-slate-700 border-slate-200"
+                                        )}>
+                                            {project.status.substring(0, 6)}
                                         </span>
                                     </div>
-                                </div>
-                                <span className={cn(
-                                    "px-2 py-1 rounded-lg text-[11px] text-center font-bold border uppercase tracking-tight",
-                                    project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                        project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                            "bg-slate-50 text-slate-700 border-slate-200"
-                                )}>
-                                    {project.status}
-                                </span>
-                                <span className="px-2 py-1 rounded-lg text-[11px] text-center font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase tracking-tight">One-time</span>
-                                <span className={cn(
-                                    "px-2 py-1 rounded-lg text-[11px] text-center font-bold border uppercase tracking-tight",
-                                    project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
-                                )}>
-                                    {project.paymentStatus}
-                                </span>
-                                <span className="font-bold text-slate-800 text-right pr-6">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[10px]">RON</span></span>
-                                <div className="flex items-center justify-center">
-                                    <div className="relative h-8 w-8">
-                                        <svg className="h-full w-full" viewBox="0 0 36 36">
-                                            <circle className="stroke-slate-100" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
-                                            <circle
-                                                className="stroke-emerald-600 transition-all duration-500"
-                                                strokeWidth="3"
-                                                strokeDasharray={`${progress}, 100`}
-                                                strokeLinecap="round"
-                                                fill="transparent"
-                                                r="16"
-                                                cx="18"
-                                                cy="18"
-                                                transform="rotate(-90 18 18)"
-                                            />
-                                        </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <span className="text-[9px] font-bold text-slate-700">{project.completedTasks}/{totalTasks}</span>
+                                    <div className="flex justify-center">
+                                        <span className="px-1.5 py-1 rounded-lg text-[9px] text-center font-bold border bg-violet-50 text-violet-700 border-violet-200 uppercase tracking-tight min-w-[65px]">Monthly</span>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span className={cn(
+                                            "px-1.5 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[75px]",
+                                            project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
+                                        )}>
+                                            {project.paymentStatus}
+                                        </span>
+                                    </div>
+                                    <span className="font-bold text-slate-800 text-right">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[9px]">RON</span></span>
+                                    <div className="flex items-center justify-center">
+                                        <div className="relative h-8 w-8">
+                                            <svg className="h-full w-full" viewBox="0 0 36 36">
+                                                <circle className="stroke-slate-100 dark:stroke-zinc-800" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
+                                                <circle
+                                                    className="stroke-blue-600 transition-all duration-500"
+                                                    strokeWidth="3"
+                                                    strokeDasharray={`${progress}, 100`}
+                                                    strokeLinecap="round"
+                                                    fill="transparent"
+                                                    r="16"
+                                                    cx="18"
+                                                    cy="18"
+                                                    transform="rotate(-90 18 18)"
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300">{project.completedTasks}/{totalTasks}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <span className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 text-center uppercase tracking-tight">{formatDuration(project.secondsLogged)}</span>
-                                <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
-                                <span className="text-[11px] font-medium text-slate-500 text-right">{project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}</span>
-                                <span className="text-[11px] font-medium text-slate-400 text-right">{format(new Date(project.createdAt), "dd MMM")}</span>
-                            </button>
-                        )
-                    })}
-                </div>
-            </section>
+                                    <div className="flex justify-center">
+                                        <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
+                                    <span className="text-[11px] font-medium text-slate-500 text-right">{project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}</span>
+                                    <span className="text-[11px] font-medium text-slate-400 text-right">{format(new Date(project.createdAt), "dd MMM")}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </section>
+
+                <section className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <span className="h-5 w-1 rounded-full bg-emerald-500" />
+                        <h2 className="text-xs font-semibold text-slate-500">One-time Projects</h2>
+                    </div>
+
+                    <div className="space-y-2">
+                        {oneTimeProjects.length === 0 && (
+                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
+                                No one-time projects match current filters.
+                            </div>
+                        )}
+                        {oneTimeProjects.map((project) => {
+                            const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
+                            const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
+                            return (
+                                <button
+                                    key={project.id}
+                                    type="button"
+                                    onClick={() => openDetails(project.id)}
+                                    className="w-full text-left grid grid-cols-[minmax(320px,3.5fr)_80px_70px_85px_90px_60px_75px_100px_100px_70px] gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/5 transition-all duration-200 ease-in-out"
+                                >
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
+                                        <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
+                                            <span className="truncate">{project.serviceLabel}</span>
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0 uppercase tracking-tighter">
+                                                {format(new Date(project.createdAt), "MMM yyyy")}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span className={cn(
+                                            "px-2 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[70px]",
+                                            project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                                project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                                    "bg-slate-50 text-slate-700 border-slate-200"
+                                        )}>
+                                            {project.status.substring(0, 6)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span className="px-1.5 py-1 rounded-lg text-[9px] text-center font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase tracking-tight min-w-[65px]">One-time</span>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span className={cn(
+                                            "px-1.5 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[75px]",
+                                            project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
+                                        )}>
+                                            {project.paymentStatus}
+                                        </span>
+                                    </div>
+                                    <span className="font-bold text-slate-800 text-right">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[9px]">RON</span></span>
+                                    <div className="flex items-center justify-center">
+                                        <div className="relative h-8 w-8">
+                                            <svg className="h-full w-full" viewBox="0 0 36 36">
+                                                <circle className="stroke-slate-100 dark:stroke-zinc-800" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
+                                                <circle
+                                                    className="stroke-emerald-600 transition-all duration-500"
+                                                    strokeWidth="3"
+                                                    strokeDasharray={`${progress}, 100`}
+                                                    strokeLinecap="round"
+                                                    fill="transparent"
+                                                    r="16"
+                                                    cx="18"
+                                                    cy="18"
+                                                    transform="rotate(-90 18 18)"
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300">{project.completedTasks}/{totalTasks}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
+                                    <span className="text-[11px] font-medium text-slate-500 text-right">{project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}</span>
+                                    <span className="text-[11px] font-medium text-slate-400 text-right">{format(new Date(project.createdAt), "dd MMM")}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </section>
+            </div>
         </div>
     )
 }
