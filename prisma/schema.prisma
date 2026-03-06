@@ -14,7 +14,7 @@ model Tenant {
   id        String   @id @default(uuid())
   name      String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   users            User[]
   partners         Partner[]
@@ -40,7 +40,7 @@ model Partner {
   phone          String?
   internalNotes  String?  @map("internal_notes")
   createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime @default(now()) @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   sites  Site[]
@@ -66,7 +66,7 @@ model Site {
   marketingVault String? @map("marketing_vault")
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   partner  Partner   @relation(fields: [tenantId, partnerId], references: [tenantId, id], onDelete: Cascade)
@@ -91,7 +91,7 @@ model Service {
   baseFee       Decimal? @map("base_fee")
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projects Project[]
@@ -114,7 +114,7 @@ model Project {
   currentFee    Decimal?  @map("current_fee")
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   site              Site              @relation(fields: [tenantId, siteId], references: [tenantId, id], onDelete: Cascade)
@@ -145,7 +145,7 @@ model Task {
   estimatedMinutes Int?      @map("estimated_minutes")
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   project  Project   @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade)
@@ -197,7 +197,7 @@ model User {
   twoFactorSecret  String?  @map("two_factor_secret")
   twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
   createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  updatedAt        DateTime @default(now()) @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -210,7 +210,7 @@ model RateLimitEntry {
   count     Int      @default(0)
   resetAt   DateTime @map("reset_at")
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@index([resetAt])
   @@map("rate_limit_entries")
