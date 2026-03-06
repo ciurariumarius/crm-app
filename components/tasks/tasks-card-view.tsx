@@ -10,6 +10,7 @@ import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
 import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight, Plus, Lightbulb } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
+import { TaskGridCard } from "./task-grid-card"
 
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
@@ -108,6 +109,19 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
         }
     }
 
+    const handleComplete = async (taskId: string) => {
+        try {
+            const result = await updateTask(taskId, { status: 'Completed' })
+            if (result.success) {
+                toast.success("Task completed")
+            } else {
+                toast.error(result.error || "Failed to complete task")
+            }
+        } catch (error) {
+            toast.error("Process failed")
+        }
+    }
+
     const renderTaskActionMenu = (task: any) => (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -152,126 +166,28 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
         <div className={cn(
             "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
         )}>
-            {tasks.map((task) => {
-                const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
-                const isActiveTimerThisTask = timerState.taskId === task.id
-                const isRunning = isActiveTimerThisTask && timerState.isRunning
-                const isPaused = isActiveTimerThisTask && !timerState.isRunning
-                const currentTimerDuration = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
-                const totalSeconds = logsDuration + currentTimerDuration
-                const timeString = formatTimer(totalSeconds)
-                const isOverdue = task.deadline && isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline))
-                const isDueToday = task.deadline && isToday(new Date(task.deadline))
-                const activeHighlight = isRunning ? "text-blue-600" : "text-foreground"
-
-                // Extract domain, services for subtitle
-                const domainName = task.project?.site?.domainName || task.project?.name || "No Project"
-                const services = task.project?.services || []
-                const isRecurring = services.some((s: any) => s.isRecurring)
-
-                const serviceName = services.length > 0
-                    ? services.map((s: any) => s.serviceName).join(" + ")
-                    : "No Service"
-
-                return (
-                    <div
-                        key={task.id}
-                        className={cn(
-                            "group relative flex flex-col bg-card rounded-xl p-5 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 cursor-pointer min-h-[160px]",
-                            selectedIds.includes(task.id) ? "ring-2 ring-primary/20 border-primary" : ""
-                        )}
-                        onClick={() => setSelectedTask(task)}
-                    >
-                        {selectedIds.includes(task.id) && (
-                            <div className="absolute top-5 right-12 z-10" onClick={(e) => { e.stopPropagation(); toggleSelect(task.id) }}>
-                                <Checkbox checked className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
-                            </div>
-                        )}
-
-                        <div className="flex justify-between items-start mb-1.5">
-                            <h3 className={cn("text-[15px] font-bold text-foreground leading-snug break-words pr-2 line-clamp-2", task.status === "Completed" && "line-through opacity-50")}>
-                                {task.name}
-                            </h3>
-                            <div className="shrink-0 -mt-1 -mr-2">
-                                {renderTaskActionMenu(task)}
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5 mb-5 mt-2">
-                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 break-words whitespace-normal leading-tight">{domainName}</span>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 break-words whitespace-normal">
-                                    {serviceName}
-                                </span>
-                                {isRecurring && task.project?.createdAt && (
-                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-medium shrink-0">
-                                        {format(new Date(task.project.createdAt), "MMM yyyy")}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        {task.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mb-4">
-                                {task.description}
-                            </p>
-                        )}
-
-                        <div className="flex-1" />
-
-                        {/* Bottom Badges */}
-                        <div className="flex items-center flex-wrap gap-2 mt-auto pt-4 border-t border-border/60">
-                            {/* Status */}
-                            <span className={cn(
-                                "px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 border",
-                                task.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20" :
-                                    task.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20" :
-                                        task.status === "Completed" ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20" :
-                                            "bg-muted text-muted-foreground border-border"
-                            )}>
-                                {task.status === "Active" && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
-                                {task.status === "Paused" && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
-                                {task.status === "Completed" && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                                {task.status}
-                            </span>
-
-                            {/* Priority */}
-                            {task.urgency && task.urgency !== "Normal" && (
-                                <span className={cn(
-                                    "px-2.5 py-1 rounded-lg text-xs font-semibold border",
-                                    task.urgency === "Urgent" ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20" :
-                                        task.urgency === "Idea" ? "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20" :
-                                            "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20"
-                                )}>
-                                    {task.urgency}
-                                </span>
-                            )}
-
-                            {/* Date/Deadline */}
-                            {task.deadline && (
-                                <span className={cn(
-                                    "px-2.5 py-1 bg-muted text-muted-foreground border border-border/60 rounded-lg text-xs font-semibold flex items-center gap-1.5",
-                                    (isDueToday || isOverdue) && "border-rose-200 bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
-                                )}>
-                                    <CalendarIcon className="h-3.5 w-3.5 opacity-50" />
-                                    {isDueToday ? "Today" : format(new Date(task.deadline), "MMM dd")}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                )
-            })}
+            {tasks.map((task) => (
+                <TaskGridCard
+                    key={task.id}
+                    task={task}
+                    onOpen={setSelectedTask}
+                    onComplete={handleComplete}
+                    renderMenu={renderTaskActionMenu}
+                    isSelected={selectedIds.includes(task.id)}
+                    onSelect={toggleSelect}
+                />
+            ))}
 
             {/* Quick Add Task Card */}
             <div
-                className="border-2 border-dashed border-border/60 rounded-xl flex flex-col items-center justify-center text-center p-6 text-muted-foreground hover:bg-muted/30 hover:border-border cursor-pointer transition-all min-h-[160px] group"
+                className="border-2 border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/50 cursor-pointer transition-all min-h-[220px] group"
                 onClick={() => setCreateTaskOpen(true)}
             >
-                <div className="rounded-full bg-primary/5 p-3 mb-3 text-primary group-hover:scale-110 transition-transform">
-                    <Plus className="h-6 w-6" />
+                <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-0 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                    <Plus className="h-8 w-8 text-muted-foreground group-hover:text-current" strokeWidth={1.5} />
                 </div>
-                <p className="font-bold text-sm text-foreground mb-1">Quick add task...</p>
-                <p className="text-[11px] font-medium text-muted-foreground">Organize your workflow instantly</p>
+                <p className="font-bold text-sm text-foreground mt-3">Quick add task...</p>
+                <p className="text-[11px] font-medium text-muted-foreground/50">Organize your workflow instantly</p>
             </div>
         </div>
     )
