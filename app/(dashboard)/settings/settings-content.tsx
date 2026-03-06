@@ -16,6 +16,7 @@ interface UserData {
     username: string
     profilePic: string | null
     twoFactorEnabled: boolean
+    hourlyRate?: any | null
 }
 
 export function SettingsContent({ user }: { user: UserData }) {
@@ -131,6 +132,11 @@ export function SettingsContent({ user }: { user: UserData }) {
                         <div className="space-y-2">
                             <Label>Display Name</Label>
                             <Input name="name" defaultValue={user.name || ""} placeholder="Your Name" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Target Hourly Rate (RON)</Label>
+                            <Input name="hourlyRate" type="number" defaultValue={user.hourlyRate?.toString() || "0"} placeholder="0" />
+                            <p className="text-[10px] text-muted-foreground">Used for profitability and time sink alerts.</p>
                         </div>
                         <div className="space-y-2">
                             <Label>Profile Picture URL</Label>

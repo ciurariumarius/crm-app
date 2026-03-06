@@ -17,7 +17,8 @@ export default async function SettingsPage() {
             name: true,
             username: true,
             profilePic: true,
-            twoFactorEnabled: true
+            twoFactorEnabled: true,
+            hourlyRate: true
         }
     })
 

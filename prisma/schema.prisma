@@ -194,6 +194,7 @@ model User {
   name             String?
   profilePic       String?  @map("profile_pic")
   passwordHash     String   @map("password_hash")
+  hourlyRate       Decimal? @default(0) @map("hourly_rate")
   twoFactorSecret  String?  @map("two_factor_secret")
   twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
   createdAt        DateTime @default(now())

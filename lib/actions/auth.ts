@@ -441,12 +441,15 @@ export async function updateProfile(formData: FormData) {
 
         const name = formData.get("name") as string
         const profilePic = formData.get("profilePic") as string
+        const hourlyRateRaw = formData.get("hourlyRate") as string
+        const hourlyRate = hourlyRateRaw ? Number(hourlyRateRaw) : 0
 
         await prisma.user.updateMany({
             where: { id: session.userId, tenantId: session.tenantId },
             data: {
                 name: name || null,
-                profilePic: profilePic || null
+                profilePic: profilePic || null,
+                hourlyRate: hourlyRate
             }
         })
 

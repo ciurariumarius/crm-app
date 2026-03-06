@@ -91,24 +91,24 @@ async function main() {
     })
 
     // 4. Create Projects
-    await (prisma.project as any).create({
+    await prisma.project.create({
         data: {
             tenantId: tenant.id,
             siteId: site1.id,
             status: "Active",
             paymentStatus: "Paid",
-            currentFee: (1000 as any),
+            currentFee: 1000,
             services: { connect: [{ id: gtmService.id }] }
         }
     })
 
-    await (prisma.project as any).create({
+    await prisma.project.create({
         data: {
             tenantId: tenant.id,
             siteId: site2.id,
             status: "Active",
             paymentStatus: "Unpaid",
-            currentFee: (500 as any),
+            currentFee: 500,
             services: { connect: [{ id: ppcService.id }] }
         }
     })

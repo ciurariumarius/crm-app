@@ -28,6 +28,7 @@ interface TaskGridCardProps {
     isSelected?: boolean
     onSelect?: (taskId: string) => void
     showActions?: boolean
+    className?: string
 }
 
 export function TaskGridCard({
@@ -37,7 +38,8 @@ export function TaskGridCard({
     renderMenu,
     isSelected,
     onSelect,
-    showActions = true
+    showActions = true,
+    className
 }: TaskGridCardProps) {
     const { timerState, startTimer, pauseTimer, resumeTimer } = useTimer()
 
@@ -80,7 +82,8 @@ export function TaskGridCard({
         <div
             className={cn(
                 "group relative flex flex-col bg-card hover:bg-card/80 p-5 rounded-2xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 min-h-[220px] cursor-pointer",
-                isSelected ? "ring-2 ring-primary/20 border-primary bg-primary/5" : ""
+                isSelected ? "ring-2 ring-primary/20 border-primary bg-primary/5" : "",
+                className
             )}
             onClick={() => onOpen(task)}
         >
@@ -122,25 +125,29 @@ export function TaskGridCard({
                 </div>
 
                 {/* Meatball Menu */}
-                {renderMenu && (
-                    <div className="shrink-0 -mt-1 -mr-1" onClick={e => e.stopPropagation()}>
-                        {renderMenu(task)}
-                    </div>
-                )}
-            </div>
+                {
+                    renderMenu && (
+                        <div className="shrink-0 -mt-1 -mr-1" onClick={e => e.stopPropagation()}>
+                            {renderMenu(task)}
+                        </div>
+                    )
+                }
+            </div >
 
             {/* Middle: Task Name */}
-            <h4
-                className={cn(
-                    "text-[15px] font-bold leading-tight mb-2 line-clamp-2 transition-colors text-foreground/90 group-hover:text-foreground",
-                    task.status === "Completed" && "line-through opacity-50"
-                )}
+            < h4
+                className={
+                    cn(
+                        "text-[15px] font-bold leading-tight mb-2 line-clamp-2 transition-colors text-foreground/90 group-hover:text-foreground",
+                        task.status === "Completed" && "line-through opacity-50"
+                    )
+                }
             >
                 {task.name}
-            </h4>
+            </h4 >
 
             {/* Project Context */}
-            <div className="flex flex-col gap-1 mb-4">
+            < div className="flex flex-col gap-1 mb-4" >
                 <span className="text-xs font-bold text-blue-600 dark:text-blue-400 truncate">
                     {domainName}
                 </span>
@@ -154,14 +161,16 @@ export function TaskGridCard({
                         </span>
                     )}
                 </div>
-            </div>
+            </div >
 
             {/* Description (Optional/Compact) */}
-            {task.description && (
-                <p className="text-[11px] text-muted-foreground/50 line-clamp-2 mb-4 leading-relaxed">
-                    {task.description}
-                </p>
-            )}
+            {
+                task.description && (
+                    <p className="text-[11px] text-muted-foreground/50 line-clamp-2 mb-4 leading-relaxed">
+                        {task.description}
+                    </p>
+                )
+            }
 
             <div className="flex-1" />
 
@@ -248,6 +257,6 @@ export function TaskGridCard({
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     )
 }

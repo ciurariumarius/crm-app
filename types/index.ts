@@ -18,16 +18,35 @@ export interface RevenueBreakdown {
     oneTime: { paid: number, unpaid: number }
 }
 
+export interface ProfitabilityAlert {
+    projectId: string
+    projectName: string
+    ratio: number // (Logged * Rate) / Fee
+    fee: number
+    loggedValue: number
+}
+
+export interface SettlementPartner {
+    id: string
+    name: string
+    totalUnpaid: number
+    lastSettlementDate?: Date | string | null
+}
+
 export interface DashboardMetrics {
     totalRevenue: number
     formattedRevenue: string
     revenueBreakdown: RevenueBreakdown
     totalHoursMonth: string
+    totalBillableHours: number
     recurringProjects: FormattedProject[]
     oneTimeProjects: FormattedProject[]
     quickActionProjects: QuickActionProject[]
     finalRecentProjects: RecentProject[]
     revenueByPartner: { name: string, value: number, fill: string }[]
+    unpaidByPartner: SettlementPartner[]
+    timeSinkAlerts: ProfitabilityAlert[]
+    settlementHistory: { partnerName: string, amount: number, date: Date | string }[]
     totalActiveTasks: number
     activeMonthlyProjectsCount: number
     activeOneTimeProjectsCount: number
