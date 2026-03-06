@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { format, isToday, isTomorrow, isPast, addDays } from "date-fns"
 import { cn } from "@/lib/utils"
-import { Calendar, AlertCircle, Clock, CheckCircle2, ArrowRight, Target, Plus, Play, Square, Pause, History } from "lucide-react"
+import { Calendar, AlertCircle, Clock, CheckCircle2, ArrowRight, Target, Plus, Play, Square, Pause, History, LayoutGrid, Zap, Sparkles } from "lucide-react"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import Link from "next/link"
 import { updateTask } from "@/lib/actions/tasks"
@@ -29,6 +29,18 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
         tasks,
         (state, updatedTask: string) => state.filter((task) => task.id !== updatedTask)
     )
+    const [filter, setFilter] = React.useState<"all" | "overdue" | "urgent">("all")
+
+    const filteredTasks = React.useMemo(() => {
+        switch (filter) {
+            case "overdue":
+                return optimisticTasks.filter(t => t.deadline && isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)))
+            case "urgent":
+                return optimisticTasks.filter(t => t.urgency === "Urgent")
+            default:
+                return optimisticTasks
+        }
+    }, [optimisticTasks, filter])
 
     const handleComplete = async (taskId: string) => {
         // Optimistically remove
@@ -87,7 +99,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
             <div className="flex flex-col h-full bg-transparent overflow-hidden">
                 {/* Header Section */}
                 {/* Header Section */}
-                <div className="py-4 px-1 flex flex-col gap-4">
+                <div className="py-4 px-1 flex flex-col gap-5">
                     <div className="flex flex-row items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
@@ -128,25 +140,62 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                             </Button>
                         </div>
                     </div>
-                    {/* Progress Bar */}
-                    <div className="h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden">
-                        {/* Mocking a progress for visual if we had completed count. For now, full bar or logic based. 
-                             Since we only have 'remaining', let's just show a decorative line or accurate if we had data.
-                             I'll leave it as a full nice line for "active" scope. */}
+
+                    {/* Navigation Tabs - Notion Style */}
+                    <div className="flex items-center gap-4 border-b border-border/40">
+                        <button
+                            onClick={() => setFilter("all")}
+                            className={cn(
+                                "flex items-center gap-2 px-1 py-2 text-xs font-bold uppercase tracking-wider transition-all relative",
+                                filter === "all" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <LayoutGrid className="h-3.5 w-3.5" />
+                            All Tasks
+                            {filter === "all" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-foreground rounded-full" />}
+                        </button>
+                        <button
+                            onClick={() => setFilter("overdue")}
+                            className={cn(
+                                "flex items-center gap-2 px-1 py-2 text-xs font-bold uppercase tracking-wider transition-all relative",
+                                filter === "overdue" ? "text-rose-600" : "text-muted-foreground hover:text-rose-600"
+                            )}
+                        >
+                            <Clock className="h-3.5 w-3.5" />
+                            Overdue
+                            {filter === "overdue" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-rose-600 rounded-full" />}
+                        </button>
+                        <button
+                            onClick={() => setFilter("urgent")}
+                            className={cn(
+                                "flex items-center gap-2 px-1 py-2 text-xs font-bold uppercase tracking-wider transition-all relative",
+                                filter === "urgent" ? "text-orange-600" : "text-muted-foreground hover:text-orange-600"
+                            )}
+                        >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Urgent
+                            {filter === "urgent" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-orange-600 rounded-full" />}
+                        </button>
+                    </div>
+
+                    {/* Progress Bar (Decoration) */}
+                    <div className="h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden -mt-2">
                         <div className="h-full bg-emerald-500 w-1/4 rounded-full" />
                     </div>
                 </div>
 
                 {/* Tasks Grid */}
                 <div className="p-1 flex-1 overflow-visible">
-                    {optimisticTasks.length === 0 ? (
+                    {filteredTasks.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-40 text-muted-foreground/50 gap-2 border-2 border-dashed border-muted/50 rounded-xl">
                             <CheckCircle2 className="h-8 w-8 opacity-20" />
-                            <span className="text-xs font-medium">All clear for today!</span>
+                            <span className="text-xs font-medium">
+                                {filter === "overdue" ? "No overdue tasks!" : filter === "urgent" ? "No urgent tasks!" : "All clear for today!"}
+                            </span>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {optimisticTasks.map((task) => (
+                            {filteredTasks.map((task) => (
                                 <div
                                     key={task.id}
                                     className="group relative flex flex-col bg-card hover:bg-card/80 p-5 rounded-2xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 h-[220px]"
