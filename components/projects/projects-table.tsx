@@ -111,16 +111,16 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
     }
 
     const renderHeader = () => (
-        <div className={cn("hidden md:flex items-center px-4 mb-3 text-xs font-semibold pb-2 text-muted-foreground w-full min-w-[1200px]", layout === "grid" && "hidden")}>
-            <div className="w-[120px] pl-2 shrink-0">Status</div>
-            <div className="flex-1 min-w-[200px] shrink-0">Project name & url</div>
-            <div className="w-[160px] shrink-0">Partner</div>
-            <div className="w-[90px] shrink-0 text-center">Type</div>
-            <div className="w-[120px] shrink-0 text-center">Payment</div>
-            <div className="w-[150px] shrink-0 pl-6">Amount</div>
-            <div className="w-[160px] shrink-0 pl-2">Activity tracking</div>
+        <div className={cn("hidden md:flex items-center px-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground w-full min-w-[1200px]", layout === "grid" && "hidden")}>
+            <div className="w-[90px] pl-2 shrink-0 text-center">Status</div>
+            <div className="flex-1 min-w-[300px] shrink-0">Project name & url</div>
+            <div className="w-[130px] shrink-0">Partner</div>
+            <div className="w-[75px] shrink-0 text-center">Type</div>
+            <div className="w-[90px] shrink-0 text-center">Payment</div>
+            <div className="w-[110px] shrink-0 pl-6">Amount</div>
+            <div className="w-[100px] shrink-0 text-center">Tasks</div>
             <div className="w-[120px] shrink-0 text-right pr-4">Last Edited</div>
-            <div className="w-[100px] shrink-0 text-right pr-4">Created</div>
+            <div className="w-[80px] shrink-0 text-right pr-4">Created</div>
         </div>
     )
 
@@ -240,12 +240,12 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                 onClick={() => setSelectedProject(project)}
             >
                 {/* 1. Status Pill */}
-                <div className="w-[120px] shrink-0 pl-2">
+                <div className="w-[90px] shrink-0 flex justify-center">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
                                 className={cn(
-                                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                                    "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all border",
                                     isActive ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/20" :
                                         isPaused ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/20" :
                                             "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:border-slate-700"
@@ -273,22 +273,21 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                 </div>
 
                 {/* 3. Partner Name */}
-                <div className="w-[160px] shrink-0 flex items-center pr-2">
+                <div className="w-[130px] shrink-0 flex items-center pr-2">
                     <span className="text-sm font-medium text-foreground truncate leading-snug" title={project.site.partner.name}>
                         {project.site.partner.name}
                     </span>
                 </div>
 
                 {/* Type Pill */}
-                <div className="w-[90px] shrink-0 flex items-center justify-center">
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-zinc-800/50 rounded-lg text-xs font-medium text-slate-600 truncate w-full justify-center border border-slate-200 dark:border-slate-700">
-                        <Sparkles className="h-3 w-3 text-amber-500 shrink-0 hidden md:block" />
+                <div className="w-[75px] shrink-0 flex items-center justify-center">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-zinc-800/50 rounded-lg text-[10px] font-bold uppercase tracking-tight text-slate-600 truncate w-full justify-center border border-slate-200 dark:border-slate-700">
                         {isMonthly ? "Monthly" : "One-Time"}
                     </div>
                 </div>
 
                 {/* 4. Payment */}
-                <div className="w-[120px] shrink-0 flex items-center justify-center">
+                <div className="w-[90px] shrink-0 flex items-center justify-center">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
@@ -296,16 +295,12 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className={cn(
-                                    "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all border",
+                                    "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all border",
                                     project.paymentStatus === "Paid"
                                         ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
                                         : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
                                 )}>
-                                    <div className={cn(
-                                        "h-1.5 w-1.5 rounded-full",
-                                        project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
-                                    )} />
-                                    <span className="text-xs font-medium">
+                                    <span className="text-[10px] font-bold uppercase tracking-tight">
                                         {project.paymentStatus === "Paid" ? "Paid" : "Unpaid"}
                                     </span>
                                 </div>
@@ -319,7 +314,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                 </div>
 
                 {/* 5. Amount */}
-                <div className="w-[150px] shrink-0 flex items-center justify-start pl-6">
+                <div className="w-[110px] shrink-0 flex items-center justify-start pl-6">
                     <div className="relative group/fee flex items-baseline">
                         <Input
                             type="number"
@@ -332,32 +327,38 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             }}
                             className="h-10 text-base md:text-lg font-semibold bg-transparent border-transparent hover:bg-muted/50 focus:bg-muted/50 focus:ring-0 p-0 w-20 text-right cursor-text rounded transition-colors shadow-none -mb-0.5"
                         />
-                        <span className="text-xs text-muted-foreground/60 ml-1.5 font-medium mt-0.5">RON</span>
+                        <span className="text-xs text-muted-foreground/60 ml-1 font-medium mt-0.5">RON</span>
                     </div>
                 </div>
 
-                {/* 6. Activity */}
-                <div className="w-[160px] shrink-0 flex items-center pl-2">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium" title="Time Tracked">
-                            <Clock className="h-3.5 w-3.5 opacity-50" />
-                            <span className="font-mono text-xs">
-                                {(() => {
-                                    const totalSeconds = project.tasks?.reduce((acc: number, task: any) => {
-                                        const taskLogs = task.timeLogs?.reduce((lAcc: number, log: any) => lAcc + (log.durationSeconds || 0), 0) || 0
-                                        return acc + taskLogs
-                                    }, 0) || 0
-                                    const h = Math.floor(totalSeconds / 3600)
-                                    const m = Math.floor((totalSeconds % 3600) / 60)
-                                    return `${h}h ${m}m`
-                                })()}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium" title="Tasks Completed">
-                            <CheckCircle2 className="h-3.5 w-3.5 opacity-50 text-emerald-500" />
-                            <span>{project._count?.tasks || 0}</span>
-                        </div>
-                    </div>
+                {/* 6. Tasks Pi */}
+                <div className="w-[100px] shrink-0 flex items-center justify-center">
+                    {(() => {
+                        const totalTasks = project._count?.tasks || 0
+                        const completedTasks = project.completedTasks || 0
+                        const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
+                        return (
+                            <div className="relative h-8 w-8">
+                                <svg className="h-full w-full" viewBox="0 0 36 36">
+                                    <circle className="stroke-slate-100 dark:stroke-zinc-800" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
+                                    <circle
+                                        className={cn("transition-all duration-500", isMonthly ? "stroke-blue-600" : "stroke-emerald-600")}
+                                        strokeWidth="3"
+                                        strokeDasharray={`${progress}, 100`}
+                                        strokeLinecap="round"
+                                        fill="transparent"
+                                        r="16"
+                                        cx="18"
+                                        cy="18"
+                                        transform="rotate(-90 18 18)"
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300">{completedTasks}/{totalTasks}</span>
+                                </div>
+                            </div>
+                        )
+                    })()}
                 </div>
 
                 {/* 7. Last Edited */}
@@ -368,9 +369,9 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                 </div>
 
                 {/* 8. Created */}
-                <div className="w-[140px] shrink-0 flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground font-medium">
-                        {format(new Date(project.createdAt), "dd MMMM")}
+                <div className="w-[80px] shrink-0 flex items-center justify-end pr-4">
+                    <span className="text-[11px] text-muted-foreground/60 font-medium text-right">
+                        {format(new Date(project.createdAt), "dd MMM")}
                     </span>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4">
