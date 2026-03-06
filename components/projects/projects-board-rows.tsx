@@ -104,7 +104,7 @@ export function ProjectsBoardRows({
                     <h2 className="text-xs font-semibold text-slate-500">Monthly Projects</h2>
                 </div>
 
-                <div className="hidden xl:grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] items-center px-5 text-xs text-slate-500 font-semibold gap-3">
+                <div className="hidden xl:grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_110px_130px] items-center px-5 text-xs text-slate-500 font-semibold gap-3">
                     <span>Project name / service</span>
                     <span>Status</span>
                     <span>Type</span>
@@ -113,6 +113,7 @@ export function ProjectsBoardRows({
                     <span>Tasks</span>
                     <span>Time</span>
                     <span>Partner</span>
+                    <span>Last Edited</span>
                     <span>Created</span>
                 </div>
 
@@ -130,7 +131,7 @@ export function ProjectsBoardRows({
                                 key={project.id}
                                 type="button"
                                 onClick={() => openDetails(project.id)}
-                                className="w-full text-left grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] gap-3 items-center rounded-xl border border-border/60 bg-card px-5 py-4 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
+                                className="w-full text-left grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_110px_130px] gap-3 items-center rounded-xl border border-border/60 bg-card px-5 py-4 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
                             >
                                 <div className="min-w-0">
                                     <p className="font-semibold text-slate-900 truncate">{project.site.domainName}</p>
@@ -167,6 +168,7 @@ export function ProjectsBoardRows({
                                 </div>
                                 <span className="px-3 py-1 rounded-lg text-xs text-slate-600 bg-slate-50 text-center">{formatDuration(project.secondsLogged)}</span>
                                 <span className="text-sm text-slate-700 truncate">{project.site.partner.name}</span>
+                                <span className="text-sm text-slate-500">{project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}</span>
                                 <span className="text-sm text-slate-500">{format(new Date(project.createdAt), "dd MMMM")}</span>
                             </button>
                         )
@@ -194,7 +196,7 @@ export function ProjectsBoardRows({
                                 key={project.id}
                                 type="button"
                                 onClick={() => openDetails(project.id)}
-                                className="w-full text-left grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_130px] gap-3 items-center rounded-xl border border-border/60 bg-card px-5 py-4 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
+                                className="w-full text-left grid xl:grid-cols-[minmax(260px,2fr)_130px_110px_120px_120px_140px_110px_140px_110px_130px] gap-3 items-center rounded-xl border border-border/60 bg-card px-5 py-4 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/50 transition-all duration-200 ease-in-out"
                             >
                                 <div className="min-w-0">
                                     <p className="font-semibold text-slate-900 truncate">{project.site.domainName}</p>
@@ -231,6 +233,7 @@ export function ProjectsBoardRows({
                                 </div>
                                 <span className="px-3 py-1 rounded-lg text-xs text-slate-600 bg-slate-50 text-center">{formatDuration(project.secondsLogged)}</span>
                                 <span className="text-sm text-slate-700 truncate">{project.site.partner.name}</span>
+                                <span className="text-sm text-slate-500">{project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}</span>
                                 <span className="text-sm text-slate-500">{format(new Date(project.createdAt), "dd MMMM")}</span>
                             </button>
                         )
