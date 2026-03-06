@@ -111,7 +111,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
     }
 
     const renderHeader = () => (
-        <div className={cn("hidden md:flex items-center px-4 mb-3 text-xs font-semibold pb-2 text-muted-foreground w-full min-w-[1100px]", layout === "grid" && "hidden")}>
+        <div className={cn("hidden md:flex items-center px-4 mb-3 text-xs font-semibold pb-2 text-muted-foreground w-full min-w-[1200px]", layout === "grid" && "hidden")}>
             <div className="w-[120px] pl-2 shrink-0">Status</div>
             <div className="flex-1 min-w-[200px] shrink-0">Project name & url</div>
             <div className="w-[160px] shrink-0">Partner</div>
@@ -119,6 +119,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
             <div className="w-[120px] shrink-0 text-center">Payment</div>
             <div className="w-[150px] shrink-0 pl-6">Amount</div>
             <div className="w-[160px] shrink-0 pl-2">Activity tracking</div>
+            <div className="w-[120px] shrink-0 text-right pr-4">Last Edited</div>
             <div className="w-[100px] shrink-0 text-right pr-4">Created</div>
         </div>
     )
@@ -235,7 +236,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
         return (
             <div
                 key={project.id}
-                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1100px]"
+                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1200px]"
                 onClick={() => setSelectedProject(project)}
             >
                 {/* 1. Status Pill */}
@@ -359,7 +360,14 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     </div>
                 </div>
 
-                {/* 7. Created */}
+                {/* 7. Last Edited */}
+                <div className="w-[120px] shrink-0 flex items-center justify-end pr-4">
+                    <span className="text-xs text-muted-foreground font-medium text-right">
+                        {project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}
+                    </span>
+                </div>
+
+                {/* 8. Created */}
                 <div className="w-[140px] shrink-0 flex items-center justify-between">
                     <span className="text-xs text-muted-foreground font-medium">
                         {format(new Date(project.createdAt), "dd MMMM")}
@@ -419,7 +427,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     {/* Shadow Create Row */}
                     {layout === "list" && (
                         <div
-                            className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1100px]"
+                            className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1200px]"
                             onClick={() => setCreateProjectOpen(true)}
                         >
                             <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
@@ -471,7 +479,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                     {oneTimeProjects.map(renderProjectCard)}
                                     {/* Shadow Create Row */}
                                     <div
-                                        className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer min-w-[1100px] mt-2 group/shadow"
+                                        className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer min-w-[1200px] mt-2 group/shadow"
                                         onClick={() => setCreateProjectOpen(true)}
                                     >
                                         <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
