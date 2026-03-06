@@ -1,43 +1,26 @@
+import { CreditCard, Wallet, Target, LayoutGrid, AlertCircle, TrendingUp, Sparkles } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-// Removed unused imports: ArrowUpRight, ArrowDownRight, TrendingUp, Wallet, PieChart, Users, CreditCard
 
 interface FinancialStatusBarProps {
     totalRevenue: number
     formattedRevenue: string
-    revenueBreakdown: {
-        monthly: { paid: number, unpaid: number }
-        oneTime: { paid: number, unpaid: number }
-    }
-    revenueByPartner: { name: string, value: number, fill: string }[]
-    mom?: string
+    allTimeUnpaidRevenue: number
+    activeMonthlyProjectsCount: number
+    activeOneTimeProjectsCount: number
+    totalActiveTasks: number
     className?: string
 }
 
 export function FinancialStatusBar({
     totalRevenue,
     formattedRevenue,
-    revenueBreakdown,
-    revenueByPartner,
-    mom,
+    allTimeUnpaidRevenue,
+    activeMonthlyProjectsCount,
+    activeOneTimeProjectsCount,
+    totalActiveTasks,
     className
 }: FinancialStatusBarProps) {
-    // Calculations for Zone 1: Cash Flow
-    const totalCollected = revenueBreakdown.monthly.paid + revenueBreakdown.oneTime.paid
-    const totalPending = revenueBreakdown.monthly.unpaid + revenueBreakdown.oneTime.unpaid
-    const collectionRate = totalRevenue > 0 ? (totalCollected / totalRevenue) * 100 : 0
-
-    // Calculations for Zone 2: Revenue Quality
-    const totalRecurring = revenueBreakdown.monthly.paid + revenueBreakdown.monthly.unpaid
-    const totalOneTime = revenueBreakdown.oneTime.paid + revenueBreakdown.oneTime.unpaid
-    const recurringPercent = totalRevenue > 0 ? (totalRecurring / totalRevenue) * 100 : 0
-    const oneTimePercent = totalRevenue > 0 ? (totalOneTime / totalRevenue) * 100 : 0
-
-    // Calculations for Zone 3: Partner Distribution
-    // Filter out 0% partners and sort by value desc
-    const activePartners = revenueByPartner.filter(p => p.value > 0).sort((a, b) => b.value - a.value)
-
-    // Currency formatter for tooltips
     const formatCurrency = (val: number) => new Intl.NumberFormat('ro-RO', {
         style: 'currency',
         currency: 'RON',
@@ -45,111 +28,83 @@ export function FinancialStatusBar({
     }).format(val)
 
     return (
-        <Card className={cn("p-6 flex flex-col lg:flex-row gap-8 lg:gap-12 items-stretch lg:items-center shadow-sm hover:shadow-md transition-shadow bg-card/50", className)}>
+        <div className={cn("grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4", className)}>
+            {/* 1. This Month Revenue */}
+            <Card className="p-6 border-none shadow-sm bg-white dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                            <TrendingUp className="h-5 w-5" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">This Month</span>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-black tracking-tight text-foreground">{formattedRevenue}</div>
+                        <div className="text-xs font-bold text-muted-foreground mt-1">Total Revenue</div>
+                    </div>
+                </div>
+            </Card>
 
-            {/* ZONE 1: Total Revenue & Cash Flow */}
-            <div className="flex-1 min-w-0 md:min-w-[300px] flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                    <span className="text-3xl font-black tracking-tighter text-foreground">
-                        {formattedRevenue}
-                    </span>
-                    {mom && (
-                        <div className="flex gap-1.5">
-                            <div className="flex items-center gap-0.5 text-xs font-semibold text-emerald-600 bg-emerald-50/50 px-2 py-0.5 rounded-lg border border-emerald-100">
-                                {mom} MOM
+            {/* 2. All Time Unpaid */}
+            <Card className="p-6 border-none shadow-sm bg-white dark:bg-zinc-900 group hover:shadow-md transition-all duration-300 border-l-4 border-l-rose-500/20">
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600">
+                            <AlertCircle className="h-5 w-5" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Total Unpaid</span>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-black tracking-tight text-rose-600">{formatCurrency(allTimeUnpaidRevenue)}</div>
+                        <div className="text-xs font-bold text-muted-foreground mt-1">Pending Arrears</div>
+                    </div>
+                </div>
+            </Card>
+
+            {/* 3. Active Projects */}
+            <Card className="p-6 border-none shadow-sm bg-white dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                            <LayoutGrid className="h-5 w-5" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Project Status</span>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-black tracking-tight text-foreground">
+                            {activeMonthlyProjectsCount + activeOneTimeProjectsCount} <span className="text-sm font-medium text-muted-foreground tracking-normal">Projects</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase">{activeMonthlyProjectsCount} Monthly</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase">{activeOneTimeProjectsCount} One-time</span>
                             </div>
                         </div>
-                    )}
-                </div>
-
-                {/* Collection Progress Bar */}
-                <div className="flex flex-col gap-2">
-                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
-                        <div
-                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                            style={{ width: `${collectionRate}%` }}
-                        />
-                    </div>
-                    <div className="flex justify-between text-xs font-semibold text-muted-foreground mt-1">
-                        <span>
-                            Collected ({collectionRate.toFixed(0)}%)
-                        </span>
-                        <span className="text-muted-foreground/80">
-                            {formatCurrency(totalPending)} Pending
-                        </span>
                     </div>
                 </div>
-            </div>
+            </Card>
 
-            {/* Spacer/Divider (Desktop) */}
-            <div className="hidden lg:block w-px h-16 bg-border/40" />
-
-            {/* ZONE 2: Revenue Quality (Stability Indicator) */}
-            <div className="flex-1 min-w-0 md:min-w-[300px] flex flex-col gap-2 justify-center">
-                {/* Top Labels */}
-                <div className="flex justify-between text-xs mb-1">
-                    <span className="font-bold text-foreground">{recurringPercent.toFixed(0)}% Monthly</span>
-                    <span className="text-muted-foreground font-medium">{oneTimePercent.toFixed(0)}% One-time</span>
-                </div>
-
-                {/* Bar */}
-                <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
-                    <div
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                        style={{ width: `${recurringPercent}%` }}
-                    />
-                    {/* Gap between bars if needed, or just adjacent */}
-                    <div className="w-1 h-full bg-transparent" />
-                    <div
-                        className="h-full bg-slate-200 dark:bg-slate-700 rounded-full transition-all duration-500"
-                        style={{ width: `${oneTimePercent}%` }}
-                    />
-                </div>
-
-                {/* Bottom Label */}
-                <span className="text-xs font-semibold text-muted-foreground mt-1">
-                    Revenue Type
-                </span>
-            </div>
-
-            {/* Spacer/Divider (Desktop) */}
-            <div className="hidden lg:block w-px h-16 bg-border/40" />
-
-            {/* ZONE 3: Partner Distribution */}
-            <div className="flex-1 min-w-0 md:min-w-[300px] flex flex-col gap-4 justify-center">
-                <span className="text-xs font-bold text-foreground">Partner Distribution</span>
-
-                <div className="flex flex-col gap-3">
-                    {/* Sparkline Segmented Bar - Very Thin */}
-                    <div className="h-1 w-full rounded-full overflow-hidden flex">
-                        {activePartners.map((partner) => {
-                            const percent = totalRevenue > 0 ? (partner.value / totalRevenue) * 100 : 0
-                            if (percent < 1) return null
-                            return (
-                                <div
-                                    key={partner.name}
-                                    className="h-full first:rounded-l-full last:rounded-r-full"
-                                    style={{ width: `${percent}%`, backgroundColor: partner.fill }}
-                                />
-                            )
-                        })}
+            {/* 4. Active Tasks */}
+            <Card className="p-6 border-none shadow-sm bg-white dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                            <Sparkles className="h-5 w-5" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Queue Status</span>
                     </div>
-
-                    {/* Legend: Dot Name % */}
-                    <div className="flex flex-wrap gap-x-4 gap-y-2">
-                        {activePartners.slice(0, 3).map((partner) => {
-                            const percent = totalRevenue > 0 ? (partner.value / totalRevenue) * 100 : 0
-                            return (
-                                <div key={partner.name} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: partner.fill }} />
-                                    <span>{partner.name}</span>
-                                    <span className="text-muted-foreground/60">{percent.toFixed(0)}%</span>
-                                </div>
-                            )
-                        })}
+                    <div>
+                        <div className="text-2xl font-black tracking-tight text-foreground">
+                            {totalActiveTasks} <span className="text-sm font-medium text-muted-foreground tracking-normal">Active Tasks</span>
+                        </div>
+                        <div className="text-xs font-bold text-amber-600/80 mt-1 uppercase tracking-wider">Requires Attention</div>
                     </div>
                 </div>
-            </div>
-        </Card>
+            </Card>
+        </div>
     )
 }

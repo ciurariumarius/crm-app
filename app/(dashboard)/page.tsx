@@ -105,7 +105,7 @@ export default async function Home() {
     console.error("[dashboard] failed to load homepage data", error)
   }
 
-  const metrics = calculateDashboardMetrics(activeProjects, timeLogsThisMonth, recentProjects)
+  const metrics = calculateDashboardMetrics(activeProjects, timeLogsThisMonth, recentProjects, upcomingTasks.length)
   const formattedPartners = serialize(partners)
   const formattedServices = serialize(services)
 
@@ -131,8 +131,11 @@ export default async function Home() {
           <FinancialStatusBar
             totalRevenue={metrics.totalRevenue}
             formattedRevenue={metrics.formattedRevenue}
-            revenueBreakdown={metrics.revenueBreakdown}
-            revenueByPartner={metrics.revenueByPartner}
+            allTimeUnpaidRevenue={metrics.allTimeUnpaidRevenue}
+            activeMonthlyProjectsCount={metrics.activeMonthlyProjectsCount}
+            activeOneTimeProjectsCount={metrics.activeOneTimeProjectsCount}
+            totalActiveTasks={metrics.totalActiveTasks}
+            className="mb-8"
           />
 
           {dashboardQueryFailed ? (

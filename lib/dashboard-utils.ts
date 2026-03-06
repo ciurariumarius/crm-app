@@ -7,7 +7,7 @@ export interface RevenueByPartner {
     fill: string
 }
 
-export function calculateDashboardMetrics(activeProjects: any[], timeLogsThisMonth: any, recentProjectsRaw: any[]): DashboardMetrics {
+export function calculateDashboardMetrics(activeProjects: any[], timeLogsThisMonth: any, recentProjectsRaw: any[], totalActiveTasks: number = 0): DashboardMetrics {
     // Split into Recurring and One-Time
     const recurringProjects: FormattedProject[] = []
     const oneTimeProjects: FormattedProject[] = []
@@ -110,6 +110,10 @@ export function calculateDashboardMetrics(activeProjects: any[], timeLogsThisMon
         }))
         .sort((a, b) => b.value - a.value)
 
+    const allTimeUnpaidRevenue = activeProjects.reduce((sum: number, p: any) => p.paymentStatus === "Unpaid" ? sum + (Number(p.currentFee) || 0) : sum, 0)
+    const activeMonthlyProjectsCount = activeProjects.filter(p => p.status === "Active" && p.services.some((s: any) => s.isRecurring)).length
+    const activeOneTimeProjectsCount = activeProjects.filter(p => p.status === "Active" && !p.services.some((s: any) => s.isRecurring)).length
+
     return {
         totalRevenue,
         formattedRevenue,
@@ -119,6 +123,10 @@ export function calculateDashboardMetrics(activeProjects: any[], timeLogsThisMon
         oneTimeProjects,
         quickActionProjects,
         finalRecentProjects,
-        revenueByPartner
+        revenueByPartner,
+        totalActiveTasks,
+        activeMonthlyProjectsCount,
+        activeOneTimeProjectsCount,
+        allTimeUnpaidRevenue
     }
 }

@@ -28,6 +28,10 @@ export interface DashboardMetrics {
     quickActionProjects: QuickActionProject[]
     finalRecentProjects: RecentProject[]
     revenueByPartner: { name: string, value: number, fill: string }[]
+    totalActiveTasks: number
+    activeMonthlyProjectsCount: number
+    activeOneTimeProjectsCount: number
+    allTimeUnpaidRevenue: number
 }
 
 export interface FormattedProject {
