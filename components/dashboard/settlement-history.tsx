@@ -12,38 +12,42 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
     if (history.length === 0) return null
 
     return (
-        <section className="mt-12 pt-8 border-t border-border">
-            <div className="flex items-center gap-2 mb-6">
+        <Card className="p-6 border border-border bg-card/50 backdrop-blur-sm shadow-sm flex flex-col gap-6 h-full">
+            <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                     <History className="h-4 w-4" />
                 </div>
-                <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Recent Settlement History</h3>
+                <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Payment History</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex flex-col gap-3">
                 {history.map((item, idx) => (
-                    <Card key={idx} className="p-4 border border-border bg-card/30 backdrop-blur-sm flex items-center gap-4 group hover:border-emerald-200 transition-all">
-                        <div className="h-10 w-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                            <CheckCircle className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-sm uppercase tracking-tight truncate">{item.partnerName}</h4>
-                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
-                                {format(new Date(item.date), 'MMMM d, yyyy')}
-                            </p>
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-border bg-background/50 hover:border-emerald-500/30 transition-all group">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-8 w-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                                <CheckCircle className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                                <h4 className="font-bold text-[11px] uppercase tracking-tight truncate">{item.partnerName}</h4>
+                                <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-tighter">
+                                    {format(new Date(item.date), 'MMM d, yyyy')}
+                                </p>
+                            </div>
                         </div>
                         <div className="text-right shrink-0">
-                            <div className="text-sm font-black text-emerald-600 flex items-center gap-1 justify-end">
-                                <span className="text-[10px] opacity-50">RON</span> {item.amount.toLocaleString()}
-                            </div>
-                            <div className="flex items-center gap-1 justify-end text-muted-foreground">
-                                <CreditCard className="h-2.5 w-2.5" />
-                                <span className="text-[8px] font-bold uppercase tracking-widest">Bank Trf</span>
+                            <div className="text-xs font-black text-emerald-600">
+                                <span className="text-[10px] opacity-50 mr-1">RON</span>
+                                {item.amount.toLocaleString()}
                             </div>
                         </div>
-                    </Card>
+                    </div>
                 ))}
             </div>
-        </section>
+            {history.length > 3 && (
+                <p className="text-center text-[9px] text-muted-foreground uppercase font-bold tracking-widest opacity-50">
+                    Showing last 3 entries
+                </p>
+            )}
+        </Card>
     )
 }

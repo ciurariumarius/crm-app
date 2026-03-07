@@ -12,6 +12,7 @@ interface BusinessHealthPulseProps {
     activeTasks: number
     activeMonthlyProjects: number
     activeOneTimeProjects: number
+    id?: string
     className?: string
 }
 
@@ -23,6 +24,7 @@ export function BusinessHealthPulse({
     activeTasks,
     activeMonthlyProjects,
     activeOneTimeProjects,
+    id,
     className
 }: BusinessHealthPulseProps) {
     const currencyFormatter = new Intl.NumberFormat('ro-RO', {
@@ -44,51 +46,49 @@ export function BusinessHealthPulse({
     const debtBorderColor = debtAlert ? "border-l-red-500" : debtWarning ? "border-l-amber-500" : "border-l-border"
 
     return (
-        <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-6", className)}>
-            {/* Card A: Monthly Revenue */}
-            <Card className="p-6 flex flex-col gap-1 relative overflow-hidden group hover:shadow-md transition-all">
+        <div id={id} className={cn("grid grid-cols-1 md:grid-cols-2 gap-6", className)}>
+            {/* Combined Card: Financial Health (Revenue + Debt) */}
+            <Card className="p-6 flex flex-col gap-1 relative overflow-hidden group hover:shadow-md transition-all border-l-4 border-l-primary/10">
                 <div className="flex items-center justify-between z-10">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Monthly Revenue</span>
-                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                        <TrendingUp className="h-4 w-4" />
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Financial Health</span>
+                    <div className="flex gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                            <TrendingUp className="h-4 w-4" />
+                        </div>
+                        <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center", debtBadgeColor)}>
+                            <Wallet className="h-4 w-4" />
+                        </div>
                     </div>
                 </div>
-                <div className="mt-2 z-10">
-                    <h3 className="text-3xl font-bold tracking-tight">{formattedRevenue}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Total billable active projects</p>
+
+                <div className="mt-2 z-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <h3 className="text-3xl font-bold tracking-tight">{formattedRevenue}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">Monthly Revenue (Target)</p>
+                    </div>
+
+                    <div className="sm:border-l sm:pl-6 border-border/50">
+                        <h3 className={cn("text-3xl font-bold tracking-tight", debtTextColor)}>
+                            {formattedUnpaid}
+                        </h3>
+                        <div className="flex items-center gap-1.5 mt-1">
+                            {debtWarning ? (
+                                <>
+                                    <AlertCircle className={cn("h-3 w-3", debtAlert ? "text-red-500" : "text-amber-500")} />
+                                    <p className={cn("text-xs font-medium tracking-tight", debtAlert ? "text-red-500" : "text-amber-500")}>
+                                        {debtAlert ? "Urgent Action Required" : "Outstanding Balance"}
+                                    </p>
+                                </>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">All accounts settled</p>
+                            )}
+                        </div>
+                    </div>
                 </div>
-                <div className="absolute -right-4 -bottom-4 h-24 w-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors" />
+                <div className="absolute -right-4 -bottom-4 h-24 w-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
             </Card>
 
-            {/* Card B: Debt Dash */}
-            <Card className={cn("p-6 flex flex-col gap-1 relative overflow-hidden group hover:shadow-md transition-all border-l-4", debtBorderColor)}>
-                <div className="flex items-center justify-between z-10">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Debt Dash</span>
-                    <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center", debtBadgeColor)}>
-                        <Wallet className="h-4 w-4" />
-                    </div>
-                </div>
-                <div className="mt-2 z-10">
-                    <h3 className={cn("text-3xl font-bold tracking-tight", debtTextColor)}>
-                        {formattedUnpaid}
-                    </h3>
-                    <div className="flex items-center gap-1.5 mt-1">
-                        {debtWarning ? (
-                            <>
-                                <AlertCircle className={cn("h-3 w-3", debtAlert ? "text-red-500" : "text-amber-500")} />
-                                <p className={cn("text-xs font-medium tracking-tight", debtAlert ? "text-red-500" : "text-amber-500")}>
-                                    {debtAlert ? "Urgent Action Required" : "Outstanding Balance Owed"}
-                                </p>
-                            </>
-                        ) : (
-                            <p className="text-xs text-muted-foreground">All accounts settled</p>
-                        )}
-                    </div>
-                </div>
-                <div className="absolute -right-4 -bottom-4 h-24 w-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors" />
-            </Card>
-
-            {/* Card C: Capacity & Workload */}
+            {/* Card B: Capacity & Workload (Original Card C) */}
             <Card className="p-6 flex flex-col gap-1 relative overflow-hidden group hover:shadow-md transition-all">
                 <div className="flex items-center justify-between z-10">
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Capacity & Workload</span>
@@ -97,28 +97,26 @@ export function BusinessHealthPulse({
                     </div>
                 </div>
                 <div className="mt-2 z-10 space-y-3">
-                    <div>
-                        <h3 className="text-3xl font-bold tracking-tight">{billableHours.toFixed(1)}h Logged</h3>
-                        <p className="text-xs text-muted-foreground mt-1">Billable effort this month</p>
-                    </div>
-
-                    <div className="pt-3 border-t border-border/50 grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Projects</p>
-                            <div className="flex items-baseline gap-1 mt-0.5">
-                                <span className="text-sm font-black text-blue-600">{activeMonthlyProjects + activeOneTimeProjects}</span>
-                                <span className="text-[8px] font-medium text-muted-foreground uppercase">Active</span>
-                            </div>
-                            <div className="flex gap-2 mt-1">
-                                <span className="text-[9px] font-medium bg-blue-50 text-blue-700 px-1 rounded">{activeMonthlyProjects}M</span>
-                                <span className="text-[9px] font-medium bg-indigo-50 text-indigo-700 px-1 rounded">{activeOneTimeProjects}1T</span>
-                            </div>
+                            <h3 className="text-2xl font-bold tracking-tight">{billableHours.toFixed(1)}h Logged</h3>
+                            <p className="text-xs text-muted-foreground mt-1">Billable effort this month</p>
                         </div>
-                        <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Live Tasks</p>
-                            <div className="flex items-baseline gap-1 mt-0.5">
-                                <span className="text-sm font-black text-slate-700">{activeTasks}</span>
-                                <span className="text-[8px] font-medium text-muted-foreground uppercase">Current</span>
+
+                        <div className="flex items-center gap-6 sm:pl-4 sm:border-l border-border/50">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Projects</p>
+                                <div className="flex items-baseline gap-1 mt-0.5">
+                                    <span className="text-sm font-black text-blue-600">{activeMonthlyProjects + activeOneTimeProjects}</span>
+                                    <span className="text-[10px] font-medium text-muted-foreground uppercase ml-1">Live</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tasks</p>
+                                <div className="flex items-baseline gap-1 mt-0.5">
+                                    <span className="text-sm font-black text-slate-700">{activeTasks}</span>
+                                    <span className="text-[10px] font-medium text-muted-foreground uppercase ml-1">Active</span>
+                                </div>
                             </div>
                         </div>
                     </div>

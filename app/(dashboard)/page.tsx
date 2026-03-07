@@ -139,7 +139,7 @@ export default async function Home() {
   return (
     <ProjectSheetWrapper projects={serialize(activeProjects)} allServices={formattedServices}>
       <TaskSheetWrapper tasks={serialize(upcomingTasks)}>
-        <div className="flex flex-col gap-6 pb-10">
+        <div id="dashboard-main-container" className="flex flex-col gap-6 pb-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex h-10 items-center md:pl-0 gap-3">
               <MobileMenuTrigger />
@@ -158,6 +158,7 @@ export default async function Home() {
           <div className="space-y-10">
             {/* Top Row: Business Health Pulse */}
             <BusinessHealthPulse
+              id="v5-financial-pulse"
               monthlyRevenue={metrics.totalRevenue}
               formattedRevenue={metrics.formattedRevenue}
               unpaidBalance={metrics.allTimeUnpaidRevenue}
@@ -173,45 +174,53 @@ export default async function Home() {
               </div>
             ) : null}
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
-              {/* Main Feed: Daily Engine (Focus + Alerts) */}
-              <div className="lg:col-span-3 space-y-10">
-                {/* Profitability Alerts Section */}
+            {/* Main Content Flow: All Full-Width and Vertical */}
+            <div className="flex flex-col gap-10">
+              {/* 1. Daily Engine: Profitability & Focus */}
+              <div className="space-y-6">
                 <ProfitabilityAlerts alerts={metrics.timeSinkAlerts} />
-
-                {/* Task Focus Matrix */}
-                <FocusMatrix tasks={upcomingTasks} />
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                  <div className="xl:col-span-3">
+                    <FocusMatrix tasks={upcomingTasks} />
+                  </div>
+                  <div className="xl:col-span-1">
+                    <TechnicalIntegrationBar />
+                  </div>
+                </div>
               </div>
 
-              {/* Sidebar: Admin & Rapid Entry */}
-              <div className="lg:col-span-1 space-y-8">
-                {/* Settle Up Ledger */}
-                <SettleUpLedger partners={metrics.unpaidByPartner} />
-
-                {/* Technical Integration Bar */}
-                <TechnicalIntegrationBar />
-
-                {/* Existing Project Lists as secondary context */}
-                <Card className="p-4 bg-muted/30 border-dashed">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Project Overview</h4>
-                  <div className="space-y-6">
-                    <RecurringProjectsList
-                      projects={metrics.recurringProjects}
-                      partners={formattedPartners}
-                      services={formattedServices}
-                    />
-                    <OneTimeProjectsList
-                      projects={metrics.oneTimeProjects}
-                      partners={formattedPartners}
-                      services={formattedServices}
-                    />
+              {/* 2. Project Inventory: Fixed-Fee & Recurring Subscriptions (Stacked Vertically) */}
+              <div className="space-y-10">
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-center gap-2 px-2">
+                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Monthly Subscriptions</h3>
                   </div>
-                </Card>
+                  <RecurringProjectsList
+                    projects={metrics.recurringProjects}
+                    partners={formattedPartners}
+                    services={formattedServices}
+                  />
+                </div>
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-center gap-2 px-2">
+                    <div className="h-2 w-2 rounded-full bg-indigo-500" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Fixed-Fee Projects</h3>
+                  </div>
+                  <OneTimeProjectsList
+                    projects={metrics.oneTimeProjects}
+                    partners={formattedPartners}
+                    services={formattedServices}
+                  />
+                </div>
+              </div>
+
+              {/* 3. Bottom Section: Due Payment & Payment History */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                <SettleUpLedger id="v5-settle-ledger" partners={metrics.unpaidByPartner} />
+                <SettlementHistory history={metrics.settlementHistory} />
               </div>
             </div>
-
-            {/* Footer: Settlement History */}
-            <SettlementHistory history={metrics.settlementHistory} />
           </div>
         </div>
       </TaskSheetWrapper>

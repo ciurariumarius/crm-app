@@ -11,9 +11,10 @@ import { format } from "date-fns"
 
 interface SettleUpLedgerProps {
     partners: SettlementPartner[]
+    id?: string
 }
 
-export function SettleUpLedger({ partners }: SettleUpLedgerProps) {
+export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
     const [settlingId, setSettlingId] = useState<string | null>(null)
 
     const handleSettle = async (partnerId: string) => {
@@ -40,23 +41,27 @@ export function SettleUpLedger({ partners }: SettleUpLedgerProps) {
     )
 
     return (
-        <Card className="p-4 border border-border bg-card/50 backdrop-blur-sm shadow-sm flex flex-col gap-4">
-            <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
-                    <Wallet className="h-4 w-4" />
+        <Card id={id} className="p-6 border border-border bg-card/50 backdrop-blur-sm shadow-sm flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
+                        <Wallet className="h-4 w-4" />
+                    </div>
+                    <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Due Payment</h3>
                 </div>
-                <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Settle Up Ledger</h3>
+                <p className="hidden sm:block text-[10px] text-muted-foreground italic">
+                    Updating ledger generates a payment audit log for bookkeeping.
+                </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {partners.map(partner => (
-                    <div key={partner.id} className="group p-3 rounded-xl border border-border bg-background hover:border-red-500/30 transition-all">
-                        <div className="flex justify-between items-start mb-2">
+                    <div key={partner.id} className="group p-4 rounded-xl border border-border bg-background hover:border-red-500/30 transition-all flex flex-col justify-between">
+                        <div className="flex justify-between items-start mb-4">
                             <div>
-                                <h4 className="font-bold text-sm group-hover:text-red-600 transition-colors uppercase tracking-tight">{partner.name}</h4>
+                                <h4 className="font-bold text-sm group-hover:text-red-600 transition-colors uppercase tracking-tight truncate max-w-[140px]">{partner.name}</h4>
                                 <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground">
-                                    <Calendar className="h-3 w-3" />
-                                    <span className="text-[10px] uppercase font-medium">Outst. Balance</span>
+                                    <span className="text-[10px] uppercase font-medium">Owed</span>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -67,7 +72,7 @@ export function SettleUpLedger({ partners }: SettleUpLedgerProps) {
                         <Button
                             variant="outline"
                             size="sm"
-                            className="w-full mt-1 text-[11px] font-bold h-8 border-red-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-none uppercase"
+                            className="w-full text-[11px] font-bold h-8 border-red-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-none uppercase"
                             onClick={() => handleSettle(partner.id)}
                             disabled={settlingId === partner.id}
                         >
@@ -76,15 +81,11 @@ export function SettleUpLedger({ partners }: SettleUpLedgerProps) {
                             ) : (
                                 <CheckCircle2 className="h-3 w-3 mr-2" />
                             )}
-                            Mark All Paid
+                            Mark Paid
                         </Button>
                     </div>
                 ))}
             </div>
-
-            <p className="text-[10px] text-muted-foreground italic text-center mt-2 px-4">
-                Updating ledger generates a payment audit log for monthly bookkeeping.
-            </p>
         </Card>
     )
 }
