@@ -1,7 +1,7 @@
 "use client"
 
 import { Card } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 import { TrendingUp, Wallet, Clock, AlertCircle } from "lucide-react"
 
 interface BusinessHealthPulseProps {
@@ -27,15 +27,9 @@ export function BusinessHealthPulse({
     id,
     className
 }: BusinessHealthPulseProps) {
-    const currencyFormatter = new Intl.NumberFormat('ro-RO', {
-        style: 'currency',
-        currency: 'RON',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    })
-
     const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' })
-    const formattedUnpaid = currencyFormatter.format(unpaidBalance)
+    const formattedUnpaid = formatCurrency(unpaidBalance)
+    const displayRevenue = formatCurrency(monthlyRevenue)
 
     // Dynamic color for debt based on spec:
     // 0 = Neutral, > 0 = Warning Amber/Orange, > 1500 = Alert Red
@@ -64,7 +58,7 @@ export function BusinessHealthPulse({
 
                 <div className="mt-2 z-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                        <h3 className="text-3xl font-bold tracking-tight">{formattedRevenue}</h3>
+                        <h3 className="text-3xl font-bold tracking-tight">{displayRevenue}</h3>
                         <p className="text-xs text-muted-foreground mt-1">{currentMonthName} Revenue</p>
                     </div>
 

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 interface PageHeaderProps {
     title: string
     subtitle?: string
+    description?: string
     actions?: React.ReactNode
     className?: string
     titleClassName?: string
@@ -13,10 +14,13 @@ interface PageHeaderProps {
 export function PageHeader({
     title,
     subtitle,
+    description,
     actions,
     className,
     titleClassName,
 }: PageHeaderProps) {
+    const effectiveSubtitle = subtitle ?? description
+
     return (
         <div className={cn("flex flex-col gap-2", className)}>
             <div className="flex min-h-10 items-center justify-between gap-4">
@@ -26,7 +30,7 @@ export function PageHeader({
                 </div>
                 {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
             </div>
-            {subtitle ? <p className="page-subtitle">{subtitle}</p> : null}
+            {effectiveSubtitle ? <p className="page-subtitle">{effectiveSubtitle}</p> : null}
         </div>
     )
 }

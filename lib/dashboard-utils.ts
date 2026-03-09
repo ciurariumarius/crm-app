@@ -39,10 +39,12 @@ export function calculateDashboardMetrics(
             services: project.services
         }
 
-        if (isRecurring) {
-            recurringProjects.push(formattedProject)
-        } else {
-            oneTimeProjects.push(formattedProject)
+        if (project.status === "Active") {
+            if (isRecurring) {
+                recurringProjects.push(formattedProject)
+            } else {
+                oneTimeProjects.push(formattedProject)
+            }
         }
     })
 
@@ -140,12 +142,14 @@ export function calculateDashboardMetrics(
         oneTime: { paid: oneTimePaid, unpaid: oneTimeUnpaid }
     }
 
-    const quickActionProjects = activeProjects.map((p: any) => ({
-        id: p.id,
-        siteName: formatProjectName(p),
-        services: p.services,
-        status: p.status
-    }))
+    const quickActionProjects = activeProjects
+        .filter((p: any) => p.status === "Active")
+        .map((p: any) => ({
+            id: p.id,
+            siteName: formatProjectName(p),
+            services: p.services,
+            status: p.status
+        }))
 
     const finalRecentProjects = recentProjectsRaw.map((p: any) => ({
         id: p.id,

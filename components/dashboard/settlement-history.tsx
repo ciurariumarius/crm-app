@@ -3,9 +3,10 @@
 import * as React from "react"
 import { Card } from "@/components/ui/card"
 import { format } from "date-fns"
-import { History, CheckCircle } from "lucide-react"
+import { History, CheckCircle, ChevronRight } from "lucide-react"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency, formatRelativeDate } from "@/lib/utils"
+import Link from "next/link"
 
 interface SettlementHistoryProps {
     history: {
@@ -22,17 +23,29 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
 
     if (history.length === 0) return null
 
+    // Limit to exactly 5 items as requested
+    const displayHistory = history.slice(0, 5)
+
     return (
         <Card className="p-4 border border-border bg-card/50 backdrop-blur-sm shadow-sm flex flex-col gap-4 h-full">
-            <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                    <History className="h-3.5 w-3.5" />
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                        <History className="h-3.5 w-3.5" />
+                    </div>
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Payment History (Log)</h3>
                 </div>
-                <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Payment History (Log)</h3>
+                <Link
+                    href="/payments"
+                    className="text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 group"
+                >
+                    View All
+                    <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
             </div>
 
             <div className="flex flex-col gap-2">
-                {history.map((item) => (
+                {displayHistory.map((item) => (
                     <div
                         key={item.id}
                         onClick={() => openProject(item.id)}
@@ -49,7 +62,7 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{item.partnerName}</span>
                                     <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-40 shrink-0">
-                                        • {format(new Date(item.date), 'MMM d, yyyy')}
+                                        • {formatRelativeDate(item.date)}
                                     </span>
                                 </div>
                             </div>
@@ -57,16 +70,19 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
 
                         <div className="flex items-center gap-4 shrink-0">
                             <div className="text-sm font-black text-emerald-600 tabular-nums">
-                                {item.amount.toLocaleString()} <span className="text-[10px] opacity-50 ml-0.5 font-bold">RON</span>
+                                {formatCurrency(item.amount)}
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
-            {history.length >= 10 && (
-                <p className="text-center text-[8px] text-muted-foreground uppercase font-bold tracking-widest opacity-50">
-                    Showing last 10 entries
-                </p>
+
+            {history.length > 5 && (
+                <div className="mt-auto pt-2 border-t border-border/50">
+                    <p className="text-center text-[8px] text-muted-foreground uppercase font-bold tracking-widest opacity-50">
+                        Showing latest 5 of {history.length} entries
+                    </p>
+                </div>
             )}
         </Card>
     )

@@ -5,7 +5,7 @@ import { Users, Briefcase, CircleDollarSign, AlertCircle, LayoutGrid, CheckCircl
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditPartnerDialog } from "@/components/vault/edit-partner-dialog"
-import { cn } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 
 interface Partner {
     id: string
@@ -84,7 +84,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                             Lifetime
                         </div>
                         <div className="text-xs font-bold text-foreground tabular-nums">
-                            {totalRevenue.toLocaleString()} <span className="text-[9px] text-muted-foreground font-normal">RON</span>
+                            {formatNumber(totalRevenue)} <span className="text-[9px] text-muted-foreground font-normal">RON</span>
                         </div>
                     </div>
 
@@ -100,7 +100,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                         </div>
                         <div className="text-xs font-bold tabular-nums">
                             {unpaidRevenue > 0
-                                ? `${unpaidRevenue.toLocaleString()} RON`
+                                ? `${formatNumber(unpaidRevenue)} RON`
                                 : "All Paid"
                             }
                         </div>

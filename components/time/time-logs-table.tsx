@@ -11,8 +11,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { format, isToday, isYesterday } from "date-fns"
-import { Badge } from "@/components/ui/badge"
-import { Clock, Briefcase, CheckSquare, Play, Trash2, X, AlertCircle, Copy, Square, PenLine, Timer } from "lucide-react"
+import { Clock, CheckSquare, Play, Trash2, X, Square, PenLine } from "lucide-react"
 
 interface TimeLogWithDetails {
     id: string
@@ -71,7 +70,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
             } else {
                 toast.error(result.error || "Failed to stop timer")
             }
-        } catch (error) {
+        } catch {
             toast.error("Process failed")
         } finally {
             setIsStopping(null)
@@ -100,19 +99,11 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
             } else {
                 toast.error(result.error || "Failed to delete entries")
             }
-        } catch (error) {
+        } catch {
             toast.error("Operation failed")
         } finally {
             setIsDeleting(false)
         }
-    }
-
-    const formatDuration = (seconds: number | null) => {
-        if (seconds === null) return "-"
-        const hours = Math.floor(seconds / 3600)
-        const minutes = Math.floor((seconds % 3600) / 60)
-        const secs = seconds % 60
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
     }
 
     // Group logs by date
@@ -136,7 +127,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
             await startTimer(log.project.id, log.task?.id)
             toast.success("Timer started")
             router.refresh()
-        } catch (error) {
+        } catch {
             toast.error("Failed to start timer")
         }
     }
@@ -181,10 +172,10 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                 </div>
             )}
 
-            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+            <div className="glass rounded-xl overflow-hidden apple-shadow">
                 <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-                    <Table>
-                        <TableHeader className="bg-muted/30">
+                    <Table className="table-cockpit">
+                        <TableHeader>
                             <TableRow className="hover:bg-transparent">
                                 <TableHead className="w-[40px] pl-4">
                                     <Checkbox
@@ -193,10 +184,10 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                         aria-label="Select all"
                                     />
                                 </TableHead>
-                                <TableHead className="w-[120px] font-semibold text-xs text-muted-foreground">Time</TableHead>
-                                <TableHead className="font-semibold text-xs text-muted-foreground">Context</TableHead>
-                                <TableHead className="font-semibold text-xs text-muted-foreground">Description</TableHead>
-                                <TableHead className="text-right font-semibold text-xs text-muted-foreground pr-8">Duration</TableHead>
+                                <TableHead className="w-[120px]">Time</TableHead>
+                                <TableHead>Context</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right pr-8">Duration</TableHead>
                                 <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -219,7 +210,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                 sortedDates.map(dateKey => (
                                     <Fragment key={dateKey}>
                                         {/* Date Header */}
-                                        <TableRow key={dateKey} className="bg-muted/50 hover:bg-muted/50 sticky top-0 z-10 backdrop-blur-sm supports-[backdrop-filter]:bg-muted/40">
+                                        <TableRow key={dateKey} className="glass hover:bg-transparent sticky top-0 z-20">
                                             <TableCell colSpan={6} className="py-2 px-4 shadow-sm border-b border-border/60">
                                                 <span className="font-semibold text-xs text-muted-foreground/80">
                                                     {isToday(new Date(dateKey)) ? "Today" : isYesterday(new Date(dateKey)) ? "Yesterday" : format(new Date(dateKey), "MMM d, yyyy")}
@@ -228,7 +219,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                         </TableRow>
 
                                         {/* Rows for this date */}
-                                        {groupedLogs[dateKey].map((log) => {
+                                        {groupedLogs[dateKey].map((log, logIndex) => {
                                             const isSelected = selectedIds.includes(log.id)
                                             const isRunning = !log.endTime
 
@@ -236,10 +227,11 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                 <TableRow
                                                     key={log.id}
                                                     className={cn(
-                                                        "cursor-pointer transition-all duration-200 group border-b border-border/50",
+                                                        "cursor-pointer transition-all duration-200 group border-b border-border/50 stagger-row-enter",
                                                         isSelected ? "bg-primary/[0.03] select-none" : "hover:bg-muted/20",
                                                         // Alternating row style could be added here if desired via css nth-child
                                                     )}
+                                                    style={{ animationDelay: `${logIndex * 0.05}s` }}
                                                     onClick={() => setSelectedLog(log)}
                                                 >
                                                     {/* Checkbox */}
@@ -255,7 +247,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                     </TableCell>
 
                                                     {/* Time Range (Monospaced) */}
-                                                    <TableCell className="w-[140px] font-mono text-xs text-muted-foreground">
+                                                    <TableCell className="w-[140px] cell-tech">
                                                         {format(new Date(log.startTime), "HH:mm")} — {log.endTime ? format(new Date(log.endTime), "HH:mm") : "..."}
                                                     </TableCell>
 
@@ -286,7 +278,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                     </TableCell>
 
                                                     {/* Duration & Source */}
-                                                    <TableCell className="text-right pr-8" onClick={(e) => e.stopPropagation()}>
+                                                    <TableCell className="cell-financial pr-8" onClick={(e) => e.stopPropagation()}>
                                                         <div className="flex items-center justify-end gap-3">
                                                             {/* Source Indicator */}
                                                             <div className={cn(

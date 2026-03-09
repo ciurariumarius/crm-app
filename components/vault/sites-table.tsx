@@ -23,7 +23,7 @@ import {
     Target
 } from "lucide-react"
 import { format } from "date-fns"
-import { cn } from "@/lib/utils"
+import { cn, formatRelativeDate } from "@/lib/utils"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 
@@ -37,7 +37,7 @@ export function SitesTable({ sites }: SitesTableProps) {
     return (
         <div className="rounded-xl border bg-card/50 overflow-hidden backdrop-blur-sm shadow-sm">
             <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-                <Table>
+                <Table className="table-cockpit">
                     <TableHeader>
                         <TableRow className="bg-muted/30 hover:bg-muted/30 border-none">
                             <TableHead className="w-[300px] text-xs font-semibold text-muted-foreground py-4">Domain Asset</TableHead>
@@ -114,7 +114,7 @@ export function SitesTable({ sites }: SitesTableProps) {
                                 <TableCell className="text-right py-4">
                                     <div className="flex flex-col items-end">
                                         <span className="text-xs font-bold text-muted-foreground/80">
-                                            {format(new Date(site.createdAt), "dd MMM yyyy")}
+                                            {formatRelativeDate(site.createdAt)}
                                         </span>
                                         <span className="text-xs font-medium text-muted-foreground/50">
                                             System Entry

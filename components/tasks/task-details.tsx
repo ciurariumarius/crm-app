@@ -30,7 +30,7 @@ import { format } from "date-fns"
 import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, Trash2, Loader2, Globe, Users, Target, X, Plus, Play, Pause, Square } from "lucide-react"
 import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
-import { cn, formatProjectName } from "@/lib/utils"
+import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
 import { useTimer } from "@/components/providers/timer-provider"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
@@ -39,6 +39,23 @@ interface TaskDetailsProps {
     task: any
     open: boolean
     onOpenChange: (open: boolean) => void
+}
+
+function formatClock(totalSeconds: number) {
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return [hours, minutes, seconds].map((unit) => String(unit).padStart(2, "0")).join(":")
+}
+
+function formatDurationLabel(totalSeconds: number) {
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+
+    if (hours > 0) return `${hours}h ${minutes}m`
+    if (minutes > 0) return `${minutes}m ${seconds}s`
+    return `${seconds}s`
 }
 
 export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
@@ -137,16 +154,43 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     }
 
     if (!task) return null
+    const isActiveTimerThisTask = timerState.taskId === task.id
+    const isTaskRunning = isActiveTimerThisTask && timerState.isRunning
+    const isTaskPaused = isActiveTimerThisTask && !timerState.isRunning
+    const loggedSeconds = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+    const runningSeconds = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
+    const totalTrackedSeconds = loggedSeconds + runningSeconds
+    const useEstimatedFallback = task.status === "Completed" && totalTrackedSeconds === 0 && Boolean(task.estimatedMinutes)
+    const timerDisplaySeconds = useEstimatedFallback ? task.estimatedMinutes * 60 : totalTrackedSeconds
+    const loggedHours = Math.floor(loggedSeconds / 3600)
+    const loggedMinutes = Math.floor((loggedSeconds % 3600) / 60)
+    const timerStatusLabel = isTaskRunning ? "Running" : isTaskPaused ? "Paused" : "Ready"
+    const timerPrimaryLabel = isTaskRunning ? "Pause" : isTaskPaused ? "Resume" : "Start"
+    const sortedTimeLogs = [...(task.timeLogs || [])].sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+
+    const handleTaskTimerPrimaryAction = () => {
+        if (isTaskRunning) {
+            void globalPauseTimer()
+            return
+        }
+
+        if (isTaskPaused) {
+            void globalResumeTimer()
+            return
+        }
+
+        void globalStartTimer(task.projectId, task.id, task.name)
+    }
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="sm:max-w-[700px] w-full p-0 flex flex-col border-none shadow-2xl focus-visible:outline-none"
+                className="w-full max-w-[900px] p-0 flex flex-col border-none shadow-2xl focus-visible:outline-none"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 showCloseButton={false}
             >
-                <SheetHeader className="p-8 border-b bg-muted/20 relative">
+                <SheetHeader className="p-6 border-b border-slate-200 bg-white/70 relative">
                     <div className="absolute right-6 top-6 z-10">
                         <Button
                             variant="ghost"
@@ -157,7 +201,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                             <X className="h-5 w-5" />
                         </Button>
                     </div>
-                    <div className="space-y-4 pr-12">
+                    <div className="space-y-4 pr-16">
                         <SheetTitle className="group relative">
                             <div className="space-y-4">
                                 <div className="relative">
@@ -173,7 +217,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                                 setName(task.name || "")
                                             }
                                         }}
-                                        className="text-2xl md:text-3xl font-black tracking-tight border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto min-h-[40px] resize-none leading-tight overflow-hidden pr-24"
+                                        className="text-[18px] font-semibold tracking-[-0.02em] border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto min-h-[28px] resize-none leading-tight overflow-hidden pr-24"
                                         placeholder="Task Name"
                                         rows={1}
                                         onInput={(e) => {
@@ -221,10 +265,10 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                             <div className="flex flex-wrap items-center gap-2.5">
                                 <Select value={status} onValueChange={(val) => setStatus(val)}>
                                     <SelectTrigger className={cn(
-                                        "h-9 w-auto min-w-[130px] border-none transition-all shadow-none focus:ring-1 p-0 px-4 rounded-full text-xs font-semibold [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
-                                        status === "Active" ? "bg-blue-600 text-white hover:bg-blue-700" :
-                                            status === "Paused" ? "bg-orange-500 text-white hover:bg-orange-600" :
-                                                "bg-emerald-600 text-white hover:bg-emerald-700"
+                                        "h-9 w-auto min-w-[130px] transition-all p-0 px-4 rounded-full text-xs font-semibold border [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
+                                        status === "Active" ? "bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]" :
+                                            status === "Paused" ? "bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]" :
+                                                "bg-[#ECFDF5] text-[#10B981] border-[#A7F3D0]"
                                     )}>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -237,10 +281,10 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
 
                                 <Select value={urgency} onValueChange={(val) => setUrgency(val)}>
                                     <SelectTrigger className={cn(
-                                        "h-9 w-auto min-w-[130px] border-none shadow-none focus:ring-1 transition-all p-0 px-4 rounded-full text-xs font-semibold [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
-                                        urgency === "Urgent" ? "bg-rose-600 text-white hover:bg-rose-700" :
-                                            urgency === "Idea" ? "bg-sky-600 text-white hover:bg-sky-700" :
-                                                "bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20"
+                                        "h-9 w-auto min-w-[130px] transition-all p-0 px-4 rounded-full text-xs font-semibold border [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
+                                        urgency === "Urgent" ? "bg-[#FFF1F2] text-[#E11D48] border-[#FECDD3]" :
+                                            urgency === "Idea" ? "bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]" :
+                                                "bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]"
                                     )}>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -250,77 +294,12 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                         <SelectItem value="Idea" className="text-xs font-medium text-sky-600">Idea</SelectItem>
                                     </SelectContent>
                                 </Select>
-
-                                {/* Time Worked & Timer Controls */}
-                                <div className="flex items-center gap-2">
-                                    {(() => {
-                                        const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
-                                        const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
-                                        const totalSeconds = logsDuration + currentTimerDuration
-                                        const hasTimeLogs = totalSeconds > 0
-                                        const useFallback = task.status === "Completed" && !hasTimeLogs && task.estimatedMinutes
-                                        const isActiveTimerThisTask = timerState.taskId === task.id
-                                        const isRunning = isActiveTimerThisTask && timerState.isRunning
-                                        const isPaused = isActiveTimerThisTask && !timerState.isRunning
-
-                                        const displaySeconds = useFallback ? (task.estimatedMinutes * 60) : totalSeconds
-                                        const hours = Math.floor(displaySeconds / 3600)
-                                        const mins = Math.floor((displaySeconds % 3600) / 60)
-
-                                        return (
-                                            <div className="flex items-center gap-2 h-9">
-                                                <div className={cn(
-                                                    "flex items-center gap-2 h-full text-xs font-semibold px-4 rounded-full border transition-all",
-                                                    useFallback
-                                                        ? "bg-amber-500/10 text-amber-700 border-amber-500/20"
-                                                        : (isRunning ? "bg-primary text-primary-foreground border-primary/20 animate-pulse shadow-lg shadow-primary/20" : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20")
-                                                )}>
-                                                    <Clock className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                                    <span>{hours}h {mins}m {useFallback ? "est" : "worked"}</span>
-                                                </div>
-
-                                                <button
-                                                    className={cn(
-                                                        "h-9 w-9 rounded-full flex items-center justify-center transition-all border",
-                                                        isRunning ? "bg-amber-500/20 text-amber-600 border-amber-500/20" : "bg-blue-50 text-blue-600 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border-transparent shadow-sm"
-                                                    )}
-                                                    onClick={(e) => {
-                                                        e.preventDefault()
-                                                        e.stopPropagation()
-                                                        if (isRunning) {
-                                                            globalPauseTimer()
-                                                        } else if (isPaused) {
-                                                            globalResumeTimer()
-                                                        } else {
-                                                            globalStartTimer(task.projectId, task.id, task.name)
-                                                        }
-                                                    }}
-                                                >
-                                                    {isRunning ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-1" />}
-                                                </button>
-
-                                                {isActiveTimerThisTask && (
-                                                    <button
-                                                        className="h-9 w-9 rounded-full flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all border border-transparent shadow-sm"
-                                                        onClick={(e) => {
-                                                            e.preventDefault()
-                                                            e.stopPropagation()
-                                                            globalStopTimer()
-                                                        }}
-                                                    >
-                                                        <Square className="h-3.5 w-3.5 fill-current" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )
-                                    })()}
-                                </div>
                             </div>
                         </div>
                     </div>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto p-8 pt-0 space-y-10">
+                <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-10">
                     <Separator className="bg-muted/10 mb-10" />
                     {/* Status & Deadline Row */}
 
@@ -387,48 +366,119 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         </Button>
                     </div>
 
-                    {/* Recent Time Logs Section */}
-                    {task.timeLogs && task.timeLogs.length > 0 && (
-                        <div className="space-y-4 pt-8">
-                            <Separator className="bg-muted/10" />
+                    <section className="space-y-4 pt-8">
+                        <Separator className="bg-muted/10" />
+
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-muted-foreground/80 flex items-center gap-2">
+                                <Clock className="h-3.5 w-3.5" />
+                                Task Time Tracker
+                            </h4>
+                            <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-2xl font-bold leading-none text-slate-900 tabular-nums">
+                                                {formatClock(timerDisplaySeconds)}
+                                            </span>
+                                            <span className={cn(
+                                                "text-[10px] font-bold uppercase tracking-[0.04em]",
+                                                isTaskRunning ? "text-[#10B981]" : isTaskPaused ? "text-[#D97706]" : "text-slate-400"
+                                            )}>
+                                                {timerStatusLabel}
+                                            </span>
+                                        </div>
+                                        <div className={cn(
+                                            "mt-1 text-[11px] font-medium",
+                                            useEstimatedFallback ? "text-[#D97706]" : "text-slate-500"
+                                        )}>
+                                            {useEstimatedFallback ? "Estimated from completed task" : `${loggedHours}h ${loggedMinutes}m logged`}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                handleTaskTimerPrimaryAction()
+                                            }}
+                                            className={cn(
+                                                "h-8 rounded-lg px-3 text-xs font-semibold transition-all active:scale-[0.98]",
+                                                isTaskRunning
+                                                    ? "bg-[#FFFBEB] text-[#D97706] hover:bg-[#FEF3C7]"
+                                                    : "bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE]"
+                                            )}
+                                        >
+                                            {isTaskRunning ? (
+                                                <Pause className="mr-1.5 h-3.5 w-3.5 fill-current" />
+                                            ) : (
+                                                <Play className="mr-1.5 h-3.5 w-3.5 fill-current" />
+                                            )}
+                                            {timerPrimaryLabel}
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            disabled={!isActiveTimerThisTask}
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                void globalStopTimer()
+                                            }}
+                                            className="h-8 w-8 rounded-lg bg-[#FFF1F2] text-[#E11D48] hover:bg-[#FFE4E8] disabled:bg-slate-100 disabled:text-slate-300"
+                                        >
+                                            <Square className="h-3.5 w-3.5 fill-current" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <h4 className="text-xs font-semibold text-muted-foreground/80 flex items-center gap-2">
                                     <Clock className="h-3.5 w-3.5" />
-                                    Time Logs
+                                    Time Logs History
                                 </h4>
                                 <div className="text-xs font-medium text-muted-foreground/60">
-                                    {task.timeLogs.length} Sessions
+                                    {sortedTimeLogs.length} Sessions
                                 </div>
                             </div>
+
                             <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                                {[...task.timeLogs].sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((log: any) => {
-                                    const sessionH = Math.floor(log.durationSeconds / 3600)
-                                    const sessionM = Math.floor((log.durationSeconds % 3600) / 60)
-                                    const sessionS = log.durationSeconds % 60
-                                    return (
-                                        <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-bold text-foreground">
-                                                    {format(new Date(log.startTime), "MMM do, yyyy")}
+                                {sortedTimeLogs.length === 0 && (
+                                    <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 py-6 text-center text-sm text-slate-500">
+                                        No time logs recorded for this task yet.
+                                    </div>
+                                )}
+
+                                {sortedTimeLogs.map((log: any) => (
+                                    <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-xs font-bold text-foreground">
+                                                {formatRelativeDate(log.startTime)}
+                                            </span>
+                                            <span className="text-xs font-medium text-muted-foreground/60">
+                                                {format(new Date(log.startTime), "HH:mm")} - {log.endTime ? format(new Date(log.endTime), "HH:mm") : "Ongoing"}
+                                            </span>
+                                            {log.notes && (
+                                                <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
+                                                    {log.notes}
                                                 </span>
-                                                <span className="text-xs font-medium text-muted-foreground/60">
-                                                    {format(new Date(log.startTime), "HH:mm")} - {log.endTime ? format(new Date(log.endTime), "HH:mm") : "Ongoing"}
-                                                </span>
-                                                {log.notes && (
-                                                    <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
-                                                        {log.notes}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="text-sm font-bold text-foreground tabular-nums">
-                                                {sessionH > 0 && `${sessionH}h `}{sessionM > 0 && `${sessionM}m `}{sessionS}s
-                                            </div>
+                                            )}
                                         </div>
-                                    )
-                                })}
+                                        <div className="text-sm font-bold text-foreground tabular-nums">
+                                            {formatDurationLabel(log.durationSeconds || 0)}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    )}
+                    </section>
                 </div>
 
                 <div className="p-8 border-t bg-muted/20 flex items-center justify-between mt-auto">
@@ -438,7 +488,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         </div>
                         <div>
                             <div className="text-xs font-medium text-muted-foreground/80">Creation Date</div>
-                            <div className="text-sm font-bold">{format(new Date(task.createdAt), "MMMM do, yyyy")}</div>
+                            <div className="text-sm font-bold">{formatRelativeDate(task.createdAt)}</div>
                         </div>
                     </div>
                     <div className="text-xs font-mono font-medium text-muted-foreground opacity-40 italic text-right">

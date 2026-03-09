@@ -1,18 +1,24 @@
-import { Plus_Jakarta_Sans } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import type { Metadata } from "next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/providers/providers"
 import { getActiveTimer } from "@/lib/actions/time"
 
-const jakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-jakarta",
+  variable: "--font-inter",
+  display: "swap",
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
   display: "swap",
 })
 
 export const viewport: import("next").Viewport = {
-  themeColor: "#0D9488",
+  themeColor: "#F8FAFC",
   width: "device-width",
   initialScale: 1,
 }
@@ -43,7 +49,7 @@ export default async function RootLayout({
   const initialActiveTimer = rawActiveTimer ? JSON.parse(JSON.stringify(rawActiveTimer)) : null
 
   return (
-    <html lang="en" suppressHydrationWarning className={`${jakarta.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans">
         <Providers initialActiveTimer={initialActiveTimer}>
           {children}

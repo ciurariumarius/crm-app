@@ -5,7 +5,7 @@ import { SiteDetail } from "@/components/vault/site-detail"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { formatDistanceToNow } from "date-fns"
+import { formatRelativeDate } from "@/lib/utils"
 import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
@@ -84,7 +84,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
                                         </Badge>
                                     </div>
                                     <CardDescription className="text-xs">
-                                        Updated {formatDistanceToNow(project.updatedAt)} ago
+                                        Updated {project.updatedAt ? formatRelativeDate(project.updatedAt) : "-"}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>

@@ -12,8 +12,9 @@ import {
     ChevronLeft,
     ChevronRight,
     Clock,
+    CreditCard,
     Database,
-    FolderKanban,
+    Globe,
     LayoutDashboard,
     LogOut,
     Megaphone,
@@ -21,7 +22,7 @@ import {
     Search,
     Share2,
     Settings,
-    CheckSquare,
+    CheckCircle2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -45,15 +46,16 @@ type NavItem = {
 
 const primaryNav: NavItem[] = [
     { name: "Overview", href: "/", icon: LayoutDashboard },
-    { name: "Projects", href: "/projects", icon: FolderKanban },
-    { name: "Tasks", href: "/tasks", icon: CheckSquare },
+    { name: "Projects", href: "/projects", icon: Briefcase },
+    { name: "Tasks", href: "/tasks", icon: CheckCircle2 },
 ]
 
 const dataNav: NavItem[] = [
     { name: "Clients", href: "/vault", icon: Briefcase },
-    { name: "Domains", href: "/vault/sites", icon: Database },
+    { name: "Domains", href: "/vault/sites", icon: Globe },
     { name: "Services", href: "/services", icon: Briefcase },
     { name: "Time Logs", href: "/time", icon: Clock },
+    { name: "Payment Log", href: "/payments", icon: CreditCard },
 ]
 
 const ppcNav: NavItem[] = [
@@ -99,15 +101,15 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                 href={item.href}
                 title={isSidebarCollapsed ? item.name : undefined}
                 className={cn(
-                    "group flex items-center gap-3 rounded-xl transition-all duration-200",
+                    "group relative flex items-center gap-3 rounded-xl transition-all duration-200",
                     nested ? "px-3 py-2.5 ml-7" : "px-3 py-2.5",
                     isSidebarCollapsed && "justify-center px-0",
                     isActive
-                        ? "bg-blue-600/10 text-blue-700"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        ? "bg-sidebar-accent text-slate-900 shadow-sm before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-[#2563EB]"
+                        : "text-slate-600 hover:bg-white hover:text-slate-900"
                 )}
             >
-                <item.icon className={cn("h-4 w-4 shrink-0", isActive && "text-blue-600")} strokeWidth={1.8} />
+                <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-blue-600" : "text-slate-500 group-hover:text-slate-700")} strokeWidth={1.5} />
                 {!isSidebarCollapsed && (
                     <span className={cn(
                         "text-sm",
@@ -129,14 +131,14 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
-                    "group flex items-center gap-3 rounded-xl transition-all duration-200",
+                    "group relative flex items-center gap-3 rounded-xl transition-all duration-200",
                     nested ? "px-10 py-2.5" : "px-6 py-3",
                     isActive
-                        ? "bg-blue-600/10 text-blue-700"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        ? "bg-sidebar-accent text-slate-900 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-[#2563EB]"
+                        : "text-slate-600 hover:bg-white hover:text-slate-900"
                 )}
             >
-                <item.icon className={cn("h-4 w-4 shrink-0", isActive && "text-blue-600")} strokeWidth={1.8} />
+                <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-blue-600" : "text-slate-500 group-hover:text-slate-700")} strokeWidth={1.5} />
                 <span className={cn("text-sm", nested ? "font-medium" : "font-semibold tracking-tight")}>
                     {item.name}
                 </span>
@@ -147,29 +149,31 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
     return (
         <>
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetContent side="left" className="w-[290px] p-0 bg-card border-r border-border/80 shadow-lg">
+                <SheetContent side="left" className="w-[290px] p-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg">
                     <div className="flex h-full flex-col overflow-y-auto py-6">
-                        <div className="px-6 pb-6 border-b border-border/70">
+                        <div className="px-6 pb-6 border-b border-sidebar-border">
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center">
-                                    <Rocket className="h-5 w-5" strokeWidth={2} />
+                                <div className="h-10 w-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm">
+                                    <Rocket className="h-5 w-5" strokeWidth={1.5} />
                                 </div>
                                 <div>
-                                    <h1 className="text-xl font-extrabold tracking-tight text-slate-900">Pixelist</h1>
+                                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">Pixelist</h1>
                                 </div>
                             </div>
                         </div>
 
                         <nav className="flex-1 px-4 py-6 space-y-1">
+                            <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Management</p>
                             {primaryNav.map((item) => renderMobileItem(item))}
-                            <div className="pt-4">
+                            <div className="my-4 h-px w-4/5 mx-auto bg-slate-300" />
+                            <div className="pt-1">
                                 <button
                                     onClick={() => setIsDataOpen((prev) => !prev)}
                                     aria-expanded={isDataOpen}
-                                    className="w-full flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold"
+                                    className="w-full flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 font-semibold"
                                 >
-                                    <span className="inline-flex items-center gap-2"><Database className="h-3.5 w-3.5" /> Data</span>
-                                    {isDataOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                    <span className="inline-flex items-center gap-2"><Database className="h-3.5 w-3.5" strokeWidth={1.5} /> Data</span>
+                                    {isDataOpen ? <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.5} /> : <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />}
                                 </button>
                                 {isDataOpen && (
                                     <div className="mt-1 space-y-1">
@@ -181,10 +185,10 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                                 <button
                                     onClick={() => setIsPPCOpen((prev) => !prev)}
                                     aria-expanded={isPPCOpen}
-                                    className="w-full flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold"
+                                    className="w-full flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 font-semibold"
                                 >
-                                    <span className="inline-flex items-center gap-2"><Megaphone className="h-3.5 w-3.5" /> PPC</span>
-                                    {isPPCOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                    <span className="inline-flex items-center gap-2"><Megaphone className="h-3.5 w-3.5" strokeWidth={1.5} /> PPC</span>
+                                    {isPPCOpen ? <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.5} /> : <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />}
                                 </button>
                                 {isPPCOpen && (
                                     <div className="mt-1 space-y-1">
@@ -197,18 +201,18 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             </div>
                         </nav>
 
-                        <div className="mt-auto px-6 pt-4 border-t border-border/70 flex items-center justify-between">
+                        <div className="mt-auto px-6 pt-4 border-t border-sidebar-border flex items-center justify-between">
                             <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 min-w-0">
                                 <Avatar className="h-9 w-9">
                                     <AvatarImage src={user?.profilePic || "/avatar.png"} alt={displayName} />
                                     <AvatarFallback>{initials}</AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0">
-                                    <p className="text-sm font-semibold truncate">{displayName}</p>
-                                    <p className="text-xs text-slate-500">{displayRole}</p>
+                                    <p className="text-sm font-semibold truncate text-slate-900">{displayName}</p>
+                                    <p className="text-xs text-slate-400">{displayRole}</p>
                                 </div>
                             </Link>
-                            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-rose-600" aria-label="Log out">
+                            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-rose-600 hover:bg-rose-50" aria-label="Log out">
                                 <LogOut className="h-4 w-4" />
                             </Button>
                         </div>
@@ -218,43 +222,44 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
 
             <aside
                 className={cn(
-                    "hidden md:flex fixed left-0 top-0 z-50 h-screen border-r border-border/80 bg-card/95 backdrop-blur-xl transition-[width] duration-300",
-                    isSidebarCollapsed ? "w-[96px]" : "w-[256px]"
+                    "hidden md:flex fixed left-0 top-0 z-50 h-screen border-r border-sidebar-border bg-sidebar transition-[width] duration-300",
+                    isSidebarCollapsed ? "w-[88px]" : "w-[220px]"
                 )}
             >
                 <button
                     type="button"
                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    className="absolute -right-3 top-10 h-6 w-6 rounded-full border border-border bg-card text-slate-500 hover:text-slate-900 shadow-sm flex items-center justify-center"
+                    className="absolute -right-3 top-10 h-6 w-6 rounded-full border border-sidebar-border bg-white text-slate-500 hover:text-slate-900 shadow-sm flex items-center justify-center"
                     aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
-                    {isSidebarCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+                    {isSidebarCollapsed ? <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} /> : <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />}
                 </button>
 
                 <div className="flex h-full w-full flex-col px-3 py-5">
                     <div className={cn("flex items-center", isSidebarCollapsed ? "justify-center" : "justify-start px-2")}>
                         <Link href="/" className={cn("inline-flex items-center gap-3", isSidebarCollapsed && "justify-center")}>
-                            <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
-                                <Rocket className="h-5 w-5" strokeWidth={2} />
+                            <div className="h-10 w-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
+                                <Rocket className="h-5 w-5" strokeWidth={1.5} />
                             </div>
-                            {!isSidebarCollapsed && <span className="text-[27px] font-extrabold tracking-tight text-slate-900 leading-none">Pixelist</span>}
+                            {!isSidebarCollapsed && <span className="text-[27px] font-semibold tracking-tight text-slate-900 leading-none">Pixelist</span>}
                         </Link>
                     </div>
 
                     <nav className="mt-8 flex-1 space-y-1">
+                        {!isSidebarCollapsed && <p className="px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 font-semibold">Management</p>}
                         {primaryNav.map((item) => renderDesktopItem(item))}
 
-                        <div className="my-4 h-px bg-border/70" />
+                        <div className="my-4 h-px w-4/5 mx-auto bg-slate-300" />
 
                         {!isSidebarCollapsed && (
                             <button
                                 type="button"
                                 onClick={() => setIsDataOpen((prev) => !prev)}
                                 aria-expanded={isDataOpen}
-                                className="w-full flex items-center justify-between px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold"
+                                className="w-full flex items-center justify-between px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 font-semibold"
                             >
-                                <span className="inline-flex items-center gap-2"><Database className="h-3.5 w-3.5" /> Data</span>
-                                {isDataOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                <span className="inline-flex items-center gap-2"><Database className="h-3.5 w-3.5" strokeWidth={1.5} /> Data</span>
+                                {isDataOpen ? <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.5} /> : <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />}
                             </button>
                         )}
                         {(isSidebarCollapsed || isDataOpen) && (
@@ -268,10 +273,10 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                                 type="button"
                                 onClick={() => setIsPPCOpen((prev) => !prev)}
                                 aria-expanded={isPPCOpen}
-                                className="w-full flex items-center justify-between px-3 py-1 mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold"
+                                className="w-full flex items-center justify-between px-3 py-1 mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-400 font-semibold"
                             >
-                                <span className="inline-flex items-center gap-2"><Megaphone className="h-3.5 w-3.5" /> PPC</span>
-                                {isPPCOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                <span className="inline-flex items-center gap-2"><Megaphone className="h-3.5 w-3.5" strokeWidth={1.5} /> PPC</span>
+                                {isPPCOpen ? <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.5} /> : <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />}
                             </button>
                         )}
                         {(isSidebarCollapsed || isPPCOpen) && (
@@ -280,13 +285,13 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             </div>
                         )}
 
-                        <div className="my-4 h-px bg-border/70" />
+                        <div className="my-4 h-px w-4/5 mx-auto bg-slate-300" />
                         {utilityNav.map((item) => renderDesktopItem(item))}
                     </nav>
 
                     <div className="mt-auto">
                         {!isSidebarCollapsed ? (
-                            <div className="rounded-2xl border border-border/80 bg-white/90 p-3 flex items-center gap-3">
+                            <div className="rounded-xl border border-sidebar-border bg-white p-3 flex items-center gap-3">
                                 <Link href="/settings" className="flex items-center gap-3 min-w-0 flex-1">
                                     <Avatar className="h-10 w-10">
                                         <AvatarImage src={user?.profilePic || "/avatar.png"} alt={displayName} />
@@ -294,10 +299,10 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                                     </Avatar>
                                     <div className="min-w-0">
                                         <p className="text-sm font-semibold truncate text-slate-900">{displayName}</p>
-                                        <p className="text-xs text-slate-500">{displayRole}</p>
+                                        <p className="text-xs text-slate-400">{displayRole}</p>
                                     </div>
                                 </Link>
-                                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-rose-600" aria-label="Log out">
+                                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-rose-600 hover:bg-rose-50" aria-label="Log out">
                                     <LogOut className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -307,7 +312,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
-                                            className="h-10 w-10 rounded-xl border border-border/80 bg-white/90 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                                            className="h-10 w-10 rounded-xl border border-sidebar-border bg-white flex items-center justify-center hover:bg-slate-100 transition-colors"
                                             aria-label="Open account menu"
                                         >
                                             <Avatar className="h-8 w-8">

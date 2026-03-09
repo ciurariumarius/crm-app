@@ -134,17 +134,15 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
     }
 
     const getSegmentBtnClass = (isActive: boolean) => cn(
-        "px-4 py-2 text-xs font-medium transition-all duration-200 rounded-lg border",
-        isActive
-            ? "bg-white dark:bg-zinc-800 text-foreground shadow-sm border-border/40 font-semibold"
-            : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 border-transparent"
+        "segmented-pill",
+        isActive ? "segmented-pill-active" : "hover:bg-white/70"
     )
 
     const getFilterBtnClass = (isActive: boolean) => cn(
         "px-4 py-2 text-xs font-medium transition-all duration-200 rounded-lg border",
         isActive
-            ? "bg-primary text-primary-foreground border-primary shadow-sm"
-            : "bg-white dark:bg-zinc-900 border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            ? "bg-white text-slate-900 border-slate-200 shadow-sm"
+            : "bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-white"
     )
 
     return (
@@ -152,17 +150,17 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full justify-between">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     {/* Inline Desktop/Mobile Search Pill */}
-                    <div className="flex items-center bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl h-10 px-4 shrink-0 focus-within:ring-1 focus-within:ring-blue-500 w-full sm:w-[240px] transition-colors">
-                        <Search className="w-4 h-4 text-muted-foreground/40 shrink-0 mr-3" />
+                    <div className="flex items-center bg-slate-100 border border-transparent rounded-xl h-9 px-3 shrink-0 focus-within:bg-white focus-within:border-slate-200 focus-within:shadow-sm w-full sm:w-[280px] transition-all">
+                        <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2" />
                         <Input
                             placeholder="Search projects..."
                             value={searchTerm}
                             onChange={(e) => handleSearch(e.target.value)}
-                            className="h-full bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-sm font-medium transition-all duration-300 w-full px-0 text-foreground shadow-none"
+                            className="h-full bg-transparent border-none focus-visible:ring-0 placeholder:text-slate-400 text-[13px] font-medium transition-all duration-300 w-full px-0 text-slate-900 shadow-none"
                         />
                         {searchTerm && (
                             <button onClick={() => setSearchTerm("")} className="shrink-0 ml-1">
-                                <X className="w-3.5 h-3.5 text-muted-foreground/60" />
+                                <X className="w-3.5 h-3.5 text-slate-500" />
                             </button>
                         )}
                     </div>
@@ -172,7 +170,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                     {/* Mobile Status Dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="flex md:hidden items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-xs font-medium shrink-0">
+                            <button className="flex md:hidden items-center gap-2 h-9 px-4 bg-slate-100 border border-slate-200 rounded-xl transition-colors hover:bg-white text-xs font-medium shrink-0">
                                 {currentParams.status === "Active" && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />}
                                 <span className="text-foreground whitespace-nowrap">
                                     {currentParams.status === "All" ? "Status: All" : currentParams.status}
@@ -200,7 +198,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                     </DropdownMenu>
 
                     {/* Desktop Status Segmented Control */}
-                    <div className="hidden md:flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 items-center">
+                    <div className="hidden md:flex segmented-track shrink-0 items-center">
                         {[
                             { label: "ALL", value: "All" },
                             { label: "ACTIVE", value: "Active", icon: <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2" /> },
@@ -223,9 +221,9 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                         {/* Partner Dropdown */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-xs font-medium">
-                                    <Users className="w-4 h-4 text-muted-foreground/40 shrink-0" />
-                                    <span className={cn(currentParams.partner !== "all" ? "text-foreground font-semibold" : "text-muted-foreground")}>
+                                <button className="flex items-center gap-2 h-9 px-3.5 bg-slate-100 border border-slate-200 rounded-xl transition-colors hover:bg-white text-xs font-medium">
+                                    <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                                    <span className={cn(currentParams.partner !== "all" ? "text-slate-900 font-semibold" : "text-slate-600")}>
                                         {currentParams.partner !== "all" ? partners.find(p => p.id === currentParams.partner)?.name || "Partner" : "Partner"}
                                     </span>
                                     <ChevronDown className="w-3 h-3 opacity-50 shrink-0" />
@@ -246,9 +244,9 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                         {/* Timeline Dropdown */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-xs font-medium">
-                                    <Calendar className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                                    <span className={cn(searchParams.get("period") && searchParams.get("period") !== "all_time" ? "text-foreground font-semibold" : "text-muted-foreground")}>
+                                <button className="flex items-center gap-2 h-9 px-3.5 bg-slate-100 border border-slate-200 rounded-xl transition-colors hover:bg-white text-xs font-medium">
+                                    <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
+                                    <span className={cn(searchParams.get("period") && searchParams.get("period") !== "all_time" ? "text-slate-900 font-semibold" : "text-slate-600")}>
                                         {searchParams.get("period") && searchParams.get("period") !== "all_time"
                                             ? [
                                                 { label: "All Time", value: "all_time" },
@@ -291,7 +289,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                         </DropdownMenu>
 
                         {/* Type Segmented Control */}
-                        <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 items-center">
+                        <div className="segmented-track shrink-0 items-center">
                             <div className="text-xs font-semibold text-blue-600/70 px-3 flex"><span className="w-2.5 h-2.5 rounded-full border border-blue-500/50 flex items-center justify-center mr-1 text-[6px]">↻</span></div>
                             {[
                                 { label: "All", value: "All" },
@@ -309,7 +307,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                         </div>
 
                         {/* Payment Segmented Control */}
-                        <div className="flex bg-muted/40 dark:bg-zinc-900/50 p-1 rounded-xl border border-border/50 shrink-0 items-center">
+                        <div className="segmented-track shrink-0 items-center">
                             <div className="text-xs font-semibold text-emerald-600/70 px-3 flex"><span className="w-2.5 h-2.5 rounded-full border border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950 mr-1" /></div>
                             {[
                                 { label: "All", value: "All" },
@@ -330,7 +328,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                     {/* Filter Sheet Trigger */}
                     <Sheet>
                         <SheetTrigger asChild>
-                            <button className="flex lg:hidden items-center gap-2 h-10 px-4 bg-white dark:bg-zinc-900 border border-border/60 shadow-sm rounded-xl transition-colors hover:bg-muted/50 text-xs font-medium uppercase relative shrink-0">
+                            <button className="flex lg:hidden items-center gap-2 h-9 px-4 bg-slate-100 border border-slate-200 rounded-xl transition-colors hover:bg-white text-xs font-medium uppercase relative shrink-0">
                                 <Filter className="w-4 h-4 text-muted-foreground/60" />
                                 <span>Filters</span>
                                 {hasFilters && (
@@ -340,7 +338,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                                 )}
                             </button>
                         </SheetTrigger>
-                        <SheetContent className="overflow-y-auto w-full sm:max-w-md bg-white dark:bg-zinc-950 p-6 z-[100]">
+                        <SheetContent className="overflow-y-auto w-full sm:max-w-md bg-white/90 p-6 z-[100]">
                             <SheetHeader className="mb-6 mt-4">
                                 <div className="flex items-center justify-between">
                                     <SheetTitle className="text-xl font-bold tracking-tight">Filters</SheetTitle>

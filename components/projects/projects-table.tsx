@@ -15,7 +15,7 @@ import {
     Sheet,
     SheetContent
 } from "@/components/ui/sheet"
-import { formatProjectName } from "@/lib/utils"
+import { formatProjectName, formatNumber, formatRelativeDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,7 +31,7 @@ import {
     ChevronDown
 } from "lucide-react"
 import { ProjectTasks } from "@/components/projects/project-tasks"
-import { formatDistanceToNow, format } from "date-fns"
+import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { updateProject } from "@/lib/actions/projects"
 import { toast } from "sonner"
@@ -111,7 +111,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
     }
 
     const renderHeader = () => (
-        <div className={cn("hidden md:flex items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground w-full min-w-[1280px] gap-5", layout === "grid" && "hidden")}>
+        <div className={cn("glass hidden md:flex h-10 items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground w-full min-w-[1280px] gap-5 rounded-lg", layout === "grid" && "hidden")}>
             <div className="flex-1 min-w-[320px] shrink-0">Project name & url</div>
             <div className="w-[80px] shrink-0 text-center">Status</div>
             <div className="w-[70px] shrink-0 text-center">Type</div>
@@ -137,8 +137,12 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
             <div
                 key={project.id}
                 className={cn(
-                    "group relative flex flex-col bg-white dark:bg-zinc-900 rounded-xl p-5 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 cursor-pointer overflow-hidden",
-                    isMonthly ? "border-l-[6px] border-l-blue-600" : "border-l-[6px] border-l-emerald-500"
+                    "group relative flex flex-col bg-white rounded-xl p-5 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 cursor-pointer overflow-hidden",
+                    project.paymentStatus === "Unpaid"
+                        ? "cockpit-debt-row border-l-[4px] border-l-rose-600"
+                        : isMonthly
+                            ? "border-l-[4px] border-l-blue-600"
+                            : "border-l-[4px] border-l-emerald-500"
                 )}
                 onClick={() => setSelectedProject(project)}
             >
@@ -157,10 +161,10 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <DropdownMenuTrigger asChild>
                                 <button
                                     className={cn(
-                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm border",
-                                        isActive ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20" :
-                                            isPaused ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20" :
-                                                "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                                        "status-pill flex items-center gap-1.5 transition-all shadow-sm",
+                                        isActive ? "status-pill-action" :
+                                            isPaused ? "status-pill-warning" :
+                                                "status-pill-success"
                                     )}
                                     onClick={(e) => e.stopPropagation()}
                                 >
@@ -181,10 +185,10 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <DropdownMenuTrigger asChild>
                                 <button className="focus:outline-none" onClick={(e) => e.stopPropagation()}>
                                     <div className={cn(
-                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all shadow-sm border",
+                                        "status-pill flex items-center gap-1.5 transition-all shadow-sm",
                                         project.paymentStatus === "Paid"
-                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                                            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
+                                            ? "status-pill-success"
+                                            : "status-pill-debt"
                                     )}>
                                         <div className={cn(
                                             "h-2 w-2 rounded-full",
@@ -216,7 +220,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             }}
                             className="h-auto p-0 border-none bg-transparent hover:bg-muted/30 focus-visible:ring-0 text-lg sm:text-xl font-semibold text-right w-16 shadow-none -mb-0.5"
                         />
-                        <span className="text-xs font-medium text-muted-foreground/60">RON</span>
+                        <span className="text-xs font-medium text-muted-foreground/60 font-mono">RON</span>
                     </div>
                 </div>
 
@@ -225,7 +229,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
         )
     }
 
-    const renderProjectCard = (project: any) => {
+    const renderProjectCard = (project: any, rowIndex: number) => {
         const isPaused = project.status === "Paused"
         const isCompleted = project.status === "Completed"
         const isActive = project.status === "Active"
@@ -237,7 +241,11 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
         return (
             <div
                 key={project.id}
-                className="group relative flex items-center bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1280px] gap-5 px-6"
+                className={cn(
+                    "group stagger-row-enter relative flex min-h-[52px] items-center bg-white rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1280px] gap-5 px-6",
+                    project.paymentStatus === "Unpaid" ? "cockpit-debt-row" : "hover:bg-[#F1F5F9]"
+                )}
+                style={{ animationDelay: `${rowIndex * 0.05}s` }}
                 onClick={() => setSelectedProject(project)}
             >
                 {/* 1. Project Name & URL */}
@@ -255,10 +263,10 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                         <DropdownMenuTrigger asChild>
                             <button
                                 className={cn(
-                                    "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all border min-w-[70px]",
-                                    isActive ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/20" :
-                                        isPaused ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/20" :
-                                            "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:border-slate-700"
+                                    "status-pill min-w-[70px] justify-center transition-all",
+                                    isActive ? "status-pill-action" :
+                                        isPaused ? "status-pill-warning" :
+                                            "status-pill-success"
                                 )}
                                 onClick={(e) => e.stopPropagation()}
                             >
@@ -275,7 +283,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
 
                 {/* 3. Type Pill */}
                 <div className="w-[70px] shrink-0 flex items-center justify-center">
-                    <div className="flex items-center gap-1.5 px-1.5 py-1 bg-slate-50 dark:bg-zinc-800/50 rounded-lg text-[9px] font-bold uppercase tracking-tight text-slate-600 truncate w-full justify-center border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-1.5 px-1.5 py-1 bg-slate-50 rounded-lg text-[9px] font-bold uppercase tracking-tight text-slate-600 truncate w-full justify-center border border-slate-200">
                         {isMonthly ? "Monthly" : "One-Time"}
                     </div>
                 </div>
@@ -289,10 +297,10 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className={cn(
-                                    "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all border min-w-[75px] justify-center",
+                                    "status-pill min-w-[75px] justify-center transition-all",
                                     project.paymentStatus === "Paid"
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                                        : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
+                                        ? "status-pill-success"
+                                        : "status-pill-debt"
                                 )}>
                                     <span className="text-[10px] font-bold uppercase tracking-tight">
                                         {project.paymentStatus}
@@ -321,7 +329,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             }}
                             className="h-10 text-base md:text-lg font-semibold bg-transparent border-transparent hover:bg-muted/50 focus:bg-muted/50 focus:ring-0 p-0 w-16 text-right cursor-text rounded transition-colors shadow-none -mb-0.5"
                         />
-                        <span className="text-xs text-muted-foreground/60 ml-0.5 font-medium mt-0.5">RON</span>
+                        <span className="text-xs text-muted-foreground/60 ml-0.5 font-mono font-medium mt-0.5">RON</span>
                     </div>
                 </div>
 
@@ -357,7 +365,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
 
                 {/* 7. Time Tracking */}
                 <div className="w-[75px] shrink-0 flex items-center justify-center">
-                    <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight">
+                    <span className="px-2 py-1 rounded-lg text-[10px] font-bold font-mono text-slate-600 bg-slate-50 border border-slate-200 text-center uppercase tracking-tight tabular-nums">
                         {(() => {
                             const totalSeconds = project.tasks?.reduce((acc: number, task: any) => {
                                 const taskLogs = task.timeLogs?.reduce((lAcc: number, log: any) => lAcc + (log.durationSeconds || 0), 0) || 0
@@ -379,15 +387,15 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
 
                 {/* 9. Last Edited */}
                 <div className="w-[100px] shrink-0 flex items-center justify-end">
-                    <span className="text-[11px] text-muted-foreground font-medium text-right">
-                        {project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}
+                    <span className="text-[11px] text-muted-foreground font-medium text-right font-mono tabular-nums">
+                        {project.updatedAt ? formatRelativeDate(project.updatedAt) : "-"}
                     </span>
                 </div>
 
                 {/* 10. Created */}
                 <div className="w-[70px] shrink-0 flex items-center justify-end">
-                    <span className="text-[11px] text-muted-foreground/60 font-medium text-right">
-                        {format(new Date(project.createdAt), "dd MMM")}
+                    <span className="text-[11px] text-muted-foreground/60 font-medium text-right font-mono tabular-nums">
+                        {project.createdAt ? formatRelativeDate(project.createdAt) : "-"}
                     </span>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4">
@@ -411,63 +419,16 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
 
     return (
         <div className="space-y-12">
-            {/* Monthly Group */}
-            {recurringProjects.length > 0 && (
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="h-5 w-1.5 rounded-full bg-blue-500 shadow-sm" />
-                            <span className="text-xl md:text-2xl font-bold tracking-tight text-foreground leading-none">Monthly Projects</span>
-                        </div>
-                        <div className="text-xs font-semibold text-muted-foreground hidden md:block">
-                            Subtotal: <span className="text-foreground">{recurringProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString('en-US')} RON</span>
-                        </div>
-                    </div>
-                    {layout === "grid" ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
-                            {recurringProjects.map(p => renderGridCard(p, true))}
-                        </div>
-                    ) : (
-                        <>
-                            <div className="grid grid-cols-1 gap-4 md:hidden">
-                                {recurringProjects.map(p => renderGridCard(p, true))}
-                            </div>
-                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
-                                <div className="min-w-[1280px] flex flex-col gap-2">
-                                    {renderHeader()}
-                                    {recurringProjects.map(renderProjectCard)}
-                                </div>
-                            </div>
-                        </>
-                    )}
-                    {/* Shadow Create Row */}
-                    {layout === "list" && (
-                        <div
-                            className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1240px]"
-                            onClick={() => setCreateProjectOpen(true)}
-                        >
-                            <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
-                                <div className="h-6 w-16 bg-primary/20 rounded-full animate-pulse" />
-                            </div>
-                            <div className="flex-1 px-4 flex items-center gap-3">
-                                <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
-                                <span className="text-sm font-semibold text-primary transition-colors">Add new project...</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
             {/* One-Time Group */}
             {oneTimeProjects.length > 0 && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <div className="h-5 w-1.5 rounded-full bg-emerald-500 shadow-sm" />
-                            <span className="text-xl md:text-2xl font-bold tracking-tight text-foreground leading-none">One-Time Projects</span>
+                            <span className="text-2xl md:text-3xl font-black tracking-tight text-foreground leading-none">One-Time Projects</span>
                         </div>
                         <div className="text-xs font-semibold text-muted-foreground hidden md:block">
-                            Subtotal: <span className="text-foreground">{oneTimeProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0).toLocaleString('en-US')} RON</span>
+                            Subtotal: <span className="text-foreground">{formatNumber(oneTimeProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0))} RON</span>
                         </div>
                     </div>
                     {layout === "grid" ? (
@@ -492,7 +453,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
                                 <div className="min-w-[1240px] flex flex-col gap-2">
                                     {renderHeader()}
-                                    {oneTimeProjects.map(renderProjectCard)}
+                                    {oneTimeProjects.map((project, index) => renderProjectCard(project, index))}
                                     {/* Shadow Create Row */}
                                     <div
                                         className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer min-w-[1280px] mt-2 group/shadow"
@@ -513,6 +474,53 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                 </div>
             )}
 
+            {/* Monthly Group */}
+            {recurringProjects.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-5 w-1.5 rounded-full bg-blue-500 shadow-sm" />
+                            <span className="text-2xl md:text-3xl font-black tracking-tight text-foreground leading-none">Monthly Projects</span>
+                        </div>
+                        <div className="text-xs font-semibold text-muted-foreground hidden md:block">
+                            Subtotal: <span className="text-foreground">{formatNumber(recurringProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0))} RON</span>
+                        </div>
+                    </div>
+                    {layout === "grid" ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+                            {recurringProjects.map(p => renderGridCard(p, true))}
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 gap-4 md:hidden">
+                                {recurringProjects.map(p => renderGridCard(p, true))}
+                            </div>
+                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
+                                <div className="min-w-[1280px] flex flex-col gap-2">
+                                    {renderHeader()}
+                                    {recurringProjects.map((project, index) => renderProjectCard(project, index))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                    {/* Shadow Create Row */}
+                    {layout === "list" && (
+                        <div
+                            className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1240px]"
+                            onClick={() => setCreateProjectOpen(true)}
+                        >
+                            <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
+                                <div className="h-6 w-16 bg-primary/20 rounded-full animate-pulse" />
+                            </div>
+                            <div className="flex-1 px-4 flex items-center gap-3">
+                                <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
+                                <span className="text-sm font-semibold text-primary transition-colors">Add new project...</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Create Project Dialog */}
             <GlobalCreateProjectDialog
                 open={createProjectOpen}
@@ -527,7 +535,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                     setSelectedProject(null)
                 }
             }}>
-                <SheetContent side="right" className="w-[90vw] sm:max-w-[800px] 2xl:max-w-[1000px] p-0 flex flex-col border-none shadow-xl bg-background backdrop-blur-3xl overflow-hidden">
+                <SheetContent side="right" className="w-full max-w-[900px] p-0 flex flex-col border-none shadow-xl bg-background backdrop-blur-3xl overflow-hidden">
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}

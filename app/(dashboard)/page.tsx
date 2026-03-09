@@ -156,7 +156,7 @@ export default async function Home() {
               <DashboardHeaderActions
                 partners={formattedPartners}
                 services={formattedServices}
-                activeProjects={metrics.quickActionProjects}
+                activeProjects={serialize(metrics.quickActionProjects)}
               />
             </div>
           </div>
@@ -185,9 +185,9 @@ export default async function Home() {
             <div className="flex flex-col gap-10">
               {/* 1. Daily Engine: Profitability & Focus */}
               <div className="space-y-6">
-                <ProfitabilityAlerts alerts={metrics.timeSinkAlerts} />
+                <ProfitabilityAlerts alerts={serialize(metrics.timeSinkAlerts)} />
                 <div className="w-full">
-                  <FocusMatrix tasks={upcomingTasks} />
+                  <FocusMatrix tasks={serialize(upcomingTasks)} />
                 </div>
               </div>
 
@@ -199,7 +199,7 @@ export default async function Home() {
                     <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Monthly Subscriptions</h3>
                   </div>
                   <RecurringProjectsList
-                    projects={metrics.recurringProjects}
+                    projects={serialize(metrics.recurringProjects)}
                     partners={formattedPartners}
                     services={formattedServices}
                   />
@@ -210,7 +210,7 @@ export default async function Home() {
                     <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Fixed-Fee Projects</h3>
                   </div>
                   <OneTimeProjectsList
-                    projects={metrics.oneTimeProjects}
+                    projects={serialize(metrics.oneTimeProjects)}
                     partners={formattedPartners}
                     services={formattedServices}
                   />
@@ -219,8 +219,8 @@ export default async function Home() {
 
               {/* 3. Bottom Section: Due Payment & Payment History */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                <SettleUpLedger id="v5-settle-ledger" partners={metrics.unpaidByPartner} />
-                <SettlementHistory history={metrics.settlementHistory} />
+                <SettleUpLedger id="v5-settle-ledger" partners={serialize(metrics.unpaidByPartner)} />
+                <SettlementHistory history={serialize(metrics.settlementHistory)} />
               </div>
             </div>
           </div>

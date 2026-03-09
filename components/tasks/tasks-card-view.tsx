@@ -414,7 +414,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
 
             {/* Project Details Sheet */}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <SheetContent side="right" className="sm:max-w-[800px] w-full p-0 flex flex-col border-none shadow-xl bg-background backdrop-blur-3xl overflow-hidden">
+                <SheetContent side="right" className="w-full max-w-[900px] p-0 flex flex-col border-none shadow-xl bg-background backdrop-blur-3xl overflow-hidden">
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}

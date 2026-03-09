@@ -16,13 +16,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { format, formatDistanceToNow } from "date-fns"
-import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+import { cn, formatRelativeDate } from "@/lib/utils"
 import { updateTask, toggleTaskStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
-import { Calendar as CalendarIcon, Clock, Users, Globe, ExternalLink, Target } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, Globe, Target } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { useTimer } from "@/components/providers/timer-provider"
 
@@ -40,7 +39,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
         try {
             await toggleTaskStatus(taskId, currentStatus, projectId)
             toast.success("Task status updated")
-        } catch (error) {
+        } catch {
             toast.error("Failed to update status")
         } finally {
             setUpdatingId(null)
@@ -52,7 +51,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
         try {
             await updateTask(taskId, data)
             toast.success("Task updated")
-        } catch (error) {
+        } catch {
             toast.error("Failed to update task")
         } finally {
             setUpdatingId(null)
@@ -60,9 +59,9 @@ export function TasksTable({ tasks }: TasksTableProps) {
     }
 
     return (
-        <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden shadow-2xl shadow-primary/5">
+        <div className="glass rounded-xl overflow-hidden apple-shadow">
             <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-                <Table>
+                <Table className="table-cockpit">
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">
                             <TableHead className="w-[40px]"></TableHead>
@@ -70,15 +69,16 @@ export function TasksTable({ tasks }: TasksTableProps) {
                             <TableHead>Project / Partner</TableHead>
                             <TableHead className="w-[140px]">Status</TableHead>
                             <TableHead className="w-[160px]">Deadline</TableHead>
-                            <TableHead className="w-[140px]">Duration</TableHead>
-                            <TableHead className="w-[160px]">Last Update</TableHead>
+                            <TableHead className="w-[140px] text-right">Duration</TableHead>
+                            <TableHead className="w-[160px] text-right">Last Update</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {tasks.map((task) => (
+                        {tasks.map((task, index) => (
                             <TableRow
                                 key={task.id}
-                                className="group transition-colors cursor-pointer"
+                                className="group transition-colors cursor-pointer stagger-row-enter"
+                                style={{ animationDelay: `${index * 0.05}s` }}
                             >
                                 <TableCell onClick={(e) => e.stopPropagation()}>
                                     <Checkbox
@@ -134,7 +134,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                         </SelectContent>
                                     </Select>
                                 </TableCell>
-                                <TableCell onClick={() => setSelectedTask(task)}>
+                                <TableCell onClick={() => setSelectedTask(task)} className="cell-tech">
                                     <div className="flex items-center gap-2 text-xs font-medium">
                                         <CalendarIcon className={cn(
                                             "h-3 w-3",
@@ -144,14 +144,14 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                             <span className={cn(
                                                 task.deadline && new Date(task.deadline) < new Date() && task.status !== "Completed" ? "text-rose-500" : "text-muted-foreground"
                                             )}>
-                                                {format(new Date(task.deadline), "MMM dd, yyyy")}
+                                                {formatRelativeDate(task.deadline)}
                                             </span>
                                         ) : (
                                             <span className="text-muted-foreground/30 italic">No deadline</span>
                                         )}
                                     </div>
                                 </TableCell>
-                                <TableCell onClick={() => setSelectedTask(task)}>
+                                <TableCell onClick={() => setSelectedTask(task)} className="cell-financial">
                                     {(() => {
                                         const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
                                         const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
@@ -162,7 +162,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                         if (!hasTimeLogs && !useFallback) {
                                             if (task.estimatedMinutes) {
                                                 return (
-                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium opacity-80">
+                                                    <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground font-medium opacity-80">
                                                         <Target className="h-3 w-3 opacity-50" />
                                                         <span>Est: {task.estimatedMinutes >= 60 ? `${Math.floor(task.estimatedMinutes / 60)}h ${task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}` : `${task.estimatedMinutes}m`}</span>
                                                     </div>
@@ -177,7 +177,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
 
                                         return (
                                             <div className={cn(
-                                                "flex items-center gap-2 text-xs font-medium",
+                                                "flex items-center justify-end gap-2 text-xs font-medium",
                                                 useFallback ? "text-amber-600" : (timerState.taskId === task.id && timerState.isRunning ? "text-primary animate-pulse font-bold" : "text-emerald-600")
                                             )}>
                                                 {useFallback ? <Target className="h-3 w-3 opacity-50" /> : <Clock className="h-3 w-3 opacity-50" />}
@@ -186,10 +186,10 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                         )
                                     })()}
                                 </TableCell>
-                                <TableCell onClick={() => setSelectedTask(task)}>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                                <TableCell onClick={() => setSelectedTask(task)} className="cell-tech text-right">
+                                    <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground font-medium">
                                         <Clock className="h-3 w-3 opacity-50" />
-                                        {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
+                                        {formatRelativeDate(task.updatedAt)}
                                     </div>
                                 </TableCell>
                             </TableRow>

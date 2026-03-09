@@ -21,10 +21,10 @@ export function ShellFrame({ user, children }: ShellFrameProps) {
             <div
                 className={cn(
                     "flex-1 flex flex-col min-w-0 min-h-dvh overflow-y-auto transition-all duration-300 relative",
-                    isSidebarCollapsed ? "md:pl-[96px]" : "md:pl-[256px]"
+                    isSidebarCollapsed ? "md:pl-[88px]" : "md:pl-[220px]"
                 )}
             >
-                <main className="flex-1 px-4 md:px-8 pt-4 md:pt-8 pb-24 md:pb-8 max-w-full overflow-hidden">
+                <main className="cockpit-page-enter flex-1 px-4 md:px-8 pt-4 md:pt-8 pb-24 md:pb-8 max-w-full overflow-hidden">
                     {children}
                 </main>
             </div>

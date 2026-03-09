@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { format, formatDistanceToNow } from "date-fns"
+import { format } from "date-fns"
 import {
     AlertCircle,
     Check,
@@ -23,17 +23,10 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { ProjectTasks } from "@/components/projects/project-tasks"
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
-import { cn, formatProjectName } from "@/lib/utils"
+import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
 import { updateProject, deleteProject } from "@/lib/actions/projects"
 import { logTime } from "@/lib/actions/time"
 import { getProjectPaymentHistory } from "@/lib/actions/payment-actions"
@@ -90,7 +83,7 @@ function formatDurationLabel(totalSeconds: number) {
 
 function formatBottomDate(value: Date | null) {
     if (!value) return "—"
-    return format(value, "d MMM. yy, HH:mm")
+    return formatRelativeDate(value)
 }
 
 export function ProjectSheetContent({
@@ -299,6 +292,19 @@ export function ProjectSheetContent({
         setAmountInput(String(parsed))
     }
 
+    const updateProjectStatus = (value: UpdateProjectPayload["status"]) => {
+        if (!value || value === project.status) return
+        void handleUpdate({ status: value })
+    }
+
+    const updateProjectPaymentStatus = (value: UpdateProjectPayload["paymentStatus"]) => {
+        if (!value || value === project.paymentStatus) return
+        void handleUpdate({
+            paymentStatus: value,
+            paidAt: value === "Paid" ? new Date() : null,
+        })
+    }
+
     const handleDelete = async () => {
         if (!window.confirm("Delete this project permanently?")) {
             return
@@ -366,10 +372,15 @@ export function ProjectSheetContent({
     const logsSeconds = (project.timeLogs || []).reduce((sum, log) => sum + (log.durationSeconds || 0), 0)
     const runningSeconds = isTimerForProject ? timerState.elapsedSeconds : 0
     const totalTrackedSeconds = logsSeconds + runningSeconds
+    const isProjectTimerRunning = isTimerForProject && timerState.isRunning
+    const isProjectTimerPaused = isTimerForProject && !timerState.isRunning
+    const timerStatusLabel = isProjectTimerRunning ? "Running" : isProjectTimerPaused ? "Paused" : "Ready"
+    const loggedHours = Math.floor(logsSeconds / 3600)
+    const loggedMinutes = Math.floor((logsSeconds % 3600) / 60)
     const timerPrimaryLabel =
-        isTimerForProject && timerState.isRunning
+        isProjectTimerRunning
             ? "Pause"
-            : isTimerForProject
+            : isProjectTimerPaused
                 ? "Resume"
                 : "Start"
 
@@ -417,26 +428,28 @@ export function ProjectSheetContent({
 
     return (
         <TaskSheetWrapper tasks={project.tasks || []} project={project}>
-            <div className="relative flex h-full flex-col overflow-hidden bg-[#f7f9fc]">
-                {!standalone && onClose && (
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="absolute right-8 top-8 z-20 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
-                        aria-label="Close project"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
-                )}
+            <div className="relative flex h-full flex-col overflow-hidden bg-[#f8fafc]">
+                <div className="absolute right-8 top-8 z-20 flex items-center gap-2">
+                    {!standalone && onClose && (
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                            aria-label="Close project"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
 
                 <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
                     <div className="space-y-8 pb-20">
-                        <div className="space-y-3 pr-14">
+                        <div className="space-y-3 pr-60">
                             {isEditingTitle ? (
                                 <Textarea
                                     value={localName}
                                     onChange={(event) => setLocalName(event.target.value)}
-                                    className="min-h-[52px] resize-none border-none bg-transparent p-0 text-3xl font-black leading-tight tracking-tight text-slate-900 focus-visible:ring-0 sm:text-4xl"
+                                    className="min-h-[44px] resize-none border-none bg-transparent p-0 text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900 focus-visible:ring-0"
                                     rows={1}
                                     autoFocus
                                     onBlur={commitTitle}
@@ -462,65 +475,79 @@ export function ProjectSheetContent({
                                     onClick={() => setIsEditingTitle(true)}
                                     className="text-left"
                                 >
-                                    <h1 className="text-3xl font-black leading-tight tracking-tight text-slate-900 sm:text-4xl">
+                                    <h1 className="text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900">
                                         {localName || formatProjectName(project)}
-                                        <span className="pl-3 text-blue-500">/ {format(toDate(project.createdAt) || new Date(), "MMMM yyyy")}</span>
+                                        <span className="pl-3 text-blue-600">/ {format(toDate(project.createdAt) || new Date(), "MMMM yyyy")}</span>
                                     </h1>
                                 </button>
                             )}
 
-                            <p className="text-sm font-medium text-slate-400">
-                                Created {formatDistanceToNow(toDate(project.createdAt) || new Date(), { addSuffix: true })}
-                                {updatingId === project.id && <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin" />}
-                            </p>
+                            {updatingId === project.id && (
+                                <div className="text-xs font-medium text-slate-400">
+                                    <Loader2 className="mr-1.5 inline h-3.5 w-3.5 animate-spin" />
+                                    Updating...
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-4">
-                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-600">Project Status</p>
-                                <Select
-                                    value={project.status}
-                                    onValueChange={(value) => void handleUpdate({ status: value as UpdateProjectPayload["status"] })}
-                                >
-                                    <SelectTrigger className="mt-1 h-auto border-none bg-transparent p-0 text-left text-xl font-black tracking-tight text-emerald-700 shadow-none focus:ring-0 sm:text-2xl">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Active">Active</SelectItem>
-                                        <SelectItem value="Paused">Paused</SelectItem>
-                                        <SelectItem value="Completed">Completed</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                            <div className={cn(
+                                "rounded-2xl border p-3",
+                                project.status === "Active"
+                                    ? "border-[#BFDBFE] bg-[#EFF6FF]"
+                                    : project.status === "Paused"
+                                        ? "border-[#FDE68A] bg-[#FFFBEB]"
+                                        : "border-[#A7F3D0] bg-[#ECFDF5]"
+                            )}>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-500">Project Status</p>
+
+                                <div className="mt-2 grid grid-cols-3 gap-1 rounded-full border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.05)]">
+                                    {(["Active", "Paused", "Completed"] as const).map((statusOption) => (
+                                        <Button
+                                            key={statusOption}
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => updateProjectStatus(statusOption)}
+                                            className={cn(
+                                                "h-7 rounded-full px-2 text-[11px] font-semibold transition-all border border-transparent",
+                                                project.status === statusOption && statusOption === "Active" && "bg-gradient-to-b from-[#EFF6FF] to-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE] shadow-[0_1px_2px_rgba(37,99,235,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]",
+                                                project.status === statusOption && statusOption === "Paused" && "bg-gradient-to-b from-[#FFFBEB] to-[#FEF3C7] text-[#B45309] border-[#FDE68A] shadow-[0_1px_2px_rgba(217,119,6,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]",
+                                                project.status === statusOption && statusOption === "Completed" && "bg-gradient-to-b from-[#ECFDF5] to-[#D1FAE5] text-[#047857] border-[#A7F3D0] shadow-[0_1px_2px_rgba(16,185,129,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]",
+                                                project.status !== statusOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                                            )}
+                                        >
+                                            {statusOption}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-4">
-                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-rose-600">Payment Status</p>
-                                <Select
-                                    value={project.paymentStatus}
-                                    onValueChange={(value) => {
-                                        const updates: UpdateProjectPayload = {
-                                            paymentStatus: value as UpdateProjectPayload["paymentStatus"],
-                                        }
+                            <div className={cn(
+                                "rounded-2xl border p-3",
+                                project.paymentStatus === "Paid" ? "border-[#A7F3D0] bg-[#ECFDF5]" : "border-[#FECDD3] bg-[#FFF1F2]"
+                            )}>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-500">Payment Status</p>
 
-                                        if (value === "Paid" && !project.paidAt) {
-                                            updates.paidAt = new Date()
-                                        }
-
-                                        if (value === "Unpaid") {
-                                            updates.paidAt = null
-                                        }
-
-                                        void handleUpdate(updates)
-                                    }}
-                                >
-                                    <SelectTrigger className="mt-1 h-auto border-none bg-transparent p-0 text-left text-xl font-black tracking-tight text-rose-700 shadow-none focus:ring-0 sm:text-2xl">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Paid">Paid</SelectItem>
-                                        <SelectItem value="Unpaid">Unpaid</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <div className="mt-2 grid grid-cols-2 gap-1 rounded-full border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.05)]">
+                                    {(["Paid", "Unpaid"] as const).map((paymentOption) => (
+                                        <Button
+                                            key={paymentOption}
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => updateProjectPaymentStatus(paymentOption)}
+                                            className={cn(
+                                                "h-7 rounded-full px-2 text-[11px] font-semibold transition-all border border-transparent",
+                                                project.paymentStatus === paymentOption && paymentOption === "Paid" && "bg-gradient-to-b from-[#ECFDF5] to-[#D1FAE5] text-[#047857] border-[#A7F3D0] shadow-[0_1px_2px_rgba(16,185,129,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]",
+                                                project.paymentStatus === paymentOption && paymentOption === "Unpaid" && "bg-gradient-to-b from-[#FFF1F2] to-[#FFE4E8] text-[#BE123C] border-[#FECDD3] shadow-[0_1px_2px_rgba(225,29,72,0.16),inset_0_1px_0_rgba(255,255,255,0.9)]",
+                                                project.paymentStatus !== paymentOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                                            )}
+                                        >
+                                            {paymentOption}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
@@ -640,50 +667,6 @@ export function ProjectSheetContent({
                             />
                         </section>
 
-                        <section className="space-y-4">
-                            <div className="rounded-2xl bg-[radial-gradient(circle_at_top_right,_#1f4ed8_0%,_#0c1533_30%,_#091127_100%)] px-5 py-4 text-white shadow-lg">
-                                <div className="flex flex-wrap items-center justify-between gap-5">
-                                    <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300">Project Timer</p>
-                                        <div className="mt-1 flex flex-wrap items-end gap-3">
-                                            <span className="text-3xl font-black leading-none tabular-nums sm:text-4xl">{formatClock(totalTrackedSeconds)}</span>
-                                            <span className={cn(
-                                                "pb-1 text-[13px] font-black uppercase",
-                                                isTimerForProject && timerState.isRunning ? "text-emerald-300" : "text-slate-300"
-                                            )}>
-                                                {isTimerForProject && timerState.isRunning ? "Working" : isTimerForProject ? "Paused" : "Ready"}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2.5">
-                                        <Button
-                                            type="button"
-                                            onClick={handleTimerPrimaryAction}
-                                            className="h-10 rounded-full bg-white px-5 text-sm font-semibold text-slate-800 hover:bg-slate-100 transition-all active:scale-[0.98]"
-                                        >
-                                            {isTimerForProject && timerState.isRunning ? (
-                                                <Pause className="mr-2 h-3.5 w-3.5 fill-current" />
-                                            ) : (
-                                                <Play className="mr-2 h-3.5 w-3.5 fill-current" />
-                                            )}
-                                            {timerPrimaryLabel}
-                                        </Button>
-
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            disabled={!isTimerForProject}
-                                            onClick={() => void globalStopTimer()}
-                                            className="h-10 w-10 rounded-full bg-blue-500 text-white shadow-[0_0_28px_rgba(59,130,246,0.55)] hover:bg-blue-400 disabled:cursor-not-allowed disabled:bg-blue-500/40 transition-all active:scale-[0.98]"
-                                        >
-                                            <Square className="h-3.5 w-3.5 fill-current" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
                         <section className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
@@ -699,6 +682,58 @@ export function ProjectSheetContent({
                                     <Plus className="mr-1 h-3.5 w-3.5" />
                                     Add Time
                                 </Button>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Project Time Tracker</p>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <span className="font-mono text-2xl font-bold leading-none text-slate-900 tabular-nums">
+                                                {formatClock(totalTrackedSeconds)}
+                                            </span>
+                                            <span className={cn(
+                                                "text-[10px] font-bold uppercase tracking-[0.04em]",
+                                                isProjectTimerRunning ? "text-[#10B981]" : isProjectTimerPaused ? "text-[#D97706]" : "text-slate-400"
+                                            )}>
+                                                {timerStatusLabel}
+                                            </span>
+                                        </div>
+                                        <div className="mt-1 text-[11px] font-medium text-slate-500">
+                                            {loggedHours}h {loggedMinutes}m logged
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5">
+                                        <Button
+                                            type="button"
+                                            onClick={handleTimerPrimaryAction}
+                                            className={cn(
+                                                "h-8 rounded-lg px-3 text-xs font-semibold transition-all active:scale-[0.98]",
+                                                isProjectTimerRunning
+                                                    ? "bg-[#FFFBEB] text-[#D97706] hover:bg-[#FEF3C7]"
+                                                    : "bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE]"
+                                            )}
+                                        >
+                                            {isProjectTimerRunning ? (
+                                                <Pause className="mr-1.5 h-3.5 w-3.5 fill-current" />
+                                            ) : (
+                                                <Play className="mr-1.5 h-3.5 w-3.5 fill-current" />
+                                            )}
+                                            {timerPrimaryLabel}
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            disabled={!isTimerForProject}
+                                            onClick={() => void globalStopTimer()}
+                                            className="h-8 w-8 rounded-lg bg-[#FFF1F2] text-[#E11D48] hover:bg-[#FFE4E8] disabled:bg-slate-100 disabled:text-slate-300"
+                                        >
+                                            <Square className="h-3.5 w-3.5 fill-current" />
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
 
                             {isManualTimeOpen && (
@@ -751,7 +786,7 @@ export function ProjectSheetContent({
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="min-w-0">
                                                     <p className="text-lg font-bold text-slate-700">
-                                                        {start ? format(start, "MMM do, yyyy") : "Unknown date"}
+                                                        {start ? formatRelativeDate(start) : "Unknown date"}
                                                     </p>
                                                     <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                                                         <span>
@@ -792,24 +827,24 @@ export function ProjectSheetContent({
                                     </div>
                                 ) : (
                                     paymentHistory.map((entry) => (
-                                        <div key={entry.id} className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white shadow-sm ring-1 ring-slate-200/50">
+                                        <div key={entry.id} className="glass flex items-center justify-between p-3 rounded-2xl border border-slate-200">
                                             <div className="flex items-center gap-3">
                                                 <div className={cn(
                                                     "h-7 w-7 rounded-full flex items-center justify-center shrink-0",
-                                                    entry.status === "Paid" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                                                    entry.status === "Paid" ? "bg-[#ECFDF5] text-[#10B981]" : "bg-[#FFF1F2] text-[#E11D48]"
                                                 )}>
                                                     <CheckCircle className="h-4 w-4" />
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-bold text-slate-700">Marked as {entry.status}</span>
                                                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                                        {format(new Date(entry.date), "MMM d, yyyy 'at' HH:mm")}
+                                                        {formatRelativeDate(entry.date)}
                                                     </span>
                                                 </div>
                                             </div>
                                             <Badge variant="outline" className={cn(
                                                 "text-[9px] font-black uppercase tracking-widest border-none",
-                                                entry.status === "Paid" ? "bg-emerald-100/50 text-emerald-700" : "bg-rose-100/50 text-rose-700"
+                                                entry.status === "Paid" ? "bg-[#ECFDF5] text-[#10B981]" : "bg-[#FFF1F2] text-[#E11D48]"
                                             )}>
                                                 {entry.status}
                                             </Badge>

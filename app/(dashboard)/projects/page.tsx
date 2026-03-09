@@ -8,6 +8,7 @@ import {
     Search,
     SlidersHorizontal,
     Users,
+    X,
 } from "lucide-react"
 import {
     endOfMonth,
@@ -30,10 +31,10 @@ export const dynamic = "force-dynamic"
 const PAGE_SIZE = 24
 
 const statusOptions = [
+    { label: "All", value: "All" },
     { label: "Active", value: "Active" },
     { label: "Paused", value: "Paused" },
     { label: "Completed", value: "Completed" },
-    { label: "All", value: "All" },
 ]
 
 const paymentOptions = [
@@ -182,6 +183,9 @@ export default async function ProjectsPage({
 
     const partnersList = partnersFullRaw.map((partner) => ({ id: partner.id, name: partner.name }))
     const filteredPartner = partnersList.find((partner) => partner.id === partnerId)
+    const selectedPeriodLabel = periodOptions.find((option) => option.value === period)?.label || "All Time"
+    const selectedPaymentLabel = paymentOptions.find((option) => option.value === payment)?.label || "All"
+    const selectedRecurringLabel = recurringOptions.find((option) => option.value === recurring)?.label || "All"
 
     const projects = projectsRaw.map((project) => {
         const completedTasks = project.tasks.filter((task) => task.status === "Completed").length
@@ -231,6 +235,23 @@ export default async function ProjectsPage({
 
         return `/projects?${next.toString()}`
     }
+
+    const activeFilters: { key: string; label: string; href: string }[] = []
+    if (q) activeFilters.push({ key: "q", label: `Search: ${q}`, href: buildHref({ q: null, page: "1" }) })
+    if (queryStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${queryStatus}`, href: buildHref({ status: "Active", page: "1" }) })
+    if (payment !== "All") activeFilters.push({ key: "payment", label: `Payment: ${selectedPaymentLabel}`, href: buildHref({ payment: "All", page: "1" }) })
+    if (recurring !== "All") activeFilters.push({ key: "recurring", label: `Type: ${selectedRecurringLabel}`, href: buildHref({ recurring: "All", page: "1" }) })
+    if (partnerId) activeFilters.push({ key: "partnerId", label: `Partner: ${filteredPartner?.name || "Selected"}`, href: buildHref({ partnerId: null, page: "1" }) })
+    if (period !== "all_time") activeFilters.push({ key: "period", label: `Period: ${selectedPeriodLabel}`, href: buildHref({ period: "all_time", page: "1" }) })
+    const clearAllHref = buildHref({
+        q: null,
+        status: "Active",
+        payment: "All",
+        recurring: "All",
+        partnerId: null,
+        period: "all_time",
+        page: "1",
+    })
 
     return (
         <ProjectSheetWrapper projects={projectsForClient} allServices={servicesForClient}>
@@ -289,107 +310,160 @@ export default async function ProjectsPage({
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 md:px-4 md:py-3 shadow-sm">
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                        <div className="inline-flex items-center gap-1 rounded-xl bg-slate-50 p-1">
-                            {statusOptions.map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildHref({ status: option.value, page: "1" })}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-[11px] uppercase tracking-[0.12em] font-semibold transition-colors",
-                                        queryStatus === option.value
-                                            ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                                            : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    {option.label}
-                                </Link>
-                            ))}
-                        </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 md:px-4 md:py-4 shadow-sm">
+                    <div className="flex flex-col gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
+                                {statusOptions.map((option) => (
+                                    <Link
+                                        key={option.value}
+                                        href={buildHref({ status: option.value, page: "1" })}
+                                        className={cn(
+                                            "inline-flex h-7 items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.1em] transition-all",
+                                            queryStatus === option.value && option.value === "Active" && "bg-[#DBEAFE] text-[#1D4ED8] ring-1 ring-[#93C5FD]",
+                                            queryStatus === option.value && option.value === "Paused" && "bg-[#FEF3C7] text-[#B45309] ring-1 ring-[#FCD34D]",
+                                            queryStatus === option.value && option.value === "Completed" && "bg-[#D1FAE5] text-[#047857] ring-1 ring-[#6EE7B7]",
+                                            queryStatus === option.value && option.value === "All" && "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200",
+                                            queryStatus !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                        )}
+                                    >
+                                        {option.label}
+                                    </Link>
+                                ))}
+                            </div>
 
-                        <div className="inline-flex items-center gap-1 rounded-xl bg-slate-50 p-1">
-                            {paymentOptions.map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildHref({ payment: option.value, page: "1" })}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-[11px] uppercase tracking-[0.12em] font-semibold transition-colors",
-                                        payment === option.value
-                                            ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                                            : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    {option.label}
-                                </Link>
-                            ))}
-                        </div>
+                            <div className="ml-auto flex flex-wrap items-center gap-2">
+                                <details className="group relative">
+                                    <summary className={cn(
+                                        "list-none inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] cursor-pointer transition-colors",
+                                        recurring !== "All"
+                                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
+                                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                                    )}>
+                                        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Type</span>
+                                        <span className="font-medium">{selectedRecurringLabel}</span>
+                                        <ChevronDown className="h-4 w-4 opacity-70 transition group-open:rotate-180" />
+                                    </summary>
+                                    <div className="absolute left-0 top-11 z-20 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                        {recurringOptions.map((option) => (
+                                            <Link
+                                                key={option.value}
+                                                href={buildHref({ recurring: option.value, page: "1" })}
+                                                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                                            >
+                                                {option.label}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </details>
 
-                        <div className="inline-flex items-center gap-1 rounded-xl bg-slate-50 p-1">
-                            {recurringOptions.map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildHref({ recurring: option.value, page: "1" })}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-[11px] uppercase tracking-[0.12em] font-semibold transition-colors",
-                                        recurring === option.value
-                                            ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                                            : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    {option.label}
-                                </Link>
-                            ))}
-                        </div>
+                                <details className="group relative">
+                                    <summary className={cn(
+                                        "list-none inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] cursor-pointer transition-colors",
+                                        payment !== "All"
+                                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
+                                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                                    )}>
+                                        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Payment</span>
+                                        <span className="font-medium">{selectedPaymentLabel}</span>
+                                        <ChevronDown className="h-4 w-4 opacity-70 transition group-open:rotate-180" />
+                                    </summary>
+                                    <div className="absolute left-0 top-11 z-20 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                        {paymentOptions.map((option) => (
+                                            <Link
+                                                key={option.value}
+                                                href={buildHref({ payment: option.value, page: "1" })}
+                                                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                                            >
+                                                {option.label}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </details>
 
-                        <div className="ml-auto flex items-center gap-2">
-                            <details className="group relative">
-                                <summary className="list-none inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 cursor-pointer hover:bg-slate-50">
-                                    <Users className="h-4 w-4 text-slate-400" />
-                                    <span>{filteredPartner?.name || "Partner"}</span>
-                                    <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
+                                <details className="group relative">
+                                <summary className={cn(
+                                    "list-none inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] cursor-pointer transition-colors",
+                                    partnerId
+                                        ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
+                                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                                )}>
+                                    <Users className={cn("h-4 w-4", partnerId ? "text-[#3B82F6]" : "text-slate-400")} />
+                                    <span className="max-w-[180px] truncate">{filteredPartner?.name || "Partner"}</span>
+                                    <ChevronDown className="h-4 w-4 opacity-70 transition group-open:rotate-180" />
                                 </summary>
-                                <div className="absolute right-0 top-12 z-20 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                <div className="absolute left-0 top-11 z-20 w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
                                     <Link href={buildHref({ partnerId: null, page: "1" })} className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
                                         All partners
                                     </Link>
                                     <div className="my-1 h-px bg-slate-100" />
-                                    {partnersList.map((partner) => (
-                                        <Link
-                                            key={partner.id}
-                                            href={buildHref({ partnerId: partner.id, page: "1" })}
-                                            className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                                        >
-                                            {partner.name}
-                                        </Link>
-                                    ))}
+                                    <div className="max-h-72 overflow-y-auto pr-1">
+                                        {partnersList.map((partner) => (
+                                            <Link
+                                                key={partner.id}
+                                                href={buildHref({ partnerId: partner.id, page: "1" })}
+                                                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                                            >
+                                                {partner.name}
+                                            </Link>
+                                        ))}
+                                    </div>
                                 </div>
-                            </details>
+                                </details>
 
-                            <details className="group relative">
-                                <summary className="list-none inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 cursor-pointer hover:bg-slate-50">
-                                    <CalendarDays className="h-4 w-4 text-slate-400" />
-                                    <span>{periodOptions.find((option) => option.value === period)?.label || "Date"}</span>
-                                    <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
-                                </summary>
-                                <div className="absolute right-0 top-12 z-20 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                                    {periodOptions.map((option) => (
-                                        <Link
-                                            key={option.value}
-                                            href={buildHref({ period: option.value, page: "1" })}
-                                            className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                                        >
-                                            {option.label}
-                                        </Link>
-                                    ))}
+                                <details className="group relative">
+                                    <summary className={cn(
+                                        "list-none inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] cursor-pointer transition-colors",
+                                        period !== "all_time"
+                                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
+                                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                                    )}>
+                                        <CalendarDays className={cn("h-4 w-4", period !== "all_time" ? "text-[#3B82F6]" : "text-slate-400")} />
+                                        <span>{selectedPeriodLabel}</span>
+                                        <ChevronDown className="h-4 w-4 opacity-70 transition group-open:rotate-180" />
+                                    </summary>
+                                    <div className="absolute left-0 top-11 z-20 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                        {periodOptions.map((option) => (
+                                            <Link
+                                                key={option.value}
+                                                href={buildHref({ period: option.value, page: "1" })}
+                                                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                                            >
+                                                {option.label}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </details>
+
+                                <div className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-50 px-3 text-[11px] uppercase tracking-[0.1em] text-slate-500 font-semibold">
+                                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                                    {totalProjects} results
                                 </div>
-                            </details>
-
-                            <div className="inline-flex h-10 items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-slate-500 font-semibold px-2">
-                                <SlidersHorizontal className="h-3.5 w-3.5" />
-                                {totalProjects} results
                             </div>
                         </div>
+
+                        {activeFilters.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Active filters</span>
+                                {activeFilters.map((filter) => (
+                                    <Link
+                                        key={filter.key}
+                                        href={filter.href}
+                                        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 pl-2.5 pr-2 text-[11px] font-medium text-slate-700 hover:bg-white"
+                                        title={`Remove ${filter.label}`}
+                                    >
+                                        <span className="max-w-[180px] truncate">{filter.label}</span>
+                                        <X className="h-3 w-3 text-slate-400" />
+                                    </Link>
+                                ))}
+                                <Link
+                                    href={clearAllHref}
+                                    className="inline-flex h-7 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                                >
+                                    Clear all
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

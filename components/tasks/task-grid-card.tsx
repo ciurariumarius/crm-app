@@ -4,15 +4,12 @@ import * as React from "react"
 import { format, isToday, isPast } from "date-fns"
 import { cn } from "@/lib/utils"
 import {
-    Clock,
     Target,
     Play,
     Pause,
     CheckCircle2,
     History,
-    Zap,
     Lightbulb,
-    ArrowRight,
     Calendar as CalendarIcon
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -37,17 +34,10 @@ export function TaskGridCard({
     onComplete,
     renderMenu,
     isSelected,
-    onSelect,
     showActions = true,
     className
 }: TaskGridCardProps) {
     const { timerState, startTimer, pauseTimer, resumeTimer } = useTimer()
-
-    const getDeadlineColor = (date: Date) => {
-        if (isPast(date) && !isToday(date)) return "text-rose-500 font-bold"
-        if (isToday(date)) return "text-orange-500 font-bold"
-        return "text-muted-foreground/60"
-    }
 
     const getDeadlineText = (date: Date) => {
         if (isPast(date) && !isToday(date)) return "Overdue"
@@ -77,131 +67,123 @@ export function TaskGridCard({
 
     const isOverdue = task.deadline && isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline))
     const isDueToday = task.deadline && isToday(new Date(task.deadline))
+    const estimatedSeconds = task.estimatedMinutes ? task.estimatedMinutes * 60 : 0
+    const progressPercent = task.status === "Completed"
+        ? 100
+        : estimatedSeconds > 0
+            ? Math.min(100, Math.round((totalSeconds / estimatedSeconds) * 100))
+            : isRunning
+                ? 45
+                : 15
 
     return (
         <div
             className={cn(
-                "group relative flex flex-col bg-card hover:bg-card/80 p-5 rounded-2xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 min-h-[220px] cursor-pointer",
+                "cockpit-task-card group relative flex min-h-[220px] cursor-pointer flex-col p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
                 isSelected ? "ring-2 ring-primary/20 border-primary bg-primary/5" : "",
                 className
             )}
+            style={{ "--progress-width": `${progressPercent}%` } as React.CSSProperties}
             onClick={() => onOpen(task)}
         >
-            {/* Top Row: Meta & Menu */}
-            <div className="flex items-start justify-between mb-3">
-                <div className="flex flex-wrap items-center gap-2">
-                    {/* Status Dot */}
-                    <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        task.status === "Active" ? "bg-blue-500" :
-                            task.status === "Paused" ? "bg-amber-500" :
-                                task.status === "Completed" ? "bg-emerald-500" : "bg-muted-foreground"
-                    )} />
-
-                    {/* Priority Badge */}
-                    {task.urgency === "Urgent" && (
-                        <Badge variant="secondary" className="px-2 py-0.5 text-[10px] font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-lg border-none shadow-sm shadow-rose-500/10">
-                            URGENT
-                        </Badge>
+            <div className="flex items-start justify-between gap-3 mb-3">
+                <h4
+                    className={cn(
+                        "text-[14px] font-semibold leading-tight transition-colors text-foreground line-clamp-2 pr-3",
+                        task.status === "Completed" && "line-through opacity-60"
                     )}
-                    {task.urgency === "Idea" && (
-                        <Badge variant="secondary" className="px-2 py-0.5 text-[10px] font-bold text-sky-700 bg-sky-50 dark:bg-sky-900/20 rounded-lg border-sky-100 border shadow-none">
-                            <Lightbulb className="h-3 w-3 mr-1" /> IDEA
-                        </Badge>
-                    )}
-
-                    {/* Deadline */}
-                    {task.deadline && (
-                        <div className={cn(
-                            "text-[10px] flex items-center gap-1 font-bold px-2 py-0.5 rounded-lg border transition-colors",
-                            isOverdue ? "bg-rose-50 text-rose-600 border-rose-100" :
-                                isDueToday ? "bg-orange-50 text-orange-600 border-orange-100" :
-                                    "bg-muted/30 text-muted-foreground/70 border-border/40"
-                        )}>
-                            <CalendarIcon className="h-3 w-3" />
-                            {getDeadlineText(new Date(task.deadline))}
-                        </div>
-                    )}
+                >
+                    {task.name}
+                </h4>
+                <div className="shrink-0 text-right">
+                    <p className="font-mono text-[13px] font-semibold tabular-nums text-foreground">{formattedTotalTime}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">spent</p>
                 </div>
+            </div>
 
-                {/* Meatball Menu */}
-                {
-                    renderMenu && (
-                        <div className="shrink-0 -mt-1 -mr-1" onClick={e => e.stopPropagation()}>
-                            {renderMenu(task)}
-                        </div>
-                    )
-                }
-            </div >
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+                <div className={cn(
+                    "w-2 h-2 rounded-full",
+                    task.status === "Active" ? "bg-blue-500" :
+                        task.status === "Paused" ? "bg-amber-500" :
+                            task.status === "Completed" ? "bg-emerald-500" : "bg-muted-foreground"
+                )} />
+                {task.urgency === "Urgent" && (
+                    <Badge variant="secondary" className="px-2 py-0.5 text-[10px] font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-lg border-none shadow-sm shadow-rose-500/10">
+                        URGENT
+                    </Badge>
+                )}
+                {task.urgency === "Idea" && (
+                    <Badge variant="secondary" className="px-2 py-0.5 text-[10px] font-bold text-sky-700 bg-sky-50 rounded-lg border-sky-100 border shadow-none">
+                        <Lightbulb className="h-3 w-3 mr-1" /> IDEA
+                    </Badge>
+                )}
+                {task.deadline && (
+                    <div className={cn(
+                        "text-[10px] flex items-center gap-1 font-bold px-2 py-0.5 rounded-lg border transition-colors",
+                        isOverdue ? "bg-rose-50 text-rose-600 border-rose-100" :
+                            isDueToday ? "bg-orange-50 text-orange-600 border-orange-100" :
+                                "bg-muted/30 text-muted-foreground/70 border-border/40"
+                    )}>
+                        <CalendarIcon className="h-3 w-3" />
+                        {getDeadlineText(new Date(task.deadline))}
+                    </div>
+                )}
+                {renderMenu && (
+                    <div className="ml-auto shrink-0" onClick={e => e.stopPropagation()}>
+                        {renderMenu(task)}
+                    </div>
+                )}
+            </div>
 
-            {/* Middle: Task Name */}
-            < h4
-                className={
-                    cn(
-                        "text-[15px] font-bold leading-tight mb-2 line-clamp-2 transition-colors text-foreground/90 group-hover:text-foreground",
-                        task.status === "Completed" && "line-through opacity-50"
-                    )
-                }
-            >
-                {task.name}
-            </h4 >
-
-            {/* Project Context */}
-            < div className="flex flex-col gap-1 mb-4" >
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 truncate">
+            <div className="flex flex-col gap-1 mb-4">
+                <span className="text-xs font-semibold text-blue-600 truncate">
                     {domainName}
                 </span>
                 <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="text-[11px] font-medium text-muted-foreground/60 truncate">
+                    <span className="text-[11px] font-medium text-muted-foreground/70 truncate">
                         {serviceName}
                     </span>
                     {isRecurring && task.project?.createdAt && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold text-muted-foreground shrink-0 border border-border/40">
+                        <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 text-[10px] font-bold text-muted-foreground shrink-0 border border-border/40">
                             {format(new Date(task.project.createdAt), "MMM yyyy")}
                         </span>
                     )}
                 </div>
-            </div >
+            </div>
 
-            {/* Description (Optional/Compact) */}
-            {
-                task.description && (
-                    <p className="text-[11px] text-muted-foreground/50 line-clamp-2 mb-4 leading-relaxed">
-                        {task.description}
-                    </p>
-                )
-            }
+            {task.description && (
+                <p className="text-[11px] text-muted-foreground/50 line-clamp-2 mb-4 leading-relaxed">
+                    {task.description}
+                </p>
+            )}
 
             <div className="flex-1" />
 
-            {/* Bottom: Metrics & Actions */}
             <div className="flex items-center justify-between pt-3 border-t border-border/40 mt-auto">
                 <div className="flex items-center gap-3">
-                    {/* Time Logged */}
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
-                            <History className={cn("h-3 w-3", isRunning ? "text-emerald-500 animate-pulse" : "text-muted-foreground/40")} />
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-foreground tabular-nums">
+                            <History className={cn("h-3 w-3", isRunning ? "text-blue-600 timer-pulse" : "text-muted-foreground/40")} />
                             {formattedTotalTime}
                         </div>
-                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-tighter">Spent</span>
+                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.1em]">Spent</span>
                     </div>
 
-                    {/* Estimate */}
                     {task.estimatedMinutes && (
                         <div className="w-[1px] h-6 bg-border/40" />
                     )}
                     {task.estimatedMinutes && (
                         <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground/60">
+                            <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-muted-foreground/60 tabular-nums">
                                 <Target className="h-3 w-3 opacity-40" />
                                 {task.estimatedMinutes}m
                             </div>
-                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-tighter">Est</span>
+                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.1em]">Est</span>
                         </div>
                     )}
                 </div>
 
-                {/* Actions */}
                 {showActions && (
                     <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                         {isRunning ? (
@@ -232,7 +214,7 @@ export function TaskGridCard({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-lg transition-all"
+                                className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                                 onClick={(e) => {
                                     e.preventDefault()
                                     startTimer(task.projectId, task.id, task.name)
@@ -246,7 +228,7 @@ export function TaskGridCard({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-lg transition-all"
+                            className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                             onClick={(e) => {
                                 e.preventDefault()
                                 onComplete(task.id)
@@ -257,6 +239,30 @@ export function TaskGridCard({
                     </div>
                 )}
             </div>
-        </div >
+
+            {showActions && !isRunning && (
+                <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 opacity-0 translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0">
+                    <Button
+                        size="icon"
+                        className="pointer-events-auto h-9 w-9 rounded-full bg-primary text-primary-foreground shadow-lg"
+                        onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (isPaused) {
+                                resumeTimer()
+                                toast.success("Timer resumed")
+                            } else {
+                                startTimer(task.projectId, task.id, task.name)
+                                toast.success("Timer started")
+                            }
+                        }}
+                    >
+                        <Play className="h-4 w-4 ml-0.5" />
+                    </Button>
+                </div>
+            )}
+
+            <div className="cockpit-task-progress" />
+        </div>
     )
 }
