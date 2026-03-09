@@ -13,9 +13,15 @@ export function calculateDashboardMetrics(
     recentProjectsRaw: any[],
     totalActiveTasks: number = 0,
     hourlyRate: number = 0,
-    settlementAuditLogs: any[] = []
+    settlementAuditLogs: any[] = [],
+    startOfMonth?: Date
 ): DashboardMetrics {
-    // Split into Recurring and One-Time
+    const referenceDate = startOfMonth || new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+
+    // Projects created this month (for revenue metrics)
+    const currentMonthProjects = activeProjects.filter(p => new Date(p.createdAt) >= referenceDate)
+
+    // Split into Recurring and One-Time (Keep all active/unpaid for the main lists)
     const recurringProjects: FormattedProject[] = []
     const oneTimeProjects: FormattedProject[] = []
 
@@ -46,21 +52,18 @@ export function calculateDashboardMetrics(
     const totalHoursMonth = totalHoursMonthNum.toFixed(1)
     const totalBillableHours = totalHoursMonthNum
 
-    // Revenue: Sum of currentFee of all active projects
-    const totalRevenue = activeProjects.reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
+    // Revenue: Sum of currentFee of projects created this month
+    const totalRevenue = currentMonthProjects.reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
 
-    // Revenue Breakdown
+    // Revenue Breakdown (Based on current month projects)
     let monthlyPaid = 0
     let monthlyUnpaid = 0
     let oneTimePaid = 0
     let oneTimeUnpaid = 0
 
-    const unpaidByPartnerMap = new Map<string, { id: string, name: string, total: number }>()
-
-    activeProjects.forEach((p: any) => {
+    currentMonthProjects.forEach((p: any) => {
         const isRecurring = p.services.some((s: any) => s.isRecurring)
         const fee = Number(p.currentFee) || 0
-        const partner = p.site?.partner
 
         if (p.paymentStatus === "Paid") {
             if (isRecurring) monthlyPaid += fee
@@ -68,7 +71,15 @@ export function calculateDashboardMetrics(
         } else {
             if (isRecurring) monthlyUnpaid += fee
             else oneTimeUnpaid += fee
+        }
+    })
 
+    // Unpaid Balance Tracking (Based on ALL active/unpaid projects)
+    const unpaidByPartnerMap = new Map<string, { id: string, name: string, total: number }>()
+    activeProjects.forEach((p: any) => {
+        if (p.paymentStatus === "Unpaid") {
+            const fee = Number(p.currentFee) || 0
+            const partner = p.site?.partner
             if (partner) {
                 const existing = unpaidByPartnerMap.get(partner.id) || { id: partner.id, name: partner.name, total: 0 }
                 unpaidByPartnerMap.set(partner.id, { ...existing, total: existing.total + fee })
@@ -81,7 +92,7 @@ export function calculateDashboardMetrics(
             id: p.id,
             name: p.name,
             totalUnpaid: p.total,
-            lastSettlementDate: null // We'll need a different query for this if needed
+            lastSettlementDate: null
         }))
         .sort((a, b) => b.totalUnpaid - a.totalUnpaid)
 
@@ -143,9 +154,9 @@ export function calculateDashboardMetrics(
         siteName: p.site?.domainName || "Unknown Site"
     }))
 
-    // Revenue by Partner Chart Data
+    // Revenue by Partner Chart Data (Based on current month projects)
     const revenueByPartnerMap = new Map<string, number>()
-    activeProjects.forEach((p: any) => {
+    currentMonthProjects.forEach((p: any) => {
         const fee = Number(p.currentFee) || 0
         const partnerName = p.site?.partner?.name || "Unknown"
         revenueByPartnerMap.set(partnerName, (revenueByPartnerMap.get(partnerName) || 0) + fee)
