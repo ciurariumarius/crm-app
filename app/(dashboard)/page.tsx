@@ -16,7 +16,6 @@ import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { BusinessHealthPulse } from "@/components/dashboard/business-health-pulse"
 import { FocusMatrix } from "@/components/dashboard/focus-matrix"
 import { SettleUpLedger } from "@/components/dashboard/settle-up-ledger"
-import { TechnicalIntegrationBar } from "@/components/dashboard/technical-integration-bar"
 import { ProfitabilityAlerts } from "@/components/dashboard/profitability-alerts"
 import { SettlementHistory } from "@/components/dashboard/settlement-history"
 import { Card } from "@/components/ui/card"
@@ -179,18 +178,13 @@ export default async function Home() {
               {/* 1. Daily Engine: Profitability & Focus */}
               <div className="space-y-6">
                 <ProfitabilityAlerts alerts={metrics.timeSinkAlerts} />
-                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                  <div className="xl:col-span-3">
-                    <FocusMatrix tasks={upcomingTasks} />
-                  </div>
-                  <div className="xl:col-span-1">
-                    <TechnicalIntegrationBar />
-                  </div>
+                <div className="w-full">
+                  <FocusMatrix tasks={upcomingTasks} />
                 </div>
               </div>
 
-              {/* 2. Project Inventory: Fixed-Fee & Recurring Subscriptions (Stacked Vertically) */}
-              <div className="space-y-10">
+              {/* 2. Project Inventory: Fixed-Fee & Recurring Subscriptions (Side-by-Side) */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
                 <div className="flex flex-col gap-6">
                   <div className="flex items-center gap-2 px-2">
                     <div className="h-2 w-2 rounded-full bg-blue-500" />

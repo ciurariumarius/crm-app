@@ -49,9 +49,6 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
                     </div>
                     <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Due Payment</h3>
                 </div>
-                <p className="hidden sm:block text-[10px] text-muted-foreground italic">
-                    Updating ledger generates a payment audit log for bookkeeping.
-                </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
