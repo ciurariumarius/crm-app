@@ -1,5 +1,5 @@
 name: Find Users
-on: [push, workflow_dispatch]
+on: [workflow_dispatch]
 jobs:
   find:
     runs-on: ubuntu-latest

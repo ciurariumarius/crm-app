@@ -46,7 +46,7 @@ export interface DashboardMetrics {
     revenueByPartner: { name: string, value: number, fill: string }[]
     unpaidByPartner: SettlementPartner[]
     timeSinkAlerts: ProfitabilityAlert[]
-    settlementHistory: { partnerName: string, amount: number, date: Date | string }[]
+    settlementHistory: { id: string, projectName: string, partnerName: string, amount: number, date: Date | string }[]
     totalActiveTasks: number
     activeMonthlyProjectsCount: number
     activeOneTimeProjectsCount: number
