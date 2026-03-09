@@ -103,10 +103,18 @@ export async function voidSettlement(auditLogId: string) {
             })
         }
 
-        // Mark log as voided
-        await prisma.auditLog.update({
-            where: { id: auditLogId },
-            data: { action: "SETTLE_PARTNER_VOIDED" }
+        // Log the void action as a new event
+        await logAuditEvent({
+            action: "SETTLE_PARTNER_VOIDED",
+            success: true,
+            tenantId: session.tenantId,
+            actorUserId: session.userId,
+            details: JSON.stringify({
+                auditLogId,
+                partnerId: details.partnerId,
+                projectCount: projectIds.length,
+                projects: details.projects
+            })
         })
 
         revalidatePath("/")

@@ -6,10 +6,12 @@ import { format, formatDistanceToNow } from "date-fns"
 import {
     AlertCircle,
     Check,
+    CheckCircle,
     Clock3,
     Cloud,
     FolderOpen,
     Globe,
+    History,
     Loader2,
     Pause,
     Play,
@@ -34,6 +36,7 @@ import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
 import { cn, formatProjectName } from "@/lib/utils"
 import { updateProject, deleteProject } from "@/lib/actions/projects"
 import { logTime } from "@/lib/actions/time"
+import { getProjectPaymentHistory } from "@/lib/actions/payment-actions"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useTimer } from "@/components/providers/timer-provider"
@@ -112,6 +115,11 @@ export function ProjectSheetContent({
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [selectedTimeLog, setSelectedTimeLog] = React.useState<any | null>(null)
     const [isTimeLogSheetOpen, setIsTimeLogSheetOpen] = React.useState(false)
+
+    // Payment History State
+    const [paymentHistory, setPaymentHistory] = React.useState<any[]>([])
+    const [isLoadingHistory, setIsLoadingHistory] = React.useState(false)
+
     const router = useRouter()
     const {
         timerState,
@@ -128,8 +136,29 @@ export function ProjectSheetContent({
     React.useEffect(() => {
         setLocalName(project.name || formatProjectName(project))
         setDescription(project.description || "")
-        setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
+    }, [project.description, project.name])
+
+    const fetchPaymentHistory = React.useCallback(async () => {
+        setIsLoadingHistory(true)
+        try {
+            const result = await getProjectPaymentHistory(project.id)
+            if (result.success) {
+                setPaymentHistory(result.data || [])
+            }
+        } catch (error) {
+            console.error("Failed to load payment history", error)
+        } finally {
+            setIsLoadingHistory(false)
+        }
     }, [project.id])
+
+    React.useEffect(() => {
+        fetchPaymentHistory()
+    }, [fetchPaymentHistory])
+
+    React.useEffect(() => {
+        setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
+    }, [project.currentFee, project.id])
 
     const handleUpdate = React.useCallback(
         async (data: UpdateProjectPayload) => {
@@ -167,6 +196,12 @@ export function ProjectSheetContent({
 
                 setProject(updatedProject)
                 onUpdate?.(updatedProject)
+
+                // Refresh history if payment status changed
+                if (data.paymentStatus !== undefined) {
+                    fetchPaymentHistory()
+                }
+
                 router.refresh()
             } catch {
                 toast.error("Update failed")
@@ -174,7 +209,7 @@ export function ProjectSheetContent({
                 setUpdatingId(null)
             }
         },
-        [allServices, onUpdate, project, router]
+        [allServices, onUpdate, project, router, fetchPaymentHistory]
     )
 
     const isInitialMount = React.useRef(true)
@@ -368,7 +403,7 @@ export function ProjectSheetContent({
             : null
     const timeLogProjects = React.useMemo(
         () => [{ id: project.id, displayName: localName || formatProjectName(project) }],
-        [project.id, localName, project]
+        [project.id, localName]
     )
     const timeLogTasks = React.useMemo(
         () =>
@@ -737,6 +772,50 @@ export function ProjectSheetContent({
                                         </button>
                                     )
                                 })}
+                            </div>
+                        </section>
+
+                        <section className="space-y-3">
+                            <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                <History className="h-3.5 w-3.5" />
+                                Payment History (Log)
+                            </h2>
+                            <div className="space-y-2">
+                                {isLoadingHistory && paymentHistory.length === 0 ? (
+                                    <div className="flex items-center justify-center py-6 text-slate-400">
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
+                                    </div>
+                                ) : paymentHistory.length === 0 ? (
+                                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-4 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        No payment records found.
+                                    </div>
+                                ) : (
+                                    paymentHistory.map((entry) => (
+                                        <div key={entry.id} className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white shadow-sm ring-1 ring-slate-200/50">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "h-7 w-7 rounded-full flex items-center justify-center shrink-0",
+                                                    entry.status === "Paid" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                                                )}>
+                                                    <CheckCircle className="h-4 w-4" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-700">Marked as {entry.status}</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                        {format(new Date(entry.date), "MMM d, yyyy 'at' HH:mm")}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <Badge variant="outline" className={cn(
+                                                "text-[9px] font-black uppercase tracking-widest border-none",
+                                                entry.status === "Paid" ? "bg-emerald-100/50 text-emerald-700" : "bg-rose-100/50 text-rose-700"
+                                            )}>
+                                                {entry.status}
+                                            </Badge>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </section>
 

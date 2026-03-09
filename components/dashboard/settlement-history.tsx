@@ -1,8 +1,11 @@
 "use client"
 
+import * as React from "react"
 import { Card } from "@/components/ui/card"
 import { format } from "date-fns"
 import { History, CheckCircle } from "lucide-react"
+import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
+import { cn } from "@/lib/utils"
 
 interface SettlementHistoryProps {
     history: {
@@ -15,6 +18,8 @@ interface SettlementHistoryProps {
 }
 
 export function SettlementHistory({ history }: SettlementHistoryProps) {
+    const { openProject } = React.useContext(ProjectSheetContext)
+
     if (history.length === 0) return null
 
     return (
@@ -28,7 +33,13 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
 
             <div className="flex flex-col gap-2">
                 {history.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-background/50 hover:bg-background transition-all group">
+                    <div
+                        key={item.id}
+                        onClick={() => openProject(item.id)}
+                        className={cn(
+                            "flex items-center justify-between p-3 rounded-lg border border-border bg-background/50 hover:bg-emerald-50/20 transition-all group cursor-pointer active:scale-[0.99]",
+                        )}
+                    >
                         <div className="flex items-center gap-3 min-w-0">
                             <div className="h-7 w-7 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
                                 <CheckCircle className="h-4 w-4" />

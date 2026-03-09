@@ -267,6 +267,13 @@ export async function updateProject(projectId: string, data: {
             include: { site: true }
         })
 
+        if (validated.paymentStatus) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_PAYMENT_TOGGLED",
+                details: `projectId=${validatedProjectId}; to=${validated.paymentStatus}`,
+            })
+        }
+
         await logSessionAuditEvent(session, {
             action: "PROJECT_UPDATED",
             details: `projectId=${validatedProjectId}`,
