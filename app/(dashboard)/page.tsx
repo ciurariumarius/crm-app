@@ -107,14 +107,19 @@ export default async function Home() {
         }),
         // Services
         prisma.service.findMany({ where: { tenantId: session.tenantId }, orderBy: { serviceName: "asc" } }),
-        // Settlement Audit Logs
-        prisma.auditLog.findMany({
+        // Recently Paid Projects (Log)
+        prisma.project.findMany({
           where: {
             tenantId: session.tenantId,
-            action: "SETTLE_PARTNER"
+            paymentStatus: "Paid",
+            paidAt: { not: null }
           },
-          orderBy: { createdAt: "desc" },
-          take: 3
+          orderBy: { paidAt: "desc" },
+          take: 10,
+          include: {
+            services: true,
+            site: { include: { partner: true } }
+          }
         })
       ])
   } catch (error) {

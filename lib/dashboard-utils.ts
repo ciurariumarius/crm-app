@@ -106,17 +106,14 @@ export function calculateDashboardMetrics(
         })
         .filter((a): a is ProfitabilityAlert => a !== null)
 
-    // Settlement History
-    const settlementHistory = settlementAuditLogs.map(log => {
-        const details = JSON.parse(log.details || "{}")
-        return {
-            id: log.id,
-            partnerName: details.partnerName || "Unknown Partner",
-            amount: details.totalAmount || 0,
-            date: log.createdAt,
-            projects: details.projects || []
-        }
-    })
+    // Recent Payment History (Log)
+    const settlementHistory = settlementAuditLogs.map((p: any) => ({
+        id: p.id,
+        projectName: formatProjectName(p),
+        partnerName: p.site?.partner?.name || "Unknown Partner",
+        amount: Number(p.currentFee) || 0,
+        date: p.paidAt || p.updatedAt
+    }))
 
     const currencyFormatter = new Intl.NumberFormat('ro-RO', {
         style: 'currency',
