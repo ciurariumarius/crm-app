@@ -12,10 +12,13 @@ import {
     FolderOpen,
     Globe,
     History,
+    FileDown,
     Loader2,
     Pause,
     Play,
     Plus,
+    Expand,
+    Pencil,
     Square,
     Trash2,
     X,
@@ -35,6 +38,7 @@ import { useRouter } from "next/navigation"
 import { useTimer } from "@/components/providers/timer-provider"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { TimeLogSheet } from "@/components/time/time-log-sheet"
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectWithDetails } from "@/types"
 import { Service, Site } from "@prisma/client"
 
@@ -44,6 +48,7 @@ type UpdateProjectPayload = {
     status?: "Active" | "Paused" | "Completed"
     paymentStatus?: "Paid" | "Unpaid"
     paidAt?: Date | string | null
+    createdAt?: Date | string
     currentFee?: number | null
     serviceIds?: string[]
 }
@@ -62,6 +67,20 @@ function toDate(value: Date | string | null | undefined) {
     const parsed = new Date(value)
     return Number.isNaN(parsed.getTime()) ? null : parsed
 }
+
+const PROJECT_REQUIREMENTS_TEMPLATE = [
+    "<h2>Requirements</h2>",
+    "<ul>",
+    "<li><strong>Goal:</strong> </li>",
+    "<li><strong>Deliverables:</strong> </li>",
+    "<li><strong>Tracking scope (GTM / GA4 / Pixel):</strong> </li>",
+    "<li><strong>Constraints:</strong> </li>",
+    "</ul>",
+    "<h3>Implementation Notes</h3>",
+    "<p></p>",
+    "<h3>Screenshots</h3>",
+    "<p></p>",
+].join("")
 
 function formatClock(totalSeconds: number) {
     const hours = Math.floor(totalSeconds / 3600)
@@ -86,6 +105,11 @@ function formatBottomDate(value: Date | null) {
     return format(value, "dd MMMM yyyy, HH:mm")
 }
 
+function toDateTimeLocalValue(value: Date | null) {
+    if (!value) return ""
+    return format(value, "yyyy-MM-dd'T'HH:mm")
+}
+
 export function ProjectSheetContent({
     project: initialProject,
     allServices,
@@ -99,15 +123,26 @@ export function ProjectSheetContent({
     const [amountInput, setAmountInput] = React.useState("")
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
     const [isEditingServices, setIsEditingServices] = React.useState(false)
-    const [description, setDescription] = React.useState("")
+    const [description, setDescription] = React.useState(initialProject.description || "")
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
     const [isDeleting, setIsDeleting] = React.useState(false)
     const [isManualTimeOpen, setIsManualTimeOpen] = React.useState(false)
+    const [isNotesModalOpen, setIsNotesModalOpen] = React.useState(false)
+    const [isEditingCreatedAt, setIsEditingCreatedAt] = React.useState(false)
+    const [createdAtInput, setCreatedAtInput] = React.useState("")
     const [manualMinutes, setManualMinutes] = React.useState("")
     const [manualNotes, setManualNotes] = React.useState("")
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [selectedTimeLog, setSelectedTimeLog] = React.useState<any | null>(null)
     const [isTimeLogSheetOpen, setIsTimeLogSheetOpen] = React.useState(false)
+    const [isExportingNotes, setIsExportingNotes] = React.useState(false)
+    const [notesSaveState, setNotesSaveState] = React.useState<
+        "idle" | "typing" | "saving" | "saved" | "error"
+    >("idle")
+    const activeProjectIdRef = React.useRef(initialProject.id)
+    const isDescriptionSaveInFlightRef = React.useRef(false)
+    const queuedDescriptionRef = React.useRef<string | null>(null)
+    const lastSavedDescriptionRef = React.useRef(initialProject.description || "")
 
     // Payment History State
     const [paymentHistory, setPaymentHistory] = React.useState<any[]>([])
@@ -128,8 +163,40 @@ export function ProjectSheetContent({
 
     React.useEffect(() => {
         setLocalName(project.name || formatProjectName(project))
-        setDescription(project.description || "")
-    }, [project.description, project.name])
+    }, [project.name, project.id])
+
+    React.useEffect(() => {
+        if (activeProjectIdRef.current === project.id) return
+        activeProjectIdRef.current = project.id
+        const serverDescription = project.description || ""
+        setDescription(serverDescription)
+        lastSavedDescriptionRef.current = serverDescription
+        queuedDescriptionRef.current = null
+        isDescriptionSaveInFlightRef.current = false
+        setNotesSaveState("idle")
+    }, [project.id, project.description])
+
+    const persistDescription = React.useCallback(
+        async (projectId: string, nextDescription: string) => {
+            const result = await updateProject(projectId, { description: nextDescription })
+            if (!result.success) {
+                toast.error(result.error || "Failed to update notes")
+                return false
+            }
+
+            setProject((previousProject) => {
+                if (previousProject.id !== projectId) return previousProject
+                return {
+                    ...previousProject,
+                    description: nextDescription,
+                    updatedAt: new Date(),
+                } as ProjectWithDetails
+            })
+
+            return true
+        },
+        []
+    )
 
     const fetchPaymentHistory = React.useCallback(async () => {
         setIsLoadingHistory(true)
@@ -153,6 +220,11 @@ export function ProjectSheetContent({
         setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
     }, [project.currentFee, project.id])
 
+    React.useEffect(() => {
+        const currentCreatedAt = toDate(project.createdAt)
+        setCreatedAtInput(toDateTimeLocalValue(currentCreatedAt))
+    }, [project.createdAt, project.id])
+
     const handleUpdate = React.useCallback(
         async (data: UpdateProjectPayload) => {
             setUpdatingId(project.id)
@@ -160,7 +232,7 @@ export function ProjectSheetContent({
                 const result = await updateProject(project.id, data as any)
                 if (!result.success) {
                     toast.error(result.error || "Update failed")
-                    return
+                    return false
                 }
 
                 let updatedProject: ProjectWithDetails = project
@@ -183,7 +255,9 @@ export function ProjectSheetContent({
                         ...(data.status !== undefined ? { status: data.status } : {}),
                         ...(data.paymentStatus !== undefined ? { paymentStatus: data.paymentStatus } : {}),
                         ...(data.paidAt !== undefined ? { paidAt: nextPaidAt } : {}),
+                        ...(data.createdAt !== undefined ? { createdAt: data.createdAt } : {}),
                         ...(data.currentFee !== undefined ? { currentFee: data.currentFee } : {}),
+                        updatedAt: new Date(),
                     } as ProjectWithDetails
                 }
 
@@ -195,9 +269,17 @@ export function ProjectSheetContent({
                     fetchPaymentHistory()
                 }
 
-                router.refresh()
+                const isDescriptionOnlyUpdate =
+                    data.description !== undefined &&
+                    Object.keys(data).length === 1
+
+                if (!isDescriptionOnlyUpdate) {
+                    router.refresh()
+                }
+                return true
             } catch {
                 toast.error("Update failed")
+                return false
             } finally {
                 setUpdatingId(null)
             }
@@ -206,20 +288,69 @@ export function ProjectSheetContent({
     )
 
     const isInitialMount = React.useRef(true)
+    const triggerDescriptionSave = React.useCallback(
+        async (nextDescription: string) => {
+            const projectId = activeProjectIdRef.current
+
+            if (isDescriptionSaveInFlightRef.current) {
+                queuedDescriptionRef.current = nextDescription
+                return
+            }
+
+            isDescriptionSaveInFlightRef.current = true
+            let descriptionToSave: string | null = nextDescription
+
+            while (descriptionToSave !== null) {
+                setNotesSaveState("saving")
+                const success = await persistDescription(projectId, descriptionToSave)
+
+                if (success) {
+                    lastSavedDescriptionRef.current = descriptionToSave
+                    setNotesSaveState("saved")
+                } else {
+                    setNotesSaveState("error")
+                }
+
+                const queuedDescription = queuedDescriptionRef.current
+                if (queuedDescription && queuedDescription !== descriptionToSave) {
+                    queuedDescriptionRef.current = null
+                    descriptionToSave = queuedDescription
+                } else {
+                    queuedDescriptionRef.current = null
+                    descriptionToSave = null
+                }
+            }
+
+            isDescriptionSaveInFlightRef.current = false
+        },
+        [persistDescription]
+    )
+
     React.useEffect(() => {
         if (isInitialMount.current) {
             isInitialMount.current = false
             return
         }
 
+        if (description === lastSavedDescriptionRef.current) {
+            setNotesSaveState((current) => (current === "idle" ? current : "saved"))
+            return
+        }
+
+        setNotesSaveState("typing")
         const timer = setTimeout(() => {
-            if (description !== (project.description || "")) {
-                void handleUpdate({ description })
-            }
-        }, 400)
+            void triggerDescriptionSave(description)
+        }, 650)
 
         return () => clearTimeout(timer)
-    }, [description, project.description, handleUpdate])
+    }, [description, triggerDescriptionSave])
+
+    const appendRequirementsTemplate = React.useCallback(() => {
+        setDescription((current) => {
+            if (!current.trim()) return PROJECT_REQUIREMENTS_TEMPLATE
+            return `${current}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}`
+        })
+    }, [])
 
     const toggleService = (serviceId: string) => {
         const currentServices = project.services || []
@@ -292,10 +423,116 @@ export function ProjectSheetContent({
         setAmountInput(String(parsed))
     }
 
+    const handleCreatedAtSave = () => {
+        const parsed = createdAtInput ? new Date(createdAtInput) : null
+        if (!parsed || Number.isNaN(parsed.getTime())) {
+            toast.error("Please select a valid creation date")
+            return
+        }
+        setIsEditingCreatedAt(false)
+        void handleUpdate({ createdAt: parsed })
+    }
+
     const updateProjectStatus = (value: UpdateProjectPayload["status"]) => {
         if (!value || value === project.status) return
         void handleUpdate({ status: value })
     }
+
+    const exportNotesAsPdf = React.useCallback(async () => {
+        if (isExportingNotes) return
+        setIsExportingNotes(true)
+        try {
+            const title = project.name || formatProjectName(project)
+            const safeTitle = title.replace(/[/\\?%*:|"<>]/g, "-")
+            const createdLabel = formatBottomDate(toDate(project.createdAt) || null)
+            const updatedLabel = formatBottomDate(toDate(project.updatedAt) || null)
+            const html = description || ""
+
+            const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+                import("html2canvas"),
+                import("jspdf"),
+            ])
+
+            const container = document.createElement("div")
+            container.style.width = "800px"
+            container.style.padding = "32px"
+            container.style.background = "#ffffff"
+            container.style.color = "#0f172a"
+            container.style.fontFamily =
+                "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+            container.innerHTML = `
+                <h1 style="font-size:24px;margin:0 0 8px 0;">Project Notes - ${safeTitle}</h1>
+                <div style="font-size:12px;color:#64748b;margin-bottom:24px;">
+                    Created: ${createdLabel} • Last updated: ${updatedLabel}
+                </div>
+                <div class="content" style="font-size:13px;line-height:1.6;">
+                    ${html || "<p></p>"}
+                </div>
+            `
+            const images = Array.from(container.querySelectorAll("img"))
+            for (const img of images) {
+                img.style.maxWidth = "70%"
+                img.style.height = "auto"
+                img.style.border = "1px solid #e2e8f0"
+                img.style.borderRadius = "10px"
+                img.style.margin = "12px 0"
+            }
+
+            container.style.position = "fixed"
+            container.style.left = "-9999px"
+            container.style.top = "0"
+            document.body.appendChild(container)
+
+            await Promise.all(
+                images.map(
+                    (img) =>
+                        new Promise<void>((resolve) => {
+                            if (img.complete) {
+                                resolve()
+                            } else {
+                                img.onload = () => resolve()
+                                img.onerror = () => resolve()
+                            }
+                        })
+                )
+            )
+
+            const canvas = await html2canvas(container, {
+                backgroundColor: "#ffffff",
+                scale: window.devicePixelRatio || 2,
+                useCORS: true,
+            })
+
+            document.body.removeChild(container)
+
+            const pdf = new jsPDF("p", "pt", "a4")
+            const pageWidth = pdf.internal.pageSize.getWidth()
+            const pageHeight = pdf.internal.pageSize.getHeight()
+            const imgWidth = pageWidth
+            const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+            let position = 0
+            let remainingHeight = imgHeight
+            const imgData = canvas.toDataURL("image/png")
+
+            pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+            remainingHeight -= pageHeight
+
+            while (remainingHeight > 0) {
+                position -= pageHeight
+                pdf.addPage()
+                pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+                remainingHeight -= pageHeight
+            }
+
+            pdf.save(`Project Notes - ${safeTitle}.pdf`)
+        } catch (error) {
+            console.error("PDF export failed", error)
+            toast.error("Failed to export PDF")
+        } finally {
+            setIsExportingNotes(false)
+        }
+    }, [project, description, isExportingNotes])
 
     const updateProjectPaymentStatus = (value: UpdateProjectPayload["paymentStatus"]) => {
         if (!value || value === project.paymentStatus) return
@@ -408,10 +645,7 @@ export function ProjectSheetContent({
     const createdAt = toDate(project.createdAt)
     const updatedAt = toDate(project.updatedAt)
     const createdTimestamp = createdAt || updatedAt || new Date()
-    const lastUpdatedTimestamp =
-        createdAt && updatedAt && updatedAt.getTime() > createdAt.getTime()
-            ? updatedAt
-            : null
+    const lastUpdatedTimestamp = updatedAt || createdAt || null
     const timeLogProjects = React.useMemo(
         () => [{ id: project.id, displayName: localName || formatProjectName(project) }],
         [project.id, localName]
@@ -658,13 +892,94 @@ export function ProjectSheetContent({
                         </section>
 
                         <section className="space-y-4">
-                            <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Notes & Documentation</h2>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Project Notes</h2>
+                                <span
+                                    className={cn(
+                                        "inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
+                                        notesSaveState === "error" &&
+                                            "bg-rose-50 text-rose-600",
+                                        notesSaveState === "saving" &&
+                                            "bg-blue-50 text-blue-600",
+                                        notesSaveState === "typing" &&
+                                            "bg-slate-100 text-slate-500",
+                                        notesSaveState === "saved" &&
+                                            "bg-emerald-50 text-emerald-600",
+                                        notesSaveState === "idle" &&
+                                            "bg-slate-100 text-slate-500"
+                                    )}
+                                >
+                                    {notesSaveState === "saving" && (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    )}
+                                    {notesSaveState === "saved" && (
+                                        <CheckCircle className="h-3.5 w-3.5" />
+                                    )}
+                                    {notesSaveState === "error" && (
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                    )}
+                                    {notesSaveState === "idle" && "Ready"}
+                                    {notesSaveState === "typing" && "Typing"}
+                                    {notesSaveState === "saving" && "Saving"}
+                                    {notesSaveState === "saved" && "Saved"}
+                                    {notesSaveState === "error" && "Error"}
+                                </span>
+                            </div>
 
                             <RichTextEditor
                                 value={description}
                                 onChange={setDescription}
-                                placeholder="Add scope details, technical notes, or client requests..."
+                                placeholder=""
+                                variant="plain"
+                                minHeightClassName="h-[360px] px-4"
+                                uploadProjectId={project.id}
+                                toolbarVisibility="always"
+                                toolbarActions={
+                                    <>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={appendRequirementsTemplate}
+                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            aria-label="Add template"
+                                            title="Add template"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={exportNotesAsPdf}
+                                            disabled={isExportingNotes}
+                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            aria-label="Export notes as PDF"
+                                            title="Export notes as PDF"
+                                        >
+                                            {isExportingNotes ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <FileDown className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setIsNotesModalOpen(true)}
+                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            aria-label="Open in modal"
+                                            title="Open in modal"
+                                        >
+                                            <Expand className="h-4 w-4" />
+                                        </Button>
+                                    </>
+                                }
                             />
+                            <p className="text-[11px] font-medium text-slate-400">
+                                Paste screenshots with Cmd/Ctrl+V or drag and drop. Click any image to open it in full view.
+                            </p>
                         </section>
 
                         <section className="space-y-3">
@@ -903,7 +1218,49 @@ export function ProjectSheetContent({
                 <div className="sticky bottom-0 flex flex-col gap-1 border-t border-slate-200 bg-white/95 px-6 py-3 text-[11px] font-semibold text-slate-500 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
                     <span># Project ID: {project.id.split("-")[0]}</span>
                     <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                        <span>Created: {formatBottomDate(createdTimestamp)}</span>
+                        <span className="inline-flex items-center gap-1.5">
+                            Created:
+                            {isEditingCreatedAt ? (
+                                <>
+                                    <Input
+                                        type="datetime-local"
+                                        value={createdAtInput}
+                                        onChange={(event) => setCreatedAtInput(event.target.value)}
+                                        className="h-7 w-[210px] border-slate-200 bg-white px-2 py-1 text-[11px]"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleCreatedAtSave}
+                                        className="text-blue-600 hover:text-blue-500"
+                                    >
+                                        Save
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setCreatedAtInput(toDateTimeLocalValue(createdAt))
+                                            setIsEditingCreatedAt(false)
+                                        }}
+                                        className="text-slate-500 hover:text-slate-700"
+                                    >
+                                        Cancel
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <span>{formatBottomDate(createdTimestamp)}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditingCreatedAt(true)}
+                                        className="text-slate-400 transition hover:text-slate-700"
+                                        aria-label="Edit created date"
+                                        title="Edit created date"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                </>
+                            )}
+                        </span>
                         <span className="inline-flex items-center gap-1.5">
                             Last updated: {formatBottomDate(lastUpdatedTimestamp)}
                             <Cloud className="h-3.5 w-3.5" />
@@ -924,6 +1281,89 @@ export function ProjectSheetContent({
                     projects={timeLogProjects}
                     tasks={timeLogTasks}
                 />
+
+                <Dialog open={isNotesModalOpen} onOpenChange={setIsNotesModalOpen}>
+                    <DialogContent
+                        showCloseButton={false}
+                        overlayClassName="bg-slate-900/18 backdrop-blur-[6px]"
+                        className="h-[92vh] w-[94vw] max-w-[94vw] overflow-hidden rounded-2xl border border-slate-200/80 bg-[#FCFCFB] p-0 shadow-[0_40px_100px_-45px_rgba(15,23,42,0.7)] sm:w-[65vw] sm:min-w-[65vw] sm:max-w-[65vw]"
+                    >
+                        <DialogHeader className="border-b border-slate-200/70 px-8 py-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-slate-900">
+                                        Project Notes - {project.name || formatProjectName(project)}
+                                    </DialogTitle>
+                                    <span className="mt-2 inline-flex min-w-[140px] items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                                        {notesSaveState === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />}
+                                        {notesSaveState === "saved" && <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />}
+                                        {notesSaveState === "error" && <AlertCircle className="h-3.5 w-3.5 text-rose-500" />}
+                                        {notesSaveState === "saving"
+                                            ? "Saving..."
+                                            : notesSaveState === "saved"
+                                                ? "Saved"
+                                                : notesSaveState === "error"
+                                                    ? "Error"
+                                                    : "Auto-save enabled"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={exportNotesAsPdf}
+                                        disabled={isExportingNotes}
+                                        className="h-11 w-11 rounded-xl border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                                        aria-label="Export notes as PDF"
+                                        title="Export notes as PDF"
+                                    >
+                                        {isExportingNotes ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <FileDown className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                    <DialogClose asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-11 rounded-xl border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                                        >
+                                            <X className="mr-2 h-4 w-4" />
+                                            Close
+                                        </Button>
+                                    </DialogClose>
+                                </div>
+                            </div>
+                        </DialogHeader>
+                        <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-[#FCFCFB] px-8 pb-8 pt-6">
+                            <RichTextEditor
+                                value={description}
+                                onChange={setDescription}
+                                placeholder=""
+                                variant="plain"
+                                mode="document"
+                                className="h-full"
+                                minHeightClassName="min-h-0"
+                                uploadProjectId={project.id}
+                                toolbarVisibility="always"
+                                toolbarActions={
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={appendRequirementsTemplate}
+                                        className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                        aria-label="Add template"
+                                        title="Add template"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                }
+                            />
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </TaskSheetWrapper>
     )

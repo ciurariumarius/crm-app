@@ -79,7 +79,7 @@ export function TaskGridCard({
     return (
         <div
             className={cn(
-                "cockpit-task-card group relative flex min-h-[220px] cursor-pointer flex-col p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                "cockpit-task-card premium-card group relative flex min-h-[220px] cursor-pointer flex-col p-4",
                 isSelected ? "ring-2 ring-primary/20 border-primary bg-primary/5" : "",
                 className
             )}
@@ -109,7 +109,7 @@ export function TaskGridCard({
                             task.status === "Completed" ? "bg-emerald-500" : "bg-muted-foreground"
                 )} />
                 {task.urgency === "Urgent" && (
-                    <Badge variant="secondary" className="px-2 py-0.5 text-[10px] font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-lg border-none shadow-sm shadow-rose-500/10">
+                    <Badge variant="secondary" className="status-pill status-pill-debt border-none">
                         URGENT
                     </Badge>
                 )}

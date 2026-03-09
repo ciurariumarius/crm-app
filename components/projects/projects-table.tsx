@@ -137,7 +137,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
             <div
                 key={project.id}
                 className={cn(
-                    "group relative flex flex-col bg-white rounded-xl p-5 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 cursor-pointer overflow-hidden",
+                    "group premium-card relative flex flex-col bg-white rounded-xl p-5 border border-border/60 overflow-hidden",
                     project.paymentStatus === "Unpaid"
                         ? "cockpit-debt-row border-l-[4px] border-l-rose-600"
                         : isMonthly
@@ -242,7 +242,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
             <div
                 key={project.id}
                 className={cn(
-                    "group stagger-row-enter relative flex min-h-[52px] items-center bg-white rounded-xl p-4 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 w-full cursor-pointer overflow-x-auto min-w-[1280px] gap-5 px-6",
+                    "group stagger-row-enter premium-card relative flex min-h-[52px] items-center bg-white rounded-xl p-4 border border-border/60 w-full cursor-pointer overflow-x-auto min-w-[1280px] gap-5 px-6",
                     project.paymentStatus === "Unpaid" ? "cockpit-debt-row" : "hover:bg-[#F1F5F9]"
                 )}
                 style={{ animationDelay: `${rowIndex * 0.05}s` }}

@@ -149,7 +149,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
     return (
         <>
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetContent side="left" className="w-[290px] p-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg">
+                <SheetContent side="left" className="w-[290px] p-0 glass text-sidebar-foreground border-r border-sidebar-border shadow-lg">
                     <div className="flex h-full flex-col overflow-y-auto py-6">
                         <div className="px-6 pb-6 border-b border-sidebar-border">
                             <div className="flex items-center gap-3">
@@ -222,7 +222,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
 
             <aside
                 className={cn(
-                    "hidden md:flex fixed left-0 top-0 z-50 h-screen border-r border-sidebar-border bg-sidebar transition-[width] duration-300",
+                    "hidden md:flex fixed left-0 top-0 z-50 h-screen border-r border-sidebar-border glass transition-[width] duration-300",
                     isSidebarCollapsed ? "w-[88px]" : "w-[220px]"
                 )}
             >

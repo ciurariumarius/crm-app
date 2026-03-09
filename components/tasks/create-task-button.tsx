@@ -19,7 +19,7 @@ export function CreateTaskButton({ projects }: CreateTaskButtonProps) {
                 className="header-action-button shrink-0"
             >
                 <Plus className="h-4 w-4 md:mr-1.5" strokeWidth={2.5} />
-                <span className="header-action-label">NEW TASK</span>
+                <span className="header-action-label">Add Task</span>
             </Button>
             <GlobalCreateTaskDialog
                 open={open}

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format, isToday, isYesterday } from "date-fns"
-import { CalendarDays, Check, Circle, Pause, Play, Repeat2 } from "lucide-react"
+import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Repeat2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 
@@ -30,41 +30,41 @@ function formatRelativeDateTime(value: Date | string | null | undefined) {
     }
 
     if (isYesterday(date)) {
-        return `Yesterday, ${format(date, "HH:mm")}`
+        return `Yest, ${format(date, "HH:mm")}`
     }
 
-    return format(date, "dd MMM yyyy, HH:mm")
+    return format(date, "dd/MM/yy")
 }
 
 function getStatusBadge(status: string) {
     if (status === "Active") {
         return {
             label: "Active",
-            className: "border-blue-200 bg-blue-50 text-blue-700",
-            icon: <Play className="h-3.5 w-3.5 [stroke-width:1.5]" />,
+            className: "status-pill status-pill-action",
+            icon: <Play className="h-3 w-3 fill-current" />,
         }
     }
 
     if (status === "Paused") {
         return {
             label: "Paused",
-            className: "border-amber-200 bg-amber-50 text-amber-700",
-            icon: <Pause className="h-3.5 w-3.5 [stroke-width:1.5]" />,
+            className: "status-pill status-pill-warning",
+            icon: <Pause className="h-3 w-3 fill-current" />,
         }
     }
 
     if (status === "Completed") {
         return {
             label: "Completed",
-            className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-            icon: <Check className="h-3.5 w-3.5 [stroke-width:1.5]" />,
+            className: "status-pill status-pill-success",
+            icon: <Check className="h-3.5 w-3.5" />,
         }
     }
 
     return {
         label: status,
-        className: "border-slate-200 bg-slate-50 text-slate-700",
-        icon: <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />,
+        className: "status-pill",
+        icon: <Circle className="h-3 w-3" />,
     }
 }
 
@@ -76,9 +76,50 @@ export function ProjectsBoardRows({
     layout: "grid" | "list"
 }) {
     const { openProject } = React.useContext(ProjectSheetContext)
+    const [sortBy, setSortBy] = React.useState<"createdAt" | "amount" | "name" | "time">("createdAt")
+    const [sortDirection, setSortDirection] = React.useState<"desc" | "asc">("desc")
 
-    const monthlyProjects = projects.filter((project) => project.isRecurring)
-    const oneTimeProjects = projects.filter((project) => !project.isRecurring)
+    const setSort = (key: "createdAt" | "amount" | "name" | "time") => {
+        if (sortBy === key) {
+            setSortDirection((current) => (current === "desc" ? "asc" : "desc"))
+            return
+        }
+
+        setSortBy(key)
+        setSortDirection(key === "name" ? "asc" : "desc")
+    }
+
+    const sortProjects = React.useCallback(
+        (items: any[]) =>
+            [...items].sort((a, b) => {
+                let leftValue: number | string
+                let rightValue: number | string
+
+                if (sortBy === "name") {
+                    leftValue = (a.site?.domainName || a.name || "").toLowerCase()
+                    rightValue = (b.site?.domainName || b.name || "").toLowerCase()
+                } else if (sortBy === "amount") {
+                    leftValue = Number(a.amount || 0)
+                    rightValue = Number(b.amount || 0)
+                } else if (sortBy === "time") {
+                    leftValue = Number(a.secondsLogged || 0)
+                    rightValue = Number(b.secondsLogged || 0)
+                } else {
+                    const left = new Date(a.createdAt).getTime()
+                    const right = new Date(b.createdAt).getTime()
+                    leftValue = Number.isNaN(left) ? 0 : left
+                    rightValue = Number.isNaN(right) ? 0 : right
+                }
+
+                if (leftValue < rightValue) return sortDirection === "desc" ? 1 : -1
+                if (leftValue > rightValue) return sortDirection === "desc" ? -1 : 1
+                return 0
+            }),
+        [sortBy, sortDirection]
+    )
+
+    const monthlyProjects = sortProjects(projects.filter((project) => project.isRecurring))
+    const oneTimeProjects = sortProjects(projects.filter((project) => !project.isRecurring))
     const orderedProjects = [...oneTimeProjects, ...monthlyProjects]
 
     const openDetails = (projectId: string) => {
@@ -96,7 +137,7 @@ export function ProjectsBoardRows({
                             key={project.id}
                             type="button"
                             onClick={() => openDetails(project.id)}
-                            className="text-left rounded-xl border border-border/60 bg-card p-5 shadow-sm hover:shadow-md hover:border-border/80 transition duration-200 ease-in-out"
+                            className="text-left rounded-xl border border-border/60 bg-card p-5 premium-card"
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
@@ -104,10 +145,10 @@ export function ProjectsBoardRows({
                                     <p className="text-sm text-slate-500 truncate">{project.serviceLabel}</p>
                                 </div>
                                 <span className={cn(
-                                    "px-3 py-1.5 rounded-lg text-xs font-medium border",
-                                    project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                        project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                            "bg-slate-50 text-slate-700 border-slate-200"
+                                    "status-pill",
+                                    project.status === "Active" ? "status-pill-action" :
+                                        project.status === "Paused" ? "status-pill-warning" :
+                                            "status-pill-success"
                                 )}>
                                     {project.status}
                                 </span>
@@ -158,15 +199,59 @@ export function ProjectsBoardRows({
                     </div>
 
                     <div className={cn("hidden md:grid items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-5", LIST_GRID_COLUMNS)}>
-                        <span>Project name / service</span>
+                        <button
+                            type="button"
+                            onClick={() => setSort("name")}
+                            className={cn(
+                                "inline-flex items-center gap-1 text-left text-[11px] font-bold uppercase tracking-wider",
+                                sortBy === "name" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
+                            )}
+                            title={`Sort by name (${sortBy === "name" ? (sortDirection === "desc" ? "Z-A" : "A-Z") : "A-Z"})`}
+                        >
+                            Project name / service
+                            <ArrowDownUp className="h-3 w-3" />
+                        </button>
                         <span className="text-center">Status</span>
                         <span className="text-center">Type</span>
                         <span className="text-center">Payment</span>
-                        <span className="text-right">Amount</span>
+                        <button
+                            type="button"
+                            onClick={() => setSort("amount")}
+                            className={cn(
+                                "inline-flex items-center justify-end gap-1 text-right text-[11px] font-bold uppercase tracking-wider",
+                                sortBy === "amount" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
+                            )}
+                            title={`Sort by amount (${sortBy === "amount" && sortDirection === "desc" ? "high to low" : "low to high"})`}
+                        >
+                            Amount
+                            <ArrowDownUp className="h-3 w-3" />
+                        </button>
                         <span className="text-center">Tasks</span>
-                        <span className="text-center">Time</span>
+                        <button
+                            type="button"
+                            onClick={() => setSort("time")}
+                            className={cn(
+                                "inline-flex items-center justify-center gap-1 text-center text-[11px] font-bold uppercase tracking-wider",
+                                sortBy === "time" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
+                            )}
+                            title={`Sort by time (${sortBy === "time" && sortDirection === "desc" ? "most to least" : "least to most"})`}
+                        >
+                            Time
+                            <ArrowDownUp className="h-3 w-3" />
+                        </button>
                         <span>Partner</span>
-                        <span className="text-right">Created</span>
+                        <button
+                            type="button"
+                            onClick={() => setSort("createdAt")}
+                            className={cn(
+                                "inline-flex items-center justify-end gap-1 text-right text-[11px] font-bold uppercase tracking-wider",
+                                sortBy === "createdAt" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
+                            )}
+                            title={`Sort by created date (${sortBy === "createdAt" && sortDirection === "desc" ? "newest first" : "oldest first"})`}
+                        >
+                            Created
+                            <ArrowDownUp className="h-3 w-3" />
+                        </button>
                     </div>
 
                     <div className="space-y-2">

@@ -350,6 +350,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                             value={description}
                             onChange={setDescription}
                             placeholder="Add details, technical requirements, or SOP references..."
+                            uploadProjectId={task?.projectId || task?.id}
                         />
                     </div>
 

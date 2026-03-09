@@ -99,7 +99,7 @@ export function RecurringProjectsList({ projects, partners, services }: Recurrin
                             <div
                                 key={project.id}
                                 onClick={() => openProject(project.id)}
-                                className="group flex items-center justify-between px-6 py-3 min-h-[60px] rounded-2xl border border-transparent hover:border-primary/30 hover:bg-muted/50 hover:scale-[1.01] transition-all duration-300 cursor-pointer"
+                                className="premium-card group flex items-center justify-between px-6 py-3 min-h-[60px] rounded-2xl border border-transparent cursor-pointer"
                             >
                                 <div className="flex flex-col justify-center gap-1.5 min-w-0 flex-1 pr-4">
                                     <div className="text-sm font-bold text-foreground/80 group-hover:text-foreground transition-colors break-words leading-tight">{project.siteName}</div>
@@ -118,10 +118,10 @@ export function RecurringProjectsList({ projects, partners, services }: Recurrin
                                 </div>
                                 <div className="flex items-center gap-4 shrink-0">
                                     <Badge className={cn(
-                                        "text-xs font-medium px-3 py-1.5 rounded-xl border shrink-0",
+                                        "status-pill shrink-0",
                                         project.paymentStatus === "Paid"
-                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                            : "bg-rose-50 text-rose-700 border-rose-200"
+                                            ? "status-pill-success"
+                                            : "status-pill-debt"
                                     )}>
                                         {project.paymentStatus === "Paid" ? "Paid" : "Unpaid"}
                                     </Badge>

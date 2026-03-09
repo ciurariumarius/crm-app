@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 
 interface ProjectSheetWrapperProps {
@@ -70,6 +70,7 @@ export function ProjectSheetWrapper({ projects, allServices, children }: Project
                     showCloseButton={false}
                     className="w-full max-w-[900px] p-0 border-l border-border bg-white/90 backdrop-blur-[12px] shadow-[var(--shadow-drawer)] flex flex-col overflow-hidden rounded-l-[12px]"
                 >
+                    <SheetTitle className="sr-only">Project details</SheetTitle>
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}

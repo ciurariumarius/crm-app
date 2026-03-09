@@ -30,6 +30,7 @@ const UpdateProjectSchema = z.object({
     status: z.enum(["Active", "Paused", "Completed"]).optional(),
     paymentStatus: z.enum(["Paid", "Unpaid"]).optional(),
     paidAt: z.union([z.date(), z.string(), z.null()]).optional(),
+    createdAt: z.union([z.date(), z.string()]).optional(),
     currentFee: z.number().nullable().optional(),
     serviceIds: z.array(z.string().uuid()).optional(),
 })
@@ -190,6 +191,7 @@ export async function updateProject(projectId: string, data: {
     status?: string
     paymentStatus?: string
     paidAt?: Date | string | null
+    createdAt?: Date | string
     currentFee?: number
     serviceIds?: string[]
 }) {
@@ -202,6 +204,7 @@ export async function updateProject(projectId: string, data: {
         if (data.status !== undefined) updateData.status = data.status
         if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus
         if (data.paidAt !== undefined) updateData.paidAt = data.paidAt
+        if (data.createdAt !== undefined) updateData.createdAt = data.createdAt
         if (data.currentFee !== undefined) updateData.currentFee = data.currentFee
         if (data.serviceIds !== undefined) updateData.serviceIds = data.serviceIds
 

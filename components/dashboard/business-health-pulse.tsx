@@ -43,7 +43,7 @@ export function BusinessHealthPulse({
     return (
         <div id={id} className={cn("grid grid-cols-1 md:grid-cols-2 gap-6", className)}>
             {/* Combined Card: Financial Health (Revenue + Debt) */}
-            <Card className="p-6 flex flex-col gap-1 relative overflow-hidden group hover:shadow-md transition-all border-l-4 border-l-primary/10">
+            <Card className="premium-card p-6 flex flex-col gap-1 relative overflow-hidden group border-l-4 border-l-primary/20">
                 <div className="flex items-center justify-between z-10">
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Financial Overview</span>
                     <div className="flex gap-2">
@@ -84,7 +84,7 @@ export function BusinessHealthPulse({
             </Card>
 
             {/* Card B: Capacity & Workload (Original Card C) */}
-            <Card className="p-6 flex flex-col gap-1 relative overflow-hidden group hover:shadow-md transition-all">
+            <Card className="premium-card p-6 flex flex-col gap-1 relative overflow-hidden group">
                 <div className="flex items-center justify-between z-10">
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Projects Overview</span>
                     <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">

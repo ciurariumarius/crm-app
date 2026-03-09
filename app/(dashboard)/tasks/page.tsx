@@ -168,19 +168,19 @@ export default async function TasksPage({
     return (
         <div className="flex flex-col gap-6">
             {/* Header Row */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3 w-full md:w-auto md:min-w-[180px] shrink-0">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                <div className="flex items-center gap-3 min-w-[180px]">
                     <MobileMenuTrigger />
                     <h1 className="page-title">
                         Tasks
                     </h1>
                 </div>
 
-                <div className="w-full md:flex-1 md:max-w-2xl px-0 md:px-4 shrink-0 transition-all">
+                <div className="flex-1 min-w-0">
                     <TasksSearchInput />
                 </div>
 
-                <div className="flex items-center justify-end gap-3 w-full md:w-auto md:min-w-[180px] shrink-0">
+                <div className="flex items-center gap-3">
                     <TasksViewToggle currentView={view} />
                     <CreateTaskButton projects={activeProjects} />
                 </div>

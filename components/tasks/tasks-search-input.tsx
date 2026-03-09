@@ -35,21 +35,21 @@ export function TasksSearchInput() {
     }, [debouncedSearch, router, searchParams])
 
     return (
-        <div className="flex items-center relative transition-all duration-300 ease-in-out bg-card rounded-xl border border-border/60 shadow-sm h-11 w-full focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50">
-            <div className="pl-4 pr-3 text-muted-foreground/50 shrink-0">
-                <Search className="h-4 w-4" strokeWidth={2.5} />
+        <div className="relative h-11 w-full">
+            <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <Search className="h-4 w-4" />
             </div>
             <Input
                 placeholder="Search tasks, priorities or projects..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-11 bg-transparent border-none focus-visible:ring-0 placeholder:text-muted-foreground/40 text-sm font-medium transition-all duration-300 w-full px-0 shadow-none text-foreground"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 text-sm shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-blue-100 focus-visible:ring-offset-0 focus-visible:border-blue-300 placeholder:text-slate-400 text-slate-900"
             />
             {searchTerm && (
                 <button
                     type="button"
                     onClick={() => setSearchTerm("")}
-                    className="pr-4 pl-2 h-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                 >
                     <X className="h-4 w-4" />
                 </button>

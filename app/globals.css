@@ -136,9 +136,27 @@
 
 @layer components {
   .glass {
-    border: 1px solid var(--border);
-    background: var(--glass-white);
-    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.64);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+
+  .glass-dark {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.64);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+
+  .premium-card {
+    @apply relative overflow-hidden transition-all duration-300;
+    transition-timing-function: var(--ease-spring);
+  }
+
+  .premium-card:hover {
+    @apply -translate-y-1 shadow-xl border-primary/20 bg-white/50 dark:bg-zinc-900/50;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   }
 
   .apple-shadow {
@@ -175,7 +193,7 @@
   }
 
   .header-action-button {
-    @apply h-10 w-10 md:w-auto md:px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 active:scale-[0.98] font-semibold text-sm inline-flex items-center justify-center gap-2 shrink-0;
+    @apply h-11 w-11 md:min-w-[156px] md:px-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 active:scale-[0.98] font-semibold text-sm inline-flex items-center justify-center gap-2 shrink-0;
     box-shadow: var(--shadow-apple);
   }
 
@@ -275,32 +293,28 @@
   }
 
   .status-pill {
-    @apply inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase;
-    letter-spacing: 0.05em;
+    @apply inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase shadow-sm transition-all;
+    letter-spacing: 0.08em;
   }
 
   .status-pill-action {
-    color: #2563EB;
-    background: #EFF6FF;
-    border-color: #BFDBFE;
+    @apply text-blue-700 border-blue-200/50;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   }
 
   .status-pill-success {
-    color: #10B981;
-    background: #ECFDF5;
-    border-color: #A7F3D0;
+    @apply text-emerald-700 border-emerald-200/50;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
   }
 
   .status-pill-debt {
-    color: #E11D48;
-    background: #FFF1F2;
-    border-color: #FECDD3;
+    @apply text-rose-700 border-rose-200/50;
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
   }
 
   .status-pill-warning {
-    color: #D97706;
-    background: #FFFBEB;
-    border-color: #FDE68A;
+    @apply text-amber-700 border-amber-200/50;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
   }
 
   .segmented-track {
