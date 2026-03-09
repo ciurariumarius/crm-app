@@ -7,7 +7,6 @@ import {
     List,
     Search,
     SlidersHorizontal,
-    Users,
     X,
 } from "lucide-react"
 import {
@@ -25,6 +24,13 @@ import { requireTenantContext } from "@/lib/tenant"
 import { Prisma } from "@prisma/client"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
+import { PartnerFilterCombobox } from "@/components/projects/partner-filter-combobox"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export const dynamic = "force-dynamic"
 
@@ -252,6 +258,12 @@ export default async function ProjectsPage({
         period: "all_time",
         page: "1",
     })
+    const resultsSummaryParts = [`${totalProjects} results`, `Status: ${queryStatus}`]
+    if (payment !== "All") resultsSummaryParts.push(`Payment: ${selectedPaymentLabel}`)
+    if (recurring !== "All") resultsSummaryParts.push(`Type: ${selectedRecurringLabel}`)
+    if (filteredPartner) resultsSummaryParts.push(`Partner: ${filteredPartner.name}`)
+    if (period !== "all_time") resultsSummaryParts.push(`Period: ${selectedPeriodLabel}`)
+    const resultsSummary = resultsSummaryParts.join(" · ")
 
     return (
         <ProjectSheetWrapper projects={projectsForClient} allServices={servicesForClient}>
@@ -310,134 +322,107 @@ export default async function ProjectsPage({
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 md:px-4 md:py-4 shadow-sm">
+                <div className="md:sticky md:top-3 z-20 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 md:px-4 md:py-4 shadow-sm backdrop-blur-[6px]">
                     <div className="flex flex-col gap-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
-                                {statusOptions.map((option) => (
-                                    <Link
-                                        key={option.value}
-                                        href={buildHref({ status: option.value, page: "1" })}
-                                        className={cn(
-                                            "inline-flex h-7 items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.1em] transition-all",
-                                            queryStatus === option.value && option.value === "Active" && "bg-[#DBEAFE] text-[#1D4ED8] ring-1 ring-[#93C5FD]",
-                                            queryStatus === option.value && option.value === "Paused" && "bg-[#FEF3C7] text-[#B45309] ring-1 ring-[#FCD34D]",
-                                            queryStatus === option.value && option.value === "Completed" && "bg-[#D1FAE5] text-[#047857] ring-1 ring-[#6EE7B7]",
-                                            queryStatus === option.value && option.value === "All" && "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200",
-                                            queryStatus !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
-                                        )}
-                                    >
-                                        {option.label}
-                                    </Link>
-                                ))}
+                        <div className="flex flex-wrap items-end gap-4">
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Status</p>
+                                <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
+                                    {statusOptions.map((option) => (
+                                        <Link
+                                            key={option.value}
+                                            href={buildHref({ status: option.value, page: "1" })}
+                                            className={cn(
+                                                "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
+                                                queryStatus === option.value && option.value === "Active" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
+                                                queryStatus === option.value && option.value === "Paused" && "bg-[#F59E0B] text-white shadow-sm ring-1 ring-[#D97706]",
+                                                queryStatus === option.value && option.value === "Completed" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
+                                                queryStatus === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
+                                                queryStatus !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                            )}
+                                        >
+                                            {option.label}
+                                        </Link>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div className="ml-auto flex flex-wrap items-center gap-2">
-                                <details className="group relative">
-                                    <summary className={cn(
-                                        "list-none inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] cursor-pointer transition-colors",
-                                        recurring !== "All"
-                                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
-                                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
-                                    )}>
-                                        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Type</span>
-                                        <span className="font-medium">{selectedRecurringLabel}</span>
-                                        <ChevronDown className="h-4 w-4 opacity-70 transition group-open:rotate-180" />
-                                    </summary>
-                                    <div className="absolute left-0 top-11 z-20 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                                        {recurringOptions.map((option) => (
-                                            <Link
-                                                key={option.value}
-                                                href={buildHref({ recurring: option.value, page: "1" })}
-                                                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                                            >
-                                                {option.label}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </details>
-
-                                <details className="group relative">
-                                    <summary className={cn(
-                                        "list-none inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] cursor-pointer transition-colors",
-                                        payment !== "All"
-                                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
-                                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
-                                    )}>
-                                        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Payment</span>
-                                        <span className="font-medium">{selectedPaymentLabel}</span>
-                                        <ChevronDown className="h-4 w-4 opacity-70 transition group-open:rotate-180" />
-                                    </summary>
-                                    <div className="absolute left-0 top-11 z-20 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                                        {paymentOptions.map((option) => (
-                                            <Link
-                                                key={option.value}
-                                                href={buildHref({ payment: option.value, page: "1" })}
-                                                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                                            >
-                                                {option.label}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </details>
-
-                                <details className="group relative">
-                                <summary className={cn(
-                                    "list-none inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] cursor-pointer transition-colors",
-                                    partnerId
-                                        ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
-                                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
-                                )}>
-                                    <Users className={cn("h-4 w-4", partnerId ? "text-[#3B82F6]" : "text-slate-400")} />
-                                    <span className="max-w-[180px] truncate">{filteredPartner?.name || "Partner"}</span>
-                                    <ChevronDown className="h-4 w-4 opacity-70 transition group-open:rotate-180" />
-                                </summary>
-                                <div className="absolute left-0 top-11 z-20 w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                                    <Link href={buildHref({ partnerId: null, page: "1" })} className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
-                                        All partners
-                                    </Link>
-                                    <div className="my-1 h-px bg-slate-100" />
-                                    <div className="max-h-72 overflow-y-auto pr-1">
-                                        {partnersList.map((partner) => (
-                                            <Link
-                                                key={partner.id}
-                                                href={buildHref({ partnerId: partner.id, page: "1" })}
-                                                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                                            >
-                                                {partner.name}
-                                            </Link>
-                                        ))}
-                                    </div>
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Payment</p>
+                                <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
+                                    {paymentOptions.map((option) => (
+                                        <Link
+                                            key={option.value}
+                                            href={buildHref({ payment: option.value, page: "1" })}
+                                            className={cn(
+                                                "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
+                                                payment === option.value && option.value === "Paid" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
+                                                payment === option.value && option.value === "Unpaid" && "bg-[#E11D48] text-white shadow-sm ring-1 ring-[#BE123C]",
+                                                payment === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
+                                                payment !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                            )}
+                                        >
+                                            {option.label}
+                                        </Link>
+                                    ))}
                                 </div>
-                                </details>
+                            </div>
 
-                                <details className="group relative">
-                                    <summary className={cn(
-                                        "list-none inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] cursor-pointer transition-colors",
-                                        period !== "all_time"
-                                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
-                                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
-                                    )}>
-                                        <CalendarDays className={cn("h-4 w-4", period !== "all_time" ? "text-[#3B82F6]" : "text-slate-400")} />
-                                        <span>{selectedPeriodLabel}</span>
-                                        <ChevronDown className="h-4 w-4 opacity-70 transition group-open:rotate-180" />
-                                    </summary>
-                                    <div className="absolute left-0 top-11 z-20 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Type</p>
+                                <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
+                                    {recurringOptions.map((option) => (
+                                        <Link
+                                            key={option.value}
+                                            href={buildHref({ recurring: option.value, page: "1" })}
+                                            className={cn(
+                                                "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
+                                                recurring === option.value && option.value === "Recurring" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
+                                                recurring === option.value && option.value === "OneTime" && "bg-[#F59E0B] text-white shadow-sm ring-1 ring-[#D97706]",
+                                                recurring === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
+                                                recurring !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                            )}
+                                        >
+                                            {option.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="ml-auto flex flex-wrap items-end gap-2">
+                                <PartnerFilterCombobox partners={partnersList} currentPartnerId={partnerId} />
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className={cn(
+                                                "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] transition-colors",
+                                                period !== "all_time"
+                                                    ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
+                                                    : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                                            )}
+                                        >
+                                            <CalendarDays className={cn("h-4 w-4", period !== "all_time" ? "text-[#3B82F6]" : "text-slate-400")} />
+                                            <span>{selectedPeriodLabel}</span>
+                                            <ChevronDown className="h-4 w-4 opacity-70" />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
                                         {periodOptions.map((option) => (
-                                            <Link
-                                                key={option.value}
-                                                href={buildHref({ period: option.value, page: "1" })}
-                                                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                                            >
-                                                {option.label}
-                                            </Link>
+                                            <DropdownMenuItem key={option.value} asChild className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-700">
+                                                <Link href={buildHref({ period: option.value, page: "1" })}>
+                                                    {option.label}
+                                                </Link>
+                                            </DropdownMenuItem>
                                         ))}
-                                    </div>
-                                </details>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
 
-                                <div className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-50 px-3 text-[11px] uppercase tracking-[0.1em] text-slate-500 font-semibold">
+                                <div className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-50 px-3 text-[11px] text-slate-500 font-semibold" title={resultsSummary}>
                                     <SlidersHorizontal className="h-3.5 w-3.5" />
-                                    {totalProjects} results
+                                    <span className="hidden xl:inline max-w-[420px] truncate">{resultsSummary}</span>
+                                    <span className="xl:hidden">{totalProjects} results</span>
                                 </div>
                             </div>
                         </div>

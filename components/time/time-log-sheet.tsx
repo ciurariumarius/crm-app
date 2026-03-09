@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
+import { formatRelativeDate } from "@/lib/utils"
 import { Calendar as CalendarIcon, Clock, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
@@ -128,7 +129,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                     <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 p-3 rounded-xl border border-border">
                         <div className="flex flex-col">
                             <span className="text-xs font-semibold text-muted-foreground/80">Created</span>
-                            <span>{format(new Date(log.createdAt), "PP pp")}</span>
+                            <span>{formatRelativeDate(log.createdAt)}</span>
                         </div>
                         <div className="h-8 w-[1px] bg-border mx-2" />
                         <div className="flex flex-col items-end">
