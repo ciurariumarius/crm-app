@@ -110,9 +110,11 @@ export function calculateDashboardMetrics(
     const settlementHistory = settlementAuditLogs.map(log => {
         const details = JSON.parse(log.details || "{}")
         return {
+            id: log.id,
             partnerName: details.partnerName || "Unknown Partner",
             amount: details.totalAmount || 0,
-            date: log.createdAt
+            date: log.createdAt,
+            projects: details.projects || []
         }
     })
 

@@ -77,7 +77,7 @@ export function BusinessHealthPulse({
                                 <>
                                     <AlertCircle className={cn("h-3 w-3", debtAlert ? "text-red-500" : "text-amber-500")} />
                                     <p className={cn("text-xs font-medium tracking-tight", debtAlert ? "text-red-500" : "text-amber-500")}>
-                                        {debtAlert ? "Urgent Action Required" : "Unpaid Projects"}
+                                        Unpaid Projects
                                     </p>
                                 </>
                             ) : (

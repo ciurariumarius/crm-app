@@ -51,25 +51,21 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-2">
                 {partners.map(partner => (
-                    <div key={partner.id} className="group p-4 rounded-xl border border-border bg-background hover:border-red-500/30 transition-all flex flex-col justify-between">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h4 className="font-bold text-sm group-hover:text-red-600 transition-colors uppercase tracking-tight truncate max-w-[140px]">{partner.name}</h4>
-                                <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground">
-                                    <span className="text-[10px] uppercase font-medium">Owed</span>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-sm font-bold text-red-600">{partner.totalUnpaid} RON</span>
+                    <div key={partner.id} className="group flex items-center justify-between p-3 rounded-lg border border-border bg-background/30 hover:bg-background hover:border-red-500/20 transition-all gap-4">
+                        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                            <span className="font-bold text-xs uppercase tracking-tight truncate sm:w-48">{partner.name}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] uppercase font-medium text-muted-foreground">Owed Sum:</span>
+                                <span className="text-sm font-black text-red-600 tabular-nums">{partner.totalUnpaid} RON</span>
                             </div>
                         </div>
 
                         <Button
                             variant="outline"
                             size="sm"
-                            className="w-full text-[11px] font-bold h-8 border-red-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-none uppercase"
+                            className="text-[10px] font-bold h-8 border-red-50/50 hover:bg-emerald-50/50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-none uppercase px-4"
                             onClick={() => handleSettle(partner.id)}
                             disabled={settlingId === partner.id}
                         >

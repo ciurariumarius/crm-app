@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
-import { getSession } from "@/lib/auth"
 import { logAuditEvent } from "@/lib/audit"
 import { requireTenantContext } from "@/lib/tenant"
+import { formatProjectName } from "@/lib/utils"
 
 export async function settlePartnerDebt(partnerId: string) {
     try {
@@ -19,7 +19,11 @@ export async function settlePartnerDebt(partnerId: string) {
                 site: { partnerId: partnerId }
             },
             include: {
-                site: { include: { partner: true } }
+                site: { include: { partner: true } },
+                services: true,
+                timeLogs: true,
+                _count: { select: { tasks: true } },
+                tasks: true
             }
         })
 
@@ -52,7 +56,12 @@ export async function settlePartnerDebt(partnerId: string) {
                 partnerId,
                 partnerName,
                 totalAmount,
-                projectCount: unpaidProjects.length
+                projectCount: unpaidProjects.length,
+                projects: unpaidProjects.map(p => ({
+                    id: p.id,
+                    name: formatProjectName(p),
+                    fee: p.currentFee
+                }))
             })
         })
 
@@ -62,5 +71,49 @@ export async function settlePartnerDebt(partnerId: string) {
     } catch (error) {
         console.error("[settlePartnerDebt] failed", error)
         return { success: false, error: "Failed to settle partner debt" }
+    }
+}
+
+export async function voidSettlement(auditLogId: string) {
+    try {
+        const session = await requireTenantContext()
+        if (!session) return { success: false, error: "Unauthorized" }
+
+        const log = await prisma.auditLog.findUnique({
+            where: { id: auditLogId, tenantId: session.tenantId }
+        })
+
+        if (!log || log.action !== "SETTLE_PARTNER") {
+            return { success: false, error: "Settlement log not found" }
+        }
+
+        const details = JSON.parse(log.details || "{}")
+        const projectIds = (details.projects || []).map((p: any) => p.id)
+
+        if (projectIds.length > 0) {
+            await prisma.project.updateMany({
+                where: {
+                    id: { in: projectIds },
+                    tenantId: session.tenantId
+                },
+                data: {
+                    paymentStatus: "Unpaid",
+                    paidAt: null
+                }
+            })
+        }
+
+        // Mark log as voided
+        await prisma.auditLog.update({
+            where: { id: auditLogId },
+            data: { action: "SETTLE_PARTNER_VOIDED" }
+        })
+
+        revalidatePath("/")
+        revalidatePath("/projects")
+        return { success: true }
+    } catch (error) {
+        console.error("[voidSettlement] failed", error)
+        return { success: false, error: "Failed to void settlement" }
     }
 }
