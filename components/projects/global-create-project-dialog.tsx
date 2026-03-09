@@ -316,7 +316,7 @@ export function GlobalCreateProjectDialog({
                                                     type="button"
                                                     onClick={() => toggleService(s.id)}
                                                     className={cn(
-                                                        "flex flex-col items-start p-3 text-left rounded-xl border transition-all group relative overflow-hidden",
+                                                        "flex flex-col items-start p-3 text-left rounded-xl border transition-all group relative overflow-hidden premium-card",
                                                         isSelected
                                                             ? "bg-primary/5 border-primary ring-1 ring-primary/20"
                                                             : "bg-background hover:bg-muted/50 border-muted hover:border-primary/20"
@@ -371,9 +371,9 @@ export function GlobalCreateProjectDialog({
                                                 type="button"
                                                 onClick={() => setIsCompleted(!isCompleted)}
                                                 className={cn(
-                                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all",
+                                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all premium-card",
                                                     isCompleted
-                                                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                                                        ? "status-pill-success/10 border-emerald-500/30 text-emerald-600"
                                                         : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
                                                 )}
                                             >
@@ -392,9 +392,9 @@ export function GlobalCreateProjectDialog({
                                                 type="button"
                                                 onClick={() => setIsPaid(!isPaid)}
                                                 className={cn(
-                                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all",
+                                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all premium-card",
                                                     isPaid
-                                                        ? "bg-blue-500/10 border-blue-500/30 text-blue-600"
+                                                        ? "status-pill-action/10 border-blue-500/30 text-blue-600"
                                                         : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
                                                 )}
                                             >

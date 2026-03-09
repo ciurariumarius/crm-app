@@ -269,7 +269,7 @@ export function ProjectsBoardRows({
                                     key={project.id}
                                     type="button"
                                     onClick={() => openDetails(project.id)}
-                                    className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/5 transition-all duration-200 ease-in-out", LIST_GRID_COLUMNS)}
+                                    className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS)}
                                 >
                                     <div className="min-w-0">
                                         <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
@@ -303,8 +303,8 @@ export function ProjectsBoardRows({
                                     </div>
                                     <div className="flex justify-center">
                                         <span className={cn(
-                                            "px-1.5 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[75px]",
-                                            project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
+                                            "status-pill min-w-[75px] justify-center",
+                                            project.paymentStatus === "Paid" ? "status-pill-success" : "status-pill-debt"
                                         )}>
                                             {project.paymentStatus}
                                         </span>
@@ -366,7 +366,7 @@ export function ProjectsBoardRows({
                                     key={project.id}
                                     type="button"
                                     onClick={() => openDetails(project.id)}
-                                    className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/5 transition-all duration-200 ease-in-out", LIST_GRID_COLUMNS)}
+                                    className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS)}
                                 >
                                     <div className="min-w-0">
                                         <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
@@ -400,8 +400,8 @@ export function ProjectsBoardRows({
                                     </div>
                                     <div className="flex justify-center">
                                         <span className={cn(
-                                            "px-1.5 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[75px]",
-                                            project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
+                                            "status-pill min-w-[75px] justify-center",
+                                            project.paymentStatus === "Paid" ? "status-pill-success" : "status-pill-debt"
                                         )}>
                                             {project.paymentStatus}
                                         </span>

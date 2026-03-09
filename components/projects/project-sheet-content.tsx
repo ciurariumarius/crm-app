@@ -726,16 +726,16 @@ export function ProjectSheetContent({
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div className={cn(
-                                "rounded-2xl border p-3",
+                                "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
                                 project.status === "Active"
-                                    ? "border-[#BFDBFE] bg-[#EFF6FF]"
+                                    ? "border-blue-200/60 bg-blue-50/40"
                                     : project.status === "Paused"
-                                        ? "border-[#FDE68A] bg-[#FFFBEB]"
-                                        : "border-[#A7F3D0] bg-[#ECFDF5]"
+                                        ? "border-amber-200/60 bg-amber-50/40"
+                                        : "border-emerald-200/60 bg-emerald-50/40"
                             )}>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-500">Project Status</p>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Project Status</p>
 
-                                <div className="mt-2 grid grid-cols-3 gap-1 rounded-full border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.05)]">
+                                <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
                                     {(["Active", "Paused", "Completed"] as const).map((statusOption) => (
                                         <Button
                                             key={statusOption}
@@ -744,10 +744,10 @@ export function ProjectSheetContent({
                                             variant="ghost"
                                             onClick={() => updateProjectStatus(statusOption)}
                                             className={cn(
-                                                "h-7 rounded-full px-2 text-[11px] font-semibold transition-all border border-transparent",
-                                                project.status === statusOption && statusOption === "Active" && "bg-gradient-to-b from-[#EFF6FF] to-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE] shadow-[0_1px_2px_rgba(37,99,235,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]",
-                                                project.status === statusOption && statusOption === "Paused" && "bg-gradient-to-b from-[#FFFBEB] to-[#FEF3C7] text-[#B45309] border-[#FDE68A] shadow-[0_1px_2px_rgba(217,119,6,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]",
-                                                project.status === statusOption && statusOption === "Completed" && "bg-gradient-to-b from-[#ECFDF5] to-[#D1FAE5] text-[#047857] border-[#A7F3D0] shadow-[0_1px_2px_rgba(16,185,129,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]",
+                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
+                                                project.status === statusOption && statusOption === "Active" && "status-pill-action shadow-md",
+                                                project.status === statusOption && statusOption === "Paused" && "status-pill-warning shadow-md",
+                                                project.status === statusOption && statusOption === "Completed" && "status-pill-success shadow-md",
                                                 project.status !== statusOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
                                             )}
                                         >
@@ -758,12 +758,12 @@ export function ProjectSheetContent({
                             </div>
 
                             <div className={cn(
-                                "rounded-2xl border p-3",
-                                project.paymentStatus === "Paid" ? "border-[#A7F3D0] bg-[#ECFDF5]" : "border-[#FECDD3] bg-[#FFF1F2]"
+                                "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
+                                project.paymentStatus === "Paid" ? "border-emerald-200/60 bg-emerald-50/40" : "border-rose-200/60 bg-rose-50/40"
                             )}>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-500">Payment Status</p>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Payment Status</p>
 
-                                <div className="mt-2 grid grid-cols-2 gap-1 rounded-full border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.05)]">
+                                <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
                                     {(["Paid", "Unpaid"] as const).map((paymentOption) => (
                                         <Button
                                             key={paymentOption}
@@ -772,9 +772,9 @@ export function ProjectSheetContent({
                                             variant="ghost"
                                             onClick={() => updateProjectPaymentStatus(paymentOption)}
                                             className={cn(
-                                                "h-7 rounded-full px-2 text-[11px] font-semibold transition-all border border-transparent",
-                                                project.paymentStatus === paymentOption && paymentOption === "Paid" && "bg-gradient-to-b from-[#ECFDF5] to-[#D1FAE5] text-[#047857] border-[#A7F3D0] shadow-[0_1px_2px_rgba(16,185,129,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]",
-                                                project.paymentStatus === paymentOption && paymentOption === "Unpaid" && "bg-gradient-to-b from-[#FFF1F2] to-[#FFE4E8] text-[#BE123C] border-[#FECDD3] shadow-[0_1px_2px_rgba(225,29,72,0.16),inset_0_1px_0_rgba(255,255,255,0.9)]",
+                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
+                                                project.paymentStatus === paymentOption && paymentOption === "Paid" && "status-pill-success shadow-md",
+                                                project.paymentStatus === paymentOption && paymentOption === "Unpaid" && "status-pill-debt shadow-md",
                                                 project.paymentStatus !== paymentOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
                                             )}
                                         >
@@ -786,7 +786,7 @@ export function ProjectSheetContent({
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_2fr]">
-                            <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                            <div className="rounded-3xl border border-slate-200 bg-white p-6 premium-card shadow-sm">
                                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Amount</p>
                                 <div className="mt-2 flex items-end gap-2">
                                     <Input
@@ -802,7 +802,7 @@ export function ProjectSheetContent({
                                 </div>
                             </div>
 
-                            <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                            <div className="rounded-3xl border border-slate-200 bg-white p-6 premium-card shadow-sm">
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Active Services</p>
                                     <button
@@ -820,7 +820,7 @@ export function ProjectSheetContent({
                                             key={service.id}
                                             type="button"
                                             onClick={() => toggleService(service.id)}
-                                            className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.08em] text-blue-600"
+                                            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200/60 bg-blue-50/50 px-3.5 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-blue-600 premium-card hover:bg-blue-100/50"
                                         >
                                             {service.serviceName}
                                             <X className="h-3.5 w-3.5" />
@@ -898,15 +898,15 @@ export function ProjectSheetContent({
                                     className={cn(
                                         "inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
                                         notesSaveState === "error" &&
-                                            "bg-rose-50 text-rose-600",
+                                        "bg-rose-50 text-rose-600",
                                         notesSaveState === "saving" &&
-                                            "bg-blue-50 text-blue-600",
+                                        "bg-blue-50 text-blue-600",
                                         notesSaveState === "typing" &&
-                                            "bg-slate-100 text-slate-500",
+                                        "bg-slate-100 text-slate-500",
                                         notesSaveState === "saved" &&
-                                            "bg-emerald-50 text-emerald-600",
+                                        "bg-emerald-50 text-emerald-600",
                                         notesSaveState === "idle" &&
-                                            "bg-slate-100 text-slate-500"
+                                        "bg-slate-100 text-slate-500"
                                     )}
                                 >
                                     {notesSaveState === "saving" && (

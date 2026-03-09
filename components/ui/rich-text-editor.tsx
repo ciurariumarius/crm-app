@@ -26,7 +26,7 @@ import {
     X,
 } from "lucide-react"
 import { Toggle } from "@/components/ui/toggle"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
 const MAX_UPLOAD_FILE_BYTES = 12 * 1024 * 1024
@@ -515,7 +515,6 @@ export function RichTextEditor({
                         shouldShow={({ editor: currentEditor }: { editor: TiptapEditor }) =>
                             currentEditor.isActive("table")
                         }
-                        tippyOptions={{ duration: 150, placement: "top" }}
                     >
                         <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 p-1 shadow-md">
                             <button
@@ -644,6 +643,7 @@ export function RichTextEditor({
                 }
             >
                 <DialogContent className="h-[94vh] w-[96vw] min-w-[80vw] max-w-[96vw] overflow-hidden border-slate-700 bg-black/95 p-0 sm:w-[90vw] sm:min-w-[80vw] sm:max-w-[90vw]">
+                    <DialogTitle className="sr-only">Screenshot preview</DialogTitle>
                     <div className="flex h-full flex-col">
                         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-white">
                             <div className="flex items-center gap-2">
