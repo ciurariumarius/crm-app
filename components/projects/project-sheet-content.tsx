@@ -83,7 +83,7 @@ function formatDurationLabel(totalSeconds: number) {
 
 function formatBottomDate(value: Date | null) {
     if (!value) return "—"
-    return formatRelativeDate(value)
+    return format(value, "dd MMMM yyyy, HH:mm")
 }
 
 export function ProjectSheetContent({

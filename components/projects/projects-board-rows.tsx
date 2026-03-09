@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
+import { format, isToday, isYesterday } from "date-fns"
+import { CalendarDays, Check, Circle, Pause, Play, Repeat2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 
@@ -17,6 +18,56 @@ function formatDuration(totalSeconds: number) {
     return `${hours}h ${minutes}m`
 }
 
+const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_52px_52px_85px_90px_60px_75px_110px_150px]"
+
+function formatRelativeDateTime(value: Date | string | null | undefined) {
+    if (!value) return "—"
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "—"
+
+    if (isToday(date)) {
+        return `Today, ${format(date, "HH:mm")}`
+    }
+
+    if (isYesterday(date)) {
+        return `Yesterday, ${format(date, "HH:mm")}`
+    }
+
+    return format(date, "dd MMM yyyy, HH:mm")
+}
+
+function getStatusBadge(status: string) {
+    if (status === "Active") {
+        return {
+            label: "Active",
+            className: "border-blue-200 bg-blue-50 text-blue-700",
+            icon: <Play className="h-3.5 w-3.5 [stroke-width:1.5]" />,
+        }
+    }
+
+    if (status === "Paused") {
+        return {
+            label: "Paused",
+            className: "border-amber-200 bg-amber-50 text-amber-700",
+            icon: <Pause className="h-3.5 w-3.5 [stroke-width:1.5]" />,
+        }
+    }
+
+    if (status === "Completed") {
+        return {
+            label: "Completed",
+            className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+            icon: <Check className="h-3.5 w-3.5 [stroke-width:1.5]" />,
+        }
+    }
+
+    return {
+        label: status,
+        className: "border-slate-200 bg-slate-50 text-slate-700",
+        icon: <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />,
+    }
+}
+
 export function ProjectsBoardRows({
     projects,
     layout,
@@ -28,6 +79,7 @@ export function ProjectsBoardRows({
 
     const monthlyProjects = projects.filter((project) => project.isRecurring)
     const oneTimeProjects = projects.filter((project) => !project.isRecurring)
+    const orderedProjects = [...oneTimeProjects, ...monthlyProjects]
 
     const openDetails = (projectId: string) => {
         openProject(projectId)
@@ -36,7 +88,7 @@ export function ProjectsBoardRows({
     if (layout === "grid") {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {projects.map((project) => {
+                {orderedProjects.map((project) => {
                     const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                     const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
                     return (
@@ -101,11 +153,11 @@ export function ProjectsBoardRows({
             <div className="min-w-[1280px] space-y-7">
                 <section className="space-y-3">
                     <div className="flex items-center gap-3">
-                        <span className="h-5 w-1 rounded-full bg-violet-500" />
-                        <h2 className="text-xs font-semibold text-slate-500">Monthly Projects</h2>
+                        <span className="h-5 w-1 rounded-full bg-emerald-500" />
+                        <h2 className="text-lg font-semibold tracking-tight text-slate-900">One-time Projects</h2>
                     </div>
 
-                    <div className="hidden md:grid grid-cols-[minmax(320px,3.5fr)_80px_70px_85px_90px_60px_75px_100px_100px_70px] items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-5">
+                    <div className={cn("hidden md:grid items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-5", LIST_GRID_COLUMNS)}>
                         <span>Project name / service</span>
                         <span className="text-center">Status</span>
                         <span className="text-center">Type</span>
@@ -114,94 +166,7 @@ export function ProjectsBoardRows({
                         <span className="text-center">Tasks</span>
                         <span className="text-center">Time</span>
                         <span>Partner</span>
-                        <span className="text-right">Last Edited</span>
                         <span className="text-right">Created</span>
-                    </div>
-
-                    <div className="space-y-2">
-                        {monthlyProjects.length === 0 && (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
-                                No monthly projects match current filters.
-                            </div>
-                        )}
-                        {monthlyProjects.map((project) => {
-                            const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
-                            const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
-                            return (
-                                <button
-                                    key={project.id}
-                                    type="button"
-                                    onClick={() => openDetails(project.id)}
-                                    className="w-full text-left grid grid-cols-[minmax(320px,3.5fr)_80px_70px_85px_90px_60px_75px_100px_100px_70px] gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/5 transition-all duration-200 ease-in-out"
-                                >
-                                    <div className="min-w-0">
-                                        <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
-                                        <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
-                                            <span className="truncate">{project.serviceLabel}</span>
-                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
-                                                {format(new Date(project.createdAt), "MMM yyyy")}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-center">
-                                        <span className={cn(
-                                            "px-2 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[70px]",
-                                            project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                                project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                                    "bg-slate-50 text-slate-700 border-slate-200"
-                                        )}>
-                                            {project.status.substring(0, 6)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-center">
-                                        <span className="px-1.5 py-1 rounded-lg text-[9px] text-center font-bold border bg-violet-50 text-violet-700 border-violet-200 uppercase tracking-tight min-w-[65px]">Monthly</span>
-                                    </div>
-                                    <div className="flex justify-center">
-                                        <span className={cn(
-                                            "px-1.5 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[75px]",
-                                            project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
-                                        )}>
-                                            {project.paymentStatus}
-                                        </span>
-                                    </div>
-                                    <span className="font-bold text-slate-800 text-right">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[9px]">RON</span></span>
-                                    <div className="flex items-center justify-center">
-                                        <div className="relative h-8 w-8">
-                                            <svg className="h-full w-full" viewBox="0 0 36 36">
-                                                <circle className="stroke-slate-100 dark:stroke-zinc-800" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
-                                                <circle
-                                                    className="stroke-blue-600 transition-all duration-500"
-                                                    strokeWidth="3"
-                                                    strokeDasharray={`${progress}, 100`}
-                                                    strokeLinecap="round"
-                                                    fill="transparent"
-                                                    r="16"
-                                                    cx="18"
-                                                    cy="18"
-                                                    transform="rotate(-90 18 18)"
-                                                />
-                                            </svg>
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300">{project.completedTasks}/{totalTasks}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-center">
-                                        <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
-                                    </div>
-                                    <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
-                                    <span className="text-[11px] font-medium text-slate-500 text-right">{project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}</span>
-                                    <span className="text-[11px] font-medium text-slate-400 text-right">{format(new Date(project.createdAt), "dd MMM")}</span>
-                                </button>
-                            )
-                        })}
-                    </div>
-                </section>
-
-                <section className="space-y-3">
-                    <div className="flex items-center gap-3">
-                        <span className="h-5 w-1 rounded-full bg-emerald-500" />
-                        <h2 className="text-xs font-semibold text-slate-500">One-time Projects</h2>
                     </div>
 
                     <div className="space-y-2">
@@ -213,12 +178,13 @@ export function ProjectsBoardRows({
                         {oneTimeProjects.map((project) => {
                             const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                             const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
+                            const statusBadge = getStatusBadge(project.status)
                             return (
                                 <button
                                     key={project.id}
                                     type="button"
                                     onClick={() => openDetails(project.id)}
-                                    className="w-full text-left grid grid-cols-[minmax(320px,3.5fr)_80px_70px_85px_90px_60px_75px_100px_100px_70px] gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/5 transition-all duration-200 ease-in-out"
+                                    className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/5 transition-all duration-200 ease-in-out", LIST_GRID_COLUMNS)}
                                 >
                                     <div className="min-w-0">
                                         <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
@@ -230,17 +196,25 @@ export function ProjectsBoardRows({
                                         </div>
                                     </div>
                                     <div className="flex justify-center">
-                                        <span className={cn(
-                                            "px-2 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[70px]",
-                                            project.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                                project.status === "Paused" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                                    "bg-slate-50 text-slate-700 border-slate-200"
-                                        )}>
-                                            {project.status.substring(0, 6)}
+                                        <span
+                                            title={statusBadge.label}
+                                            aria-label={statusBadge.label}
+                                            className={cn(
+                                                "inline-flex h-7 w-7 items-center justify-center rounded-lg border",
+                                                statusBadge.className
+                                            )}
+                                        >
+                                            {statusBadge.icon}
                                         </span>
                                     </div>
                                     <div className="flex justify-center">
-                                        <span className="px-1.5 py-1 rounded-lg text-[9px] text-center font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase tracking-tight min-w-[65px]">One-time</span>
+                                        <span
+                                            title="One-time"
+                                            aria-label="One-time"
+                                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                        >
+                                            <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                        </span>
                                     </div>
                                     <div className="flex justify-center">
                                         <span className={cn(
@@ -276,8 +250,107 @@ export function ProjectsBoardRows({
                                         <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
                                     </div>
                                     <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
-                                    <span className="text-[11px] font-medium text-slate-500 text-right">{project.updatedAt ? format(new Date(project.updatedAt), "dd MMM, HH:mm") : "-"}</span>
-                                    <span className="text-[11px] font-medium text-slate-400 text-right">{format(new Date(project.createdAt), "dd MMM")}</span>
+                                    <div className="flex items-center justify-end gap-1.5">
+                                        <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+                                        <span className="text-[11px] font-medium text-slate-500">{formatRelativeDateTime(project.createdAt)}</span>
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </section>
+
+                <section className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <span className="h-5 w-1 rounded-full bg-violet-500" />
+                        <h2 className="text-lg font-semibold tracking-tight text-slate-900">Monthly Projects</h2>
+                    </div>
+
+                    <div className="space-y-2">
+                        {monthlyProjects.length === 0 && (
+                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
+                                No monthly projects match current filters.
+                            </div>
+                        )}
+                        {monthlyProjects.map((project) => {
+                            const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
+                            const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
+                            const statusBadge = getStatusBadge(project.status)
+                            return (
+                                <button
+                                    key={project.id}
+                                    type="button"
+                                    onClick={() => openDetails(project.id)}
+                                    className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-3 shadow-sm hover:shadow-md hover:border-border/80 hover:bg-muted/5 transition-all duration-200 ease-in-out", LIST_GRID_COLUMNS)}
+                                >
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
+                                        <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
+                                            <span className="truncate">{project.serviceLabel}</span>
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
+                                                {format(new Date(project.createdAt), "MMM yyyy")}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span
+                                            title={statusBadge.label}
+                                            aria-label={statusBadge.label}
+                                            className={cn(
+                                                "inline-flex h-7 w-7 items-center justify-center rounded-lg border",
+                                                statusBadge.className
+                                            )}
+                                        >
+                                            {statusBadge.icon}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span
+                                            title="Monthly"
+                                            aria-label="Monthly"
+                                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
+                                        >
+                                            <Repeat2 className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span className={cn(
+                                            "px-1.5 py-1 rounded-lg text-[10px] text-center font-bold border uppercase tracking-tight min-w-[75px]",
+                                            project.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
+                                        )}>
+                                            {project.paymentStatus}
+                                        </span>
+                                    </div>
+                                    <span className="font-bold text-slate-800 text-right">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[9px]">RON</span></span>
+                                    <div className="flex items-center justify-center">
+                                        <div className="relative h-8 w-8">
+                                            <svg className="h-full w-full" viewBox="0 0 36 36">
+                                                <circle className="stroke-slate-100 dark:stroke-zinc-800" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
+                                                <circle
+                                                    className="stroke-blue-600 transition-all duration-500"
+                                                    strokeWidth="3"
+                                                    strokeDasharray={`${progress}, 100`}
+                                                    strokeLinecap="round"
+                                                    fill="transparent"
+                                                    r="16"
+                                                    cx="18"
+                                                    cy="18"
+                                                    transform="rotate(-90 18 18)"
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300">{project.completedTasks}/{totalTasks}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
+                                    <div className="flex items-center justify-end gap-1.5">
+                                        <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+                                        <span className="text-[11px] font-medium text-slate-500">{formatRelativeDateTime(project.createdAt)}</span>
+                                    </div>
                                 </button>
                             )
                         })}

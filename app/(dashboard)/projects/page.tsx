@@ -34,7 +34,8 @@ import {
 
 export const dynamic = "force-dynamic"
 
-const PAGE_SIZE = 24
+const PAGE_SIZE = 50
+const PAGINATION_THRESHOLD = 250
 
 const statusOptions = [
     { label: "All", value: "All" },
@@ -86,7 +87,7 @@ export default async function ProjectsPage({
     const recurring = params.recurring || "All"
     const period = params.period || "all_time"
     const layout = params.layout || "list"
-    const page = Math.max(1, Number(params.page) || 1)
+    const requestedPage = Math.max(1, Number(params.page) || 1)
 
     const now = new Date()
     let dateFilter: Prisma.ProjectWhereInput = {}
@@ -143,7 +144,11 @@ export default async function ProjectsPage({
         ],
     }
 
-    const [projectsRaw, totalProjects, partnersFullRaw, servicesRaw] = await Promise.all([
+    const totalProjects = await prisma.project.count({ where: projectWhere })
+    const shouldPaginate = totalProjects > PAGINATION_THRESHOLD
+    const page = shouldPaginate ? requestedPage : 1
+
+    const [projectsRaw, partnersFullRaw, servicesRaw] = await Promise.all([
         prisma.project.findMany({
             where: projectWhere,
             include: {
@@ -168,10 +173,8 @@ export default async function ProjectsPage({
                 },
             },
             orderBy: { updatedAt: "desc" },
-            skip: (page - 1) * PAGE_SIZE,
-            take: PAGE_SIZE,
+            ...(shouldPaginate ? { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE } : {}),
         }),
-        prisma.project.count({ where: projectWhere }),
         prisma.partner.findMany({
             where: { tenantId: session.tenantId },
             include: {
@@ -212,9 +215,9 @@ export default async function ProjectsPage({
     const partnersForClient = JSON.parse(JSON.stringify(partnersFullRaw))
     const servicesForClient = JSON.parse(JSON.stringify(servicesRaw))
 
-    const totalPages = Math.max(1, Math.ceil(totalProjects / PAGE_SIZE))
-    const prevPage = page > 1 ? page - 1 : null
-    const nextPage = page < totalPages ? page + 1 : null
+    const totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalProjects / PAGE_SIZE)) : 1
+    const prevPage = shouldPaginate && page > 1 ? page - 1 : null
+    const nextPage = shouldPaginate && page < totalPages ? page + 1 : null
 
     const buildHref = (overrides: Record<string, string | null | undefined>) => {
         const next = new URLSearchParams()
@@ -225,7 +228,9 @@ export default async function ProjectsPage({
         if (recurring) next.set("recurring", recurring)
         if (period) next.set("period", period)
         if (layout) next.set("layout", layout)
-        next.set("page", String(page))
+        if (shouldPaginate) {
+            next.set("page", String(page))
+        }
 
         for (const [key, value] of Object.entries(overrides)) {
             if (value === null || value === undefined || value === "") {
@@ -235,8 +240,11 @@ export default async function ProjectsPage({
             }
         }
 
-        if (!next.get("page")) {
+        if (shouldPaginate && !next.get("page")) {
             next.set("page", "1")
+        }
+        if (!shouldPaginate) {
+            next.delete("page")
         }
 
         return `/projects?${next.toString()}`
@@ -455,25 +463,27 @@ export default async function ProjectsPage({
 
             <ProjectsBoardRows projects={projectsForClient} layout={layout as "grid" | "list"} />
 
-            <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Page {page} of {totalPages} · {totalProjects} projects</span>
-                <div className="flex items-center gap-2">
-                    {prevPage ? (
-                        <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(prevPage) })}>
-                            Previous
-                        </Link>
-                    ) : (
-                        <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
-                    )}
-                    {nextPage ? (
-                        <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(nextPage) })}>
-                            Next
-                        </Link>
-                    ) : (
-                        <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
-                    )}
+            {shouldPaginate && (
+                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
+                    <span className="text-muted-foreground">Page {page} of {totalPages} · {totalProjects} projects</span>
+                    <div className="flex items-center gap-2">
+                        {prevPage ? (
+                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(prevPage) })}>
+                                Previous
+                            </Link>
+                        ) : (
+                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                        )}
+                        {nextPage ? (
+                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(nextPage) })}>
+                                Next
+                            </Link>
+                        ) : (
+                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
             </div>
         </ProjectSheetWrapper>
     )
