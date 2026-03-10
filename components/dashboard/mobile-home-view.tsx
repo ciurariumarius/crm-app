@@ -5,6 +5,8 @@ import Link from "next/link"
 import { isPast, isToday } from "date-fns"
 import {
     CheckCircle2,
+    ChevronDown,
+    ChevronUp,
     Clock3,
     CreditCard,
     FolderOpen,
@@ -28,6 +30,7 @@ import { cn, formatCurrency, formatRelativeDate } from "@/lib/utils"
 import { settlePartnerDebt } from "@/lib/actions/settlement"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
+import { GlobalSearch } from "@/components/dashboard/global-search"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import type { Service } from "@prisma/client"
@@ -139,7 +142,15 @@ export function MobileHomeView({
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
     const [settlingPartnerId, setSettlingPartnerId] = React.useState<string | null>(null)
+    const [expandedPartners, setExpandedPartners] = React.useState<Set<string>>(new Set())
     const [isSettling, startSettlingTransition] = React.useTransition()
+
+    const togglePartner = (partnerId: string) => {
+        const next = new Set(expandedPartners)
+        if (next.has(partnerId)) next.delete(partnerId)
+        else next.add(partnerId)
+        setExpandedPartners(next)
+    }
 
     const name = user?.name?.split(" ")[0] || user?.username || "Admin"
     const initials = name.slice(0, 2).toUpperCase()
@@ -178,9 +189,12 @@ export function MobileHomeView({
                     </Avatar>
                     <div className="min-w-0">
                         <p className="text-[13px] text-slate-600 leading-none">{greetingByHour()},</p>
-                        <h1 className="text-[34px] font-semibold text-slate-900 leading-none tracking-[-0.03em] truncate mt-1">
-                            {name}
-                        </h1>
+                        <div className="flex items-center gap-3 mt-1">
+                            <h1 className="text-[34px] font-semibold text-slate-900 leading-none tracking-[-0.03em] truncate">
+                                {name}
+                            </h1>
+                            <GlobalSearch />
+                        </div>
                     </div>
                 </div>
 
@@ -442,27 +456,61 @@ export function MobileHomeView({
                         <div className="divide-y divide-slate-100">
                             {visibleUnpaidPartners.map((partner) => {
                                 const currentSettling = isSettling && settlingPartnerId === partner.id
+                                const isExpanded = expandedPartners.has(partner.id)
                                 return (
-                                    <div key={partner.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                                        <div>
-                                            <p className="text-[13px] font-semibold uppercase text-slate-900">{partner.name}</p>
-                                            <p className="mt-0.5 text-[11px] text-slate-500">
-                                                Owed sum:
-                                                <span className="ml-1 font-mono font-bold text-[#E11D48]">
-                                                    {formatCurrency(partner.totalUnpaid)}
-                                                </span>
-                                            </p>
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            disabled={currentSettling}
-                                            onClick={() => handleSettlePartner(partner.id)}
-                                            className="h-8 rounded-full px-3 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                                    <div key={partner.id} className="flex flex-col divide-y divide-slate-50">
+                                        <div
+                                            onClick={() => togglePartner(partner.id)}
+                                            className={cn(
+                                                "flex items-center justify-between gap-3 px-4 py-3 cursor-pointer transition-colors",
+                                                isExpanded && "bg-slate-50/50"
+                                            )}
                                         >
-                                            {currentSettling ? "Saving..." : "Mark Paid"}
-                                        </Button>
+                                            <div className="flex-1 min-w-0 flex items-center gap-3">
+                                                {isExpanded ? (
+                                                    <ChevronUp className="h-4 w-4 text-slate-300" />
+                                                ) : (
+                                                    <ChevronDown className="h-4 w-4 text-slate-300" />
+                                                )}
+                                                <div>
+                                                    <p className="text-[13px] font-semibold uppercase text-slate-900">{partner.name}</p>
+                                                    <p className="mt-0.5 text-[11px] text-slate-500">
+                                                        Owed sum:
+                                                        <span className="ml-1 font-mono font-bold text-[#E11D48]">
+                                                            {formatCurrency(partner.totalUnpaid)}
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                disabled={currentSettling}
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    handleSettlePartner(partner.id)
+                                                }}
+                                                className="h-8 rounded-full px-3 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                                            >
+                                                {currentSettling ? "Saving..." : "Mark Paid"}
+                                            </Button>
+                                        </div>
+
+                                        {/* Unpaid Projects List */}
+                                        {isExpanded && (
+                                            <div className="flex flex-col gap-2 px-4 py-3 bg-slate-50/50 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                {partner.unpaidProjects.map(project => (
+                                                    <div key={project.id} className="flex items-center justify-between py-1 border-b border-slate-100 last:border-0 border-dashed">
+                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                            <div className="h-1 w-1 rounded-full bg-rose-400 shrink-0" />
+                                                            <span className="text-[11px] font-medium text-slate-600 truncate">{project.name}</span>
+                                                        </div>
+                                                        <span className="text-[11px] font-bold text-slate-900 tabular-nums ml-2">{formatCurrency(project.amount)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })}

@@ -1,0 +1,182 @@
+"use client"
+
+import * as React from "react"
+import { useRouter } from "next/navigation"
+import {
+    CommandDialog,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
+import { globalSearch } from "@/lib/actions/search"
+import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
+import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
+import { FolderDot, ListChecks, User, Search, Loader2 } from "lucide-react"
+import { useDebounce } from "react-use"
+import { formatProjectName } from "@/lib/utils"
+
+export function GlobalSearch() {
+    const [open, setOpen] = React.useState(false)
+    const [query, setQuery] = React.useState("")
+    const [results, setResults] = React.useState<{ projects: any[], tasks: any[], partners: any[] }>({
+        projects: [],
+        tasks: [],
+        partners: []
+    })
+    const [loading, setLoading] = React.useState(false)
+
+    const { openProject } = React.useContext(ProjectSheetContext)
+    const { openTask } = React.useContext(TaskSheetContext)
+
+    React.useEffect(() => {
+        const down = (e: KeyboardEvent) => {
+            if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                setOpen((open) => !open)
+            }
+        }
+        document.addEventListener("keydown", down)
+        return () => document.removeEventListener("keydown", down)
+    }, [])
+
+    useDebounce(
+        async () => {
+            if (query.length < 2) {
+                setResults({ projects: [], tasks: [], partners: [] })
+                setLoading(false)
+                return
+            }
+
+            setLoading(true)
+            try {
+                const searchResults = await globalSearch(query)
+                setResults(searchResults)
+            } catch (error) {
+                console.error(error)
+            } finally {
+                setLoading(false)
+            }
+        },
+        300,
+        [query]
+    )
+
+    const handleSelect = (callback: () => void) => {
+        setOpen(false)
+        callback()
+    }
+
+    return (
+        <>
+            {/* Desktop Search Trigger - Redesigned to match screenshot */}
+            <button
+                onClick={() => setOpen(true)}
+                className="hidden md:flex items-center gap-3 w-full max-w-[500px] px-6 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all text-slate-400 group shadow-sm mx-auto"
+            >
+                <Search className="h-4 w-4 text-slate-400" />
+                <span className="text-[13px] text-slate-500 font-medium">Search projects, clients or campaigns...</span>
+                <div className="ml-auto flex items-center gap-1">
+                    <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-400 opacity-100 group-hover:bg-slate-100">
+                        <span className="text-xs">⌘</span>K
+                    </kbd>
+                </div>
+            </button>
+
+            {/* Mobile Search Trigger */}
+            <button
+                onClick={() => setOpen(true)}
+                className="md:hidden flex items-center justify-center p-2 rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm"
+            >
+                <Search className="h-5 w-5" />
+            </button>
+
+            <CommandDialog
+                open={open}
+                onOpenChange={setOpen}
+                shouldFilter={false} // Disable internal cmdk filtering for instant server results
+            >
+                <CommandInput
+                    placeholder="Search projects, tasks, or partners..."
+                    value={query}
+                    onValueChange={setQuery}
+                />
+                <CommandList>
+                    {loading && (
+                        <div className="flex items-center justify-center py-10">
+                            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                        </div>
+                    )}
+
+                    {!loading && query.length > 0 &&
+                        results.projects.length === 0 &&
+                        results.tasks.length === 0 &&
+                        results.partners.length === 0 && (
+                            <CommandEmpty>No results found for "{query}".</CommandEmpty>
+                        )}
+
+                    {!loading && results.projects.length > 0 && (
+                        <CommandGroup heading="Projects">
+                            {results.projects.map((project) => (
+                                <CommandItem
+                                    key={project.id}
+                                    onSelect={() => handleSelect(() => openProject(project.id, project))}
+                                    className="flex items-center gap-3 cursor-pointer p-4"
+                                >
+                                    <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                        <FolderDot className="h-4 w-4 text-blue-500" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-slate-700">{project.name || formatProjectName(project)}</span>
+                                        <span className="text-[10px] text-slate-400 uppercase font-black">{project.site?.partner?.name}</span>
+                                    </div>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    )}
+
+                    {!loading && results.tasks.length > 0 && (
+                        <CommandGroup heading="Tasks">
+                            {results.tasks.map((task) => (
+                                <CommandItem
+                                    key={task.id}
+                                    onSelect={() => handleSelect(() => openTask(task.id, task))}
+                                    className="flex items-center gap-3 cursor-pointer p-4"
+                                >
+                                    <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                        <ListChecks className="h-4 w-4 text-emerald-500" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-slate-700">{task.name}</span>
+                                        <span className="text-[10px] text-slate-400 uppercase font-black">{task.project?.name || (task.project ? formatProjectName(task.project) : "No Project")}</span>
+                                    </div>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    )}
+
+                    {!loading && results.partners.length > 0 && (
+                        <CommandGroup heading="Partners">
+                            {results.partners.map((partner) => (
+                                <CommandItem
+                                    key={partner.id}
+                                    onSelect={() => handleSelect(() => { })}
+                                    className="flex items-center gap-3 cursor-pointer p-4"
+                                >
+                                    <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                                        <User className="h-4 w-4 text-amber-500" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-slate-700">{partner.name}</span>
+                                        <span className="text-[10px] text-slate-400 font-bold">@{partner.username || partner.businessName}</span>
+                                    </div>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    )}
+                </CommandList>
+            </CommandDialog>
+        </>
+    )
+}

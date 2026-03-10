@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client"
 import { requireTenantContext } from "@/lib/tenant"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { PROJECT_STATUS_VALUES, taskStatusSortOrder } from "@/lib/status"
 import { z } from "zod"
 
 function revalidateProjectPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
@@ -20,14 +21,14 @@ const CreateProjectSchema = z.object({
     serviceIds: z.array(z.string().uuid()).min(1, "At least one service must be selected"),
     name: z.string().optional(),
     currentFee: z.number().optional().nullable(),
-    status: z.enum(["Active", "Paused", "Completed"]).optional(),
+    status: z.enum(PROJECT_STATUS_VALUES).optional(),
     paymentStatus: z.enum(["Paid", "Unpaid"]).optional(),
 })
 
 const UpdateProjectSchema = z.object({
     name: z.string().nullable().optional(),
     description: z.string().nullable().optional(),
-    status: z.enum(["Active", "Paused", "Completed"]).optional(),
+    status: z.enum(PROJECT_STATUS_VALUES).optional(),
     paymentStatus: z.enum(["Paid", "Unpaid"]).optional(),
     paidAt: z.union([z.date(), z.string(), z.null()]).optional(),
     createdAt: z.union([z.date(), z.string()]).optional(),
@@ -44,7 +45,7 @@ export async function createProject(data: {
     serviceIds: string[]
     name?: string
     currentFee?: number
-    status?: "Active" | "Paused" | "Completed"
+    status?: "Active" | "Completed" | "Closed"
     paymentStatus?: "Paid" | "Unpaid"
 }) {
     try {
@@ -376,9 +377,8 @@ export async function getProjectDetails(projectId: string) {
 
         if (!project) return { success: false, error: "Project not found" }
 
-        const statusOrder: Record<string, number> = { "Active": 0, "Paused": 1, "Completed": 2 }
         project.tasks.sort((a, b) => {
-            const statusDiff = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
+            const statusDiff = taskStatusSortOrder(a.status) - taskStatusSortOrder(b.status)
             if (statusDiff !== 0) return statusDiff
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         })

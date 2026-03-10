@@ -108,7 +108,7 @@ model Project {
   name        String? // Optional custom name override
   description String? // Optional rich text content
 
-  status        String    @default("Active") // Active, Paused, Completed
+  status        String    @default("Active") // Active, Completed, Closed
   paymentStatus String    @default("Unpaid") @map("payment_status") // Paid, Unpaid
   paidAt        DateTime? @map("paid_at")
   currentFee    Decimal?  @map("current_fee")
@@ -139,7 +139,7 @@ model Task {
   projectId        String    @map("project_id")
   name             String
   description      String?
-  status           String    @default("Active") // Active, Paused, Completed
+  status           String    @default("Active") // Active, Completed
   urgency          String    @default("Normal") // Low, Normal, High, Urgent
   deadline         DateTime?
   estimatedMinutes Int?      @map("estimated_minutes")

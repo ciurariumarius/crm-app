@@ -19,6 +19,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { format } from "date-fns"
 import { cn, formatRelativeDate } from "@/lib/utils"
+import { normalizeTaskStatus } from "@/lib/status"
 import { updateTask, toggleTaskStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { Calendar as CalendarIcon, Clock, Users, Globe, Target } from "lucide-react"
@@ -116,20 +117,19 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 </TableCell>
                                 <TableCell>
                                     <Select
-                                        defaultValue={task.status}
+                                        defaultValue={normalizeTaskStatus(task.status)}
                                         onValueChange={(val) => handleUpdate(task.id, { status: val })}
                                         disabled={updatingId === task.id}
                                     >
                                         <SelectTrigger className={cn(
                                             "h-8 text-xs font-medium border-none bg-transparent hover:bg-muted/50 p-1 w-[120px]",
                                             task.status === "Completed" ? "text-emerald-600" :
-                                                task.status === "Active" ? "text-blue-600" : "text-amber-600"
+                                                task.status === "Active" ? "text-blue-600" : "text-slate-600"
                                         )}>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Active" className="text-xs font-medium text-blue-600">Active</SelectItem>
-                                            <SelectItem value="Paused" className="text-xs font-medium text-amber-600">Paused</SelectItem>
                                             <SelectItem value="Completed" className="text-xs font-medium text-emerald-600">Completed</SelectItem>
                                         </SelectContent>
                                     </Select>

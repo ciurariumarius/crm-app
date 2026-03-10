@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ProjectTasks } from "@/components/projects/project-tasks"
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
 import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
+import { normalizeProjectStatus } from "@/lib/status"
 import { updateProject, deleteProject } from "@/lib/actions/projects"
 import { logTime } from "@/lib/actions/time"
 import { getProjectPaymentHistory } from "@/lib/actions/payment-actions"
@@ -45,7 +46,7 @@ import { Service, Site } from "@prisma/client"
 type UpdateProjectPayload = {
     name?: string
     description?: string | null
-    status?: "Active" | "Paused" | "Completed"
+    status?: "Active" | "Completed" | "Closed"
     paymentStatus?: "Paid" | "Unpaid"
     paidAt?: Date | string | null
     createdAt?: Date | string
@@ -118,7 +119,9 @@ export function ProjectSheetContent({
     standalone = false,
     onClose,
 }: ProjectSheetContentProps) {
-    const [project, setProject] = React.useState<ProjectWithDetails>(initialProject)
+    const [project, setProject] = React.useState<ProjectWithDetails>(
+        { ...initialProject, status: normalizeProjectStatus(initialProject.status) } as ProjectWithDetails
+    )
     const [localName, setLocalName] = React.useState("")
     const [amountInput, setAmountInput] = React.useState("")
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
@@ -158,7 +161,7 @@ export function ProjectSheetContent({
     } = useTimer()
 
     React.useEffect(() => {
-        setProject(initialProject)
+        setProject({ ...initialProject, status: normalizeProjectStatus(initialProject.status) } as ProjectWithDetails)
     }, [initialProject])
 
     React.useEffect(() => {
@@ -747,14 +750,14 @@ export function ProjectSheetContent({
                                 "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
                                 project.status === "Active"
                                     ? "border-blue-200/60 bg-blue-50/40"
-                                    : project.status === "Paused"
-                                        ? "border-amber-200/60 bg-amber-50/40"
-                                        : "border-emerald-200/60 bg-emerald-50/40"
+                                    : project.status === "Completed"
+                                        ? "border-emerald-200/60 bg-emerald-50/40"
+                                        : "border-slate-300/70 bg-slate-100/70"
                             )}>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Project Status</p>
 
                                 <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
-                                    {(["Active", "Paused", "Completed"] as const).map((statusOption) => (
+                                    {(["Active", "Completed", "Closed"] as const).map((statusOption) => (
                                         <Button
                                             key={statusOption}
                                             type="button"
@@ -764,8 +767,8 @@ export function ProjectSheetContent({
                                             className={cn(
                                                 "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
                                                 project.status === statusOption && statusOption === "Active" && "status-pill-action shadow-md",
-                                                project.status === statusOption && statusOption === "Paused" && "status-pill-warning shadow-md",
                                                 project.status === statusOption && statusOption === "Completed" && "status-pill-success shadow-md",
+                                                project.status === statusOption && statusOption === "Closed" && "status-pill-closed shadow-md",
                                                 project.status !== statusOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
                                             )}
                                         >
@@ -1233,7 +1236,7 @@ export function ProjectSheetContent({
                     </div>
                 </div>
 
-                <div className="sticky bottom-0 flex flex-col gap-1 border-t border-slate-200 bg-white/95 px-6 py-3 text-[11px] font-semibold text-slate-500 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-3 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                     <span># Project ID: {project.id.split("-")[0]}</span>
                     <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                         <span className="inline-flex items-center gap-1.5">

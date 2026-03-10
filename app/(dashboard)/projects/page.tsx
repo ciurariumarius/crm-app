@@ -4,9 +4,6 @@ import {
     Briefcase,
     CalendarDays,
     ChevronDown,
-    Grid2x2,
-    List,
-    Search,
     SlidersHorizontal,
     X,
 } from "lucide-react"
@@ -21,11 +18,13 @@ import {
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { cn } from "@/lib/utils"
+import { normalizeProjectStatus } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
 import { Prisma } from "@prisma/client"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
 import { PartnerFilterCombobox } from "@/components/projects/partner-filter-combobox"
+import { ProjectsSearchInput } from "@/components/projects/projects-search-input"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -41,8 +40,8 @@ const PAGINATION_THRESHOLD = 250
 const statusOptions = [
     { label: "All", value: "All" },
     { label: "Active", value: "Active" },
-    { label: "Paused", value: "Paused" },
     { label: "Completed", value: "Completed" },
+    { label: "Closed", value: "Closed" },
 ]
 
 const paymentOptions = [
@@ -75,20 +74,20 @@ export default async function ProjectsPage({
         payment?: string
         recurring?: string
         period?: string
-        layout?: string
         filters?: string
         page?: string
     }>
 }) {
     const session = await requireTenantContext()
     const params = await searchParams
-    const queryStatus = params.status || "Active"
+    const queryStatusRaw = params.status === "Paused" ? "Closed" : (params.status || "Active")
+    const queryStatus = ["All", "Active", "Completed", "Closed"].includes(queryStatusRaw) ? queryStatusRaw : "Active"
     const q = params.q?.trim()
     const partnerId = params.partnerId
     const payment = params.payment || "All"
     const recurring = params.recurring || "All"
     const period = params.period || "all_time"
-    const layout = params.layout || "list"
+    const layout = "list"
     const mobileFiltersOpen = params.filters === "1"
     const requestedPage = Math.max(1, Number(params.page) || 1)
 
@@ -130,7 +129,11 @@ export default async function ProjectsPage({
     const projectWhere: Prisma.ProjectWhereInput = {
         AND: [
             { tenantId: session.tenantId },
-            queryStatus === "All" ? {} : { status: queryStatus },
+            queryStatus === "All"
+                ? {}
+                : queryStatus === "Closed"
+                    ? { status: { in: ["Closed", "Paused"] } }
+                    : { status: queryStatus },
             payment === "All" ? {} : { paymentStatus: payment },
             partnerId ? { site: { partnerId } } : {},
             recurring === "Recurring" ? { services: { some: { isRecurring: true } } } :
@@ -206,6 +209,7 @@ export default async function ProjectsPage({
         const serviceLabel = project.services.map((service) => service.serviceName).join(" + ") || "No service"
         return {
             ...project,
+            status: normalizeProjectStatus(project.status),
             completedTasks,
             secondsLogged,
             isRecurring,
@@ -230,7 +234,6 @@ export default async function ProjectsPage({
         if (payment) next.set("payment", payment)
         if (recurring) next.set("recurring", recurring)
         if (period) next.set("period", period)
-        if (layout) next.set("layout", layout)
         if (mobileFiltersOpen) next.set("filters", "1")
         if (shouldPaginate) {
             next.set("page", String(page))
@@ -300,21 +303,9 @@ export default async function ProjectsPage({
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <form className="relative flex-1 min-w-0" action="/projects" method="get">
-                                {queryStatus && <input type="hidden" name="status" value={queryStatus} />}
-                                {payment && <input type="hidden" name="payment" value={payment} />}
-                                {recurring && <input type="hidden" name="recurring" value={recurring} />}
-                                {period && <input type="hidden" name="period" value={period} />}
-                                {partnerId && <input type="hidden" name="partnerId" value={partnerId} />}
-                                {layout && <input type="hidden" name="layout" value={layout} />}
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <input
-                                    name="q"
-                                    defaultValue={q || ""}
-                                    placeholder="Search projects, clients or campaigns..."
-                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm shadow-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                                />
-                            </form>
+                            <div className="flex-1 min-w-0">
+                                <ProjectsSearchInput />
+                            </div>
 
                             <Link
                                 href={buildHref({ filters: mobileFiltersOpen ? null : "1", page: "1" })}
@@ -326,50 +317,77 @@ export default async function ProjectsPage({
                             </Link>
                         </div>
 
-                        <div className="inline-flex h-12 w-full items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                            {statusOptions.map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildHref({ status: option.value, page: "1" })}
-                                    className={cn(
-                                        "inline-flex h-10 flex-1 items-center justify-center rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
-                                        queryStatus === option.value
-                                            ? "bg-white text-[#2563EB] shadow-sm"
-                                            : "text-slate-600"
-                                    )}
-                                >
-                                    {option.label.toUpperCase()}
-                                </Link>
-                            ))}
+                        <div className="-mx-1 overflow-x-auto px-1 hidescrollbar">
+                            <div className="inline-flex min-w-max items-center gap-3">
+                                <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                                    {paymentOptions.map((option) => (
+                                        <Link
+                                            key={option.value}
+                                            href={buildHref({ payment: option.value, page: "1" })}
+                                            className={cn(
+                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                                payment === option.value
+                                                    ? "bg-white text-[#2563EB] shadow-sm"
+                                                    : "text-slate-600"
+                                            )}
+                                        >
+                                            {option.label.toUpperCase()}
+                                        </Link>
+                                    ))}
+                                </div>
+
+                                <div className="h-8 w-px shrink-0 bg-slate-200" />
+
+                                <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                                    {statusOptions.map((option) => (
+                                        <Link
+                                            key={option.value}
+                                            href={buildHref({ status: option.value, page: "1" })}
+                                            className={cn(
+                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                                queryStatus === option.value
+                                                    ? "bg-white text-[#2563EB] shadow-sm"
+                                                    : "text-slate-600"
+                                            )}
+                                        >
+                                            {option.label.toUpperCase()}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-                                <Link
-                                    href={buildHref({ layout: "list", page: "1" })}
-                                    className={cn(
-                                        "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-                                        layout === "list" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    <List className="h-4 w-4" />
-                                </Link>
-                                <Link
-                                    href={buildHref({ layout: "grid", page: "1" })}
-                                    className={cn(
-                                        "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-                                        layout === "grid" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    <Grid2x2 className="h-4 w-4" />
-                                </Link>
-                            </div>
-
+                        <div className="flex items-center gap-2">
                             <div className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-50 px-3 text-[11px] text-slate-500 font-semibold" title={resultsSummary}>
                                 <SlidersHorizontal className="h-3.5 w-3.5" />
                                 <span>{totalProjects} results</span>
                             </div>
+                            {activeFilters.length > 0 && (
+                                <Link
+                                    href={clearAllHref}
+                                    className="inline-flex h-9 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                                >
+                                    Clear all
+                                </Link>
+                            )}
                         </div>
+
+                        {activeFilters.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                {activeFilters.map((filter) => (
+                                    <Link
+                                        key={filter.key}
+                                        href={filter.href}
+                                        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 pl-2.5 pr-2 text-[11px] font-medium text-slate-700 hover:bg-white"
+                                        title={`Remove ${filter.label}`}
+                                    >
+                                        <span className="max-w-[180px] truncate">{filter.label}</span>
+                                        <X className="h-3 w-3 text-slate-400" />
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+
                     </div>
 
                     <div className="hidden md:flex flex-col lg:flex-row lg:items-center gap-4">
@@ -378,44 +396,11 @@ export default async function ProjectsPage({
                             <h1 className="page-title text-slate-900">Projects</h1>
                         </div>
 
-                        <form className="relative flex-1 min-w-0" action="/projects" method="get">
-                            {queryStatus && <input type="hidden" name="status" value={queryStatus} />}
-                            {payment && <input type="hidden" name="payment" value={payment} />}
-                            {recurring && <input type="hidden" name="recurring" value={recurring} />}
-                            {period && <input type="hidden" name="period" value={period} />}
-                            {partnerId && <input type="hidden" name="partnerId" value={partnerId} />}
-                            {layout && <input type="hidden" name="layout" value={layout} />}
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <input
-                                name="q"
-                                defaultValue={q || ""}
-                                placeholder="Search projects, clients or campaigns..."
-                                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm shadow-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                            />
-                        </form>
+                        <div className="flex-1 min-w-0">
+                            <ProjectsSearchInput />
+                        </div>
 
                         <div className="flex items-center gap-3">
-                            <div className="hidden sm:flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-                                <Link
-                                    href={buildHref({ layout: "list", page: "1" })}
-                                    className={cn(
-                                        "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-                                        layout === "list" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    <List className="h-4 w-4" />
-                                </Link>
-                                <Link
-                                    href={buildHref({ layout: "grid", page: "1" })}
-                                    className={cn(
-                                        "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-                                        layout === "grid" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
-                                    )}
-                                >
-                                    <Grid2x2 className="h-4 w-4" />
-                                </Link>
-                            </div>
-
                             <CreateProjectButton
                                 variant="full"
                                 label="Add Project"
@@ -432,29 +417,7 @@ export default async function ProjectsPage({
                     )}>
                         <div className="flex flex-col gap-3">
                             <div className="flex flex-wrap items-end gap-4">
-                                <div className="space-y-1.5">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Status</p>
-                                    <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
-                                        {statusOptions.map((option) => (
-                                            <Link
-                                                key={option.value}
-                                                href={buildHref({ status: option.value, page: "1" })}
-                                                className={cn(
-                                                    "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
-                                                    queryStatus === option.value && option.value === "Active" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
-                                                    queryStatus === option.value && option.value === "Paused" && "bg-[#F59E0B] text-white shadow-sm ring-1 ring-[#D97706]",
-                                                    queryStatus === option.value && option.value === "Completed" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
-                                                    queryStatus === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
-                                                    queryStatus !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
-                                                )}
-                                            >
-                                                {option.label}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
+                                <div className={cn("space-y-1.5", mobileFiltersOpen && "hidden md:block")}>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Payment</p>
                                     <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
                                         {paymentOptions.map((option) => (
@@ -467,6 +430,28 @@ export default async function ProjectsPage({
                                                     payment === option.value && option.value === "Unpaid" && "bg-[#E11D48] text-white shadow-sm ring-1 ring-[#BE123C]",
                                                     payment === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
                                                     payment !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                                )}
+                                            >
+                                                {option.label}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className={cn("space-y-1.5", mobileFiltersOpen && "hidden md:block")}>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Status</p>
+                                    <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
+                                        {statusOptions.map((option) => (
+                                            <Link
+                                                key={option.value}
+                                                href={buildHref({ status: option.value, page: "1" })}
+                                                className={cn(
+                                                    "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
+                                                    queryStatus === option.value && option.value === "Active" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
+                                                    queryStatus === option.value && option.value === "Completed" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
+                                                    queryStatus === option.value && option.value === "Closed" && "bg-slate-700 text-white shadow-sm ring-1 ring-slate-600",
+                                                    queryStatus === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
+                                                    queryStatus !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
                                                 )}
                                             >
                                                 {option.label}

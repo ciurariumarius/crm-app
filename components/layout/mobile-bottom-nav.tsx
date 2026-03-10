@@ -76,7 +76,7 @@ export function MobileBottomNav({
                     <button
                         type="button"
                         onClick={() => setQuickActionsOpen(true)}
-                        className="absolute left-1/2 top-0 z-10 inline-flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#1D4ED8] bg-[#2563EB] text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.85)] transition-transform active:scale-[0.97]"
+                        className="absolute left-1/2 top-1/2 z-10 inline-flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#1D4ED8] bg-[#2563EB] text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.85)] transition-transform active:scale-[0.97]"
                         aria-label="Quick actions"
                     >
                         <Plus className="h-6 w-6" strokeWidth={2.3} />
@@ -160,4 +160,3 @@ export function MobileBottomNav({
         </>
     )
 }
-

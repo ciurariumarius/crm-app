@@ -26,11 +26,18 @@ export interface ProfitabilityAlert {
     loggedValue: number
 }
 
+export interface SettlementProject {
+    id: string
+    name: string
+    amount: number
+}
+
 export interface SettlementPartner {
     id: string
     name: string
     totalUnpaid: number
     lastSettlementDate?: Date | string | null
+    unpaidProjects: SettlementProject[]
 }
 
 export interface DashboardMetrics {
@@ -78,7 +85,7 @@ export interface RecentProject {
     siteName: string
 }
 
-export type ProjectStatus = "Active" | "Paused" | "Completed"
+export type ProjectStatus = "Active" | "Completed" | "Closed"
 export type PaymentStatus = "Paid" | "Unpaid"
 
 export interface PartnerWithSites extends Partner {

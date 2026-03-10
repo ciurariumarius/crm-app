@@ -162,11 +162,12 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
     )
 
     const renderGridCard = (project: any, isMonthly: boolean) => {
-        const isPaused = project.status === "Paused"
-        const isCompleted = project.status === "Completed"
-        const isActive = project.status === "Active"
+        const normalizedStatus = project.status === "Paused" ? "Closed" : project.status
+        const isClosed = normalizedStatus === "Closed"
+        const isCompleted = normalizedStatus === "Completed"
+        const isActive = normalizedStatus === "Active"
 
-        const statusColor = isActive ? "text-foreground font-bold" : isPaused ? "text-muted-foreground" : "text-muted-foreground/50 line-through"
+        const statusColor = isActive ? "text-foreground font-bold" : isClosed ? "text-muted-foreground" : "text-muted-foreground/50 line-through"
 
 
         return (
@@ -199,19 +200,19 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                     className={cn(
                                         "status-pill flex items-center gap-1.5 transition-all shadow-sm",
                                         isActive ? "status-pill-action" :
-                                            isPaused ? "status-pill-warning" :
-                                                "status-pill-success"
+                                            isCompleted ? "status-pill-success" :
+                                                "status-pill-closed"
                                     )}
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                    {project.status}
+                                    {normalizedStatus}
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="rounded-xl">
                                 <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-medium text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-medium text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-medium text-slate-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-medium text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
@@ -266,11 +267,12 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
     }
 
     const renderProjectCard = (project: any, rowIndex: number) => {
-        const isPaused = project.status === "Paused"
-        const isCompleted = project.status === "Completed"
-        const isActive = project.status === "Active"
+        const normalizedStatus = project.status === "Paused" ? "Closed" : project.status
+        const isClosed = normalizedStatus === "Closed"
+        const isCompleted = normalizedStatus === "Completed"
+        const isActive = normalizedStatus === "Active"
 
-        const statusColor = isActive ? "text-foreground font-bold" : isPaused ? "text-muted-foreground" : "text-muted-foreground/50 line-through"
+        const statusColor = isActive ? "text-foreground font-bold" : isClosed ? "text-muted-foreground" : "text-muted-foreground/50 line-through"
 
         const isMonthly = project.services?.[0]?.isRecurring
 
@@ -301,18 +303,18 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                 className={cn(
                                     "status-pill min-w-[70px] justify-center transition-all",
                                     isActive ? "status-pill-action" :
-                                        isPaused ? "status-pill-warning" :
-                                            "status-pill-success"
+                                        isCompleted ? "status-pill-success" :
+                                            "status-pill-closed"
                                 )}
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {project.status.substring(0, 6)}
+                                {normalizedStatus.substring(0, 6)}
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="rounded-xl">
                             <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-medium text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-medium text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-medium text-slate-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-medium text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -571,7 +573,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                     setSelectedProject(null)
                 }
             }}>
-                <SheetContent side="right" className="w-full max-w-[900px] p-0 flex flex-col border-none shadow-xl bg-background backdrop-blur-3xl overflow-hidden">
+                <SheetContent side="right" className="w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-background overflow-hidden sm:w-full sm:max-w-[900px]">
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}
@@ -585,7 +587,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
 
             {/* Site Detail Sheet */}
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent className="sm:max-w-xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background backdrop-blur-3xl shadow-xl">
+                <SheetContent className="w-screen max-w-none p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl sm:w-full sm:max-w-xl">
                     {selectedSite && (
                         <SiteSheetContent
                             site={selectedSite}

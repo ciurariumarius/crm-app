@@ -29,6 +29,7 @@ import { Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Loader2, X, Play
 import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { cn, formatRelativeDate } from "@/lib/utils"
+import { normalizeTaskStatus } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
 
 interface TaskDetailsProps {
@@ -74,7 +75,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         if (task) {
             setName(task.name || "")
             setDescription(task.description || "")
-            setStatus(task.status || "Active")
+            setStatus(normalizeTaskStatus(task.status))
             setUrgency(task.urgency || "Normal")
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
             setEstimatedMinutes(task.estimatedMinutes?.toString() || "")
@@ -201,7 +202,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-full max-w-[900px] p-0 flex flex-col border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none"
+                className="w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none sm:w-full sm:max-w-[900px]"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 showCloseButton={false}
             >
@@ -282,13 +283,11 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                 "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
                                 status === "Active"
                                     ? "border-blue-200/60 bg-blue-50/40"
-                                    : status === "Paused"
-                                        ? "border-amber-200/60 bg-amber-50/40"
-                                        : "border-emerald-200/60 bg-emerald-50/40"
+                                    : "border-emerald-200/60 bg-emerald-50/40"
                             )}>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Task Status</p>
-                                <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
-                                    {(["Active", "Paused", "Completed"] as const).map((statusOption) => (
+                                <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
+                                    {(["Active", "Completed"] as const).map((statusOption) => (
                                         <Button
                                             key={statusOption}
                                             type="button"
@@ -298,7 +297,6 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                             className={cn(
                                                 "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
                                                 status === statusOption && statusOption === "Active" && "status-pill-action shadow-md",
-                                                status === statusOption && statusOption === "Paused" && "status-pill-warning shadow-md",
                                                 status === statusOption && statusOption === "Completed" && "status-pill-success shadow-md",
                                                 status !== statusOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
                                             )}
@@ -556,7 +554,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                 </div>
             </div>
 
-                <div className="sticky bottom-0 flex flex-col gap-1 border-t border-slate-200 bg-white/95 px-6 py-3 text-[11px] font-semibold text-slate-500 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-3 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                     <span># Task ID: {task.id.slice(0, 8)}</span>
                     <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                         <span className="inline-flex items-center gap-1.5">

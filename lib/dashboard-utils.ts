@@ -1,5 +1,6 @@
-import { ProjectWithDetails, DashboardMetrics, FormattedProject, QuickActionProject, RecentProject, SettlementPartner, ProfitabilityAlert } from "@/types"
+import { ProjectWithDetails, DashboardMetrics, FormattedProject, QuickActionProject, RecentProject, SettlementPartner, SettlementProject, ProfitabilityAlert } from "@/types"
 import { formatProjectName } from "@/lib/utils"
+import { normalizeProjectStatus } from "@/lib/status"
 
 export interface RevenueByPartner {
     name: string
@@ -77,14 +78,18 @@ export function calculateDashboardMetrics(
     })
 
     // Unpaid Balance Tracking (Based on ALL active/unpaid projects)
-    const unpaidByPartnerMap = new Map<string, { id: string, name: string, total: number }>()
+    const unpaidByPartnerMap = new Map<string, { id: string, name: string, total: number, projects: SettlementProject[] }>()
     activeProjects.forEach((p: any) => {
         if (p.paymentStatus === "Unpaid") {
             const fee = Number(p.currentFee) || 0
             const partner = p.site?.partner
             if (partner) {
-                const existing = unpaidByPartnerMap.get(partner.id) || { id: partner.id, name: partner.name, total: 0 }
-                unpaidByPartnerMap.set(partner.id, { ...existing, total: existing.total + fee })
+                const existing = unpaidByPartnerMap.get(partner.id) || { id: partner.id, name: partner.name, total: 0, projects: [] }
+                unpaidByPartnerMap.set(partner.id, {
+                    ...existing,
+                    total: existing.total + fee,
+                    projects: [...existing.projects, { id: p.id, name: formatProjectName(p), amount: fee }]
+                })
             }
         }
     })
@@ -94,7 +99,8 @@ export function calculateDashboardMetrics(
             id: p.id,
             name: p.name,
             totalUnpaid: p.total,
-            lastSettlementDate: null
+            lastSettlementDate: null,
+            unpaidProjects: p.projects
         }))
         .sort((a, b) => b.totalUnpaid - a.totalUnpaid)
 
@@ -148,7 +154,7 @@ export function calculateDashboardMetrics(
             id: p.id,
             siteName: formatProjectName(p),
             services: p.services,
-            status: p.status
+            status: normalizeProjectStatus(p.status)
         }))
 
     const finalRecentProjects = recentProjectsRaw.map((p: any) => ({

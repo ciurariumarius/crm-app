@@ -21,6 +21,9 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                     try {
                         tasks = JSON.parse(service.standardTasks)
                     } catch { tasks = [] }
+                    const activeCount = service.projects.filter((p: any) => p.status === "Active").length
+                    const completedCount = service.projects.filter((p: any) => p.status === "Completed").length
+                    const closedCount = service.projects.filter((p: any) => p.status === "Closed" || p.status === "Paused").length
 
                     return (
                         <div
@@ -47,9 +50,11 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                     </div>
                                     <CardDescription className="pt-2 flex flex-col gap-0.5">
                                         <div className="flex items-center gap-1.5 text-xs">
-                                            <span className="font-bold text-foreground">{service.projects.filter((p: any) => p.status === "Active").length}</span> Active
+                                            <span className="font-bold text-foreground">{activeCount}</span> Active
                                             <span className="text-muted-foreground/40">•</span>
-                                            <span className="font-bold text-foreground">{service.projects.filter((p: any) => p.status === "Completed").length}</span> Completed
+                                            <span className="font-bold text-foreground">{completedCount}</span> Completed
+                                            <span className="text-muted-foreground/40">•</span>
+                                            <span className="font-bold text-foreground">{closedCount}</span> Closed
                                         </div>
                                     </CardDescription>
                                 </CardHeader>

@@ -232,6 +232,11 @@
     animation: timer-pulse 1.6s ease-in-out infinite;
   }
 
+  .timer-tick {
+    animation: timer-tick 1.15s ease-in-out infinite;
+    transform-origin: 50% 50%;
+  }
+
   .cockpit-task-card {
     @apply relative rounded-[12px] border border-border bg-card;
     box-shadow: var(--shadow-apple);
@@ -317,6 +322,11 @@
     background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
   }
 
+  .status-pill-closed {
+    @apply text-slate-700 border-slate-200/70;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  }
+
   .segmented-track {
     @apply inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200;
   }
@@ -343,6 +353,18 @@
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes timer-tick {
+  0% {
+    transform: rotate(0deg);
+  }
+  45% {
+    transform: rotate(6deg);
+  }
+  100% {
+    transform: rotate(0deg);
   }
 }
 

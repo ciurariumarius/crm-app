@@ -78,7 +78,9 @@ async function rolloverProject(project: {
             where: {
                 id: project.id,
                 tenantId: project.tenantId,
-                status: 'Active',
+                status: {
+                    in: ['Active', 'Completed'],
+                },
             },
             data: { status: 'Completed' },
         })
@@ -88,7 +90,7 @@ async function rolloverProject(project: {
                 status: 'skipped' as const,
                 oldProjectId: project.id,
                 oldProjectName: project.name,
-                reason: 'source_not_active',
+                reason: 'source_not_rollover_eligible',
             }
         }
 
@@ -162,7 +164,9 @@ export async function POST(request: Request) {
 
         const projectsToRollover = await prisma.project.findMany({
             where: {
-                status: 'Active',
+                status: {
+                    in: ['Active', 'Completed'],
+                },
                 createdAt: { lt: startOfCurrentMonth },
                 services: {
                     some: { isRecurring: true },

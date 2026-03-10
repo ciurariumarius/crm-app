@@ -18,15 +18,19 @@ export function GlobalTimer() {
         return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
     }
 
-    if (!timerState.isRunning && timerState.elapsedSeconds === 0 && !isExpanded) {
+    if (!timerState.isRunning) {
+        return null
+    }
+
+    if (!isExpanded) {
         return (
             <Button
                 size="icon"
-                className="fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 md:right-6 md:bottom-[max(1rem,env(safe-area-inset-bottom))] h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg z-50 animate-in fade-in zoom-in duration-300"
+                className="timer-pulse fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 z-50 h-12 w-12 rounded-full border border-[#1D4ED8] bg-[#2563EB] text-white shadow-[0_12px_24px_-12px_rgba(37,99,235,0.75)] animate-in fade-in zoom-in duration-300 md:bottom-[max(1rem,env(safe-area-inset-bottom))] md:right-6 md:h-14 md:w-14"
                 onClick={() => setIsExpanded(true)}
                 aria-label="Open timer controls"
             >
-                <Timer className="h-6 w-6" />
+                <Timer className="timer-tick h-6 w-6 md:h-7 md:w-7" />
             </Button>
         )
     }

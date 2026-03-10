@@ -14,8 +14,10 @@ import { FocusMatrix } from "@/components/dashboard/focus-matrix"
 import { SettleUpLedger } from "@/components/dashboard/settle-up-ledger"
 import { ProfitabilityAlerts } from "@/components/dashboard/profitability-alerts"
 import { SettlementHistory } from "@/components/dashboard/settlement-history"
+import { GlobalSearch } from "@/components/dashboard/global-search"
 import { MobileHomeView } from "@/components/dashboard/mobile-home-view"
 import type { MobileHomeViewProps } from "@/components/dashboard/mobile-home-view"
+import { normalizeProjectStatus, normalizeTaskStatus } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
@@ -131,19 +133,27 @@ export default async function Home() {
   }
 
   const hourlyRate = Number((user as { hourlyRate?: number | string | null } | null)?.hourlyRate || 0)
+  const normalizedActiveProjects = (activeProjects as any[]).map((project: any) => ({
+    ...project,
+    status: normalizeProjectStatus(project.status),
+  }))
+  const normalizedUpcomingTasks = (upcomingTasks as any[]).map((task: any) => ({
+    ...task,
+    status: normalizeTaskStatus(task.status),
+  }))
   const metrics = calculateDashboardMetrics(
-    activeProjects,
+    normalizedActiveProjects,
     timeLogsThisMonth,
     recentProjects,
-    upcomingTasks.length,
+    normalizedUpcomingTasks.length,
     hourlyRate,
     settlementAuditLogs,
     startOfMonth
   )
   const formattedPartners = serialize(partners) as MobileHomeViewProps["partners"]
   const formattedServices = serialize(services) as MobileHomeViewProps["services"]
-  const serializedActiveProjects = serialize(activeProjects)
-  const serializedUpcomingTasks = serialize(upcomingTasks) as MobileHomeViewProps["upcomingTasks"]
+  const serializedActiveProjects = serialize(normalizedActiveProjects)
+  const serializedUpcomingTasks = serialize(normalizedUpcomingTasks) as MobileHomeViewProps["upcomingTasks"]
   const serializedRecurringProjects = serialize(metrics.recurringProjects)
   const serializedOneTimeProjects = serialize(metrics.oneTimeProjects)
   const serializedUnpaidPartners = serialize(metrics.unpaidByPartner)
@@ -175,11 +185,14 @@ export default async function Home() {
 
           <div className="hidden md:block space-y-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex h-10 items-center md:pl-0 gap-3">
+              <div className="flex h-10 items-center md:pl-0 gap-4 shrink-0">
                 <MobileMenuTrigger />
                 <GreetingHeader name={user?.name?.split(" ")[0] || user?.username || "Admin"} />
               </div>
-              <div className="flex items-center gap-3 md:pl-0 w-full md:w-auto">
+              <div className="flex-1 flex justify-center px-4">
+                <GlobalSearch />
+              </div>
+              <div className="flex items-center gap-3 md:pl-0 w-full md:w-auto shrink-0">
                 <DashboardHeaderActions
                   partners={formattedPartners}
                   services={formattedServices}

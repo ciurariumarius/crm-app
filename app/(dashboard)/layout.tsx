@@ -4,6 +4,7 @@ import { HeaderProvider } from "@/components/layout/header-context"
 import { ShellFrame } from "@/components/layout/shell-frame"
 import { redirect } from "next/navigation"
 import { formatProjectName } from "@/lib/utils"
+import { normalizeProjectStatus } from "@/lib/status"
 import type { PartnerWithSites } from "@/types"
 import type { Service } from "@prisma/client"
 import type { TaskDialogProject } from "@/components/tasks/global-create-task-dialog"
@@ -65,7 +66,7 @@ export default async function DashboardLayout({
 
   const quickActionProjectsRaw: TaskDialogProject[] = projectsData.map((project) => ({
     id: project.id,
-    status: project.status,
+    status: normalizeProjectStatus(project.status),
     createdAt: project.createdAt,
     site: project.site ? { domainName: project.site.domainName } : undefined,
     services: project.services,

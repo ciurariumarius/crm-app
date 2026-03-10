@@ -4,11 +4,12 @@ import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { formatProjectName } from "@/lib/utils"
+import { normalizeProjectStatus, normalizeTaskStatus } from "@/lib/status"
 import { TasksViewToggle } from "@/components/tasks/tasks-view-toggle"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
-import { LayoutGrid, SlidersHorizontal } from "lucide-react"
+import { LayoutGrid, SlidersHorizontal, X } from "lucide-react"
 import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
@@ -50,7 +51,8 @@ export default async function TasksPage({
     const session = await requireTenantContext()
     const params = await searchParams
     const q = params.q?.trim()
-    const statusFilter = params.status || "Active"
+    const statusFilterRaw = params.status === "Paused" ? "Active" : (params.status || "Active")
+    const statusFilter = ["All", "Active", "Completed"].includes(statusFilterRaw) ? statusFilterRaw : "Active"
     const partnerId = params.partnerId
     const projectId = params.projectId
     const urgencyFilter = params.urgency || "all"
@@ -63,7 +65,11 @@ export default async function TasksPage({
     const where: Prisma.TaskWhereInput = { tenantId: session.tenantId }
 
     if (statusFilter !== "All") {
-        where.status = statusFilter
+        if (statusFilter === "Active") {
+            where.status = { in: ["Active", "Paused"] }
+        } else {
+            where.status = statusFilter
+        }
     }
 
     if (projectId && projectId !== "all") {
@@ -131,17 +137,26 @@ export default async function TasksPage({
         }),
     ])
 
+    const normalizedTasksRaw = tasksRaw.map((task) => ({
+        ...task,
+        status: normalizeTaskStatus(task.status),
+    }))
+    const normalizedProjectsRaw = allProjectsRaw.map((project) => ({
+        ...project,
+        status: normalizeProjectStatus(project.status),
+    }))
+
     const allServices = JSON.parse(JSON.stringify(allServicesRaw))
     const initialActiveTimer = JSON.parse(JSON.stringify(activeTimerRaw))
-    const activeProjects = JSON.parse(JSON.stringify(allProjectsRaw))
+    const activeProjects = JSON.parse(JSON.stringify(normalizedProjectsRaw))
 
-    const serializedTasks = JSON.parse(JSON.stringify(tasksRaw))
-    const projectsList = allProjectsRaw
+    const serializedTasks = JSON.parse(JSON.stringify(normalizedTasksRaw))
+    const projectsList = normalizedProjectsRaw
         .map((project) => ({ id: project.id, name: formatProjectName(project) }))
         .sort((a, b) => a.name.localeCompare(b.name))
 
     const partnersMap = new Map()
-    allProjectsRaw.forEach((p) => {
+    normalizedProjectsRaw.forEach((p) => {
         if (p.site?.partner) {
             partnersMap.set(p.site.partner.id, { id: p.site.partner.id, name: p.site.partner.name })
         }
@@ -175,6 +190,22 @@ export default async function TasksPage({
         return `/tasks?${next.toString()}`
     }
     const buildPageHref = (targetPage: number) => buildTasksHref({ page: String(targetPage) })
+    const selectedProject = projectsList.find((project) => project.id === projectId)
+    const selectedPartner = partnersList.find((partner) => partner.id === partnerId)
+    const activeFilters: { key: string; label: string; href: string }[] = []
+    if (q) activeFilters.push({ key: "q", label: `Search: ${q}`, href: buildTasksHref({ q: null, page: "1" }) })
+    if (statusFilter !== "Active") activeFilters.push({ key: "status", label: `Status: ${statusFilter}`, href: buildTasksHref({ status: "Active", page: "1" }) })
+    if (urgencyFilter !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${urgencyFilter}`, href: buildTasksHref({ urgency: "all", page: "1" }) })
+    if (projectId && projectId !== "all") activeFilters.push({ key: "projectId", label: `Project: ${selectedProject?.name || "Selected"}`, href: buildTasksHref({ projectId: null, page: "1" }) })
+    if (partnerId && partnerId !== "all") activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner?.name || "Selected"}`, href: buildTasksHref({ partnerId: null, page: "1" }) })
+    const clearAllHref = buildTasksHref({
+        q: null,
+        status: "Active",
+        urgency: "all",
+        projectId: null,
+        partnerId: null,
+        page: "1",
+    })
 
     return (
         <div className="flex flex-col gap-6">
@@ -212,7 +243,6 @@ export default async function TasksPage({
                     {[
                         { label: "ALL", value: "All" },
                         { label: "ACTIVE", value: "Active" },
-                        { label: "PAUSED", value: "Paused" },
                         { label: "COMPLETED", value: "Completed" },
                     ].map((option) => (
                         <Link
@@ -229,6 +259,58 @@ export default async function TasksPage({
                         </Link>
                     ))}
                 </div>
+
+                <div className="inline-flex h-12 w-full items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                    {[
+                        { label: "ALL", value: "all" },
+                        { label: "URGENT", value: "Urgent" },
+                        { label: "NORMAL", value: "Normal" },
+                        { label: "IDEA", value: "Idea" },
+                    ].map((option) => (
+                        <Link
+                            key={option.value}
+                            href={buildTasksHref({ urgency: option.value, page: "1" })}
+                            className={
+                                "inline-flex h-10 flex-1 items-center justify-center rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                (urgencyFilter === option.value
+                                    ? "bg-white text-[#2563EB] shadow-sm"
+                                    : "text-slate-600")
+                            }
+                        >
+                            {option.label}
+                        </Link>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <div className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-50 px-3 text-[11px] text-slate-500 font-semibold">
+                        <SlidersHorizontal className="h-3.5 w-3.5" />
+                        <span>{totalTasks} results</span>
+                    </div>
+                    {activeFilters.length > 0 && (
+                        <Link
+                            href={clearAllHref}
+                            className="inline-flex h-9 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                            Clear all
+                        </Link>
+                    )}
+                </div>
+
+                {activeFilters.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        {activeFilters.map((filter) => (
+                            <Link
+                                key={filter.key}
+                                href={filter.href}
+                                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 pl-2.5 pr-2 text-[11px] font-medium text-slate-700 hover:bg-white"
+                            >
+                                <span className="max-w-[180px] truncate">{filter.label}</span>
+                                <X className="h-3 w-3 text-slate-400" />
+                            </Link>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Header Row (Desktop) */}
@@ -256,6 +338,7 @@ export default async function TasksPage({
                         projects={projectsList}
                         partners={partnersList}
                         totalTasks={totalTasks}
+                        mobileSecondaryOnly
                     />
                 ) : null}
 

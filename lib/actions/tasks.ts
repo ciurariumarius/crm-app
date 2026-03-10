@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client"
 import { requireTenantContext } from "@/lib/tenant"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { TASK_STATUS_VALUES, normalizeTaskStatus } from "@/lib/status"
 import { z } from "zod"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
@@ -16,7 +17,8 @@ function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?
     if (sitePartnerId && siteId) revalidatePath(`/vault/${sitePartnerId}/${siteId}`)
 }
 
-const TaskStatusSchema = z.enum(["Active", "Paused", "Completed"])
+const TaskStatusSchema = z.enum(TASK_STATUS_VALUES)
+const LegacyTaskStatusSchema = z.enum(["Active", "Paused", "Completed"])
 const TaskUrgencySchema = z.enum(["Low", "Normal", "High", "Urgent"])
 const TaskIdSchema = z.string().uuid()
 const TaskIdsSchema = z.array(TaskIdSchema).max(500)
@@ -89,8 +91,9 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
         const session = await requireTenantContext()
         const validatedTaskId = TaskIdSchema.parse(taskId)
         const validatedProjectId = ProjectIdSchema.parse(projectId)
-        const validatedCurrentStatus = TaskStatusSchema.parse(currentStatus)
-        const isCompleted = validatedCurrentStatus === "Completed"
+        const validatedCurrentStatus = LegacyTaskStatusSchema.parse(currentStatus)
+        const normalizedCurrentStatus = normalizeTaskStatus(validatedCurrentStatus)
+        const isCompleted = normalizedCurrentStatus === "Completed"
         const newStatus = isCompleted ? "Active" : "Completed"
 
         const taskEntity = await prisma.task.findFirst({
@@ -115,7 +118,7 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
         })
         await logSessionAuditEvent(session, {
             action: "TASK_STATUS_TOGGLED",
-            details: `taskId=${validatedTaskId}; from=${validatedCurrentStatus}; to=${newStatus}`,
+            details: `taskId=${validatedTaskId}; from=${normalizedCurrentStatus}; to=${newStatus}`,
         })
         revalidateTaskPaths(validatedProjectId, task.project.site.partnerId, task.project.siteId)
         return { success: true }

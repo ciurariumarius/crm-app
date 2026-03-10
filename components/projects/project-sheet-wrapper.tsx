@@ -12,7 +12,7 @@ interface ProjectSheetWrapperProps {
 
 // Create a context to manage project sheet state
 export const ProjectSheetContext = React.createContext<{
-    openProject: (projectId: string) => void
+    openProject: (projectId: string, projectData?: any) => void
     closeProject: () => void
     currentProject: any | null
 }>({
@@ -25,8 +25,8 @@ export function ProjectSheetWrapper({ projects, allServices, children }: Project
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const pendingSyncRef = React.useRef<Record<string, { status?: string; paymentStatus?: string }>>({})
 
-    const openProject = (projectId: string) => {
-        const project = projects.find(p => p.id === projectId)
+    const openProject = (projectId: string, projectData?: any) => {
+        const project = projectData || projects.find(p => p.id === projectId)
         if (project) {
             setSelectedProject(project)
         }
@@ -68,7 +68,7 @@ export function ProjectSheetWrapper({ projects, allServices, children }: Project
                 <SheetContent
                     side="right"
                     showCloseButton={false}
-                    className="w-full max-w-[900px] p-0 border-l border-border bg-white/90 backdrop-blur-[12px] shadow-[var(--shadow-drawer)] flex flex-col overflow-hidden rounded-l-[12px]"
+                    className="w-screen max-w-none p-0 border-l border-border bg-white shadow-[var(--shadow-drawer)] flex flex-col overflow-hidden sm:w-full sm:max-w-[900px] sm:rounded-l-[12px]"
                 >
                     <SheetTitle className="sr-only">Project details</SheetTitle>
                     {selectedProject && (

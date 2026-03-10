@@ -96,9 +96,12 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
         router.push(`/projects?${params.toString()}`)
     }
 
+    const currentStatusParam = searchParams.get("status") === "Paused" ? "Closed" : (searchParams.get("status") || "Active")
+    const currentStatus = ["All", "Active", "Completed", "Closed"].includes(currentStatusParam) ? currentStatusParam : "Active"
+
     const currentParams = {
         partner: searchParams.get("partnerId") || "all",
-        status: searchParams.get("status") || "Active",
+        status: currentStatus,
         type: searchParams.get("recurring") || "All",
         payment: searchParams.get("payment") || "All"
     }
@@ -126,8 +129,8 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
             if (value === 'Paid') return "bg-emerald-600 text-white shadow-md shadow-emerald-500/20 ring-0 font-bold"
             if (value === 'Unpaid') return "bg-rose-600 text-white shadow-md shadow-rose-500/20 ring-0 font-bold"
             if (value === 'Active') return "bg-primary text-primary-foreground shadow-md shadow-primary/20 ring-0 font-bold"
-            if (value === 'Paused') return "bg-amber-500 text-white shadow-md shadow-amber-500/20 ring-0 font-bold"
             if (value === 'Completed') return "bg-blue-500 text-white shadow-md shadow-blue-500/20 ring-0 font-bold"
+            if (value === 'Closed') return "bg-slate-700 text-white shadow-md shadow-slate-500/20 ring-0 font-bold"
             return "bg-background text-foreground shadow-md ring-0 font-bold"
         }
         return "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -182,8 +185,8 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                             {[
                                 { label: "ALL", value: "All" },
                                 { label: "ACTIVE", value: "Active", icon: <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 shrink-0 inline-block" /> },
-                                { label: "PAUSED", value: "Paused", icon: null },
-                                { label: "COMPLETED", value: "Completed", icon: null }
+                                { label: "COMPLETED", value: "Completed", icon: null },
+                                { label: "CLOSED", value: "Closed", icon: null },
                             ].map((opt) => (
                                 <DropdownMenuItem
                                     key={opt.value}
@@ -202,8 +205,8 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                         {[
                             { label: "ALL", value: "All" },
                             { label: "ACTIVE", value: "Active", icon: <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2" /> },
-                            { label: "PAUSED", value: "Paused", icon: null },
-                            { label: "COMPLETED", value: "Completed", icon: null }
+                            { label: "COMPLETED", value: "Completed", icon: null },
+                            { label: "CLOSED", value: "Closed", icon: null }
                         ].map((opt) => (
                             <button
                                 key={opt.value}

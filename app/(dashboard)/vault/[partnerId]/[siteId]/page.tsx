@@ -71,30 +71,33 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {site.projects.map((project: any) => (
-                        <Link key={project.id} href={`/projects/${project.id}`} className="transition-transform hover:scale-[1.02]">
-                            <Card className="h-full">
-                                <CardHeader className="pb-2">
-                                    <div className="flex justify-between items-start">
-                                        <CardTitle className="text-base">
-                                            {project.name || `${site.domainName} - ${project.services.map((s: any) => s.serviceName).join(" & ")}`}
-                                        </CardTitle>
-                                        <Badge variant={project.status === "Active" ? "default" : "secondary"}>
-                                            {project.status}
-                                        </Badge>
-                                    </div>
-                                    <CardDescription className="text-xs">
-                                        Updated {project.updatedAt ? formatRelativeDate(project.updatedAt) : "-"}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-sm text-muted-foreground">
-                                        {project._count.tasks} Tasks • {project.paymentStatus}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    ))}
+                    {site.projects.map((project: any) => {
+                        const displayStatus = project.status === "Paused" ? "Closed" : project.status
+                        return (
+                            <Link key={project.id} href={`/projects/${project.id}`} className="transition-transform hover:scale-[1.02]">
+                                <Card className="h-full">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex justify-between items-start">
+                                            <CardTitle className="text-base">
+                                                {project.name || `${site.domainName} - ${project.services.map((s: any) => s.serviceName).join(" & ")}`}
+                                            </CardTitle>
+                                            <Badge variant={displayStatus === "Active" ? "default" : "secondary"}>
+                                                {displayStatus}
+                                            </Badge>
+                                        </div>
+                                        <CardDescription className="text-xs">
+                                            Updated {project.updatedAt ? formatRelativeDate(project.updatedAt) : "-"}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-sm text-muted-foreground">
+                                            {project._count.tasks} Tasks • {project.paymentStatus}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        )
+                    })}
                     {site.projects.length === 0 && (
                         <div className="col-span-full text-center py-8 text-muted-foreground border-dashed border-2 rounded-lg">
                             No projects yet. Start one to track time and tasks.

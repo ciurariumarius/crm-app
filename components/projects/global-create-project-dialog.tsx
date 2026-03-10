@@ -53,7 +53,7 @@ export function GlobalCreateProjectDialog({
     const [partnerId, setPartnerId] = useState(defaultPartnerId || "")
     const [siteId, setSiteId] = useState(defaultSiteId || "")
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
-    const [isCompleted, setIsCompleted] = useState(false)
+    const [projectStatus, setProjectStatus] = useState<"Active" | "Completed" | "Closed">("Active")
     const [isPaid, setIsPaid] = useState(false)
     const [fee, setFee] = useState("")
 
@@ -154,7 +154,7 @@ export function GlobalCreateProjectDialog({
                 siteId,
                 serviceIds: selectedServiceIds,
                 currentFee: fee ? parseFloat(fee) : undefined,
-                status: isCompleted ? "Completed" : "Active",
+                status: projectStatus,
                 paymentStatus: isPaid ? "Paid" : "Unpaid",
             })
 
@@ -175,7 +175,7 @@ export function GlobalCreateProjectDialog({
         if (!defaultSiteId) setSiteId("")
         setSelectedServiceIds([])
         setFee("")
-        setIsCompleted(false)
+        setProjectStatus("Active")
         setIsPaid(false)
         setShowQuickAddSite(false)
         setNewSiteDomain("")
@@ -367,26 +367,26 @@ export function GlobalCreateProjectDialog({
                                         </div>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsCompleted(!isCompleted)}
-                                                className={cn(
-                                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all premium-card",
-                                                    isCompleted
-                                                        ? "status-pill-success/10 border-emerald-500/30 text-emerald-600"
-                                                        : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
-                                                )}
-                                            >
-                                                <Label className="text-xs font-semibold cursor-pointer">
-                                                    Mark as Completed
-                                                </Label>
-                                                <div className={cn(
-                                                    "h-5 w-5 rounded-md border flex items-center justify-center transition-all",
-                                                    isCompleted ? "bg-emerald-500 border-emerald-500 text-white" : "border-muted-foreground/30 bg-background"
-                                                )}>
-                                                    {isCompleted && <Check className="h-3 w-3" />}
+                                            <div className="rounded-xl border border-slate-200 bg-slate-100 p-1">
+                                                <div className="grid grid-cols-3 gap-1">
+                                                    {(["Active", "Completed", "Closed"] as const).map((statusOption) => (
+                                                        <button
+                                                            key={statusOption}
+                                                            type="button"
+                                                            onClick={() => setProjectStatus(statusOption)}
+                                                            className={cn(
+                                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
+                                                                projectStatus === statusOption && statusOption === "Active" && "status-pill-action shadow-sm",
+                                                                projectStatus === statusOption && statusOption === "Completed" && "status-pill-success shadow-sm",
+                                                                projectStatus === statusOption && statusOption === "Closed" && "status-pill-closed shadow-sm",
+                                                                projectStatus !== statusOption && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                                            )}
+                                                        >
+                                                            {statusOption}
+                                                        </button>
+                                                    ))}
                                                 </div>
-                                            </button>
+                                            </div>
 
                                             <button
                                                 type="button"

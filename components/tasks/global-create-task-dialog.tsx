@@ -110,7 +110,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                             <div className="flex items-center justify-between">
                                 <Label className="text-xs font-semibold text-muted-foreground/80">Target Project</Label>
                                 <div className="flex items-center gap-2">
-                                    <Label htmlFor="show-completed" className="text-xs font-medium text-muted-foreground/60 cursor-pointer">Search in completed</Label>
+                                    <Label htmlFor="show-completed" className="text-xs font-medium text-muted-foreground/60 cursor-pointer">Show non-active</Label>
                                     <Switch
                                         id="show-completed"
                                         checked={showCompleted}
@@ -165,7 +165,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                                         {p.status !== "Active" && (
                                                             <Badge variant="outline" className={cn(
                                                                 "text-xs font-medium ml-2 flex-shrink-0 px-2 py-0.5 border-dashed",
-                                                                p.status === "Completed" ? "text-blue-500 border-blue-500/30" : "text-amber-500 border-amber-500/30"
+                                                                p.status === "Completed" ? "text-blue-500 border-blue-500/30" : "text-slate-500 border-slate-400/40"
                                                             )}>
                                                                 {p.status}
                                                             </Badge>
@@ -217,7 +217,6 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Active" className="font-bold">ACTIVE</SelectItem>
-                                                <SelectItem value="Paused" className="font-bold">PAUSED</SelectItem>
                                                 <SelectItem value="Completed" className="font-bold">COMPLETED</SelectItem>
                                             </SelectContent>
                                         </Select>

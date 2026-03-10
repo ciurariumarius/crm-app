@@ -60,7 +60,7 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 border border-border bg-white/78 backdrop-blur-[12px] shadow-lg transition data-[state=closed]:duration-300 data-[state=open]:duration-300 ease-[var(--ease-spring)]",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 border border-border bg-white shadow-lg transition data-[state=closed]:duration-300 data-[state=open]:duration-300 ease-[var(--ease-spring)]",
           side === "right" &&
           "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-[min(760px,100vw)] border-l border-border",
           side === "left" &&

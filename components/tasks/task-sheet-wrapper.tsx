@@ -12,7 +12,7 @@ interface TaskSheetWrapperProps {
 
 // Create a context to manage task sheet state
 export const TaskSheetContext = React.createContext<{
-    openTask: (taskId: string) => void
+    openTask: (taskId: string, taskData?: any) => void
     closeTask: () => void
     currentTask: any | null
 }>({
@@ -24,8 +24,8 @@ export const TaskSheetContext = React.createContext<{
 export function TaskSheetWrapper({ tasks, project, children }: TaskSheetWrapperProps) {
     const [selectedTask, setSelectedTask] = React.useState<any>(null)
 
-    const openTask = (taskId: string) => {
-        const task = tasks.find(t => t.id === taskId)
+    const openTask = (taskId: string, taskData?: any) => {
+        const task = taskData || tasks.find(t => t.id === taskId)
         if (task) {
             // Inject project context if available and missing on task
             const taskWithContext = project ? { ...task, project: task.project || project } : task

@@ -19,13 +19,13 @@ interface TasksToolbarProps {
     projects: { id: string; name: string }[]
     partners: { id: string; name: string }[]
     totalTasks: number
+    mobileSecondaryOnly?: boolean
 }
 
 function statusPillClass(currentStatus: string, option: string) {
     return cn(
         "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
         currentStatus === option && option === "Active" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
-        currentStatus === option && option === "Paused" && "bg-[#F59E0B] text-white shadow-sm ring-1 ring-[#D97706]",
         currentStatus === option && option === "Completed" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
         currentStatus === option && option === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
         currentStatus !== option && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
@@ -43,12 +43,14 @@ function urgencyPillClass(currentUrgency: string, option: string) {
     )
 }
 
-export function TasksToolbar({ projects, partners, totalTasks }: TasksToolbarProps) {
+export function TasksToolbar({ projects, partners, totalTasks, mobileSecondaryOnly = false }: TasksToolbarProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
 
     const currentQ = searchParams.get("q")?.trim() || ""
-    const currentStatus = searchParams.get("status") || "Active"
+    const currentStatusParam = searchParams.get("status") || "Active"
+    const normalizedStatusParam = currentStatusParam === "Paused" ? "Active" : currentStatusParam
+    const currentStatus = ["All", "Active", "Completed"].includes(normalizedStatusParam) ? normalizedStatusParam : "Active"
     const currentUrgency = searchParams.get("urgency") || "all"
     const currentProject = searchParams.get("projectId") || "all"
     const currentPartner = searchParams.get("partnerId") || "all"
@@ -117,13 +119,12 @@ export function TasksToolbar({ projects, partners, totalTasks }: TasksToolbarPro
         <div className="md:sticky md:top-3 z-20 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 md:px-4 md:py-4 shadow-sm backdrop-blur-[6px]">
             <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-end gap-4">
-                    <div className="space-y-1.5">
+                    <div className={cn("space-y-1.5", mobileSecondaryOnly && "hidden")}>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Status</p>
                         <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
                             {[
                                 { label: "All", value: "All" },
                                 { label: "Active", value: "Active" },
-                                { label: "Paused", value: "Paused" },
                                 { label: "Completed", value: "Completed" },
                             ].map((option) => (
                                 <Link
@@ -137,7 +138,7 @@ export function TasksToolbar({ projects, partners, totalTasks }: TasksToolbarPro
                         </div>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className={cn("space-y-1.5", mobileSecondaryOnly && "hidden")}>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Priority</p>
                         <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
                             {[
