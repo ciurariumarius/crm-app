@@ -2,9 +2,10 @@
 
 import * as React from "react"
 import { format, isToday, isYesterday } from "date-fns"
-import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Repeat2 } from "lucide-react"
+import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Repeat2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
+import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
     minimumFractionDigits: 0,
@@ -68,16 +69,57 @@ function getStatusBadge(status: string) {
     }
 }
 
+type BoardPartner = {
+    id: string
+    name: string
+    sites?: { id: string; domainName: string }[]
+}
+
+type BoardService = {
+    id: string
+    serviceName: string
+    isRecurring: boolean
+    baseFee?: number | string | null
+}
+
+type BoardProject = {
+    id: string
+    name?: string | null
+    status: string
+    paymentStatus: string
+    amount: number
+    secondsLogged: number
+    completedTasks: number
+    createdAt: string | Date
+    isRecurring: boolean
+    serviceLabel: string
+    site: {
+        domainName: string
+        partner: {
+            name: string
+        }
+    }
+    _count?: {
+        tasks?: number
+    }
+    tasks?: unknown[]
+}
+
 export function ProjectsBoardRows({
     projects,
     layout,
+    partners = [],
+    services = [],
 }: {
-    projects: any[]
+    projects: BoardProject[]
     layout: "grid" | "list"
+    partners?: BoardPartner[]
+    services?: BoardService[]
 }) {
     const { openProject } = React.useContext(ProjectSheetContext)
     const [sortBy, setSortBy] = React.useState<"createdAt" | "amount" | "name" | "time">("createdAt")
     const [sortDirection, setSortDirection] = React.useState<"desc" | "asc">("desc")
+    const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
 
     const setSort = (key: "createdAt" | "amount" | "name" | "time") => {
         if (sortBy === key) {
@@ -90,7 +132,7 @@ export function ProjectsBoardRows({
     }
 
     const sortProjects = React.useCallback(
-        (items: any[]) =>
+        (items: BoardProject[]) =>
             [...items].sort((a, b) => {
                 let leftValue: number | string
                 let rightValue: number | string
@@ -208,7 +250,7 @@ export function ProjectsBoardRows({
                             )}
                             title={`Sort by name (${sortBy === "name" ? (sortDirection === "desc" ? "Z-A" : "A-Z") : "A-Z"})`}
                         >
-                            Project name / service
+                            Project name
                             <ArrowDownUp className="h-3 w-3" />
                         </button>
                         <span className="text-center">Status</span>
@@ -342,6 +384,8 @@ export function ProjectsBoardRows({
                                 </button>
                             )
                         })}
+
+
                     </div>
                 </section>
 
@@ -439,8 +483,39 @@ export function ProjectsBoardRows({
                                 </button>
                             )
                         })}
+
+
                     </div>
                 </section>
+
+                {/* Global Shadow Row - Bottom */}
+                {layout === "list" && (
+                    <div className="pt-8 pb-4">
+                        {createProjectOpen ? (
+                            <InlineQuickAddRow
+                                partners={partners}
+                                services={services}
+                                onCancel={() => setCreateProjectOpen(false)}
+                                gridColumns={LIST_GRID_COLUMNS}
+                                autoFocus
+                            />
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setCreateProjectOpen(true)}
+                                className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-dashed border-primary/30 bg-primary/5 px-6 py-4 transition-all hover:bg-primary/10 group/shadow", LIST_GRID_COLUMNS)}
+                            >
+                                <div className="min-w-0 flex items-center gap-4">
+                                    <div className="h-6 w-16 bg-primary/10 rounded-full animate-pulse flex-shrink-0" />
+                                    <div className="flex items-center gap-2">
+                                        <Plus className="h-4 w-4 text-primary group-hover/shadow:scale-110 transition-transform" />
+                                        <span className="text-sm font-semibold text-primary">Add new project...</span>
+                                    </div>
+                                </div>
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )

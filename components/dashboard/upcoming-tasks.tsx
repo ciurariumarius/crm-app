@@ -1,21 +1,19 @@
 "use client"
 
 import * as React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { format, isToday, isTomorrow, isPast, addDays } from "date-fns"
+import { format, isToday, isPast } from "date-fns"
 import { cn } from "@/lib/utils"
-import { Calendar, AlertCircle, Clock, CheckCircle2, ArrowRight, Target, Plus, Play, Square, Pause, History, LayoutGrid, Zap, Sparkles } from "lucide-react"
+import { Clock, CheckCircle2, Target, Plus, LayoutGrid, Sparkles, Trash2 } from "lucide-react"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import Link from "next/link"
-import { updateTask } from "@/lib/actions/tasks"
+import { updateTask, deleteTasks } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
+import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 
 interface UpcomingTasksProps {
     tasks: any[]
@@ -26,11 +24,24 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
     const { timerState, startTimer, stopTimer, pauseTimer, resumeTimer } = useTimer()
     const { openTask } = React.useContext(TaskSheetContext)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
+    const [quickLogTask, setQuickLogTask] = React.useState<any>(null)
+    const [cols, setCols] = React.useState<3 | 4>(3)
+    const [filter, setFilter] = React.useState<"all" | "overdue" | "urgent">("all")
     const [optimisticTasks, setOptimisticTasks] = React.useOptimistic(
         tasks,
         (state, updatedTask: string) => state.filter((task) => task.id !== updatedTask)
     )
-    const [filter, setFilter] = React.useState<"all" | "overdue" | "urgent">("all")
+
+    // Persist column preference
+    React.useEffect(() => {
+        const saved = localStorage.getItem("dashboard.tasks.cols")
+        if (saved === "4") setCols(4)
+    }, [])
+
+    const handleSetCols = (c: 3 | 4) => {
+        setCols(c)
+        localStorage.setItem("dashboard.tasks.cols", String(c))
+    }
 
     const filteredTasks = React.useMemo(() => {
         switch (filter) {
@@ -115,9 +126,28 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                         </div>
 
                         <div className="flex items-center gap-3">
+                            {/* Column switcher */}
+                            <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm gap-0.5">
+                                {([3, 4] as const).map((c) => (
+                                    <button
+                                        key={c}
+                                        onClick={() => handleSetCols(c)}
+                                        title={`${c} columns`}
+                                        className={cn(
+                                            "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors",
+                                            cols === c
+                                                ? "bg-slate-100 text-slate-900"
+                                                : "text-slate-400 hover:text-slate-700"
+                                        )}
+                                    >
+                                        {c}
+                                    </button>
+                                ))}
+                            </div>
+
                             <Link href="/tasks" className="hidden md:block">
                                 <Button variant="ghost" className="text-xs font-bold text-muted-foreground hover:text-foreground uppercase tracking-wider">
-                                    View All <ArrowRight className="ml-1 h-3 w-3" />
+                                    View All
                                 </Button>
                             </Link>
                             <Button
@@ -175,39 +205,67 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
 
                 {/* Tasks Grid */}
                 <div className="p-1 flex-1 overflow-visible">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {filteredTasks.map((task) => (
-                            <TaskGridCard
-                                key={task.id}
-                                task={task}
-                                onOpen={openTask}
-                                onComplete={handleComplete}
-                            />
-                        ))}
+                    {(() => {
+                        const colsClass = {
+                            3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+                            4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+                        }[cols]
+                        return (
+                            <div className={cn("grid gap-6", colsClass)}>
+                                {filteredTasks.map((task) => (
+                                    <TaskGridCard
+                                        key={task.id}
+                                        task={task}
+                                        onOpen={openTask}
+                                        onComplete={handleComplete}
+                                        renderMenu={(t) => (
+                                            <>
+                                                <DropdownMenuItem
+                                                    onClick={(e) => { e.stopPropagation(); setQuickLogTask(t); }}
+                                                    className="gap-2 text-sm font-medium cursor-pointer"
+                                                >
+                                                    <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    className="gap-2 text-sm font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        if (confirm("Delete this task?")) {
+                                                            deleteTasks([t.id]).then(() => toast.success("Task deleted"))
+                                                        }
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" /> Delete Task
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                    />
+                                ))}
 
-                        {/* Empty State Message and Add New Task Card */}
-                        {filteredTasks.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-[220px] text-muted-foreground/50 gap-2 border-2 border-dashed border-muted/50 rounded-2xl bg-muted/5">
-                                <CheckCircle2 className="h-8 w-8 opacity-20" />
-                                <span className="text-xs font-medium">
-                                    {filter === "overdue" ? "No overdue tasks!" : filter === "urgent" ? "No urgent tasks!" : "All clear for today!"}
-                                </span>
-                            </div>
-                        )}
+                                {/* Empty State */}
+                                {filteredTasks.length === 0 && (
+                                    <div className="col-span-full flex flex-col items-center justify-center h-[220px] text-muted-foreground/50 gap-2 border-2 border-dashed border-muted/50 rounded-2xl bg-muted/5">
+                                        <CheckCircle2 className="h-8 w-8 opacity-20" />
+                                        <span className="text-xs font-medium">
+                                            {filter === "overdue" ? "No overdue tasks!" : filter === "urgent" ? "No urgent tasks!" : "All clear for today!"}
+                                        </span>
+                                    </div>
+                                )}
 
-                        {/* Shadow Task (Create New) */}
-                        <div
-                            onClick={() => setCreateTaskOpen(true)}
-                            className="group flex flex-col items-center justify-center h-[220px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 cursor-pointer"
-                        >
-                            <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-0 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
-                                <Plus className="h-8 w-8 text-muted-foreground group-hover:text-current" strokeWidth={1.5} />
+                                {/* Shadow Task (Create New) */}
+                                <div
+                                    onClick={() => setCreateTaskOpen(true)}
+                                    className="group flex flex-col items-center justify-center h-[160px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 cursor-pointer"
+                                >
+                                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                                        <Plus className="h-6 w-6 text-muted-foreground group-hover:text-current" strokeWidth={1.5} />
+                                    </div>
+                                    <span className="text-sm font-semibold text-muted-foreground group-hover:text-emerald-500 transition-colors mt-2">Add New Task</span>
+                                </div>
                             </div>
-                            <span className="text-sm font-semibold text-muted-foreground group-hover:text-emerald-500 transition-colors mt-3">
-                                Add New Task
-                            </span>
-                        </div>
-                    </div>
+                        )
+                    })()}
                 </div>
             </div>
             <GlobalCreateTaskDialog
@@ -215,6 +273,15 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                 onOpenChange={setCreateTaskOpen}
                 projects={projects || []}
             />
+            {quickLogTask && (
+                <QuickTimeLogDialog
+                    open={!!quickLogTask}
+                    onOpenChange={(open) => { if (!open) setQuickLogTask(null) }}
+                    projectId={quickLogTask.projectId || quickLogTask.project?.id || ""}
+                    taskId={quickLogTask.id}
+                    taskName={quickLogTask.name}
+                />
+            )}
         </>
     )
 }

@@ -123,30 +123,19 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
     }
 
     const renderTaskActionMenu = (task: any) => (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <button className="h-8 w-8 rounded-full hover:bg-muted/50 flex items-center justify-center text-muted-foreground transition-colors" onClick={e => e.stopPropagation()}>
-                    <MoreVertical className="h-4 w-4" />
-                </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px] p-2 rounded-2xl shadow-xl border-border/40">
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toggleSelect(task.id); }} className="px-3 py-2 text-xs font-semibold rounded-xl focus:bg-primary/5 cursor-pointer">
-                    <CheckSquare className="mr-3 h-4 w-4 text-muted-foreground" /> Select Task
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task); }} className="px-3 py-2 text-xs font-semibold rounded-xl focus:bg-primary/5 cursor-pointer">
-                    <Clock className="mr-3 h-4 w-4 text-muted-foreground" /> Add Manual Time
-                </DropdownMenuItem>
-                <div className="h-px bg-border/40 my-1 mx-2" />
-                <DropdownMenuItem className="px-3 py-2 text-xs font-semibold rounded-xl text-rose-500 focus:bg-rose-500/10 focus:text-rose-600 cursor-pointer" onClick={(e) => {
-                    e.stopPropagation()
-                    if (confirm("Delete this task?")) {
-                        deleteTasks([task.id]).then(() => toast.success("Task deleted"))
-                    }
-                }}>
-                    <Trash2 className="mr-3 h-4 w-4" /> Delete Task
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task); }} className="gap-2 text-sm font-medium cursor-pointer">
+                <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2 text-sm font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={(e) => {
+                e.stopPropagation()
+                if (confirm("Delete this task?")) {
+                    deleteTasks([task.id]).then(() => toast.success("Task deleted"))
+                }
+            }}>
+                <Trash2 className="h-3.5 w-3.5" /> Delete Task
+            </DropdownMenuItem>
+        </>
     )
 
     const getStatusStyle = (status: string) => {
@@ -162,15 +151,22 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
         return <ArrowRight className="h-3 w-3" strokeWidth={3} />
     }
 
+    const colsClass = {
+        2: "grid-cols-1 sm:grid-cols-2",
+        3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+        4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+    }[cols] ?? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+
     const renderGridView = () => (
-        <div className={cn(
-            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-        )}>
+        <div className={cn("grid gap-6", colsClass)}>
             {tasks.map((task) => (
                 <TaskGridCard
                     key={task.id}
                     task={task}
-                    onOpen={setSelectedTask}
+                    onOpen={(taskId) => {
+                        const found = tasks.find(t => t.id === taskId)
+                        if (found) setSelectedTask(found)
+                    }}
                     onComplete={handleComplete}
                     renderMenu={renderTaskActionMenu}
                     isSelected={selectedIds.includes(task.id)}

@@ -4,28 +4,82 @@ import * as React from "react"
 import { format, isToday, isPast } from "date-fns"
 import { cn } from "@/lib/utils"
 import {
-    Target,
-    Play,
-    Pause,
+    AlertTriangle,
+    Calendar as CalendarIcon,
     CheckCircle2,
-    History,
+    CheckCheck,
+    Clock,
     Lightbulb,
-    Calendar as CalendarIcon
+    MoreHorizontal,
+    Pause,
+    Play,
+    RotateCw,
+    Circle,
+    ArrowUpRight,
 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
 
 interface TaskGridCardProps {
     task: any
-    onOpen: (task: any) => void
+    onOpen: (taskId: string) => void
     onComplete: (taskId: string) => void
     renderMenu?: (task: any) => React.ReactNode
     isSelected?: boolean
     onSelect?: (taskId: string) => void
     showActions?: boolean
     className?: string
+}
+
+function PriorityBadge({ urgency }: { urgency: string }) {
+    if (urgency === "Urgent") {
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.08em] bg-rose-50 text-rose-600 border border-rose-200">
+                <AlertTriangle className="h-2.5 w-2.5" />
+                Urgent
+            </span>
+        )
+    }
+    if (urgency === "Idea") {
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.08em] bg-sky-50 text-sky-600 border border-sky-200">
+                <Lightbulb className="h-2.5 w-2.5" />
+                Idea
+            </span>
+        )
+    }
+    return null
+}
+
+function DeadlineBadge({ deadline }: { deadline: string | null | undefined }) {
+    if (!deadline) return null
+    const date = new Date(deadline)
+    const overdue = isPast(date) && !isToday(date)
+    const dueToday = isToday(date)
+
+    const label = overdue ? "Overdue" : dueToday ? "Today" : format(date, "MMM d")
+
+    return (
+        <span className={cn(
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.08em] border",
+            overdue
+                ? "bg-rose-50 text-rose-600 border-rose-200"
+                : dueToday
+                    ? "bg-orange-50 text-orange-600 border-orange-200"
+                    : "bg-slate-50 text-slate-500 border-slate-200"
+        )}>
+            {overdue ? <AlertTriangle className="h-2.5 w-2.5" /> : <CalendarIcon className="h-2.5 w-2.5" />}
+            {label}
+        </span>
+    )
 }
 
 export function TaskGridCard({
@@ -35,234 +89,166 @@ export function TaskGridCard({
     renderMenu,
     isSelected,
     showActions = true,
-    className
+    className,
 }: TaskGridCardProps) {
     const { timerState, startTimer, pauseTimer, resumeTimer } = useTimer()
 
-    const getDeadlineText = (date: Date) => {
-        if (isPast(date) && !isToday(date)) return "Overdue"
-        if (isToday(date)) return "Today"
-        return format(date, "MMM d")
-    }
-
-    const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isRunning = isActiveTimerThisTask && timerState.isRunning
     const isPaused = isActiveTimerThisTask && !timerState.isRunning && timerState.elapsedSeconds > 0
-    const currentTimerDuration = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
-    const totalSeconds = logsDuration + currentTimerDuration
-
-    const formattedTotalTime = (() => {
-        const hours = Math.floor(totalSeconds / 3600)
-        const minutes = Math.floor((totalSeconds % 3600) / 60)
-        return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
-    })()
 
     const domainName = task.project?.site?.domainName || task.project?.name || "No Project"
     const services = task.project?.services || []
     const isRecurring = services.some((s: any) => s.isRecurring)
     const serviceName = services.length > 0
         ? services.map((s: any) => s.serviceName).join(" + ")
-        : "No Service"
+        : null
 
-    const isOverdue = task.deadline && isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline))
-    const isDueToday = task.deadline && isToday(new Date(task.deadline))
-    const estimatedSeconds = task.estimatedMinutes ? task.estimatedMinutes * 60 : 0
-    const progressPercent = task.status === "Completed"
-        ? 100
-        : estimatedSeconds > 0
-            ? Math.min(100, Math.round((totalSeconds / estimatedSeconds) * 100))
-            : isRunning
-                ? 45
-                : 15
+    const projectFullName = serviceName ? `${domainName} — ${serviceName}` : domainName
 
     return (
         <div
             className={cn(
-                "cockpit-task-card premium-card group relative flex min-h-[220px] cursor-pointer flex-col p-4",
-                isSelected ? "ring-2 ring-primary/20 border-primary bg-primary/5" : "",
+                "group relative rounded-2xl border bg-white cursor-pointer transition-all duration-200",
+                "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5",
+                isRunning
+                    ? "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
+                    : isSelected
+                        ? "border-primary/30 bg-primary/[0.02] shadow-[0_0_0_2px_rgba(var(--primary),0.1)]"
+                        : "border-slate-200 hover:border-slate-300",
                 className
             )}
-            style={{ "--progress-width": `${progressPercent}%` } as React.CSSProperties}
-            onClick={() => onOpen(task)}
+            onClick={() => onOpen(task.id)}
         >
-            <div className="flex items-start justify-between gap-3 mb-3">
-                <h4
-                    className={cn(
-                        "text-[14px] font-semibold leading-tight transition-colors text-foreground line-clamp-2 pr-3",
-                        task.status === "Completed" && "line-through opacity-60"
-                    )}
-                >
-                    {task.name}
-                </h4>
-                <div className="shrink-0 text-right">
-                    <p className="font-mono text-[13px] font-semibold tabular-nums text-foreground">{formattedTotalTime}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">spent</p>
-                </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-                <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    task.status === "Active" ? "bg-blue-500" :
-                        task.status === "Paused" ? "bg-amber-500" :
-                            task.status === "Completed" ? "bg-emerald-500" : "bg-muted-foreground"
-                )} />
-                {task.urgency === "Urgent" && (
-                    <Badge variant="secondary" className="status-pill status-pill-debt border-none">
-                        URGENT
-                    </Badge>
-                )}
-                {task.urgency === "Idea" && (
-                    <Badge variant="secondary" className="px-2 py-0.5 text-[10px] font-bold text-sky-700 bg-sky-50 rounded-lg border-sky-100 border shadow-none">
-                        <Lightbulb className="h-3 w-3 mr-1" /> IDEA
-                    </Badge>
-                )}
-                {task.deadline && (
-                    <div className={cn(
-                        "text-[10px] flex items-center gap-1 font-bold px-2 py-0.5 rounded-lg border transition-colors",
-                        isOverdue ? "bg-rose-50 text-rose-600 border-rose-100" :
-                            isDueToday ? "bg-orange-50 text-orange-600 border-orange-100" :
-                                "bg-muted/30 text-muted-foreground/70 border-border/40"
-                    )}>
-                        <CalendarIcon className="h-3 w-3" />
-                        {getDeadlineText(new Date(task.deadline))}
-                    </div>
-                )}
-                {renderMenu && (
-                    <div className="ml-auto shrink-0" onClick={e => e.stopPropagation()}>
-                        {renderMenu(task)}
-                    </div>
-                )}
-            </div>
-
-            <div className="flex flex-col gap-1 mb-4">
-                <span className="text-xs font-semibold text-blue-600 truncate">
-                    {domainName}
-                </span>
-                <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="text-[11px] font-medium text-muted-foreground/70 truncate">
-                        {serviceName}
-                    </span>
-                    {isRecurring && task.project?.createdAt && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 text-[10px] font-bold text-muted-foreground shrink-0 border border-border/40">
-                            {format(new Date(task.project.createdAt), "MMM yyyy")}
-                        </span>
-                    )}
-                </div>
-            </div>
-
-            {task.description && (
-                <p className="text-[11px] text-muted-foreground/50 line-clamp-2 mb-4 leading-relaxed">
-                    {task.description}
-                </p>
+            {/* Running timer indicator */}
+            {isRunning && (
+                <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-blue-400 via-blue-500 to-violet-500 animate-pulse" />
             )}
 
-            <div className="flex-1" />
+            <div className="p-4 flex flex-col gap-3">
+                {/* Header row: title + options menu */}
+                <div className="flex items-start justify-between gap-2">
+                    <h4 className={cn(
+                        "text-[14px] font-semibold leading-snug text-slate-900 line-clamp-2 flex-1",
+                        task.status === "Completed" && "line-through opacity-50"
+                    )}>
+                        {task.name}
+                    </h4>
 
-            <div className="flex items-center justify-between pt-3 border-t border-border/40 mt-auto">
-                <div className="flex items-center gap-3">
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-foreground tabular-nums">
-                            <History className={cn("h-3 w-3", isRunning ? "text-blue-600 timer-pulse" : "text-muted-foreground/40")} />
-                            {formattedTotalTime}
-                        </div>
-                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.1em]">Spent</span>
+                    {/* Options menu — always visible via ··· */}
+                    <div onClick={e => e.stopPropagation()} className="shrink-0">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-lg text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-100 transition-all"
+                                >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-xl border-slate-100">
+                                <DropdownMenuItem
+                                    onClick={() => onOpen(task.id)}
+                                    className="gap-2 text-sm font-medium cursor-pointer"
+                                >
+                                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
+                                    Open panel
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {renderMenu && renderMenu(task)}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
-
-                    {task.estimatedMinutes && (
-                        <div className="w-[1px] h-6 bg-border/40" />
-                    )}
-                    {task.estimatedMinutes && (
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-muted-foreground/60 tabular-nums">
-                                <Target className="h-3 w-3 opacity-40" />
-                                {task.estimatedMinutes}m
-                            </div>
-                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-[0.1em]">Est</span>
-                        </div>
-                    )}
                 </div>
 
-                {showActions && (
-                    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                {/* Project name */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                    {isRecurring
+                        ? <RotateCw className="h-3 w-3 text-violet-500 shrink-0" />
+                        : <Circle className="h-3 w-3 text-emerald-500 shrink-0" />
+                    }
+                    <p className="text-[11px] font-semibold text-slate-500 truncate">{projectFullName}</p>
+                </div>
+
+                {/* Badges: priority + deadline */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <PriorityBadge urgency={task.urgency} />
+                    <DeadlineBadge deadline={task.deadline} />
+                </div>
+            </div>
+
+            {/* Hover action bar — slides up from bottom */}
+            {showActions && (
+                <div
+                    className={cn(
+                        "absolute inset-x-0 bottom-0 rounded-b-2xl px-3 py-2.5 flex items-center justify-between",
+                        "border-t border-slate-100 bg-white/95 backdrop-blur-sm",
+                        "translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100",
+                        "transition-all duration-200 ease-out pointer-events-none group-hover:pointer-events-auto"
+                    )}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div className="flex items-center gap-1">
+                        {/* Timer button */}
                         {isRunning ? (
                             <Button
                                 size="icon"
-                                className="h-8 w-8 text-white bg-rose-500 hover:bg-rose-600 rounded-lg shadow-lg shadow-rose-500/20 transition-all"
-                                onClick={(e) => {
-                                    e.preventDefault()
+                                className="h-7 w-7 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-sm shadow-rose-200 transition-all"
+                                onClick={() => {
                                     pauseTimer()
                                     toast.success("Timer paused")
                                 }}
                             >
-                                <Pause className="h-3.5 w-3.5 fill-current" />
+                                <Pause className="h-3 w-3 fill-current" />
                             </Button>
                         ) : isPaused ? (
                             <Button
                                 size="icon"
-                                className="h-8 w-8 text-white bg-amber-500 hover:bg-amber-600 rounded-lg shadow-lg shadow-amber-500/20 transition-all"
-                                onClick={(e) => {
-                                    e.preventDefault()
+                                className="h-7 w-7 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-200 transition-all"
+                                onClick={() => {
                                     resumeTimer()
                                     toast.success("Timer resumed")
                                 }}
                             >
-                                <Play className="h-3.5 w-3.5 fill-current ml-0.5" />
+                                <Play className="h-3 w-3 fill-current ml-0.5" />
                             </Button>
                         ) : (
                             <Button
-                                variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                                onClick={(e) => {
-                                    e.preventDefault()
+                                className="h-7 w-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200 transition-all"
+                                onClick={() => {
                                     startTimer(task.projectId, task.id, task.name)
                                     toast.success("Timer started")
                                 }}
                             >
-                                <Play className="h-4 w-4 ml-1" />
+                                <Play className="h-3 w-3 fill-current ml-0.5" />
                             </Button>
                         )}
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                            onClick={(e) => {
-                                e.preventDefault()
-                                onComplete(task.id)
-                            }}
-                        >
-                            <CheckCircle2 className="h-4 w-4" />
-                        </Button>
+                        {/* Running indicator */}
+                        {isRunning && (
+                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider animate-pulse">
+                                Live
+                            </span>
+                        )}
                     </div>
-                )}
-            </div>
 
-            {showActions && !isRunning && (
-                <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 opacity-0 translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0">
+                    {/* Complete button */}
                     <Button
-                        size="icon"
-                        className="pointer-events-auto h-9 w-9 rounded-full bg-primary text-primary-foreground shadow-lg"
-                        onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            if (isPaused) {
-                                resumeTimer()
-                                toast.success("Timer resumed")
-                            } else {
-                                startTimer(task.projectId, task.id, task.name)
-                                toast.success("Timer started")
-                            }
-                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2.5 rounded-full text-[11px] font-bold text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 gap-1 transition-all"
+                        onClick={() => onComplete(task.id)}
                     >
-                        <Play className="h-4 w-4 ml-0.5" />
+                        <CheckCheck className="h-3.5 w-3.5" />
+                        Done
                     </Button>
                 </div>
             )}
 
-            <div className="cockpit-task-progress" />
+            {/* Bottom padding to make room for the hover bar */}
+            {showActions && <div className="h-10" />}
         </div>
     )
 }

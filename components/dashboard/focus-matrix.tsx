@@ -75,7 +75,6 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
                                 task={task}
                                 onOpen={openTask}
                                 onComplete={() => handleComplete(task.id)}
-                                className="border-l-4 border-l-red-500 shadow-sm"
                             />
                         ))}
                     </div>

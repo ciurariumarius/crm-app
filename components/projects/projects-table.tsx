@@ -40,6 +40,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
+import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
 
 import {
     DropdownMenu,
@@ -52,20 +53,55 @@ import {
 interface ProjectTableProps {
     projects: any[]
     allServices: any[]
+    partners?: any[]
     layout?: "grid" | "list"
 }
 
-export function ProjectsTable({ projects, allServices, layout = "grid" }: ProjectTableProps) {
+const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_52px_52px_85px_90px_60px_75px_110px_150px]"
+
+export function ProjectsTable({ projects, allServices, partners = [], layout = "grid" }: ProjectTableProps) {
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
+    const [quickAddOpen, setQuickAddOpen] = React.useState(false)
+    const [createProjectDialogOpen, setCreateProjectDialogOpen] = React.useState(false)
 
 
 
     // Derived from projects
     const recurringProjects = projects.filter(p => p.services?.[0]?.isRecurring)
     const oneTimeProjects = projects.filter(p => !p.services?.[0]?.isRecurring)
+
+    const quickAddPartners = React.useMemo(() => {
+        if (partners.length > 0) {
+            return JSON.parse(JSON.stringify(partners))
+        }
+
+        const partnerMap = new Map<string, { id: string; name: string; sites: { id: string; domainName: string }[] }>()
+
+        for (const project of projects) {
+            const partnerId = project.site?.partner?.id
+            const partnerName = project.site?.partner?.name
+            const siteId = project.site?.id
+            const domainName = project.site?.domainName
+
+            if (!partnerId || !partnerName) continue
+
+            if (!partnerMap.has(partnerId)) {
+                partnerMap.set(partnerId, { id: partnerId, name: partnerName, sites: [] })
+            }
+
+            if (siteId && domainName) {
+                const currentPartner = partnerMap.get(partnerId)
+                if (currentPartner && !currentPartner.sites.some((site) => site.id === siteId)) {
+                    currentPartner.sites.push({ id: siteId, domainName })
+                }
+            }
+        }
+
+        return Array.from(partnerMap.values()).sort((left, right) => left.name.localeCompare(right.name))
+    }, [partners, projects])
 
     const handleUpdate = async (projectId: string, data: any) => {
         setUpdatingId(projectId)
@@ -112,7 +148,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
 
     const renderHeader = () => (
         <div className={cn("glass hidden md:flex h-10 items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground w-full md:min-w-[1280px] gap-5 rounded-lg", layout === "grid" && "hidden")}>
-            <div className="flex-1 min-w-[320px] shrink-0">Project name & url</div>
+            <div className="flex-1 min-w-[320px] shrink-0">Project name</div>
             <div className="w-[80px] shrink-0 text-center">Status</div>
             <div className="w-[70px] shrink-0 text-center">Type</div>
             <div className="w-[85px] shrink-0 text-center">Payment</div>
@@ -415,8 +451,6 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
         )
     }
 
-    const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
-
     return (
         <div className="space-y-12">
             {/* One-Time Group */}
@@ -437,7 +471,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             {/* Shadow Card */}
                             <div
                                 className="group/shadow bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-white border border-dashed border-primary/30 rounded-xl flex flex-col justify-center items-center h-[180px] transition-all cursor-pointer"
-                                onClick={() => setCreateProjectOpen(true)}
+                                onClick={() => setCreateProjectDialogOpen(true)}
                             >
                                 <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover/shadow:scale-110 group-hover/shadow:bg-primary/20 transition-all">
                                     <Plus className="h-6 w-6" strokeWidth={3} />
@@ -454,19 +488,6 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 <div className="md:min-w-[1240px] flex flex-col gap-2">
                                     {renderHeader()}
                                     {oneTimeProjects.map((project, index) => renderProjectCard(project, index))}
-                                    {/* Shadow Create Row */}
-                                    <div
-                                        className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer md:min-w-[1280px] mt-2 group/shadow"
-                                        onClick={() => setCreateProjectOpen(true)}
-                                    >
-                                        <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
-                                            <div className="h-6 w-16 bg-primary/20 rounded-full animate-pulse" />
-                                        </div>
-                                        <div className="flex-1 px-4 flex items-center gap-3 text-slate-900">
-                                            <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
-                                            <span className="text-sm font-semibold text-primary transition-colors">Add new project...</span>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </>
@@ -503,29 +524,44 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                             </div>
                         </>
                     )}
-                    {/* Shadow Create Row */}
-                    {layout === "list" && (
-                        <div
-                            className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer mt-2 group/shadow md:min-w-[1240px]"
-                            onClick={() => setCreateProjectOpen(true)}
-                        >
-                            <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
-                                <div className="h-6 w-16 bg-primary/20 rounded-full animate-pulse" />
-                            </div>
-                            <div className="flex-1 px-4 flex items-center gap-3">
-                                <Plus className="h-4 w-4 text-primary group-hover/shadow:text-primary transition-colors" />
-                                <span className="text-sm font-semibold text-primary transition-colors">Add new project...</span>
-                            </div>
-                        </div>
-                    )}
+                </div>
+            )}
+
+            {layout === "list" && (
+                <div className="pt-2 overflow-x-auto pb-2 hidescrollbar text-slate-900">
+                    <div className="md:min-w-[1280px]">
+                        {quickAddOpen ? (
+                            <InlineQuickAddRow
+                                partners={quickAddPartners}
+                                services={allServices}
+                                onCancel={() => setQuickAddOpen(false)}
+                                gridColumns={LIST_GRID_COLUMNS}
+                                autoFocus
+                            />
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setQuickAddOpen(true)}
+                                className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-dashed border-primary/30 bg-primary/5 px-6 py-4 transition-all hover:bg-primary/10 group/shadow", LIST_GRID_COLUMNS)}
+                            >
+                                <div className="min-w-0 flex items-center gap-4">
+                                    <div className="h-6 w-16 bg-primary/10 rounded-full animate-pulse flex-shrink-0" />
+                                    <div className="flex items-center gap-2">
+                                        <Plus className="h-4 w-4 text-primary group-hover/shadow:scale-110 transition-transform" />
+                                        <span className="text-sm font-semibold text-primary">Add new project...</span>
+                                    </div>
+                                </div>
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
             {/* Create Project Dialog */}
             <GlobalCreateProjectDialog
-                open={createProjectOpen}
-                onOpenChange={setCreateProjectOpen}
-                partners={JSON.parse(JSON.stringify(projects.flatMap(p => p.site?.partner ? [p.site.partner] : []).filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i)))} // Rough way to get partners from projects prop, ideally passed down
+                open={createProjectDialogOpen}
+                onOpenChange={setCreateProjectDialogOpen}
+                partners={JSON.parse(JSON.stringify(quickAddPartners))}
                 services={allServices}
             />
 

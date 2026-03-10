@@ -33,43 +33,46 @@ export function TasksViewToggle({ currentView }: { currentView: string }) {
     }
 
     return (
-        <div className="hidden sm:flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm gap-0.5">
             <button
                 onClick={() => setView("list")}
+                title="List view"
                 className={cn(
-                    "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-                    currentView === "list" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
+                    "h-8 w-8 rounded-lg flex items-center justify-center transition-colors",
+                    currentView === "list" ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-700"
                 )}
             >
                 <List className="h-4 w-4" />
             </button>
             <button
                 onClick={() => setView("grid")}
+                title="Grid view"
                 className={cn(
-                    "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-                    currentView === "grid" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
+                    "h-8 w-8 rounded-lg flex items-center justify-center transition-colors",
+                    currentView !== "list" ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-700"
                 )}
             >
                 <LayoutGrid className="h-4 w-4" />
             </button>
 
-            {currentView === "grid" && (
+            {currentView !== "list" && (
                 <>
-                    <div className="w-px h-4 bg-slate-200 mx-1 hidden xl:block" />
-                    <div className="hidden xl:flex items-center gap-1">
-                        {[2, 3, 4].map((c) => (
-                            <button
-                                key={c}
-                                onClick={() => setCols(c.toString())}
-                                className={cn(
-                                    "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
-                                    colsTarget === c.toString() ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
-                                )}
-                            >
-                                {c}
-                            </button>
-                        ))}
-                    </div>
+                    <div className="w-px h-4 bg-slate-200 mx-1" />
+                    {[3, 4].map((c) => (
+                        <button
+                            key={c}
+                            onClick={() => setCols(c.toString())}
+                            title={`${c} columns`}
+                            className={cn(
+                                "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors",
+                                colsTarget === c.toString()
+                                    ? "bg-slate-100 text-slate-900"
+                                    : "text-slate-400 hover:text-slate-700"
+                            )}
+                        >
+                            {c}
+                        </button>
+                    ))}
                 </>
             )}
         </div>
