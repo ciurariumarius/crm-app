@@ -1,12 +1,8 @@
-import { QuickStart } from "@/components/dashboard/quick-start"
-import { QuickActions } from "@/components/dashboard/quick-actions"
 import { RecurringProjectsList } from "@/components/dashboard/recurring-projects-list"
 import { OneTimeProjectsList } from "@/components/dashboard/one-time-projects-list"
-import { UpcomingTasks } from "@/components/dashboard/upcoming-tasks"
 import { serialize } from "@/lib/utils"
-import { FinancialStatusBar } from "@/components/dashboard/financial-status-bar"
 import prisma from "@/lib/prisma"
-import { CreditCard, Clock, Target, FolderDot, Wallet } from "lucide-react"
+import { Target, FolderDot, Wallet } from "lucide-react"
 import { GreetingHeader } from "@/components/dashboard/greeting-header"
 import { calculateDashboardMetrics } from "@/lib/dashboard-utils"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
@@ -18,7 +14,8 @@ import { FocusMatrix } from "@/components/dashboard/focus-matrix"
 import { SettleUpLedger } from "@/components/dashboard/settle-up-ledger"
 import { ProfitabilityAlerts } from "@/components/dashboard/profitability-alerts"
 import { SettlementHistory } from "@/components/dashboard/settlement-history"
-import { Card } from "@/components/ui/card"
+import { MobileHomeView } from "@/components/dashboard/mobile-home-view"
+import type { MobileHomeViewProps } from "@/components/dashboard/mobile-home-view"
 import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
@@ -27,17 +24,21 @@ export default async function Home() {
   const session = await requireTenantContext()
   const user = await prisma.user.findFirst({
     where: { id: session.userId, tenantId: session.tenantId },
-    // @ts-ignore - hourlyRate is in the DB but the IDE's Prisma type cache is stale
-    select: { name: true, username: true, hourlyRate: true }
+    select: {
+      name: true,
+      username: true,
+      profilePic: true,
+      ...({ hourlyRate: true } as Record<string, true>),
+    }
   })
 
-  let activeProjects: any[] = []
+  let activeProjects: unknown[] = []
   let timeLogsThisMonth: { _sum: { durationSeconds: number | null } } = { _sum: { durationSeconds: null } }
-  let recentProjects: any[] = []
-  let upcomingTasks: any[] = []
-  let partners: any[] = []
-  let services: any[] = []
-  let settlementAuditLogs: any[] = []
+  let recentProjects: unknown[] = []
+  let upcomingTasks: unknown[] = []
+  let partners: unknown[] = []
+  let services: unknown[] = []
+  let settlementAuditLogs: unknown[] = []
   let dashboardQueryFailed = false
 
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -129,8 +130,7 @@ export default async function Home() {
     console.error("[dashboard] failed to load homepage data", error)
   }
 
-  // @ts-ignore - hourlyRate known at runtime but staleness in IDE
-  const hourlyRate = Number(user?.hourlyRate || 0)
+  const hourlyRate = Number((user as { hourlyRate?: number | string | null } | null)?.hourlyRate || 0)
   const metrics = calculateDashboardMetrics(
     activeProjects,
     timeLogsThisMonth,
@@ -140,30 +140,54 @@ export default async function Home() {
     settlementAuditLogs,
     startOfMonth
   )
-  const formattedPartners = serialize(partners)
-  const formattedServices = serialize(services)
+  const formattedPartners = serialize(partners) as MobileHomeViewProps["partners"]
+  const formattedServices = serialize(services) as MobileHomeViewProps["services"]
+  const serializedActiveProjects = serialize(activeProjects)
+  const serializedUpcomingTasks = serialize(upcomingTasks) as MobileHomeViewProps["upcomingTasks"]
+  const serializedRecurringProjects = serialize(metrics.recurringProjects)
+  const serializedOneTimeProjects = serialize(metrics.oneTimeProjects)
+  const serializedUnpaidPartners = serialize(metrics.unpaidByPartner)
+  const serializedSettlementHistory = serialize(metrics.settlementHistory)
+  const serializedQuickActionProjects = serialize(metrics.quickActionProjects)
 
   return (
-    <ProjectSheetWrapper projects={serialize(activeProjects)} allServices={formattedServices}>
-      <TaskSheetWrapper tasks={serialize(upcomingTasks)}>
+    <ProjectSheetWrapper projects={serializedActiveProjects} allServices={formattedServices}>
+      <TaskSheetWrapper tasks={serializedUpcomingTasks}>
         <div id="dashboard-main-container" className="flex flex-col gap-6 pb-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex h-10 items-center md:pl-0 gap-3">
-              <MobileMenuTrigger />
-              <GreetingHeader name={user?.name?.split(' ')[0] || user?.username || "Admin"} />
-            </div>
-            <div className="flex items-center gap-3 md:pl-0 w-full md:w-auto">
-              <DashboardHeaderActions
-                partners={formattedPartners}
-                services={formattedServices}
-                activeProjects={serialize(metrics.quickActionProjects)}
-              />
-            </div>
-          </div>
+          <MobileHomeView
+            user={serialize(user)}
+            formattedRevenue={metrics.formattedRevenue}
+            unpaidBalance={metrics.allTimeUnpaidRevenue}
+            activeTasks={metrics.totalActiveTasks}
+            totalHoursMonth={metrics.totalHoursMonth}
+            activeMonthlyProjects={metrics.activeMonthlyProjectsCount}
+            activeOneTimeProjects={metrics.activeOneTimeProjectsCount}
+            upcomingTasks={serializedUpcomingTasks}
+            recurringProjects={serializedRecurringProjects}
+            oneTimeProjects={serializedOneTimeProjects}
+            unpaidByPartner={serializedUnpaidPartners}
+            settlementHistory={serializedSettlementHistory}
+            partners={formattedPartners}
+            services={formattedServices}
+            quickActionProjects={serializedQuickActionProjects}
+            dashboardQueryFailed={dashboardQueryFailed}
+          />
 
-          {/* V4 Dashboard Layout */}
-          <div className="space-y-10">
-            {/* Top Row: Business Health Pulse */}
+          <div className="hidden md:block space-y-10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex h-10 items-center md:pl-0 gap-3">
+                <MobileMenuTrigger />
+                <GreetingHeader name={user?.name?.split(" ")[0] || user?.username || "Admin"} />
+              </div>
+              <div className="flex items-center gap-3 md:pl-0 w-full md:w-auto">
+                <DashboardHeaderActions
+                  partners={formattedPartners}
+                  services={formattedServices}
+                  activeProjects={serializedQuickActionProjects}
+                />
+              </div>
+            </div>
+
             <BusinessHealthPulse
               id="v5-financial-pulse"
               monthlyRevenue={metrics.totalRevenue}
@@ -183,7 +207,6 @@ export default async function Home() {
 
             {/* Main Content Flow: All Full-Width and Vertical */}
             <div className="flex flex-col gap-0">
-
               {/* ── SECTION 1: Your Tasks ──────────────────────────────────── */}
               <div className="relative rounded-3xl border border-emerald-100 bg-emerald-50/30 p-8 mb-8">
                 <div className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-emerald-400" />
@@ -198,7 +221,7 @@ export default async function Home() {
                 </div>
                 <div className="space-y-6">
                   <ProfitabilityAlerts alerts={serialize(metrics.timeSinkAlerts)} />
-                  <FocusMatrix tasks={serialize(upcomingTasks)} />
+                  <FocusMatrix tasks={serializedUpcomingTasks} />
                 </div>
               </div>
 
@@ -221,7 +244,7 @@ export default async function Home() {
                       <span className="text-xs font-bold uppercase tracking-widest text-blue-600/80">Monthly Subscriptions</span>
                     </div>
                     <RecurringProjectsList
-                      projects={serialize(metrics.recurringProjects)}
+                      projects={serializedRecurringProjects}
                       partners={formattedPartners}
                       services={formattedServices}
                     />
@@ -232,7 +255,7 @@ export default async function Home() {
                       <span className="text-xs font-bold uppercase tracking-widest text-indigo-600/80">Fixed-Fee Projects</span>
                     </div>
                     <OneTimeProjectsList
-                      projects={serialize(metrics.oneTimeProjects)}
+                      projects={serializedOneTimeProjects}
                       partners={formattedPartners}
                       services={formattedServices}
                     />
@@ -253,11 +276,10 @@ export default async function Home() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                  <SettleUpLedger id="v5-settle-ledger" partners={serialize(metrics.unpaidByPartner)} />
-                  <SettlementHistory history={serialize(metrics.settlementHistory)} />
+                  <SettleUpLedger id="v5-settle-ledger" partners={serializedUnpaidPartners} />
+                  <SettlementHistory history={serializedSettlementHistory} />
                 </div>
               </div>
-
             </div>
           </div>
         </div>

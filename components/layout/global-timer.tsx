@@ -22,7 +22,7 @@ export function GlobalTimer() {
         return (
             <Button
                 size="icon"
-                className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 md:right-6 h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg z-50 animate-in fade-in zoom-in duration-300"
+                className="fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 md:right-6 md:bottom-[max(1rem,env(safe-area-inset-bottom))] h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg z-50 animate-in fade-in zoom-in duration-300"
                 onClick={() => setIsExpanded(true)}
                 aria-label="Open timer controls"
             >
@@ -32,7 +32,7 @@ export function GlobalTimer() {
     }
 
     return (
-        <Card className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 md:right-6 p-4 shadow-xl z-50 border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-[calc(100vw-2rem)] max-w-80 animate-in slide-in-from-bottom-10 fade-in duration-300">
+        <Card className="fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 md:right-6 md:bottom-[max(1rem,env(safe-area-inset-bottom))] p-4 shadow-xl z-50 border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-[calc(100vw-2rem)] max-w-80 animate-in slide-in-from-bottom-10 fade-in duration-300">
             <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

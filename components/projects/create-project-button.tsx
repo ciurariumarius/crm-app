@@ -14,6 +14,7 @@ interface CreateProjectButtonProps {
     variant?: "icon" | "full"
     className?: string
     label?: string
+    showLabelOnMobile?: boolean
 }
 
 export function CreateProjectButton({
@@ -22,6 +23,7 @@ export function CreateProjectButton({
     variant = "icon",
     className,
     label = "Add Project",
+    showLabelOnMobile = false,
 }: CreateProjectButtonProps) {
     const [open, setOpen] = useState(false)
 
@@ -40,7 +42,11 @@ export function CreateProjectButton({
                 title="Add new project"
             >
                 <Plus className={isFull ? "h-5 w-5 md:h-4 md:w-4" : "h-5 w-5 md:h-6 md:w-6"} strokeWidth={2.5} />
-                {isFull && <span className="header-action-label">{label}</span>}
+                {isFull && (
+                    <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>
+                        {label}
+                    </span>
+                )}
             </Button>
             <GlobalCreateProjectDialog
                 open={open}

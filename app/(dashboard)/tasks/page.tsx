@@ -8,6 +8,7 @@ import { TasksViewToggle } from "@/components/tasks/tasks-view-toggle"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
+import { LayoutGrid, SlidersHorizontal } from "lucide-react"
 import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
@@ -42,6 +43,7 @@ export default async function TasksPage({
         sort?: string
         view?: string
         cols?: string
+        filters?: string
         page?: string
     }>
 }) {
@@ -55,6 +57,7 @@ export default async function TasksPage({
     const sort = params.sort || "newest"
     const view = (params.view as "grid" | "list") || "grid"
     const cols = Number(params.cols) || 3
+    const mobileFiltersOpen = params.filters === "1"
     const page = Math.max(1, Number(params.page) || 1)
 
     const where: Prisma.TaskWhereInput = { tenantId: session.tenantId }
@@ -132,15 +135,13 @@ export default async function TasksPage({
     const initialActiveTimer = JSON.parse(JSON.stringify(activeTimerRaw))
     const activeProjects = JSON.parse(JSON.stringify(allProjectsRaw))
 
-    const activeTasksCount = await prisma.task.count({ where: { tenantId: session.tenantId, status: "Active" } })
-
     const serializedTasks = JSON.parse(JSON.stringify(tasksRaw))
     const projectsList = allProjectsRaw
         .map((project) => ({ id: project.id, name: formatProjectName(project) }))
         .sort((a, b) => a.name.localeCompare(b.name))
 
     const partnersMap = new Map()
-    allProjectsRaw.forEach((p: any) => {
+    allProjectsRaw.forEach((p) => {
         if (p.site?.partner) {
             partnersMap.set(p.site.partner.id, { id: p.site.partner.id, name: p.site.partner.name })
         }
@@ -150,8 +151,7 @@ export default async function TasksPage({
     const totalPages = Math.max(1, Math.ceil(totalTasks / PAGE_SIZE))
     const prevPage = page > 1 ? page - 1 : null
     const nextPage = page < totalPages ? page + 1 : null
-
-    const buildPageHref = (targetPage: number) => {
+    const buildTasksHref = (overrides: Record<string, string | null | undefined> = {}) => {
         const next = new URLSearchParams()
         if (q) next.set("q", q)
         if (statusFilter) next.set("status", statusFilter)
@@ -161,14 +161,78 @@ export default async function TasksPage({
         if (sort) next.set("sort", sort)
         if (view) next.set("view", view)
         if (cols) next.set("cols", String(cols))
-        next.set("page", String(targetPage))
+        if (mobileFiltersOpen) next.set("filters", "1")
+        next.set("page", String(page))
+
+        for (const [key, value] of Object.entries(overrides)) {
+            if (value === null || value === undefined || value === "") {
+                next.delete(key)
+            } else {
+                next.set(key, value)
+            }
+        }
+
         return `/tasks?${next.toString()}`
     }
+    const buildPageHref = (targetPage: number) => buildTasksHref({ page: String(targetPage) })
 
     return (
         <div className="flex flex-col gap-6">
-            {/* Header Row */}
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <div className="md:hidden flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-sm">
+                            <LayoutGrid className="h-5 w-5" strokeWidth={1.8} />
+                        </div>
+                        <h1 className="page-title text-slate-900">Tasks</h1>
+                    </div>
+                    <CreateTaskButton
+                        projects={activeProjects}
+                        label="Add Task"
+                        showLabelOnMobile
+                        className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !bg-[#EFF6FF] !text-[#2563EB] !shadow-none border border-[#BFDBFE] hover:!bg-[#DBEAFE]"
+                    />
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                        <TasksSearchInput />
+                    </div>
+                    <Link
+                        href={buildTasksHref({ filters: mobileFiltersOpen ? null : "1", page: "1" })}
+                        className={mobileFiltersOpen
+                            ? "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB] shadow-sm"
+                            : "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm"}
+                    >
+                        <SlidersHorizontal className="h-4 w-4" />
+                    </Link>
+                </div>
+
+                <div className="inline-flex h-12 w-full items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                    {[
+                        { label: "ALL", value: "All" },
+                        { label: "ACTIVE", value: "Active" },
+                        { label: "PAUSED", value: "Paused" },
+                        { label: "COMPLETED", value: "Completed" },
+                    ].map((option) => (
+                        <Link
+                            key={option.value}
+                            href={buildTasksHref({ status: option.value, page: "1" })}
+                            className={
+                                "inline-flex h-10 flex-1 items-center justify-center rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                (statusFilter === option.value
+                                    ? "bg-white text-[#2563EB] shadow-sm"
+                                    : "text-slate-600")
+                            }
+                        >
+                            {option.label}
+                        </Link>
+                    ))}
+                </div>
+            </div>
+
+            {/* Header Row (Desktop) */}
+            <div className="hidden md:flex flex-col lg:flex-row lg:items-center gap-4">
                 <div className="flex items-center gap-3 min-w-[180px]">
                     <MobileMenuTrigger />
                     <h1 className="page-title">
@@ -186,7 +250,49 @@ export default async function TasksPage({
                 </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="md:hidden space-y-4">
+                {mobileFiltersOpen ? (
+                    <TasksToolbar
+                        projects={projectsList}
+                        partners={partnersList}
+                        totalTasks={totalTasks}
+                    />
+                ) : null}
+
+                <TasksCardView
+                    tasks={serializedTasks}
+                    allServices={allServices}
+                    initialActiveTimer={initialActiveTimer}
+                    projects={activeProjects}
+                    view="grid"
+                    cols={1}
+                />
+
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500 shadow-[var(--shadow-apple)] space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span>Page {page}/{totalPages}</span>
+                        <span>{totalTasks} tasks</span>
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                        {prevPage ? (
+                            <Link className="inline-flex h-7 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50" href={buildPageHref(prevPage)}>
+                                Previous
+                            </Link>
+                        ) : (
+                            <span className="inline-flex h-7 items-center rounded-full border border-slate-200 px-3 text-[11px] text-slate-400">Previous</span>
+                        )}
+                        {nextPage ? (
+                            <Link className="inline-flex h-7 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50" href={buildPageHref(nextPage)}>
+                                Next
+                            </Link>
+                        ) : (
+                            <span className="inline-flex h-7 items-center rounded-full border border-slate-200 px-3 text-[11px] text-slate-400">Next</span>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="hidden md:block space-y-4">
                 <TasksToolbar
                     projects={projectsList}
                     partners={partnersList}

@@ -2,17 +2,30 @@
 
 import { Sidebar } from "@/components/layout/sidebar"
 import { GlobalTimer } from "@/components/layout/global-timer"
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
 import { Toaster } from "@/components/ui/sonner"
 import { PWARegister } from "@/components/pwa-register"
 import { cn } from "@/lib/utils"
 import { useHeader } from "@/components/layout/header-context"
+import type { Service } from "@prisma/client"
+import type { PartnerWithSites } from "@/types"
+import type { TaskDialogProject } from "@/components/tasks/global-create-task-dialog"
 
 type ShellFrameProps = {
     user?: { name: string | null, username: string, profilePic: string | null }
+    quickActionPartners: PartnerWithSites[]
+    quickActionServices: Service[]
+    quickActionProjects: TaskDialogProject[]
     children: React.ReactNode
 }
 
-export function ShellFrame({ user, children }: ShellFrameProps) {
+export function ShellFrame({
+    user,
+    quickActionPartners,
+    quickActionServices,
+    quickActionProjects,
+    children,
+}: ShellFrameProps) {
     const { isSidebarCollapsed } = useHeader()
 
     return (
@@ -24,10 +37,15 @@ export function ShellFrame({ user, children }: ShellFrameProps) {
                     isSidebarCollapsed ? "md:pl-[88px]" : "md:pl-[220px]"
                 )}
             >
-                <main className="cockpit-page-enter flex-1 px-4 md:px-8 pt-4 md:pt-8 pb-24 md:pb-8 max-w-full overflow-hidden">
+                <main className="cockpit-page-enter flex-1 px-4 md:px-8 pt-4 md:pt-8 pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:pb-8 max-w-full overflow-hidden">
                     {children}
                 </main>
             </div>
+            <MobileBottomNav
+                quickActionPartners={quickActionPartners}
+                quickActionServices={quickActionServices}
+                quickActionProjects={quickActionProjects}
+            />
             <GlobalTimer />
             <Toaster />
             <PWARegister />

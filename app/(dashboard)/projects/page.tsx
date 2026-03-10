@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import Link from "next/link"
 import {
+    Briefcase,
     CalendarDays,
     ChevronDown,
     Grid2x2,
@@ -75,6 +76,7 @@ export default async function ProjectsPage({
         recurring?: string
         period?: string
         layout?: string
+        filters?: string
         page?: string
     }>
 }) {
@@ -87,6 +89,7 @@ export default async function ProjectsPage({
     const recurring = params.recurring || "All"
     const period = params.period || "all_time"
     const layout = params.layout || "list"
+    const mobileFiltersOpen = params.filters === "1"
     const requestedPage = Math.max(1, Number(params.page) || 1)
 
     const now = new Date()
@@ -228,6 +231,7 @@ export default async function ProjectsPage({
         if (recurring) next.set("recurring", recurring)
         if (period) next.set("period", period)
         if (layout) next.set("layout", layout)
+        if (mobileFiltersOpen) next.set("filters", "1")
         if (shouldPaginate) {
             next.set("page", String(page))
         }
@@ -277,7 +281,98 @@ export default async function ProjectsPage({
         <ProjectSheetWrapper projects={projectsForClient} allServices={servicesForClient}>
             <div className="space-y-6">
                 <div className="flex flex-col gap-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div className="md:hidden flex flex-col gap-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-sm">
+                                    <Briefcase className="h-5 w-5" strokeWidth={1.8} />
+                                </div>
+                                <h1 className="page-title text-slate-900">Projects</h1>
+                            </div>
+                            <CreateProjectButton
+                                variant="full"
+                                label="Add Project"
+                                showLabelOnMobile
+                                className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !bg-[#EFF6FF] !text-[#2563EB] !shadow-none border border-[#BFDBFE] hover:!bg-[#DBEAFE]"
+                                partners={partnersForClient}
+                                services={servicesForClient}
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <form className="relative flex-1 min-w-0" action="/projects" method="get">
+                                {queryStatus && <input type="hidden" name="status" value={queryStatus} />}
+                                {payment && <input type="hidden" name="payment" value={payment} />}
+                                {recurring && <input type="hidden" name="recurring" value={recurring} />}
+                                {period && <input type="hidden" name="period" value={period} />}
+                                {partnerId && <input type="hidden" name="partnerId" value={partnerId} />}
+                                {layout && <input type="hidden" name="layout" value={layout} />}
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <input
+                                    name="q"
+                                    defaultValue={q || ""}
+                                    placeholder="Search projects, clients or campaigns..."
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm shadow-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                />
+                            </form>
+
+                            <Link
+                                href={buildHref({ filters: mobileFiltersOpen ? null : "1", page: "1" })}
+                                className={mobileFiltersOpen
+                                    ? "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB] shadow-sm"
+                                    : "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm"}
+                            >
+                                <SlidersHorizontal className="h-4 w-4" />
+                            </Link>
+                        </div>
+
+                        <div className="inline-flex h-12 w-full items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                            {statusOptions.map((option) => (
+                                <Link
+                                    key={option.value}
+                                    href={buildHref({ status: option.value, page: "1" })}
+                                    className={cn(
+                                        "inline-flex h-10 flex-1 items-center justify-center rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                        queryStatus === option.value
+                                            ? "bg-white text-[#2563EB] shadow-sm"
+                                            : "text-slate-600"
+                                    )}
+                                >
+                                    {option.label.toUpperCase()}
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                                <Link
+                                    href={buildHref({ layout: "list", page: "1" })}
+                                    className={cn(
+                                        "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
+                                        layout === "list" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
+                                    )}
+                                >
+                                    <List className="h-4 w-4" />
+                                </Link>
+                                <Link
+                                    href={buildHref({ layout: "grid", page: "1" })}
+                                    className={cn(
+                                        "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
+                                        layout === "grid" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900"
+                                    )}
+                                >
+                                    <Grid2x2 className="h-4 w-4" />
+                                </Link>
+                            </div>
+
+                            <div className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-50 px-3 text-[11px] text-slate-500 font-semibold" title={resultsSummary}>
+                                <SlidersHorizontal className="h-3.5 w-3.5" />
+                                <span>{totalProjects} results</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="hidden md:flex flex-col lg:flex-row lg:items-center gap-4">
                         <div className="flex items-center gap-3 min-w-[180px]">
                             <MobileMenuTrigger />
                             <h1 className="page-title text-slate-900">Projects</h1>
@@ -330,7 +425,11 @@ export default async function ProjectsPage({
                         </div>
                     </div>
 
-                    <div className="md:sticky md:top-3 z-20 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 md:px-4 md:py-4 shadow-sm backdrop-blur-[6px]">
+                    <div className={cn(
+                        "z-20 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 md:px-4 md:py-4 shadow-sm backdrop-blur-[6px]",
+                        mobileFiltersOpen ? "block" : "hidden",
+                        "md:sticky md:top-3 md:block"
+                    )}>
                         <div className="flex flex-col gap-3">
                             <div className="flex flex-wrap items-end gap-4">
                                 <div className="space-y-1.5">

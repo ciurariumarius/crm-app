@@ -21,7 +21,6 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
-import { QuickActionProject } from "@/types"
 import {
     Command,
     CommandEmpty,
@@ -34,10 +33,19 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 
+export interface TaskDialogProject {
+    id: string
+    status: string
+    siteName?: string
+    site?: { domainName?: string }
+    services?: { serviceName: string; isRecurring?: boolean }[]
+    createdAt?: Date | string
+}
+
 interface GlobalCreateTaskDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    projects: QuickActionProject[]
+    projects: TaskDialogProject[]
 }
 
 export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalCreateTaskDialogProps) {
@@ -83,7 +91,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
             } else {
                 toast.error(result.error || "Failed to create task")
             }
-        } catch (error) {
+        } catch {
             toast.error("Process failed")
         } finally {
             setIsLoading(false)

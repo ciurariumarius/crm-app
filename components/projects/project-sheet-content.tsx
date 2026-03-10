@@ -678,12 +678,12 @@ export function ProjectSheetContent({
 
                 <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
                     <div className="space-y-8 pb-20">
-                        <div className="space-y-3 pr-60">
+                        <div className="space-y-5 pr-60 pt-1 pb-2">
                             {isEditingTitle ? (
                                 <Textarea
                                     value={localName}
                                     onChange={(event) => setLocalName(event.target.value)}
-                                    className="min-h-[44px] resize-none border-none bg-transparent p-0 text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900 focus-visible:ring-0"
+                                    className="min-h-[44px] resize-none !rounded-none !border-0 !border-b !border-slate-200 !bg-transparent !px-0 !pt-0 !pb-1 text-2xl md:text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900 !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0"
                                     rows={1}
                                     autoFocus
                                     onBlur={commitTitle}
@@ -704,16 +704,34 @@ export function ProjectSheetContent({
                                     }}
                                 />
                             ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => setIsEditingTitle(true)}
-                                    className="text-left"
-                                >
-                                    <h1 className="text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900">
-                                        {localName || formatProjectName(project)}
-                                        <span className="pl-3 text-blue-600">/ {format(toDate(project.createdAt) || new Date(), "MMMM yyyy")}</span>
-                                    </h1>
-                                </button>
+                                <div className="group flex w-full items-start gap-3 py-1">
+                                    <div className="min-w-0 flex-1">
+                                        <h1 className="text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900">
+                                            {localName || formatProjectName(project)}
+                                        </h1>
+                                        <span
+                                            className={cn(
+                                                "mt-2 inline-flex rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tighter",
+                                                project.services?.some((service) => service.isRecurring)
+                                                    ? "border-blue-200 bg-blue-50 text-blue-600"
+                                                    : "border-emerald-200 bg-emerald-50 text-emerald-600"
+                                            )}
+                                        >
+                                            {format(toDate(project.createdAt) || new Date(), "MMM yyyy")}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsEditingTitle(true)}
+                                        className="mt-0.5 h-8 w-8 shrink-0 rounded-lg text-slate-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-slate-100 hover:text-slate-700"
+                                        aria-label="Edit project title"
+                                        title="Edit project title"
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             )}
 
                             {updatingId === project.id && (

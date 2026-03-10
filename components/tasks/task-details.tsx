@@ -6,20 +6,18 @@ import {
     SheetContent,
     SheetHeader,
     SheetTitle,
-    SheetDescription,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
 import {
     Popover,
@@ -27,13 +25,11 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, Trash2, Loader2, Globe, Users, Target, X, Plus, Play, Pause, Square } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil } from "lucide-react"
 import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
-import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
+import { cn, formatRelativeDate } from "@/lib/utils"
 import { useTimer } from "@/components/providers/timer-provider"
-import { Separator } from "@/components/ui/separator"
-import Link from "next/link"
 
 interface TaskDetailsProps {
     task: any
@@ -70,6 +66,8 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     const [urgency, setUrgency] = React.useState("")
     const [deadline, setDeadline] = React.useState<Date | undefined>(undefined)
     const [estimatedMinutes, setEstimatedMinutes] = React.useState<string>("")
+    const [isNotesModalOpen, setIsNotesModalOpen] = React.useState(false)
+    const [isEditingTitle, setIsEditingTitle] = React.useState(false)
 
     // Sync form state with task
     React.useEffect(() => {
@@ -80,6 +78,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             setUrgency(task.urgency || "Normal")
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
             setEstimatedMinutes(task.estimatedMinutes?.toString() || "")
+            setIsEditingTitle(false)
         }
     }, [task?.id])
 
@@ -153,6 +152,13 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         }
     }
 
+    const notesSaveState = React.useMemo(() => {
+        const isDirty = description !== (task?.description || "")
+        if (loading && isDirty) return "saving"
+        if (isDirty) return "typing"
+        return "ready"
+    }, [description, loading, task?.description])
+
     if (!task) return null
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isTaskRunning = isActiveTimerThisTask && timerState.isRunning
@@ -167,6 +173,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     const timerStatusLabel = isTaskRunning ? "Running" : isTaskPaused ? "Paused" : "Ready"
     const timerPrimaryLabel = isTaskRunning ? "Pause" : isTaskPaused ? "Resume" : "Start"
     const sortedTimeLogs = [...(task.timeLogs || [])].sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+    const updatedLabel = task.updatedAt ? formatRelativeDate(task.updatedAt) : "—"
 
     const handleTaskTimerPrimaryAction = () => {
         if (isTaskRunning) {
@@ -182,76 +189,81 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         void globalStartTimer(task.projectId, task.id, task.name)
     }
 
+    const commitTitle = () => {
+        if (!task) return
+        if ((name || "").trim() !== (task.name || "").trim()) {
+            void handleUpdate()
+        }
+        setIsEditingTitle(false)
+    }
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-full max-w-[900px] p-0 flex flex-col border-none shadow-2xl focus-visible:outline-none"
+                className="w-full max-w-[900px] p-0 flex flex-col border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 showCloseButton={false}
             >
-                <SheetHeader className="p-6 border-b border-slate-200 bg-white/70 relative">
+                <SheetHeader className="px-8 pt-9 pb-6 relative bg-transparent">
                     <div className="absolute right-6 top-6 z-10">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-10 w-10 rounded-full bg-muted/50 hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-all"
+                            className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
                             onClick={() => onOpenChange(false)}
                         >
                             <X className="h-5 w-5" />
                         </Button>
                     </div>
-                    <div className="space-y-4 pr-16">
+                    <div className="space-y-5 pr-16">
                         <SheetTitle className="group relative">
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 <div className="relative">
-                                    <Textarea
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault()
-                                                if (name !== task.name) handleUpdate()
-                                            }
-                                            if (e.key === 'Escape') {
-                                                setName(task.name || "")
-                                            }
-                                        }}
-                                        className="text-[18px] font-semibold tracking-[-0.02em] border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto min-h-[28px] resize-none leading-tight overflow-hidden pr-24"
-                                        placeholder="Task Name"
-                                        rows={1}
-                                        onInput={(e) => {
-                                            const target = e.target as HTMLTextAreaElement
-                                            target.style.height = 'auto'
-                                            target.style.height = `${target.scrollHeight}px`
-                                        }}
-                                    />
-                                    <div className="absolute right-0 top-1.2 flex items-center gap-2">
-                                        {loading ? (
-                                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                        ) : (
-                                            name !== task.name && (
-                                                <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-7 w-7 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
-                                                        onClick={handleUpdate}
-                                                    >
-                                                        <CheckCircle2 className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                                                        onClick={() => setName(task.name || "")}
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
+                                    {isEditingTitle ? (
+                                        <Textarea
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault()
+                                                    commitTitle()
+                                                }
+                                                if (e.key === 'Escape') {
+                                                    setName(task.name || "")
+                                                    setIsEditingTitle(false)
+                                                }
+                                            }}
+                                            onBlur={commitTitle}
+                                            className="min-h-[44px] resize-none !rounded-none !border-0 !border-b !border-slate-200 !bg-transparent !px-0 !pt-0 !pb-1 text-2xl md:text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900 !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0"
+                                            placeholder="Task Name"
+                                            rows={1}
+                                            autoFocus
+                                            onInput={(e) => {
+                                                const target = e.target as HTMLTextAreaElement
+                                                target.style.height = 'auto'
+                                                target.style.height = `${target.scrollHeight}px`
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="group flex w-full items-start gap-3 py-1">
+                                            <h1 className="min-w-0 flex-1 text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900">
+                                                {name || task.name || "Untitled task"}
+                                            </h1>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 shrink-0 rounded-lg text-slate-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-slate-100 hover:text-slate-700"
+                                                onClick={() => setIsEditingTitle(true)}
+                                                aria-label="Edit task title"
+                                                title="Edit task title"
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                    {loading && <Loader2 className="absolute right-0 top-0 h-5 w-5 animate-spin text-primary" />}
                                 </div>
                                 {name !== task.name && (
                                     <div className="text-xs font-semibold text-primary animate-pulse">
@@ -260,122 +272,170 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                 )}
                             </div>
                         </SheetTitle>
-
-                        <div className="flex flex-col gap-4 pt-2">
-                            <div className="flex flex-wrap items-center gap-2.5">
-                                <Select value={status} onValueChange={(val) => setStatus(val)}>
-                                    <SelectTrigger className={cn(
-                                        "h-9 w-auto min-w-[130px] transition-all p-0 px-4 rounded-full text-xs font-semibold border [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
-                                        status === "Active" ? "bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]" :
-                                            status === "Paused" ? "bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]" :
-                                                "bg-[#ECFDF5] text-[#10B981] border-[#A7F3D0]"
-                                    )}>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Active" className="text-xs font-medium">Active</SelectItem>
-                                        <SelectItem value="Paused" className="text-xs font-medium">Paused</SelectItem>
-                                        <SelectItem value="Completed" className="text-xs font-medium">Completed</SelectItem>
-                                    </SelectContent>
-                                </Select>
-
-                                <Select value={urgency} onValueChange={(val) => setUrgency(val)}>
-                                    <SelectTrigger className={cn(
-                                        "h-9 w-auto min-w-[130px] transition-all p-0 px-4 rounded-full text-xs font-semibold border [&>span]:line-clamp-1 [&>svg]:!text-current [&>svg]:!opacity-100",
-                                        urgency === "Urgent" ? "bg-[#FFF1F2] text-[#E11D48] border-[#FECDD3]" :
-                                            urgency === "Idea" ? "bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]" :
-                                                "bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]"
-                                    )}>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Urgent" className="text-xs font-medium text-rose-600">Urgent</SelectItem>
-                                        <SelectItem value="Normal" className="text-xs font-medium">Normal</SelectItem>
-                                        <SelectItem value="Idea" className="text-xs font-medium text-sky-600">Idea</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
                     </div>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-10">
-                    <Separator className="bg-muted/10 mb-10" />
-                    {/* Status & Deadline Row */}
+                <div className="flex-1 overflow-y-auto px-8 pb-6 pt-0">
+                    <div className="space-y-8 pb-20">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className={cn(
+                                "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
+                                status === "Active"
+                                    ? "border-blue-200/60 bg-blue-50/40"
+                                    : status === "Paused"
+                                        ? "border-amber-200/60 bg-amber-50/40"
+                                        : "border-emerald-200/60 bg-emerald-50/40"
+                            )}>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Task Status</p>
+                                <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
+                                    {(["Active", "Paused", "Completed"] as const).map((statusOption) => (
+                                        <Button
+                                            key={statusOption}
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setStatus(statusOption)}
+                                            className={cn(
+                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
+                                                status === statusOption && statusOption === "Active" && "status-pill-action shadow-md",
+                                                status === statusOption && statusOption === "Paused" && "status-pill-warning shadow-md",
+                                                status === statusOption && statusOption === "Completed" && "status-pill-success shadow-md",
+                                                status !== statusOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                                            )}
+                                        >
+                                            {statusOption}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
 
+                            <div className={cn(
+                                "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
+                                urgency === "Urgent"
+                                    ? "border-rose-200/60 bg-rose-50/40"
+                                    : urgency === "Idea"
+                                        ? "border-blue-200/60 bg-blue-50/40"
+                                        : "border-amber-200/60 bg-amber-50/40"
+                            )}>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Priority</p>
+                                <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
+                                    {(["Urgent", "Normal", "Idea"] as const).map((urgencyOption) => (
+                                        <Button
+                                            key={urgencyOption}
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setUrgency(urgencyOption)}
+                                            className={cn(
+                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
+                                                urgency === urgencyOption && urgencyOption === "Urgent" && "status-pill-debt shadow-md",
+                                                urgency === urgencyOption && urgencyOption === "Normal" && "status-pill-warning shadow-md",
+                                                urgency === urgencyOption && urgencyOption === "Idea" && "status-pill-action shadow-md",
+                                                urgency !== urgencyOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                                            )}
+                                        >
+                                            {urgencyOption}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-3">
-                            <label className="text-xs font-semibold text-muted-foreground/80">Deadline Tracking</label>
-                            <Popover>
-                                <PopoverTrigger asChild>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-5 premium-card shadow-sm">
+                                <label className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Deadline Tracking</label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "mt-3 h-12 w-full justify-start rounded-xl border border-slate-200 bg-slate-50 text-left text-sm font-semibold shadow-none",
+                                                !deadline && "text-slate-400"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {deadline ? format(deadline, "PPP") : <span>Set Deadline</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 rounded-xl pointer-events-auto" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={deadline}
+                                            onSelect={setDeadline}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 bg-white p-5 premium-card shadow-sm">
+                                <label className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Estimated Time (min)</label>
+                                <Input
+                                    type="number"
+                                    placeholder="ex. 60"
+                                    value={estimatedMinutes}
+                                    onChange={(e) => setEstimatedMinutes(e.target.value)}
+                                    className="mt-3 h-12 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                                />
+                            </div>
+                        </div>
+
+                        <section className="space-y-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Task Notes</h2>
+                                <span
+                                    className={cn(
+                                        "inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
+                                        notesSaveState === "saving" && "bg-blue-50 text-blue-600",
+                                        notesSaveState === "typing" && "bg-slate-100 text-slate-500",
+                                        notesSaveState === "ready" && "bg-emerald-50 text-emerald-600"
+                                    )}
+                                >
+                                    {notesSaveState === "saving" && (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    )}
+                                    {notesSaveState === "ready" && (
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                    )}
+                                    {notesSaveState === "typing" && "Typing"}
+                                    {notesSaveState === "saving" && "Saving"}
+                                    {notesSaveState === "ready" && "Ready"}
+                                </span>
+                            </div>
+                            <RichTextEditor
+                                value={description}
+                                onChange={setDescription}
+                                placeholder=""
+                                variant="plain"
+                                minHeightClassName="h-[360px] px-4"
+                                uploadProjectId={task?.projectId || task?.id}
+                                toolbarVisibility="always"
+                                toolbarActions={
                                     <Button
-                                        variant="outline"
-                                        className={cn(
-                                            "w-full justify-start text-left font-bold h-12 text-sm bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 rounded-xl",
-                                            !deadline && "text-muted-foreground/40"
-                                        )}
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsNotesModalOpen(true)}
+                                        className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                        aria-label="Open notes in full view"
+                                        title="Open notes in full view"
                                     >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {deadline ? format(deadline, "PPP") : <span>Set Deadline</span>}
+                                        <Expand className="h-4 w-4" />
                                     </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 rounded-xl pointer-events-auto" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={deadline}
-                                        onSelect={setDeadline}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        <div className="space-y-3">
-                            <label className="text-xs font-semibold text-muted-foreground/80">Estimated Time (min)</label>
-                            <Input
-                                type="number"
-                                placeholder="ex. 60"
-                                value={estimatedMinutes}
-                                onChange={(e) => setEstimatedMinutes(e.target.value)}
-                                className="h-12 text-sm font-bold bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 rounded-xl"
+                                }
                             />
-                        </div>
-                    </div>
+                            <p className="text-[11px] font-medium text-slate-400">
+                                Paste screenshots with Cmd/Ctrl+V or drag and drop. Click any image to open it in full view.
+                            </p>
+                        </section>
 
-                    <div className="space-y-3 pt-4">
-                        <div className="flex items-center justify-between">
-                            <label className="text-xs font-semibold text-muted-foreground/80">Description / Technical Notes</label>
-                        </div>
-                        <RichTextEditor
-                            value={description}
-                            onChange={setDescription}
-                            placeholder="Add details, technical requirements, or SOP references..."
-                            uploadProjectId={task?.projectId || task?.id}
-                        />
-                    </div>
-
-                    <div className="flex items-center justify-start pt-4">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 h-12 px-6 font-semibold text-sm gap-2 rounded-xl"
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                        >
-                            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                            Delete Task
-                        </Button>
-                    </div>
-
-                    <section className="space-y-4 pt-8">
-                        <Separator className="bg-muted/10" />
-
+                    <section className="space-y-4">
                         <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-muted-foreground/80 flex items-center gap-2">
+                            <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                 <Clock className="h-3.5 w-3.5" />
                                 Task Time Tracker
-                            </h4>
-                            <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                            </h2>
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4 premium-card shadow-sm">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <div>
                                         <div className="flex items-center gap-2">
@@ -441,11 +501,11 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
 
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <h4 className="text-xs font-semibold text-muted-foreground/80 flex items-center gap-2">
+                                <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                                     <Clock className="h-3.5 w-3.5" />
                                     Time Logs History
-                                </h4>
-                                <div className="text-xs font-medium text-muted-foreground/60">
+                                </h2>
+                                <div className="text-[11px] font-semibold text-slate-400">
                                     {sortedTimeLogs.length} Sessions
                                 </div>
                             </div>
@@ -480,22 +540,74 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                             </div>
                         </div>
                     </section>
+
+                        <section className="pt-1">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 rounded-lg px-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                Delete Task
+                            </Button>
+                        </section>
+                </div>
+            </div>
+
+                <div className="sticky bottom-0 flex flex-col gap-1 border-t border-slate-200 bg-white/95 px-6 py-3 text-[11px] font-semibold text-slate-500 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                    <span># Task ID: {task.id.slice(0, 8)}</span>
+                    <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                        <span className="inline-flex items-center gap-1.5">
+                            Created: {formatRelativeDate(task.createdAt)}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            Last updated: {updatedLabel}
+                        </span>
+                    </div>
                 </div>
 
-                <div className="p-8 border-t bg-muted/20 flex items-center justify-between mt-auto">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
-                            <Clock className="h-5 w-5" />
+                <Dialog open={isNotesModalOpen} onOpenChange={setIsNotesModalOpen}>
+                    <DialogContent
+                        showCloseButton={false}
+                        overlayClassName="bg-slate-900/18 backdrop-blur-[6px]"
+                        className="h-[92vh] w-[94vw] max-w-[94vw] overflow-hidden rounded-2xl border border-slate-200/80 bg-[#FCFCFB] p-0 shadow-[0_40px_100px_-45px_rgba(15,23,42,0.7)] sm:w-[65vw] sm:min-w-[65vw] sm:max-w-[65vw]"
+                    >
+                        <DialogHeader className="border-b border-slate-200/70 px-8 py-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-slate-900">
+                                        Task Notes - {name || "Untitled Task"}
+                                    </DialogTitle>
+                                </div>
+                                <DialogClose asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-11 rounded-xl border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                                    >
+                                        <X className="mr-2 h-4 w-4" />
+                                        Close
+                                    </Button>
+                                </DialogClose>
+                            </div>
+                        </DialogHeader>
+                        <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-[#FCFCFB] px-8 pb-8 pt-6">
+                            <RichTextEditor
+                                value={description}
+                                onChange={setDescription}
+                                placeholder=""
+                                variant="plain"
+                                mode="document"
+                                className="h-full"
+                                minHeightClassName="min-h-0"
+                                uploadProjectId={task?.projectId || task?.id}
+                                toolbarVisibility="always"
+                            />
                         </div>
-                        <div>
-                            <div className="text-xs font-medium text-muted-foreground/80">Creation Date</div>
-                            <div className="text-sm font-bold">{formatRelativeDate(task.createdAt)}</div>
-                        </div>
-                    </div>
-                    <div className="text-xs font-mono font-medium text-muted-foreground opacity-40 italic text-right">
-                        Ref ID: {task.id.slice(0, 8)}
-                    </div>
-                </div>
+                    </DialogContent>
+                </Dialog>
             </SheetContent>
         </Sheet>
     )
