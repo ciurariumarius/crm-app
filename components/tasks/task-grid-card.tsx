@@ -162,13 +162,13 @@ export function TaskGridCard({
                     </div>
                 </div>
 
-                {/* Project name */}
-                <div className="flex items-center gap-1.5 min-w-0">
+                {/* Project subtitle */}
+                <div className="flex items-center gap-1.5 min-w-0 -mt-0.5">
                     {isRecurring
-                        ? <RotateCw className="h-3 w-3 text-violet-500 shrink-0" />
-                        : <Circle className="h-3 w-3 text-emerald-500 shrink-0" />
+                        ? <RotateCw className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+                        : <Circle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     }
-                    <p className="text-[11px] font-semibold text-slate-500 truncate">{projectFullName}</p>
+                    <p className="text-[12px] font-bold text-slate-600 truncate tracking-tight">{projectFullName}</p>
                 </div>
 
                 {/* Badges: priority + deadline */}

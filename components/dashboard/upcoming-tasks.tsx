@@ -107,7 +107,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                             </div>
                             <div>
                                 <h2 className="text-sm font-black uppercase tracking-widest text-foreground">
-                                    Your Today Work
+                                    Your Tasks
                                 </h2>
                                 <div className="flex items-center gap-2 mt-0.5 text-xs font-medium text-muted-foreground">
                                     <span className={cn(urgentTasks.length > 0 && "text-orange-500 font-bold")}>

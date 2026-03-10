@@ -39,11 +39,7 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
     return (
         <>
             <Card className="flex flex-col bento-card p-0 overflow-hidden shadow-sm">
-                <CardHeader className="py-6 px-8 flex flex-row items-center justify-between bg-card/80">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-                        <CheckSquare className="h-4 w-4 text-primary" />
-                        <span>One-Time Projects</span>
-                    </CardTitle>
+                <CardHeader className="py-4 px-6 flex flex-row items-center justify-between bg-card/80">
                     <div className="flex items-center gap-3">
                         {totalPages > 1 && (
                             <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-full border border-border">

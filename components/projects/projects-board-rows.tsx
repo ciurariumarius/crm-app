@@ -232,7 +232,7 @@ export function ProjectsBoardRows({
     }
 
     return (
-        <div className="space-y-7 overflow-x-auto pb-4 hidescrollbar">
+        <div className="space-y-7 overflow-x-auto pb-24 hidescrollbar">
             <div className="md:min-w-[1280px] space-y-7">
                 <section className="space-y-3">
                     <div className="flex items-center gap-3">
@@ -490,7 +490,7 @@ export function ProjectsBoardRows({
 
                 {/* Global Shadow Row - Bottom */}
                 {layout === "list" && (
-                    <div className="pt-8 pb-4">
+                    <div className="pt-8 pb-24">
                         {createProjectOpen ? (
                             <InlineQuickAddRow
                                 partners={partners}

@@ -528,7 +528,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
             )}
 
             {layout === "list" && (
-                <div className="pt-2 overflow-x-auto pb-2 hidescrollbar text-slate-900">
+                <div className="pt-2 overflow-x-auto pb-24 hidescrollbar text-slate-900">
                     <div className="md:min-w-[1280px]">
                         {quickAddOpen ? (
                             <InlineQuickAddRow
