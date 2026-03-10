@@ -17,7 +17,7 @@ export function DashboardHeaderActions({ partners, services, activeProjects }: D
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
 
     return (
-        <div className="flex flex-row items-center justify-center gap-3 w-full">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
             <Button
                 size="default"
                 className="h-10 px-4 flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-500/20 text-white transition-all flex items-center justify-center gap-2 font-bold"

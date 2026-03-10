@@ -139,7 +139,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
     )
 
     const getFilterBtnClass = (isActive: boolean) => cn(
-        "px-4 py-2 text-xs font-medium transition-all duration-200 rounded-lg border",
+        "px-4 py-2.5 sm:py-2 text-xs font-medium transition-all duration-200 rounded-lg border",
         isActive
             ? "bg-white text-slate-900 border-slate-200 shadow-sm"
             : "bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-white"
@@ -170,7 +170,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                     {/* Mobile Status Dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="flex md:hidden items-center gap-2 h-9 px-4 bg-slate-100 border border-slate-200 rounded-xl transition-colors hover:bg-white text-xs font-medium shrink-0">
+                            <button className="flex md:hidden items-center gap-2 h-10 px-4 bg-slate-100 border border-slate-200 rounded-xl transition-colors hover:bg-white text-xs font-medium shrink-0">
                                 {currentParams.status === "Active" && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />}
                                 <span className="text-foreground whitespace-nowrap">
                                     {currentParams.status === "All" ? "Status: All" : currentParams.status}
@@ -328,7 +328,7 @@ export function ProjectsToolbar({ partners }: ProjectsToolbarProps) {
                     {/* Filter Sheet Trigger */}
                     <Sheet>
                         <SheetTrigger asChild>
-                            <button className="flex lg:hidden items-center gap-2 h-9 px-4 bg-slate-100 border border-slate-200 rounded-xl transition-colors hover:bg-white text-xs font-medium uppercase relative shrink-0">
+                            <button className="flex lg:hidden items-center gap-2 h-10 px-4 bg-slate-100 border border-slate-200 rounded-xl transition-colors hover:bg-white text-xs font-medium uppercase relative shrink-0">
                                 <Filter className="w-4 h-4 text-muted-foreground/60" />
                                 <span>Filters</span>
                                 {hasFilters && (

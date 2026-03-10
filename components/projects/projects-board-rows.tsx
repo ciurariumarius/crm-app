@@ -191,7 +191,7 @@ export function ProjectsBoardRows({
 
     return (
         <div className="space-y-7 overflow-x-auto pb-4 hidescrollbar">
-            <div className="min-w-[1280px] space-y-7">
+            <div className="md:min-w-[1280px] space-y-7">
                 <section className="space-y-3">
                     <div className="flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-emerald-500" />

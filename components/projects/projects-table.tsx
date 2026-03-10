@@ -111,7 +111,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
     }
 
     const renderHeader = () => (
-        <div className={cn("glass hidden md:flex h-10 items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground w-full min-w-[1280px] gap-5 rounded-lg", layout === "grid" && "hidden")}>
+        <div className={cn("glass hidden md:flex h-10 items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground w-full md:min-w-[1280px] gap-5 rounded-lg", layout === "grid" && "hidden")}>
             <div className="flex-1 min-w-[320px] shrink-0">Project name & url</div>
             <div className="w-[80px] shrink-0 text-center">Status</div>
             <div className="w-[70px] shrink-0 text-center">Type</div>
@@ -242,7 +242,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
             <div
                 key={project.id}
                 className={cn(
-                    "group stagger-row-enter premium-card relative flex min-h-[52px] items-center bg-white rounded-xl p-4 border border-border/60 w-full cursor-pointer overflow-x-auto min-w-[1280px] gap-5 px-6",
+                    "group stagger-row-enter premium-card relative flex min-h-[52px] items-center bg-white rounded-xl p-4 border border-border/60 w-full cursor-pointer overflow-x-auto md:min-w-[1280px] gap-5 px-6",
                     project.paymentStatus === "Unpaid" ? "cockpit-debt-row" : "hover:bg-[#F1F5F9]"
                 )}
                 style={{ animationDelay: `${rowIndex * 0.05}s` }}
@@ -451,12 +451,12 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 {oneTimeProjects.map(p => renderGridCard(p, false))}
                             </div>
                             <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
-                                <div className="min-w-[1240px] flex flex-col gap-2">
+                                <div className="md:min-w-[1240px] flex flex-col gap-2">
                                     {renderHeader()}
                                     {oneTimeProjects.map((project, index) => renderProjectCard(project, index))}
                                     {/* Shadow Create Row */}
                                     <div
-                                        className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer min-w-[1280px] mt-2 group/shadow"
+                                        className="bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/30 hover:border-primary/50 text-white rounded-xl flex items-center p-4 transition-all cursor-pointer md:min-w-[1280px] mt-2 group/shadow"
                                         onClick={() => setCreateProjectOpen(true)}
                                     >
                                         <div className="w-[120px] shrink-0 flex justify-center text-primary dark:text-primary">
@@ -496,7 +496,7 @@ export function ProjectsTable({ projects, allServices, layout = "grid" }: Projec
                                 {recurringProjects.map(p => renderGridCard(p, true))}
                             </div>
                             <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
-                                <div className="min-w-[1280px] flex flex-col gap-2">
+                                <div className="md:min-w-[1280px] flex flex-col gap-2">
                                     {renderHeader()}
                                     {recurringProjects.map((project, index) => renderProjectCard(project, index))}
                                 </div>
