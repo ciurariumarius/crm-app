@@ -7,6 +7,7 @@ import { ProjectSheetContent } from "@/components/projects/project-sheet-content
 interface ProjectSheetWrapperProps {
     projects: any[]
     allServices: any[]
+    hourlyRate?: number
     children: React.ReactNode
 }
 
@@ -15,13 +16,15 @@ export const ProjectSheetContext = React.createContext<{
     openProject: (projectId: string, projectData?: any) => void
     closeProject: () => void
     currentProject: any | null
+    hourlyRate: number
 }>({
     openProject: () => { },
     closeProject: () => { },
-    currentProject: null
+    currentProject: null,
+    hourlyRate: 0
 })
 
-export function ProjectSheetWrapper({ projects, allServices, children }: ProjectSheetWrapperProps) {
+export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, children }: ProjectSheetWrapperProps) {
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const pendingSyncRef = React.useRef<Record<string, { status?: string; paymentStatus?: string }>>({})
 
@@ -62,7 +65,7 @@ export function ProjectSheetWrapper({ projects, allServices, children }: Project
     }, [projects, selectedProject])
 
     return (
-        <ProjectSheetContext.Provider value={{ openProject, closeProject, currentProject: selectedProject }}>
+        <ProjectSheetContext.Provider value={{ openProject, closeProject, currentProject: selectedProject, hourlyRate }}>
             {children}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && closeProject()}>
                 <SheetContent
@@ -75,6 +78,7 @@ export function ProjectSheetWrapper({ projects, allServices, children }: Project
                         <ProjectSheetContent
                             project={selectedProject}
                             allServices={allServices}
+                            hourlyRate={hourlyRate}
                             onClose={closeProject}
                             onUpdate={(updated) => {
                                 setSelectedProject(updated)

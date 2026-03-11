@@ -23,7 +23,10 @@ export async function globalSearch(query: string) {
                     site: {
                         include: { partner: true }
                     },
-                    services: true
+                    services: true,
+                    timeLogs: true,
+                    tasks: { include: { timeLogs: true } },
+                    _count: { select: { tasks: true } }
                 },
                 take: 5
             }),

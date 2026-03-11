@@ -85,3 +85,33 @@ export async function updateService(serviceId: string, data: {
         return { success: false, error: getActionErrorMessage(error, "Failed to update service") }
     }
 }
+
+export async function deleteService(serviceId: string) {
+    try {
+        const session = await requireTenantContext()
+        const validatedServiceId = z.string().uuid().parse(serviceId)
+
+        // Check if the service exists and belongs to the tenant
+        const service = await prisma.service.findFirst({
+            where: { id: validatedServiceId, tenantId: session.tenantId },
+        })
+
+        if (!service) {
+            return { success: false, error: "Service not found" }
+        }
+
+        await prisma.service.delete({
+            where: { id: validatedServiceId },
+        })
+
+        await logSessionAuditEvent(session, {
+            action: "SERVICE_DELETED",
+            details: `serviceId=${validatedServiceId}; serviceName=${service.serviceName}`,
+        })
+
+        revalidatePath("/services")
+        return { success: true }
+    } catch (error) {
+        return { success: false, error: getActionErrorMessage(error, "Failed to delete service") }
+    }
+}

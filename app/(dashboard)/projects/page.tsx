@@ -280,8 +280,17 @@ export default async function ProjectsPage({
     if (period !== "all_time") resultsSummaryParts.push(`Period: ${selectedPeriodLabel}`)
     const resultsSummary = resultsSummaryParts.join(" · ")
 
+    const user = await prisma.user.findFirst({
+        where: { id: session.userId, tenantId: session.tenantId },
+        select: { hourlyRate: true }
+    })
+
     return (
-        <ProjectSheetWrapper projects={projectsForClient} allServices={servicesForClient}>
+        <ProjectSheetWrapper
+            projects={projectsForClient}
+            allServices={servicesForClient}
+            hourlyRate={user?.hourlyRate ? Number(user.hourlyRate) : 0}
+        >
             <div className="space-y-6">
                 <div className="flex flex-col gap-4">
                     <div className="md:hidden flex flex-col gap-3">

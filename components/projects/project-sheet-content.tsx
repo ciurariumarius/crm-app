@@ -20,6 +20,7 @@ import {
     Expand,
     Pencil,
     Square,
+    Target,
     Trash2,
     X,
 } from "lucide-react"
@@ -57,6 +58,7 @@ type UpdateProjectPayload = {
 interface ProjectSheetContentProps {
     project: ProjectWithDetails
     allServices: Service[]
+    hourlyRate?: number
     onUpdate?: (updatedProject: ProjectWithDetails) => void
     onOpenSite?: (site: Site) => void
     standalone?: boolean
@@ -114,6 +116,7 @@ function toDateTimeLocalValue(value: Date | null) {
 export function ProjectSheetContent({
     project: initialProject,
     allServices,
+    hourlyRate = 0,
     onUpdate,
     onOpenSite: _onOpenSite,
     standalone = false,
@@ -135,6 +138,7 @@ export function ProjectSheetContent({
     const [createdAtInput, setCreatedAtInput] = React.useState("")
     const [manualMinutes, setManualMinutes] = React.useState("")
     const [manualNotes, setManualNotes] = React.useState("")
+
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [selectedTimeLog, setSelectedTimeLog] = React.useState<any | null>(null)
     const [isTimeLogSheetOpen, setIsTimeLogSheetOpen] = React.useState(false)
@@ -681,6 +685,60 @@ export function ProjectSheetContent({
 
                 <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
                     <div className="space-y-8 pb-20">
+                        {hourlyRate > 0 && initialProject.currentFee && Number(initialProject.currentFee) > 0 && (
+                            <section className="space-y-2 mb-4">
+                                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex flex-col">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Budget</p>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-xl font-black text-slate-900">
+                                                    {(Number(project.currentFee) / hourlyRate).toFixed(1)}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hours</span>
+                                            </div>
+                                        </div>
+                                        <div className="h-8 w-px bg-slate-200" />
+                                        <div className="flex flex-col">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Fee</p>
+                                            <p className="text-sm font-black text-slate-700">
+                                                {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON', maximumFractionDigits: 0 }).format(Number(project.currentFee))}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 max-w-[200px] ml-8">
+                                        {(() => {
+                                            const totalSeconds = project.timeLogs.reduce((sum, log) => sum + (log.durationSeconds || 0), 0);
+                                            const loggedHoursValue = totalSeconds / 3600;
+                                            const recommendedHours = Number(project.currentFee) / hourlyRate;
+                                            const percentage = Math.min((loggedHoursValue / recommendedHours) * 100, 100);
+                                            const isOverBudget = loggedHoursValue > recommendedHours;
+
+                                            return (
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+                                                        <span className={isOverBudget ? "text-rose-600" : "text-emerald-600"}>
+                                                            {isOverBudget ? "Over Budget" : "On Track"}
+                                                        </span>
+                                                        <span className="text-slate-400">{percentage.toFixed(0)}%</span>
+                                                    </div>
+                                                    <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                                                        <div
+                                                            className={cn(
+                                                                "h-full transition-all duration-500",
+                                                                isOverBudget ? "bg-rose-500" : percentage > 80 ? "bg-amber-500" : "bg-blue-500"
+                                                            )}
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            </section>
+                        )}
                         <div className="space-y-5 pr-60 pt-1 pb-2">
                             {isEditingTitle ? (
                                 <Textarea
@@ -1002,6 +1060,8 @@ export function ProjectSheetContent({
                                 Paste screenshots with Cmd/Ctrl+V or drag and drop. Click any image to open it in full view.
                             </p>
                         </section>
+
+
 
                         <section className="space-y-3">
                             <div className="flex items-center justify-between">

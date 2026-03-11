@@ -5,7 +5,6 @@ import { CreateTaskButton } from "@/components/tasks/create-task-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus, normalizeTaskStatus } from "@/lib/status"
-import { TasksViewToggle } from "@/components/tasks/tasks-view-toggle"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
@@ -42,8 +41,6 @@ export default async function TasksPage({
         projectId?: string
         urgency?: string
         sort?: string
-        view?: string
-        cols?: string
         filters?: string
         page?: string
     }>
@@ -57,8 +54,8 @@ export default async function TasksPage({
     const projectId = params.projectId
     const urgencyFilter = params.urgency || "all"
     const sort = params.sort || "newest"
-    const view = (params.view as "grid" | "list") || "grid"
-    const cols = Number(params.cols) || 3
+    const view: "grid" = "grid"
+    const cols = 3
     const mobileFiltersOpen = params.filters === "1"
     const page = Math.max(1, Number(params.page) || 1)
 
@@ -174,8 +171,6 @@ export default async function TasksPage({
         if (projectId) next.set("projectId", projectId)
         if (urgencyFilter) next.set("urgency", urgencyFilter)
         if (sort) next.set("sort", sort)
-        if (view) next.set("view", view)
-        if (cols) next.set("cols", String(cols))
         if (mobileFiltersOpen) next.set("filters", "1")
         next.set("page", String(page))
 
@@ -327,7 +322,6 @@ export default async function TasksPage({
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <TasksViewToggle currentView={view} />
                     <CreateTaskButton projects={activeProjects} />
                 </div>
             </div>

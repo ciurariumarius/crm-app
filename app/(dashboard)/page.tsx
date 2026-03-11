@@ -30,7 +30,7 @@ export default async function Home() {
       name: true,
       username: true,
       profilePic: true,
-      ...({ hourlyRate: true } as Record<string, true>),
+      hourlyRate: true,
     }
   })
 
@@ -81,6 +81,9 @@ export default async function Home() {
         include: {
           services: true,
           site: { include: { partner: true } },
+          timeLogs: true,
+          tasks: { include: { timeLogs: true } },
+          _count: { select: { tasks: true } }
         },
       }),
       // Upcoming tasks
@@ -161,7 +164,11 @@ export default async function Home() {
   const serializedQuickActionProjects = serialize(metrics.quickActionProjects)
 
   return (
-    <ProjectSheetWrapper projects={serializedActiveProjects} allServices={formattedServices}>
+    <ProjectSheetWrapper
+      projects={serializedActiveProjects}
+      allServices={formattedServices}
+      hourlyRate={user?.hourlyRate ? Number(user.hourlyRate) : 0}
+    >
       <TaskSheetWrapper tasks={serializedUpcomingTasks}>
         <div id="dashboard-main-container" className="flex flex-col gap-6 pb-10">
           <MobileHomeView

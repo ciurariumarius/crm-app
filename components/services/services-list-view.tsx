@@ -85,7 +85,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
             </div>
 
             <Sheet open={!!selectedService} onOpenChange={(open) => !open && setSelectedService(null)}>
-                <SheetContent className="sm:max-w-xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl">
+                <SheetContent className="w-screen max-w-none p-0 overflow-hidden flex flex-col border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none sm:w-full sm:max-w-[900px]">
                     {selectedService && (
                         <ServiceSheetContent
                             service={selectedService}
@@ -93,6 +93,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                 setSelectedService({ ...selectedService, ...updated })
                                 // Ideally trigger refresh here
                             }}
+                            onClose={() => setSelectedService(null)}
                         />
                     )}
                 </SheetContent>
