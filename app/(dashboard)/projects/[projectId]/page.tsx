@@ -43,8 +43,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         orderBy: { serviceName: "asc" }
     })
 
+    const userRaw = await prisma.user.findFirst({
+        where: { id: session.userId, tenantId: session.tenantId },
+        select: { hourlyRate: true },
+    })
+
     const project = JSON.parse(JSON.stringify(projectRaw))
     const allServices = JSON.parse(JSON.stringify(servicesRaw))
+    const hourlyRate = Number((userRaw as { hourlyRate?: number | string | null } | null)?.hourlyRate || 0)
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto">
@@ -54,6 +60,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <ProjectSheetContent
                     project={project}
                     allServices={allServices}
+                    hourlyRate={hourlyRate}
                     standalone
                 />
             </div>

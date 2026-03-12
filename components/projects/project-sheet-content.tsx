@@ -666,6 +666,29 @@ export function ProjectSheetContent({
             })),
         [project.tasks, project.id]
     )
+    const budgetInsights = React.useMemo(() => {
+        const hourlyRateValue = Number(hourlyRate || 0)
+        const feeValue = Number(project.currentFee || 0)
+        const hasHourlyRate = hourlyRateValue > 0
+        const hasFee = feeValue > 0
+        const recommendedHours = hasHourlyRate && hasFee ? feeValue / hourlyRateValue : 0
+        const trackedHoursNow = totalTrackedSeconds / 3600
+        const remainingHours = recommendedHours - trackedHoursNow
+        const isOverBudget = remainingHours < 0
+        const progressPercent = recommendedHours > 0 ? (trackedHoursNow / recommendedHours) * 100 : 0
+
+        return {
+            hasHourlyRate,
+            hasFee,
+            feeValue,
+            recommendedHours,
+            trackedHoursNow,
+            remainingHours,
+            isOverBudget,
+            progressPercent,
+            progressBarPercent: Math.max(0, Math.min(progressPercent, 100)),
+        }
+    }, [hourlyRate, project.currentFee, totalTrackedSeconds])
 
     return (
         <TaskSheetWrapper tasks={project.tasks || []} project={project}>
@@ -685,60 +708,6 @@ export function ProjectSheetContent({
 
                 <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
                     <div className="space-y-8 pb-20">
-                        {hourlyRate > 0 && initialProject.currentFee && Number(initialProject.currentFee) > 0 && (
-                            <section className="space-y-2 mb-4">
-                                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex flex-col">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Budget</p>
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-xl font-black text-slate-900">
-                                                    {(Number(project.currentFee) / hourlyRate).toFixed(1)}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hours</span>
-                                            </div>
-                                        </div>
-                                        <div className="h-8 w-px bg-slate-200" />
-                                        <div className="flex flex-col">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Fee</p>
-                                            <p className="text-sm font-black text-slate-700">
-                                                {new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON', maximumFractionDigits: 0 }).format(Number(project.currentFee))}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 max-w-[200px] ml-8">
-                                        {(() => {
-                                            const totalSeconds = project.timeLogs.reduce((sum, log) => sum + (log.durationSeconds || 0), 0);
-                                            const loggedHoursValue = totalSeconds / 3600;
-                                            const recommendedHours = Number(project.currentFee) / hourlyRate;
-                                            const percentage = Math.min((loggedHoursValue / recommendedHours) * 100, 100);
-                                            const isOverBudget = loggedHoursValue > recommendedHours;
-
-                                            return (
-                                                <div className="space-y-1.5">
-                                                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
-                                                        <span className={isOverBudget ? "text-rose-600" : "text-emerald-600"}>
-                                                            {isOverBudget ? "Over Budget" : "On Track"}
-                                                        </span>
-                                                        <span className="text-slate-400">{percentage.toFixed(0)}%</span>
-                                                    </div>
-                                                    <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                                                        <div
-                                                            className={cn(
-                                                                "h-full transition-all duration-500",
-                                                                isOverBudget ? "bg-rose-500" : percentage > 80 ? "bg-amber-500" : "bg-blue-500"
-                                                            )}
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                </div>
-                            </section>
-                        )}
                         <div className="space-y-5 pr-60 pt-1 pb-2">
                             {isEditingTitle ? (
                                 <Textarea
@@ -1061,6 +1030,113 @@ export function ProjectSheetContent({
                             </p>
                         </section>
 
+                        <section className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                    <Target className="h-3.5 w-3.5" />
+                                    Hour Recommendation
+                                </h2>
+                                {budgetInsights.hasHourlyRate && budgetInsights.hasFee && (
+                                    <span
+                                        className={cn(
+                                            "inline-flex h-7 items-center rounded-full px-3 text-[10px] font-black uppercase tracking-[0.08em]",
+                                            budgetInsights.isOverBudget
+                                                ? "bg-rose-50 text-rose-600"
+                                                : "bg-emerald-50 text-emerald-600"
+                                        )}
+                                    >
+                                        {budgetInsights.isOverBudget ? "Over Budget" : "On Track"}
+                                    </span>
+                                )}
+                            </div>
+
+                            {!budgetInsights.hasHourlyRate ? (
+                                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hourly Budget</p>
+                                    <p className="mt-1 text-sm font-medium text-slate-600">
+                                        Set your hourly rate to enable fee based hour recommendations.
+                                    </p>
+                                    <Link href="/settings" className="mt-2 inline-flex text-xs font-semibold text-blue-600 hover:text-blue-500">
+                                        Open Settings
+                                    </Link>
+                                </div>
+                            ) : !budgetInsights.hasFee ? (
+                                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hourly Budget</p>
+                                    <p className="mt-1 text-sm font-medium text-slate-600">
+                                        Set project amount to compute recommended hours.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                                    <div className="overflow-x-auto">
+                                        <div className="flex min-w-[640px] items-center gap-4">
+                                            <div className="shrink-0">
+                                                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-500">Recommended</p>
+                                                <p className="mt-1 font-mono text-xl font-black tabular-nums text-blue-700">
+                                                    {budgetInsights.recommendedHours.toFixed(1)}h
+                                                </p>
+                                            </div>
+
+                                            <div className="h-10 w-px shrink-0 bg-slate-200" />
+
+                                            <div className="shrink-0">
+                                                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Tracked</p>
+                                                <p className="mt-1 font-mono text-xl font-black tabular-nums text-slate-800">
+                                                    {budgetInsights.trackedHoursNow.toFixed(1)}h
+                                                </p>
+                                            </div>
+
+                                            <div className="h-10 w-px shrink-0 bg-slate-200" />
+
+                                            <div className="shrink-0">
+                                                <p className={cn(
+                                                    "text-[10px] font-bold uppercase tracking-[0.08em]",
+                                                    budgetInsights.isOverBudget ? "text-rose-500" : "text-emerald-500"
+                                                )}>
+                                                    {budgetInsights.isOverBudget ? "Overrun" : "Remaining"}
+                                                </p>
+                                                <p className={cn(
+                                                    "mt-1 font-mono text-xl font-black tabular-nums",
+                                                    budgetInsights.isOverBudget ? "text-rose-700" : "text-emerald-700"
+                                                )}>
+                                                    {Math.abs(budgetInsights.remainingHours).toFixed(1)}h
+                                                </p>
+                                            </div>
+
+                                            <div className="h-10 w-px shrink-0 bg-slate-200" />
+
+                                            <div className="min-w-[240px] flex-1">
+                                                <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                                    <span>Progress</span>
+                                                    <span>{budgetInsights.progressPercent.toFixed(0)}%</span>
+                                                </div>
+                                                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                                                    <div
+                                                        className={cn(
+                                                            "h-full transition-all duration-500",
+                                                            budgetInsights.isOverBudget
+                                                                ? "bg-rose-500"
+                                                                : budgetInsights.progressPercent > 80
+                                                                    ? "bg-amber-500"
+                                                                    : "bg-emerald-500"
+                                                        )}
+                                                        style={{ width: `${budgetInsights.progressBarPercent}%` }}
+                                                    />
+                                                </div>
+                                                <p className="mt-1 text-right text-[11px] font-medium text-slate-500">
+                                                    {new Intl.NumberFormat("ro-RO", {
+                                                        style: "currency",
+                                                        currency: "RON",
+                                                        maximumFractionDigits: 0,
+                                                    }).format(budgetInsights.feeValue)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </section>
 
 
                         <section className="space-y-3">

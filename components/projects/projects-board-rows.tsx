@@ -7,6 +7,19 @@ import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
 import { normalizeProjectStatus } from "@/lib/status"
+import { updateProject } from "@/lib/actions/projects"
+import { toast } from "sonner"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
     minimumFractionDigits: 0,
@@ -20,7 +33,7 @@ function formatDuration(totalSeconds: number) {
     return `${hours}h ${minutes}m`
 }
 
-const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_52px_52px_85px_90px_60px_75px_110px_150px]"
+const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_72px_90px_95px_60px_78px_120px_78px_150px]"
 
 function formatRelativeDateTime(value: Date | string | null | undefined) {
     if (!value) return "—"
@@ -121,6 +134,9 @@ export function ProjectsBoardRows({
     const [sortBy, setSortBy] = React.useState<"createdAt" | "amount" | "name" | "time">("createdAt")
     const [sortDirection, setSortDirection] = React.useState<"desc" | "asc">("desc")
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
+    const [inlineEdits, setInlineEdits] = React.useState<Record<string, { status?: string; paymentStatus?: string; amount?: number }>>({})
+    const [amountEditorProjectId, setAmountEditorProjectId] = React.useState<string | null>(null)
+    const [amountDraft, setAmountDraft] = React.useState("")
 
     const setSort = (key: "createdAt" | "amount" | "name" | "time") => {
         if (sortBy === key) {
@@ -167,6 +183,77 @@ export function ProjectsBoardRows({
 
     const openDetails = (projectId: string) => {
         openProject(projectId)
+    }
+
+    const getDisplayStatus = (project: BoardProject) =>
+        normalizeProjectStatus(inlineEdits[project.id]?.status ?? project.status)
+
+    const getDisplayPayment = (project: BoardProject) =>
+        inlineEdits[project.id]?.paymentStatus ?? project.paymentStatus
+
+    const getDisplayAmount = (project: BoardProject) =>
+        Number(inlineEdits[project.id]?.amount ?? project.amount ?? 0)
+
+    const setProjectStatus = async (project: BoardProject, nextStatus: "Active" | "Completed" | "Closed") => {
+        setInlineEdits((prev) => ({
+            ...prev,
+            [project.id]: { ...prev[project.id], status: nextStatus },
+        }))
+
+        const result = await updateProject(project.id, { status: nextStatus })
+        if (!result.success) {
+            setInlineEdits((prev) => ({
+                ...prev,
+                [project.id]: { ...prev[project.id], status: project.status },
+            }))
+            toast.error(result.error || "Failed to update status")
+        }
+    }
+
+    const setProjectPayment = async (project: BoardProject, nextPayment: "Paid" | "Unpaid") => {
+        setInlineEdits((prev) => ({
+            ...prev,
+            [project.id]: { ...prev[project.id], paymentStatus: nextPayment },
+        }))
+
+        const result = await updateProject(project.id, { paymentStatus: nextPayment })
+        if (!result.success) {
+            setInlineEdits((prev) => ({
+                ...prev,
+                [project.id]: { ...prev[project.id], paymentStatus: project.paymentStatus },
+            }))
+            toast.error(result.error || "Failed to update payment status")
+        }
+    }
+
+    const openAmountEditor = (project: BoardProject) => {
+        setAmountEditorProjectId(project.id)
+        setAmountDraft(String(getDisplayAmount(project)))
+    }
+
+    const saveProjectAmount = async (project: BoardProject) => {
+        const normalized = amountDraft.trim().replace(",", ".")
+        const parsed = Number(normalized)
+
+        if (!normalized.length || Number.isNaN(parsed) || parsed < 0) {
+            toast.error("Enter a valid amount")
+            return
+        }
+
+        setInlineEdits((prev) => ({
+            ...prev,
+            [project.id]: { ...prev[project.id], amount: parsed },
+        }))
+        setAmountEditorProjectId(null)
+
+        const result = await updateProject(project.id, { currentFee: parsed })
+        if (!result.success) {
+            setInlineEdits((prev) => ({
+                ...prev,
+                [project.id]: { ...prev[project.id], amount: project.amount },
+            }))
+            toast.error(result.error || "Failed to update amount")
+        }
     }
 
     if (layout === "grid") {
@@ -256,7 +343,6 @@ export function ProjectsBoardRows({
                             <ArrowDownUp className="h-3 w-3" />
                         </button>
                         <span className="text-center">Status</span>
-                        <span className="text-center">Type</span>
                         <span className="text-center">Payment</span>
                         <button
                             type="button"
@@ -284,6 +370,7 @@ export function ProjectsBoardRows({
                             <ArrowDownUp className="h-3 w-3" />
                         </button>
                         <span>Partner</span>
+                        <span className="text-center">Type</span>
                         <button
                             type="button"
                             onClick={() => setSort("createdAt")}
@@ -305,7 +392,8 @@ export function ProjectsBoardRows({
                             </div>
                         )}
                         {oneTimeProjects.map((project) => {
-                            const projectStatus = normalizeProjectStatus(project.status)
+                            const projectStatus = getDisplayStatus(project)
+                            const projectPayment = getDisplayPayment(project)
                             const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                             const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
                             const statusBadge = getStatusBadge(projectStatus)
@@ -358,9 +446,16 @@ export function ProjectsBoardRows({
                                             </div>
                                         </div>
                                     </button>
-                                    <button
-                                        type="button"
+                                    <div
+                                        role="button"
+                                        tabIndex={0}
                                         onClick={() => openDetails(project.id)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault()
+                                                openDetails(project.id)
+                                            }
+                                        }}
                                         className={cn("hidden w-full text-left md:grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
@@ -373,35 +468,139 @@ export function ProjectsBoardRows({
                                             </div>
                                         </div>
                                         <div className="flex justify-center">
-                                            <span
-                                                title={statusBadge.label}
-                                                aria-label={statusBadge.label}
-                                                className={cn(
-                                                    "inline-flex h-7 w-7 items-center justify-center rounded-lg border",
-                                                    statusBadge.className
-                                                )}
-                                            >
-                                                {statusBadge.icon}
-                                            </span>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        title={`Status: ${statusBadge.label}`}
+                                                        aria-label={`Status: ${statusBadge.label}`}
+                                                        onClick={(event) => event.stopPropagation()}
+                                                        className={cn(
+                                                            "inline-flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-all",
+                                                            projectStatus === "Active" && "border-blue-300 bg-blue-100 text-blue-700",
+                                                            projectStatus === "Completed" && "border-emerald-300 bg-emerald-100 text-emerald-700",
+                                                            projectStatus === "Closed" && "border-slate-300 bg-slate-200 text-slate-700",
+                                                        )}
+                                                    >
+                                                        {statusBadge.icon}
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                                    {(["Active", "Completed", "Closed"] as const).map((option) => (
+                                                        <DropdownMenuItem
+                                                            key={option}
+                                                            onSelect={() => void setProjectStatus(project, option)}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                        >
+                                                            <span className={cn(
+                                                                "mr-2 h-2 w-2 rounded-full",
+                                                                option === "Active" && "bg-blue-500",
+                                                                option === "Completed" && "bg-emerald-500",
+                                                                option === "Closed" && "bg-slate-500"
+                                                            )} />
+                                                            {option}
+                                                            {projectStatus === option && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                         <div className="flex justify-center">
-                                            <span
-                                                title="One-time"
-                                                aria-label="One-time"
-                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(event) => event.stopPropagation()}
+                                                        className={cn(
+                                                            "status-pill min-w-[84px] justify-center transition-all",
+                                                            projectPayment === "Paid" ? "status-pill-success" : "status-pill-debt"
+                                                        )}
+                                                        title={`Payment: ${projectPayment}`}
+                                                    >
+                                                        {projectPayment}
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                                    {(["Paid", "Unpaid"] as const).map((option) => (
+                                                        <DropdownMenuItem
+                                                            key={option}
+                                                            onSelect={() => void setProjectPayment(project, option)}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                        >
+                                                            <span className={cn(
+                                                                "mr-2 h-2 w-2 rounded-full",
+                                                                option === "Paid" ? "bg-emerald-500" : "bg-rose-500"
+                                                            )} />
+                                                            {option}
+                                                            {projectPayment === option && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <Popover
+                                                open={amountEditorProjectId === project.id}
+                                                onOpenChange={(open) => {
+                                                    if (open) openAmountEditor(project)
+                                                    else setAmountEditorProjectId(null)
+                                                }}
                                             >
-                                                <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />
-                                            </span>
+                                                <PopoverTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation()
+                                                            openAmountEditor(project)
+                                                        }}
+                                                        className="font-bold text-slate-800 text-right transition-colors hover:text-blue-700"
+                                                        title="Edit amount"
+                                                    >
+                                                        {currencyFormatter.format(getDisplayAmount(project))} <span className="text-slate-400 text-[9px]">RON</span>
+                                                    </button>
+                                                </PopoverTrigger>
+                                                <PopoverContent
+                                                    align="end"
+                                                    className="w-44 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                >
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Amount (RON)</p>
+                                                        <input
+                                                            value={amountDraft}
+                                                            onChange={(event) => setAmountDraft(event.target.value)}
+                                                            onKeyDown={(event) => {
+                                                                if (event.key === "Enter") {
+                                                                    event.preventDefault()
+                                                                    void saveProjectAmount(project)
+                                                                }
+                                                                if (event.key === "Escape") {
+                                                                    setAmountEditorProjectId(null)
+                                                                }
+                                                            }}
+                                                            className="h-9 w-full rounded-lg border border-slate-200 px-2 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                type="button"
+                                                                className="rounded-md px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+                                                                onClick={() => setAmountEditorProjectId(null)}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+                                                                onClick={() => void saveProjectAmount(project)}
+                                                            >
+                                                                Save
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
                                         </div>
-                                        <div className="flex justify-center">
-                                            <span className={cn(
-                                                "status-pill min-w-[75px] justify-center",
-                                                project.paymentStatus === "Paid" ? "status-pill-success" : "status-pill-debt"
-                                            )}>
-                                                {project.paymentStatus}
-                                            </span>
-                                        </div>
-                                        <span className="font-bold text-slate-800 text-right">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[9px]">RON</span></span>
                                         <div className="flex items-center justify-center">
                                             <div className="relative h-8 w-8">
                                                 <svg className="h-full w-full" viewBox="0 0 36 36">
@@ -427,11 +626,20 @@ export function ProjectsBoardRows({
                                             <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
+                                        <div className="flex justify-center">
+                                            <span
+                                                title="One-time"
+                                                aria-label="One-time"
+                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                            >
+                                                <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                            </span>
+                                        </div>
                                         <div className="flex items-center justify-end gap-1.5">
                                             <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
                                             <span className="text-[11px] font-medium text-slate-500">{formatRelativeDateTime(project.createdAt)}</span>
                                         </div>
-                                    </button>
+                                    </div>
                                 </React.Fragment>
                             )
                         })}
@@ -453,7 +661,8 @@ export function ProjectsBoardRows({
                             </div>
                         )}
                         {monthlyProjects.map((project) => {
-                            const projectStatus = normalizeProjectStatus(project.status)
+                            const projectStatus = getDisplayStatus(project)
+                            const projectPayment = getDisplayPayment(project)
                             const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                             const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
                             const statusBadge = getStatusBadge(projectStatus)
@@ -506,9 +715,16 @@ export function ProjectsBoardRows({
                                             </div>
                                         </div>
                                     </button>
-                                    <button
-                                        type="button"
+                                    <div
+                                        role="button"
+                                        tabIndex={0}
                                         onClick={() => openDetails(project.id)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault()
+                                                openDetails(project.id)
+                                            }
+                                        }}
                                         className={cn("hidden w-full text-left md:grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
@@ -521,35 +737,139 @@ export function ProjectsBoardRows({
                                             </div>
                                         </div>
                                         <div className="flex justify-center">
-                                            <span
-                                                title={statusBadge.label}
-                                                aria-label={statusBadge.label}
-                                                className={cn(
-                                                    "inline-flex h-7 w-7 items-center justify-center rounded-lg border",
-                                                    statusBadge.className
-                                                )}
-                                            >
-                                                {statusBadge.icon}
-                                            </span>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        title={`Status: ${statusBadge.label}`}
+                                                        aria-label={`Status: ${statusBadge.label}`}
+                                                        onClick={(event) => event.stopPropagation()}
+                                                        className={cn(
+                                                            "inline-flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-all",
+                                                            projectStatus === "Active" && "border-blue-300 bg-blue-100 text-blue-700",
+                                                            projectStatus === "Completed" && "border-emerald-300 bg-emerald-100 text-emerald-700",
+                                                            projectStatus === "Closed" && "border-slate-300 bg-slate-200 text-slate-700",
+                                                        )}
+                                                    >
+                                                        {statusBadge.icon}
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                                    {(["Active", "Completed", "Closed"] as const).map((option) => (
+                                                        <DropdownMenuItem
+                                                            key={option}
+                                                            onSelect={() => void setProjectStatus(project, option)}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                        >
+                                                            <span className={cn(
+                                                                "mr-2 h-2 w-2 rounded-full",
+                                                                option === "Active" && "bg-blue-500",
+                                                                option === "Completed" && "bg-emerald-500",
+                                                                option === "Closed" && "bg-slate-500"
+                                                            )} />
+                                                            {option}
+                                                            {projectStatus === option && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                         <div className="flex justify-center">
-                                            <span
-                                                title="Monthly"
-                                                aria-label="Monthly"
-                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(event) => event.stopPropagation()}
+                                                        className={cn(
+                                                            "status-pill min-w-[84px] justify-center transition-all",
+                                                            projectPayment === "Paid" ? "status-pill-success" : "status-pill-debt"
+                                                        )}
+                                                        title={`Payment: ${projectPayment}`}
+                                                    >
+                                                        {projectPayment}
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                                    {(["Paid", "Unpaid"] as const).map((option) => (
+                                                        <DropdownMenuItem
+                                                            key={option}
+                                                            onSelect={() => void setProjectPayment(project, option)}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                        >
+                                                            <span className={cn(
+                                                                "mr-2 h-2 w-2 rounded-full",
+                                                                option === "Paid" ? "bg-emerald-500" : "bg-rose-500"
+                                                            )} />
+                                                            {option}
+                                                            {projectPayment === option && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <Popover
+                                                open={amountEditorProjectId === project.id}
+                                                onOpenChange={(open) => {
+                                                    if (open) openAmountEditor(project)
+                                                    else setAmountEditorProjectId(null)
+                                                }}
                                             >
-                                                <Repeat2 className="h-3.5 w-3.5 [stroke-width:1.5]" />
-                                            </span>
+                                                <PopoverTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation()
+                                                            openAmountEditor(project)
+                                                        }}
+                                                        className="font-bold text-slate-800 text-right transition-colors hover:text-blue-700"
+                                                        title="Edit amount"
+                                                    >
+                                                        {currencyFormatter.format(getDisplayAmount(project))} <span className="text-slate-400 text-[9px]">RON</span>
+                                                    </button>
+                                                </PopoverTrigger>
+                                                <PopoverContent
+                                                    align="end"
+                                                    className="w-44 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                >
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Amount (RON)</p>
+                                                        <input
+                                                            value={amountDraft}
+                                                            onChange={(event) => setAmountDraft(event.target.value)}
+                                                            onKeyDown={(event) => {
+                                                                if (event.key === "Enter") {
+                                                                    event.preventDefault()
+                                                                    void saveProjectAmount(project)
+                                                                }
+                                                                if (event.key === "Escape") {
+                                                                    setAmountEditorProjectId(null)
+                                                                }
+                                                            }}
+                                                            className="h-9 w-full rounded-lg border border-slate-200 px-2 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                type="button"
+                                                                className="rounded-md px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+                                                                onClick={() => setAmountEditorProjectId(null)}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+                                                                onClick={() => void saveProjectAmount(project)}
+                                                            >
+                                                                Save
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
                                         </div>
-                                        <div className="flex justify-center">
-                                            <span className={cn(
-                                                "status-pill min-w-[75px] justify-center",
-                                                project.paymentStatus === "Paid" ? "status-pill-success" : "status-pill-debt"
-                                            )}>
-                                                {project.paymentStatus}
-                                            </span>
-                                        </div>
-                                        <span className="font-bold text-slate-800 text-right">{currencyFormatter.format(project.amount)} <span className="text-slate-400 text-[9px]">RON</span></span>
                                         <div className="flex items-center justify-center">
                                             <div className="relative h-8 w-8">
                                                 <svg className="h-full w-full" viewBox="0 0 36 36">
@@ -575,11 +895,20 @@ export function ProjectsBoardRows({
                                             <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
+                                        <div className="flex justify-center">
+                                            <span
+                                                title="Monthly"
+                                                aria-label="Monthly"
+                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
+                                            >
+                                                <Repeat2 className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                            </span>
+                                        </div>
                                         <div className="flex items-center justify-end gap-1.5">
                                             <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
                                             <span className="text-[11px] font-medium text-slate-500">{formatRelativeDateTime(project.createdAt)}</span>
                                         </div>
-                                    </button>
+                                    </div>
                                 </React.Fragment>
                             )
                         })}

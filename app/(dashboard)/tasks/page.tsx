@@ -89,7 +89,7 @@ export default async function TasksPage({
         ]
     }
 
-    const [tasksRaw, totalTasks, allServicesRaw, activeTimerRaw, allProjectsRaw] = await Promise.all([
+    const [tasksRaw, totalTasks, allServicesRaw, activeTimerRaw, allProjectsRaw, userRaw] = await Promise.all([
         prisma.task.findMany({
             where,
             include: {
@@ -132,6 +132,10 @@ export default async function TasksPage({
             },
             orderBy: { updatedAt: "desc" },
         }),
+        prisma.user.findFirst({
+            where: { id: session.userId, tenantId: session.tenantId },
+            select: { hourlyRate: true },
+        }),
     ])
 
     const normalizedTasksRaw = tasksRaw.map((task) => ({
@@ -146,6 +150,7 @@ export default async function TasksPage({
     const allServices = JSON.parse(JSON.stringify(allServicesRaw))
     const initialActiveTimer = JSON.parse(JSON.stringify(activeTimerRaw))
     const activeProjects = JSON.parse(JSON.stringify(normalizedProjectsRaw))
+    const hourlyRate = Number((userRaw as { hourlyRate?: number | string | null } | null)?.hourlyRate || 0)
 
     const serializedTasks = JSON.parse(JSON.stringify(normalizedTasksRaw))
     const projectsList = normalizedProjectsRaw
@@ -341,6 +346,7 @@ export default async function TasksPage({
                     allServices={allServices}
                     initialActiveTimer={initialActiveTimer}
                     projects={activeProjects}
+                    hourlyRate={hourlyRate}
                     view="grid"
                     cols={1}
                 />
@@ -380,6 +386,7 @@ export default async function TasksPage({
                     allServices={allServices}
                     initialActiveTimer={initialActiveTimer}
                     projects={activeProjects}
+                    hourlyRate={hourlyRate}
                     view={view}
                     cols={cols}
                 />

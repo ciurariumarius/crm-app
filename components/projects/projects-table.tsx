@@ -55,11 +55,12 @@ interface ProjectTableProps {
     allServices: any[]
     partners?: any[]
     layout?: "grid" | "list"
+    hourlyRate?: number
 }
 
 const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_52px_52px_85px_90px_60px_75px_110px_150px]"
 
-export function ProjectsTable({ projects, allServices, partners = [], layout = "grid" }: ProjectTableProps) {
+export function ProjectsTable({ projects, allServices, partners = [], layout = "grid", hourlyRate = 0 }: ProjectTableProps) {
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
@@ -578,6 +579,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                         <ProjectSheetContent
                             project={selectedProject}
                             allServices={allServices}
+                            hourlyRate={hourlyRate}
                             onUpdate={(updated) => setSelectedProject((prev: any) => ({ ...prev, ...updated }))}
                             onOpenSite={(site) => setSelectedSite(site)}
                         />

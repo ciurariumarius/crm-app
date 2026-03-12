@@ -33,9 +33,10 @@ interface TasksCardViewProps {
     projects?: any[]
     view?: "grid" | "list"
     cols?: number
+    hourlyRate?: number
 }
 
-export function TasksCardView({ tasks, allServices, initialActiveTimer, projects = [], view = "grid", cols = 3 }: TasksCardViewProps) {
+export function TasksCardView({ tasks, allServices, initialActiveTimer, projects = [], view = "grid", cols = 3, hourlyRate = 0 }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
@@ -414,6 +415,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         <ProjectSheetContent
                             project={selectedProject}
                             allServices={allServices}
+                            hourlyRate={hourlyRate}
                             onUpdate={(updated) => setSelectedProject((prev: any) => ({ ...prev, ...updated }))}
                             onOpenSite={(site) => setSelectedSite(site)}
                         />
