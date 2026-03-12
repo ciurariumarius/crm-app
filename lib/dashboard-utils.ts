@@ -37,7 +37,9 @@ export function calculateDashboardMetrics(
             paymentStatus: project.paymentStatus,
             completedTasks: project._count.tasks,
             totalTasks: project.tasks.length,
-            services: project.services
+            services: project.services,
+            createdAt: project.createdAt,
+            currentFee: Number(project.currentFee || 0)
         }
 
         if (project.status === "Active") {

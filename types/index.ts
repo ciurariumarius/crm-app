@@ -68,6 +68,8 @@ export interface FormattedProject {
     completedTasks: number
     totalTasks: number
     services: Service[]
+    createdAt?: Date | string
+    currentFee?: number | null
 }
 
 export interface QuickActionProject {

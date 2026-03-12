@@ -303,9 +303,6 @@ export default async function ProjectsPage({
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-3">
                                 <MobileMenuTrigger />
-                                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-sm">
-                                    <Briefcase className="h-5 w-5" strokeWidth={1.8} />
-                                </div>
                                 <h1 className="page-title text-slate-900">Projects</h1>
                             </div>
                             <CreateProjectButton
@@ -408,7 +405,7 @@ export default async function ProjectsPage({
                             </div>
                         )}
 
-                        {activeFilters.length > 0 && (
+                        {activeFilters.length > 0 && !mobileFiltersOpen && (
                             <div className="flex flex-wrap items-center gap-2">
                                 {activeFilters.map((filter) => (
                                     <Link
@@ -499,23 +496,31 @@ export default async function ProjectsPage({
 
                                 <div className="space-y-1.5">
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Type</p>
-                                    <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
-                                        {recurringOptions.map((option) => (
-                                            <Link
-                                                key={option.value}
-                                                href={buildHref({ recurring: option.value, page: "1" })}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button
+                                                type="button"
                                                 className={cn(
-                                                    "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
-                                                    recurring === option.value && option.value === "Recurring" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
-                                                    recurring === option.value && option.value === "OneTime" && "bg-[#F59E0B] text-white shadow-sm ring-1 ring-[#D97706]",
-                                                    recurring === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
-                                                    recurring !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                                    "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] transition-colors",
+                                                    recurring !== "All"
+                                                        ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
+                                                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
                                                 )}
                                             >
-                                                {option.label}
-                                            </Link>
-                                        ))}
-                                    </div>
+                                                <span>{selectedRecurringLabel}</span>
+                                                <ChevronDown className="h-4 w-4 opacity-70" />
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start" className="w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                                            {recurringOptions.map((option) => (
+                                                <DropdownMenuItem key={option.value} asChild className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-700">
+                                                    <Link href={buildHref({ recurring: option.value, page: "1" })}>
+                                                        {option.label}
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
 
                                 <div className="ml-auto flex flex-wrap items-end gap-2">

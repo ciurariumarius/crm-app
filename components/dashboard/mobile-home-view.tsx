@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { isPast, isToday } from "date-fns"
+import { format, isPast, isToday } from "date-fns"
 import {
     CheckCircle2,
     ChevronDown,
@@ -156,9 +156,9 @@ export function MobileHomeView({
     const name = user?.name?.split(" ")[0] || user?.username || "Admin"
     const initials = name.slice(0, 2).toUpperCase()
     const monthName = new Date().toLocaleString("en-US", { month: "long" })
-    const visibleTasks = upcomingTasks.slice(0, 3)
-    const visibleMonthlyProjects = recurringProjects.slice(0, 3)
-    const visibleOneTimeProjects = oneTimeProjects.slice(0, 3)
+    const visibleTasks = upcomingTasks.slice(0, 6)
+    const visibleMonthlyProjects = recurringProjects
+    const visibleOneTimeProjects = oneTimeProjects
     const visibleUnpaidPartners = unpaidByPartner.slice(0, 3)
     const visibleHistory = settlementHistory.slice(0, 4)
 
@@ -183,44 +183,41 @@ export function MobileHomeView({
     return (
         <div className="md:hidden flex flex-col gap-6">
             <section className="flex items-center justify-between gap-4 pt-1">
-                <div className="flex min-w-0 items-center gap-3">
-                    <MobileMenuTrigger />
-                    <div className="min-w-0">
-                        <p className="text-[13px] text-slate-600 leading-none">{greetingByHour()},</p>
-                        <div className="flex items-center gap-3 mt-1">
-                            <h1 className="text-[34px] font-semibold text-slate-900 leading-none tracking-[-0.03em] truncate">
-                                {name}
-                            </h1>
-                            <GlobalSearch />
-                        </div>
-                    </div>
+                <div className="flex min-w-0 flex-1 flex-col justify-center">
+                    <p className="text-[13px] text-slate-600 leading-none">{greetingByHour()},</p>
+                    <h1 className="text-[34px] font-semibold text-slate-900 leading-none tracking-[-0.03em] truncate mt-1">
+                        {name}
+                    </h1>
                 </div>
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button
-                            type="button"
-                            className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-                            aria-label="Quick actions"
-                        >
-                            <Plus className="h-5 w-5" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                        <DropdownMenuItem
-                            onSelect={() => setCreateProjectOpen(true)}
-                            className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-slate-700"
-                        >
-                            Add Project
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onSelect={() => setCreateTaskOpen(true)}
-                            className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-slate-700"
-                        >
-                            Add Task
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-2 shrink-0">
+                    <GlobalSearch />
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                type="button"
+                                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                                aria-label="Quick actions"
+                            >
+                                <Plus className="h-5 w-5" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                            <DropdownMenuItem
+                                onSelect={() => setCreateProjectOpen(true)}
+                                className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-slate-700"
+                            >
+                                Add Project
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onSelect={() => setCreateTaskOpen(true)}
+                                className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-slate-700"
+                            >
+                                Add Task
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </section>
 
             <section className="space-y-3">
@@ -323,12 +320,12 @@ export function MobileHomeView({
                             )
                         })}
 
-                        {upcomingTasks.length > visibleTasks.length ? (
+                        {upcomingTasks.length > 6 ? (
                             <Link
                                 href="/tasks"
                                 className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 transition-colors hover:bg-white"
                             >
-                                + {upcomingTasks.length - visibleTasks.length} More Tasks
+                                View All Tasks
                             </Link>
                         ) : null}
                     </div>
@@ -355,15 +352,15 @@ export function MobileHomeView({
                                         onClick={() => openProject(project.id)}
                                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-[var(--shadow-apple)]"
                                     >
-                                        <p className="text-[15px] font-semibold leading-tight text-slate-900">{parsed.title}</p>
-                                        <p className="mt-1 truncate text-[12px] text-slate-500">{parsed.subtitle || "No service"}</p>
+                                        <p className="text-[15px] font-bold leading-tight text-slate-900">{project.siteName || "Untitled project"}</p>
                                         <div className="mt-2 flex items-center justify-between gap-3">
-                                            <div className="inline-flex items-center gap-3 text-[11px] font-medium text-slate-500">
-                                                <span className="inline-flex items-center gap-1">
-                                                    <Clock3 className="h-3 w-3" />
-                                                    {Math.floor(Number(project.hoursLogged || 0))}h {minutes}m
+                                            <div className="inline-flex items-center gap-3 text-[11px] font-semibold text-slate-500">
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[#2563EB]">
+                                                    {format(new Date(project.createdAt || new Date()), "MMMM")}
                                                 </span>
-                                                <span>{project.completedTasks}/{project.totalTasks}</span>
+                                                <p className="font-mono font-bold text-slate-900">
+                                                    {formatCurrency(Number(project.currentFee || 0))}
+                                                </p>
                                             </div>
                                             <Badge className={cn(
                                                 "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em]",
@@ -428,13 +425,12 @@ export function MobileHomeView({
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setCreateProjectOpen(true)}
+                    <Link
+                        href="/projects"
                         className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 transition-colors hover:bg-white"
                     >
-                        + Add New Project
-                    </button>
+                        View All Active Projects
+                    </Link>
                 </div>
             </section>
 

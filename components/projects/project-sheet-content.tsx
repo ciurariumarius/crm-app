@@ -708,8 +708,8 @@ export function ProjectSheetContent({
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
-                    <div className="mx-auto max-w-[980px] space-y-6 pb-20">
-                        <div className="space-y-4 pr-16 pt-1 pb-1">
+                    <div className="mx-auto max-w-[980px] space-y-4 pb-12">
+                        <div className="space-y-3 pr-4 pt-1 pb-1">
                             {isEditingTitle ? (
                                 <Textarea
                                     value={localName}
@@ -737,18 +737,18 @@ export function ProjectSheetContent({
                             ) : (
                                 <div className="group flex w-full items-start gap-3 py-1">
                                     <div className="min-w-0 flex-1">
-                                        <h1 className="text-2xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-3xl">
+                                        <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-2xl">
                                             {localName || formatProjectName(project)}
                                         </h1>
                                         <span
                                             className={cn(
-                                                "mt-2 inline-flex rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em]",
+                                                "mt-2 inline-flex rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-all",
                                                 project.services?.some((service) => service.isRecurring)
-                                                    ? "border-blue-200 bg-blue-50 text-blue-600"
-                                                    : "border-emerald-200 bg-emerald-50 text-emerald-600"
+                                                    ? "border-blue-200/60 bg-blue-50/50 text-blue-600"
+                                                    : "border-emerald-200/60 bg-emerald-50/50 text-emerald-600"
                                             )}
                                         >
-                                            {format(toDate(project.createdAt) || new Date(), "MMM yyyy")}
+                                            {format(toDate(project.createdAt) || new Date(), "MMMM yyyy")}
                                         </span>
                                     </div>
                                     <Button
@@ -780,18 +780,19 @@ export function ProjectSheetContent({
                                         <button
                                             type="button"
                                             className={cn(
-                                                "status-pill h-11 w-full justify-center gap-2 rounded-full px-4 text-[13px] font-bold normal-case tracking-[0.01em]",
-                                                project.status === "Active" && "status-pill-action",
-                                                project.status === "Paused" && "status-pill-warning",
-                                                project.status === "Completed" && "status-pill-success",
-                                                project.status === "Closed" && "status-pill-closed"
+                                                "group/status relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-4 transition-all duration-300 active:scale-[0.98]",
+                                                project.status === "Active" && "border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-100/50 text-blue-600 shadow-[0_2px_10px_-4px_rgba(37,99,235,0.15)] hover:border-blue-300/60",
+                                                project.status === "Paused" && "border-amber-200/50 bg-gradient-to-br from-amber-50/80 to-amber-100/50 text-amber-600 shadow-[0_2px_10px_-4px_rgba(217,119,6,0.15)] hover:border-amber-300/60",
+                                                project.status === "Completed" && "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60",
+                                                project.status === "Closed" && "border-slate-200/50 bg-gradient-to-br from-slate-50/80 to-slate-100/50 text-slate-600 shadow-[0_2px_10px_-4px_rgba(71,85,105,0.15)] hover:border-slate-300/60"
                                             )}
                                         >
-                                            {project.status === "Active" && <Play className="h-3.5 w-3.5 fill-current" />}
-                                            {project.status === "Paused" && <Pause className="h-3.5 w-3.5" />}
-                                            {project.status === "Completed" && <Check className="h-3.5 w-3.5" />}
-                                            {project.status === "Closed" && <Square className="h-3.5 w-3.5 fill-current" />}
-                                            {project.status}
+                                            <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover/status:translate-y-0" />
+                                            {project.status === "Active" && <Play className="relative z-10 h-3.5 w-3.5 fill-current" />}
+                                            {project.status === "Paused" && <Pause className="relative z-10 h-3.5 w-3.5" />}
+                                            {project.status === "Completed" && <Check className="relative z-10 h-3.5 w-3.5" />}
+                                            {project.status === "Closed" && <Square className="relative z-10 h-3.5 w-3.5 fill-current" />}
+                                            <span className="relative z-10 text-[13px] font-bold tracking-[0.01em]">{project.status}</span>
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -822,12 +823,18 @@ export function ProjectSheetContent({
                                         <button
                                             type="button"
                                             className={cn(
-                                                "status-pill h-11 w-full justify-center gap-2 rounded-full px-4 text-[13px] font-bold normal-case tracking-[0.01em]",
-                                                project.paymentStatus === "Paid" ? "status-pill-success" : "status-pill-debt"
+                                                "group/payment relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-4 transition-all duration-300 active:scale-[0.98]",
+                                                project.paymentStatus === "Paid" 
+                                                    ? "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60" 
+                                                    : "border-rose-200/50 bg-gradient-to-br from-rose-50/80 to-rose-100/50 text-rose-600 shadow-[0_2px_10px_-4px_rgba(225,29,72,0.15)] hover:border-rose-300/60"
                                             )}
                                         >
-                                            <span className={cn("h-2.5 w-2.5 rounded-full", project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500")} />
-                                            {project.paymentStatus}
+                                            <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover/payment:translate-y-0" />
+                                            <span className={cn(
+                                                "relative z-10 h-2.5 w-2.5 rounded-full shadow-sm", 
+                                                project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
+                                            )} />
+                                            <span className="relative z-10 text-[13px] font-bold tracking-[0.01em]">{project.paymentStatus}</span>
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -847,17 +854,17 @@ export function ProjectSheetContent({
                             </div>
 
                             <div className="flex min-h-[78px] flex-col justify-center">
-                                <div className="flex h-11 items-center rounded-full border border-slate-200 bg-white px-5 shadow-sm">
+                                <div className="group/amount relative flex h-11 items-center overflow-hidden rounded-full border border-slate-200/80 bg-white px-5 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-blue-200 hover:shadow-[0_4px_12px_-4px_rgba(37,99,235,0.08)]">
                                     <Input
                                         type="number"
                                         step={1}
                                         value={amountInput}
                                         onChange={(event) => setAmountInput(event.target.value)}
                                         onBlur={handleAmountBlur}
-                                        className="h-auto border-none bg-transparent p-0 text-center text-2xl font-black tracking-[-0.02em] text-slate-900 shadow-none focus-visible:ring-0 md:text-[30px]"
+                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-xl font-black tracking-[-0.02em] text-slate-900 shadow-none focus-visible:ring-0 md:text-[24px]"
                                         placeholder="0"
                                     />
-                                    <span className="ml-3 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">RON</span>
+                                    <span className="relative z-10 ml-3 inline-flex items-center rounded-full bg-slate-100/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 transition-colors group-hover/amount:bg-blue-50 group-hover/amount:text-blue-600">RON</span>
                                 </div>
                             </div>
                         </div>
@@ -1380,59 +1387,62 @@ export function ProjectSheetContent({
                                 Delete
                             </Button>
                         </section>
-                    </div>
-                </div>
 
-                <div className="mt-1 flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-2.5 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                    <span># Project ID: {project.id.split("-")[0]}</span>
-                    <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                        <span className="inline-flex items-center gap-1.5">
-                            Created:
-                            {isEditingCreatedAt ? (
-                                <>
-                                    <Input
-                                        type="datetime-local"
-                                        value={createdAtInput}
-                                        onChange={(event) => setCreatedAtInput(event.target.value)}
-                                        className="h-7 w-[210px] border-slate-200 bg-white px-2 py-1 text-[11px]"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleCreatedAtSave}
-                                        className="text-blue-600 hover:text-blue-500"
-                                    >
-                                        Save
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setCreatedAtInput(toDateTimeLocalValue(createdAt))
-                                            setIsEditingCreatedAt(false)
-                                        }}
-                                        className="text-slate-500 hover:text-slate-700"
-                                    >
-                                        Cancel
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <span>{formatBottomDate(createdTimestamp)}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsEditingCreatedAt(true)}
-                                        className="text-slate-400 transition hover:text-slate-700"
-                                        aria-label="Edit created date"
-                                        title="Edit created date"
-                                    >
-                                        <Pencil className="h-3.5 w-3.5" />
-                                    </button>
-                                </>
-                            )}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                            Last updated: {formatBottomDate(lastUpdatedTimestamp)}
-                            <Cloud className="h-3.5 w-3.5" />
-                        </span>
+                        <div className="mt-12 border-t border-slate-200 pt-8 text-[11px] font-semibold text-slate-400">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <span># Project ID: {project.id.split("-")[0]}</span>
+                                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                                    <span className="inline-flex items-center gap-1.5">
+                                        Created:
+                                        {isEditingCreatedAt ? (
+                                            <>
+                                                <Input
+                                                    type="datetime-local"
+                                                    value={createdAtInput}
+                                                    onChange={(e) => setCreatedAtInput(e.target.value)}
+                                                    className="h-7 w-[210px] border-slate-200 bg-white px-2 py-1 text-[11px]"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCreatedAtSave}
+                                                    className="text-blue-600 hover:text-blue-500"
+                                                >
+                                                    Save
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setCreatedAtInput(toDateTimeLocalValue(toDate(project.createdAt)))
+                                                        setIsEditingCreatedAt(false)
+                                                    }}
+                                                    className="text-slate-500 hover:text-slate-700"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>{formatBottomDate(toDate(project.createdAt))}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsEditingCreatedAt(true)}
+                                                    className="text-slate-400 transition hover:text-slate-700"
+                                                    aria-label="Edit created date"
+                                                    title="Edit created date"
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                </button>
+                                            </>
+                                        )}
+                                    </span>
+                                    {lastUpdatedTimestamp && (
+                                        <span className="inline-flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                                            Last Updated: {formatBottomDate(lastUpdatedTimestamp)}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

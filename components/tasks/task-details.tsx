@@ -82,6 +82,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
 
     // Sync form state with task
+    const skipNextAutoSave = React.useRef(true)
     React.useEffect(() => {
         if (task) {
             setName(task.name || "")
@@ -91,6 +92,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
             setEstimatedMinutes(task.estimatedMinutes?.toString() || "")
             setIsEditingTitle(false)
+            skipNextAutoSave.current = true
         }
     }, [task?.id])
 
@@ -120,24 +122,29 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     }
 
     // Auto-save logic
-    const isInitialMount = React.useRef(true)
     React.useEffect(() => {
-        if (isInitialMount.current) {
-            isInitialMount.current = false
+        if (!task) return
+
+        if (skipNextAutoSave.current) {
+            skipNextAutoSave.current = false
             return
         }
 
-        if (!task) return
-
+        const normalizedTaskName = task.name || ""
+        const normalizedTaskDescription = task.description || ""
+        const normalizedTaskStatus = normalizeTaskStatus(task.status)
+        const normalizedTaskUrgency = task.urgency || "Normal"
+        const normalizedTaskDeadline = task.deadline ? new Date(task.deadline).getTime() : undefined
+        const normalizedTaskEstimatedMinutes = task.estimatedMinutes?.toString() || ""
 
         const timer = setTimeout(() => {
             if (
-                name !== task.name ||
-                description !== task.description ||
-                status !== task.status ||
-                urgency !== task.urgency ||
-                deadline?.getTime() !== (task.deadline ? new Date(task.deadline).getTime() : undefined) ||
-                (estimatedMinutes || null) !== (task.estimatedMinutes?.toString() || null)
+                name !== normalizedTaskName ||
+                description !== normalizedTaskDescription ||
+                status !== normalizedTaskStatus ||
+                urgency !== normalizedTaskUrgency ||
+                deadline?.getTime() !== normalizedTaskDeadline ||
+                estimatedMinutes !== normalizedTaskEstimatedMinutes
             ) {
                 handleUpdate()
             }
@@ -170,6 +177,13 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         if (isDirty) return "typing"
         return "ready"
     }, [description, loading, task?.description])
+
+    const appendTaskNotesTemplate = React.useCallback(() => {
+        setDescription((current) => {
+            if (!current.trim()) return TASK_NOTES_TEMPLATE
+            return `${current}<p></p>${TASK_NOTES_TEMPLATE}`
+        })
+    }, [])
 
     if (!task) return null
     const isActiveTimerThisTask = timerState.taskId === task.id
@@ -208,13 +222,6 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         }
         setIsEditingTitle(false)
     }
-
-    const appendTaskNotesTemplate = React.useCallback(() => {
-        setDescription((current) => {
-            if (!current.trim()) return TASK_NOTES_TEMPLATE
-            return `${current}<p></p>${TASK_NOTES_TEMPLATE}`
-        })
-    }, [])
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
