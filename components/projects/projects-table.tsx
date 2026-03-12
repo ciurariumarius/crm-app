@@ -163,12 +163,19 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
     )
 
     const renderGridCard = (project: any, isMonthly: boolean) => {
-        const normalizedStatus = project.status === "Paused" ? "Closed" : project.status
+        const normalizedStatus = project.status
         const isClosed = normalizedStatus === "Closed"
+        const isPaused = normalizedStatus === "Paused"
         const isCompleted = normalizedStatus === "Completed"
         const isActive = normalizedStatus === "Active"
 
-        const statusColor = isActive ? "text-foreground font-bold" : isClosed ? "text-muted-foreground" : "text-muted-foreground/50 line-through"
+        const statusColor = isActive
+            ? "text-foreground font-bold"
+            : isPaused
+                ? "text-amber-700"
+                : isClosed
+                    ? "text-muted-foreground"
+                    : "text-muted-foreground/50 line-through"
 
 
         return (
@@ -201,6 +208,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                     className={cn(
                                         "status-pill flex items-center gap-1.5 transition-all shadow-sm",
                                         isActive ? "status-pill-action" :
+                                            isPaused ? "status-pill-warning" :
                                             isCompleted ? "status-pill-success" :
                                                 "status-pill-closed"
                                     )}
@@ -212,6 +220,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="rounded-xl">
                                 <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-medium text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-medium text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-medium text-slate-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-medium text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
                             </DropdownMenuContent>
@@ -268,12 +277,19 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
     }
 
     const renderProjectCard = (project: any, rowIndex: number) => {
-        const normalizedStatus = project.status === "Paused" ? "Closed" : project.status
+        const normalizedStatus = project.status
         const isClosed = normalizedStatus === "Closed"
+        const isPaused = normalizedStatus === "Paused"
         const isCompleted = normalizedStatus === "Completed"
         const isActive = normalizedStatus === "Active"
 
-        const statusColor = isActive ? "text-foreground font-bold" : isClosed ? "text-muted-foreground" : "text-muted-foreground/50 line-through"
+        const statusColor = isActive
+            ? "text-foreground font-bold"
+            : isPaused
+                ? "text-amber-700"
+                : isClosed
+                    ? "text-muted-foreground"
+                    : "text-muted-foreground/50 line-through"
 
         const isMonthly = project.services?.[0]?.isRecurring
 
@@ -304,6 +320,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                 className={cn(
                                     "status-pill min-w-[70px] justify-center transition-all",
                                     isActive ? "status-pill-action" :
+                                        isPaused ? "status-pill-warning" :
                                         isCompleted ? "status-pill-success" :
                                             "status-pill-closed"
                                 )}
@@ -314,6 +331,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="rounded-xl">
                             <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-medium text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-medium text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-medium text-slate-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-medium text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
                         </DropdownMenuContent>

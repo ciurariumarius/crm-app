@@ -107,6 +107,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection, totalProjects }:
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Paused">Paused</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
                     <SelectItem value="Closed">Closed</SelectItem>
                 </SelectContent>

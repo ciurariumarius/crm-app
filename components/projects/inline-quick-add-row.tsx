@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronDown, Loader2, Play, Plus, Square, X } from "lucide-react"
+import { Check, ChevronDown, Loader2, Pause, Play, Plus, Square, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { createProject, deleteProject } from "@/lib/actions/projects"
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-type ProjectStatus = "Active" | "Completed" | "Closed"
+type ProjectStatus = "Active" | "Paused" | "Completed" | "Closed"
 type PaymentStatus = "Paid" | "Unpaid"
 
 type PartnerSite = {
@@ -169,7 +169,7 @@ export function InlineQuickAddRow({
             if (!raw) return
 
             const parsed = JSON.parse(raw) as QuickAddDefaults
-            if (parsed.status === "Active" || parsed.status === "Completed" || parsed.status === "Closed") {
+            if (parsed.status === "Active" || parsed.status === "Paused" || parsed.status === "Completed" || parsed.status === "Closed") {
                 setStatus(parsed.status)
             }
             if (parsed.paymentStatus === "Paid" || parsed.paymentStatus === "Unpaid") {
@@ -494,7 +494,7 @@ export function InlineQuickAddRow({
 
             <div className="mt-4 flex flex-wrap items-start gap-3">
                 <div className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
-                    {(["Active", "Completed", "Closed"] as ProjectStatus[]).map((option) => {
+                    {(["Active", "Paused", "Completed", "Closed"] as ProjectStatus[]).map((option) => {
                         const isActive = status === option
                         return (
                             <button
@@ -506,13 +506,15 @@ export function InlineQuickAddRow({
                                     isActive
                                         ? option === "Active"
                                             ? "bg-[#2563EB] text-white shadow-sm"
+                                            : option === "Paused"
+                                                ? "bg-[#FFFBEB] text-[#B45309] shadow-sm"
                                             : option === "Completed"
                                                 ? "bg-[#ECFDF5] text-[#047857] shadow-sm"
                                                 : "bg-slate-700 text-white shadow-sm"
                                         : "text-slate-500 hover:bg-white/80"
                                 )}
                             >
-                                {option === "Active" ? <Play className="h-3 w-3 fill-current" /> : option === "Completed" ? <Check className="h-3.5 w-3.5" /> : <Square className="h-3 w-3 fill-current" />}
+                                {option === "Active" ? <Play className="h-3 w-3 fill-current" /> : option === "Paused" ? <Pause className="h-3 w-3" /> : option === "Completed" ? <Check className="h-3.5 w-3.5" /> : <Square className="h-3 w-3 fill-current" />}
                                 {option}
                             </button>
                         )

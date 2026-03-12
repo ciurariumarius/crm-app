@@ -81,7 +81,6 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                     } catch { tasks = [] }
                     const activeCount = service.projects.filter((p: any) => p.status === "Active").length
                     const completedCount = service.projects.filter((p: any) => p.status === "Completed").length
-                    const closedCount = service.projects.filter((p: any) => p.status === "Closed" || p.status === "Paused").length
 
                     return (
                         <div

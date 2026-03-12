@@ -72,7 +72,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {site.projects.map((project: any) => {
-                        const displayStatus = project.status === "Paused" ? "Closed" : project.status
+                        const displayStatus = project.status
                         return (
                             <Link key={project.id} href={`/projects/${project.id}`} className="transition-transform hover:scale-[1.02]">
                                 <Card className="h-full">

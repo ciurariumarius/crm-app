@@ -108,7 +108,7 @@ model Project {
   name        String? // Optional custom name override
   description String? // Optional rich text content
 
-  status        String    @default("Active") // Active, Completed, Closed
+  status        String    @default("Active") // Active, Paused, Completed, Closed
   paymentStatus String    @default("Unpaid") @map("payment_status") // Paid, Unpaid
   paidAt        DateTime? @map("paid_at")
   currentFee    Decimal?  @map("current_fee")

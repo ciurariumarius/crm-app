@@ -45,7 +45,7 @@ export async function createProject(data: {
     serviceIds: string[]
     name?: string
     currentFee?: number
-    status?: "Active" | "Completed" | "Closed"
+    status?: "Active" | "Paused" | "Completed" | "Closed"
     paymentStatus?: "Paid" | "Unpaid"
 }) {
     try {

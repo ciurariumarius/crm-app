@@ -41,13 +41,14 @@ import { useTimer } from "@/components/providers/timer-provider"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { TimeLogSheet } from "@/components/time/time-log-sheet"
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ProjectWithDetails } from "@/types"
 import { Service, Site } from "@prisma/client"
 
 type UpdateProjectPayload = {
     name?: string
     description?: string | null
-    status?: "Active" | "Completed" | "Closed"
+    status?: "Active" | "Paused" | "Completed" | "Closed"
     paymentStatus?: "Paid" | "Unpaid"
     paidAt?: Date | string | null
     createdAt?: Date | string
@@ -773,72 +774,90 @@ export function ProjectSheetContent({
                         </div>
 
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <div className={cn(
-                                "rounded-[26px] border border-slate-200 bg-slate-50/90 p-4 transition-all duration-300"
-                            )}>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Project Status</p>
-
-                                <div className="mt-4 grid grid-cols-3 gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                                    {(["Active", "Completed", "Closed"] as const).map((statusOption) => (
-                                        <Button
-                                            key={statusOption}
+                            <div className="flex min-h-[78px] items-center">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
                                             type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => updateProjectStatus(statusOption)}
                                             className={cn(
-                                                "h-10 rounded-xl px-2 text-[13px] font-bold transition-all border border-transparent",
-                                                project.status === statusOption && statusOption === "Active" && "border-blue-100 bg-blue-100 text-blue-700 shadow-sm",
-                                                project.status === statusOption && statusOption === "Completed" && "border-emerald-100 bg-emerald-100 text-emerald-700 shadow-sm",
-                                                project.status === statusOption && statusOption === "Closed" && "border-slate-200 bg-slate-200 text-slate-700 shadow-sm",
-                                                project.status !== statusOption && "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                                                "status-pill h-11 w-full justify-center gap-2 rounded-full px-4 text-[13px] font-bold normal-case tracking-[0.01em]",
+                                                project.status === "Active" && "status-pill-action",
+                                                project.status === "Paused" && "status-pill-warning",
+                                                project.status === "Completed" && "status-pill-success",
+                                                project.status === "Closed" && "status-pill-closed"
                                             )}
                                         >
-                                            {statusOption}
-                                        </Button>
-                                    ))}
-                                </div>
+                                            {project.status === "Active" && <Play className="h-3.5 w-3.5 fill-current" />}
+                                            {project.status === "Paused" && <Pause className="h-3.5 w-3.5" />}
+                                            {project.status === "Completed" && <Check className="h-3.5 w-3.5" />}
+                                            {project.status === "Closed" && <Square className="h-3.5 w-3.5 fill-current" />}
+                                            {project.status}
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                        {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
+                                            <DropdownMenuItem
+                                                key={statusOption}
+                                                onSelect={() => updateProjectStatus(statusOption)}
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                            >
+                                                <span className={cn(
+                                                    "mr-2 h-2 w-2 rounded-full",
+                                                    statusOption === "Active" && "bg-blue-500",
+                                                    statusOption === "Paused" && "bg-amber-500",
+                                                    statusOption === "Completed" && "bg-emerald-500",
+                                                    statusOption === "Closed" && "bg-slate-500"
+                                                )} />
+                                                {statusOption}
+                                                {project.status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
 
-                            <div className={cn(
-                                "rounded-[26px] border border-slate-200 bg-slate-50/90 p-4 transition-all duration-300"
-                            )}>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Payment Status</p>
-
-                                <div className="mt-4 grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                                    {(["Paid", "Unpaid"] as const).map((paymentOption) => (
-                                        <Button
-                                            key={paymentOption}
+                            <div className="flex min-h-[78px] items-center">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
                                             type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => updateProjectPaymentStatus(paymentOption)}
                                             className={cn(
-                                                "h-10 rounded-xl px-2 text-[13px] font-bold transition-all border border-transparent",
-                                                project.paymentStatus === paymentOption && paymentOption === "Paid" && "border-emerald-100 bg-emerald-100 text-emerald-700 shadow-sm",
-                                                project.paymentStatus === paymentOption && paymentOption === "Unpaid" && "border-rose-100 bg-rose-100 text-rose-700 shadow-sm",
-                                                project.paymentStatus !== paymentOption && "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                                                "status-pill h-11 w-full justify-center gap-2 rounded-full px-4 text-[13px] font-bold normal-case tracking-[0.01em]",
+                                                project.paymentStatus === "Paid" ? "status-pill-success" : "status-pill-debt"
                                             )}
                                         >
-                                            {paymentOption}
-                                        </Button>
-                                    ))}
-                                </div>
+                                            <span className={cn("h-2.5 w-2.5 rounded-full", project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500")} />
+                                            {project.paymentStatus}
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                        {(["Paid", "Unpaid"] as const).map((paymentOption) => (
+                                            <DropdownMenuItem
+                                                key={paymentOption}
+                                                onSelect={() => updateProjectPaymentStatus(paymentOption)}
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                            >
+                                                <span className={cn("mr-2 h-2 w-2 rounded-full", paymentOption === "Paid" ? "bg-emerald-500" : "bg-rose-500")} />
+                                                {paymentOption}
+                                                {project.paymentStatus === paymentOption && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
 
-                            <div className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Amount</p>
-                                <div className="mt-2 flex items-end gap-2">
+                            <div className="flex min-h-[78px] flex-col justify-center">
+                                <div className="flex h-11 items-center rounded-full border border-slate-200 bg-white px-5 shadow-sm">
                                     <Input
                                         type="number"
                                         step={1}
                                         value={amountInput}
                                         onChange={(event) => setAmountInput(event.target.value)}
                                         onBlur={handleAmountBlur}
-                                        className="h-auto border-none bg-transparent p-0 text-3xl font-black tracking-[-0.02em] text-slate-900 shadow-none focus-visible:ring-0 md:text-4xl"
+                                        className="h-auto border-none bg-transparent p-0 text-center text-2xl font-black tracking-[-0.02em] text-slate-900 shadow-none focus-visible:ring-0 md:text-[30px]"
                                         placeholder="0"
                                     />
-                                    <span className="pb-2 text-lg font-bold tracking-[0.04em] text-slate-400">RON</span>
+                                    <span className="ml-3 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">RON</span>
                                 </div>
                             </div>
                         </div>

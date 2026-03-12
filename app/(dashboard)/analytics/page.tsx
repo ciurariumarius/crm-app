@@ -55,10 +55,9 @@ export default async function AnalyticsPage() {
     // Calculate statistics
     const totalProjects = projects.length
     const activeProjects = projectCounts.find((g: any) => g.status === "Active")?._count._all || 0
+    const pausedProjects = projectCounts.find((g: any) => g.status === "Paused")?._count._all || 0
     const completedProjects = projectCounts.find((g: any) => g.status === "Completed")?._count._all || 0
-    const closedProjects =
-        (projectCounts.find((g: any) => g.status === "Closed")?._count._all || 0) +
-        (projectCounts.find((g: any) => g.status === "Paused")?._count._all || 0)
+    const closedProjects = projectCounts.find((g: any) => g.status === "Closed")?._count._all || 0
 
     const totalRevenue = projects.reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
     const paidRevenue = projects.filter((p: any) => p.paymentStatus === "Paid").reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
@@ -148,7 +147,7 @@ export default async function AnalyticsPage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{totalProjects}</div>
                         <p className="text-xs text-muted-foreground">
-                            {activeProjects} active • {completedProjects} completed • {closedProjects} closed
+                            {activeProjects} active • {pausedProjects} paused • {completedProjects} completed • {closedProjects} closed
                         </p>
                     </CardContent>
                 </Card>

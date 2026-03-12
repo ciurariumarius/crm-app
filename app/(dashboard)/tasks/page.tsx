@@ -212,6 +212,7 @@ export default async function TasksPage({
             <div className="md:hidden flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
+                        <MobileMenuTrigger />
                         <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-sm">
                             <LayoutGrid className="h-5 w-5" strokeWidth={1.8} />
                         </div>

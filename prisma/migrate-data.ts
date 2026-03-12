@@ -32,12 +32,7 @@ async function main() {
     })
     console.log(`Updated ${pausedTasksUpdate.count} tasks from Paused to Active.`)
 
-    console.log("Updating existing project statuses...")
-    const pausedProjectsUpdate = await prisma.project.updateMany({
-        where: { status: "Paused" },
-        data: { status: "Closed" }
-    })
-    console.log(`Updated ${pausedProjectsUpdate.count} projects from Paused to Closed.`)
+    console.log("Keeping existing project statuses as-is (Paused is supported).")
 
     console.log("Database update complete.")
 }

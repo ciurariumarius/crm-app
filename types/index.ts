@@ -85,7 +85,7 @@ export interface RecentProject {
     siteName: string
 }
 
-export type ProjectStatus = "Active" | "Completed" | "Closed"
+export type ProjectStatus = "Active" | "Paused" | "Completed" | "Closed"
 export type PaymentStatus = "Paid" | "Unpaid"
 
 export interface PartnerWithSites extends Partner {

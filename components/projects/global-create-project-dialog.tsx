@@ -53,7 +53,7 @@ export function GlobalCreateProjectDialog({
     const [partnerId, setPartnerId] = useState(defaultPartnerId || "")
     const [siteId, setSiteId] = useState(defaultSiteId || "")
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
-    const [projectStatus, setProjectStatus] = useState<"Active" | "Completed" | "Closed">("Active")
+    const [projectStatus, setProjectStatus] = useState<"Active" | "Paused" | "Completed" | "Closed">("Active")
     const [isPaid, setIsPaid] = useState(false)
     const [fee, setFee] = useState("")
 
@@ -368,8 +368,8 @@ export function GlobalCreateProjectDialog({
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                                             <div className="rounded-xl border border-slate-200 bg-slate-100 p-1">
-                                                <div className="grid grid-cols-3 gap-1">
-                                                    {(["Active", "Completed", "Closed"] as const).map((statusOption) => (
+                                                <div className="grid grid-cols-4 gap-1">
+                                                    {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
                                                         <button
                                                             key={statusOption}
                                                             type="button"
@@ -377,6 +377,7 @@ export function GlobalCreateProjectDialog({
                                                             className={cn(
                                                                 "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
                                                                 projectStatus === statusOption && statusOption === "Active" && "status-pill-action shadow-sm",
+                                                                projectStatus === statusOption && statusOption === "Paused" && "status-pill-warning shadow-sm",
                                                                 projectStatus === statusOption && statusOption === "Completed" && "status-pill-success shadow-sm",
                                                                 projectStatus === statusOption && statusOption === "Closed" && "status-pill-closed shadow-sm",
                                                                 projectStatus !== statusOption && "text-slate-500 hover:bg-white/80 hover:text-slate-700"

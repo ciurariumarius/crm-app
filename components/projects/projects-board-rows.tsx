@@ -2,11 +2,11 @@
 
 import * as React from "react"
 import { format, isToday, isYesterday } from "date-fns"
-import { ArrowDownUp, CalendarDays, Check, Circle, Play, Plus, Repeat2, Square } from "lucide-react"
+import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Repeat2, Square } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
-import { normalizeProjectStatus } from "@/lib/status"
+import { normalizeProjectStatus, projectStatusSortOrder } from "@/lib/status"
 import { updateProject } from "@/lib/actions/projects"
 import { toast } from "sonner"
 import {
@@ -68,6 +68,14 @@ function getStatusBadge(status: string) {
         }
     }
 
+    if (status === "Paused") {
+        return {
+            label: "Paused",
+            className: "status-pill status-pill-warning",
+            icon: <Pause className="h-3 w-3" />,
+        }
+    }
+
     if (status === "Completed") {
         return {
             label: "Completed",
@@ -124,11 +132,13 @@ export function ProjectsBoardRows({
     layout,
     partners = [],
     services = [],
+    currentStatusFilter = "Active",
 }: {
     projects: BoardProject[]
     layout: "grid" | "list"
     partners?: BoardPartner[]
     services?: BoardService[]
+    currentStatusFilter?: string
 }) {
     const { openProject } = React.useContext(ProjectSheetContext)
     const [sortBy, setSortBy] = React.useState<"createdAt" | "amount" | "name" | "time">("createdAt")
@@ -151,6 +161,11 @@ export function ProjectsBoardRows({
     const sortProjects = React.useCallback(
         (items: BoardProject[]) =>
             [...items].sort((a, b) => {
+                if (currentStatusFilter === "All") {
+                    const statusDiff = projectStatusSortOrder(a.status) - projectStatusSortOrder(b.status)
+                    if (statusDiff !== 0) return statusDiff
+                }
+
                 let leftValue: number | string
                 let rightValue: number | string
 
@@ -174,7 +189,7 @@ export function ProjectsBoardRows({
                 if (leftValue > rightValue) return sortDirection === "desc" ? -1 : 1
                 return 0
             }),
-        [sortBy, sortDirection]
+        [currentStatusFilter, sortBy, sortDirection]
     )
 
     const monthlyProjects = sortProjects(projects.filter((project) => project.isRecurring))
@@ -194,7 +209,26 @@ export function ProjectsBoardRows({
     const getDisplayAmount = (project: BoardProject) =>
         Number(inlineEdits[project.id]?.amount ?? project.amount ?? 0)
 
-    const setProjectStatus = async (project: BoardProject, nextStatus: "Active" | "Completed" | "Closed") => {
+    const getProjectToneClass = (status: string) => {
+        if (status === "Paused") return "project-state-paused"
+        if (status === "Completed") return "project-state-completed"
+        if (status === "Closed") return "project-state-closed"
+        return "project-state-active"
+    }
+
+    const getProjectTitleClass = (status: string) => {
+        if (status === "Completed") return "text-slate-800"
+        if (status === "Closed") return "text-slate-500"
+        return "text-slate-900"
+    }
+
+    const getProjectMetaClass = (status: string) => {
+        if (status === "Closed") return "text-slate-400"
+        if (status === "Completed") return "text-slate-500"
+        return "text-slate-500"
+    }
+
+    const setProjectStatus = async (project: BoardProject, nextStatus: "Active" | "Paused" | "Completed" | "Closed") => {
         setInlineEdits((prev) => ({
             ...prev,
             [project.id]: { ...prev[project.id], status: nextStatus },
@@ -263,21 +297,31 @@ export function ProjectsBoardRows({
                     const projectStatus = normalizeProjectStatus(project.status)
                     const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                     const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
+                    const statusBadge = getStatusBadge(projectStatus)
                     return (
                         <button
                             key={project.id}
                             type="button"
                             onClick={() => openDetails(project.id)}
-                            className="text-left rounded-xl border border-border/60 bg-card p-5 premium-card"
+                            className={cn("text-left rounded-xl border border-border/60 bg-card p-5 premium-card", getProjectToneClass(projectStatus))}
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                    <p className="text-lg font-bold tracking-tight text-slate-900 truncate">{project.site.domainName}</p>
-                                    <p className="text-sm text-slate-500 truncate">{project.serviceLabel}</p>
+                                    <p className={cn("text-lg font-bold tracking-tight truncate", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                    <div className={cn("mt-1 flex items-center gap-2 text-sm", getProjectMetaClass(projectStatus))}>
+                                        <p className="truncate">{project.serviceLabel}</p>
+                                        {projectStatus !== "Active" && (
+                                            <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
+                                                {statusBadge.icon}
+                                                {statusBadge.label}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <span className={cn(
                                     "status-pill",
                                     projectStatus === "Active" ? "status-pill-action" :
+                                        projectStatus === "Paused" ? "status-pill-warning" :
                                         projectStatus === "Completed" ? "status-pill-success" :
                                             "status-pill-closed"
                                 )}>
@@ -402,16 +446,22 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project.id)}
-                                        className="w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-left premium-card md:hidden"
+                                        className={cn("w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-left premium-card md:hidden", getProjectToneClass(projectStatus))}
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
-                                                <p className="break-words font-bold leading-tight tracking-tight text-slate-900">{project.site.domainName}</p>
-                                                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+                                                <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                                <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
                                                     <span className="break-words">{project.serviceLabel}</span>
                                                     <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-emerald-600">
                                                         {format(new Date(project.createdAt), "MMM yyyy")}
                                                     </span>
+                                                    {projectStatus !== "Active" && (
+                                                        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
+                                                            {statusBadge.icon}
+                                                            {statusBadge.label}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                             <span className={cn(
@@ -456,15 +506,21 @@ export function ProjectsBoardRows({
                                                 openDetails(project.id)
                                             }
                                         }}
-                                        className={cn("hidden w-full text-left md:grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full text-left md:grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
                                     >
                                         <div className="min-w-0">
-                                            <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
-                                            <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
+                                            <p className={cn("font-bold truncate tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                            <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
                                                 <span className="truncate">{project.serviceLabel}</span>
                                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0 uppercase tracking-tighter">
                                                     {format(new Date(project.createdAt), "MMM yyyy")}
                                                 </span>
+                                                {projectStatus !== "Active" && (
+                                                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
+                                                        {statusBadge.icon}
+                                                        {statusBadge.label}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex justify-center">
@@ -478,6 +534,7 @@ export function ProjectsBoardRows({
                                                         className={cn(
                                                             "inline-flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-all",
                                                             projectStatus === "Active" && "border-blue-300 bg-blue-100 text-blue-700",
+                                                            projectStatus === "Paused" && "border-amber-300 bg-amber-100 text-amber-700",
                                                             projectStatus === "Completed" && "border-emerald-300 bg-emerald-100 text-emerald-700",
                                                             projectStatus === "Closed" && "border-slate-300 bg-slate-200 text-slate-700",
                                                         )}
@@ -486,7 +543,7 @@ export function ProjectsBoardRows({
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                                                    {(["Active", "Completed", "Closed"] as const).map((option) => (
+                                                    {(["Active", "Paused", "Completed", "Closed"] as const).map((option) => (
                                                         <DropdownMenuItem
                                                             key={option}
                                                             onSelect={() => void setProjectStatus(project, option)}
@@ -495,6 +552,7 @@ export function ProjectsBoardRows({
                                                             <span className={cn(
                                                                 "mr-2 h-2 w-2 rounded-full",
                                                                 option === "Active" && "bg-blue-500",
+                                                                option === "Paused" && "bg-amber-500",
                                                                 option === "Completed" && "bg-emerald-500",
                                                                 option === "Closed" && "bg-slate-500"
                                                             )} />
@@ -671,16 +729,22 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project.id)}
-                                        className="w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-left premium-card md:hidden"
+                                        className={cn("w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-left premium-card md:hidden", getProjectToneClass(projectStatus))}
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
-                                                <p className="break-words font-bold leading-tight tracking-tight text-slate-900">{project.site.domainName}</p>
-                                                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+                                                <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                                <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
                                                     <span className="break-words">{project.serviceLabel}</span>
                                                     <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-blue-600">
                                                         {format(new Date(project.createdAt), "MMM yyyy")}
                                                     </span>
+                                                    {projectStatus !== "Active" && (
+                                                        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
+                                                            {statusBadge.icon}
+                                                            {statusBadge.label}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                             <span className={cn(
@@ -725,15 +789,21 @@ export function ProjectsBoardRows({
                                                 openDetails(project.id)
                                             }
                                         }}
-                                        className={cn("hidden w-full text-left md:grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full text-left md:grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
                                     >
                                         <div className="min-w-0">
-                                            <p className="font-bold text-slate-900 truncate tracking-tight">{project.site.domainName}</p>
-                                            <div className="flex items-center gap-2 text-sm text-slate-500 min-w-0">
+                                            <p className={cn("font-bold truncate tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                            <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
                                                 <span className="truncate">{project.serviceLabel}</span>
                                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
                                                     {format(new Date(project.createdAt), "MMM yyyy")}
                                                 </span>
+                                                {projectStatus !== "Active" && (
+                                                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
+                                                        {statusBadge.icon}
+                                                        {statusBadge.label}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex justify-center">
@@ -747,6 +817,7 @@ export function ProjectsBoardRows({
                                                         className={cn(
                                                             "inline-flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-all",
                                                             projectStatus === "Active" && "border-blue-300 bg-blue-100 text-blue-700",
+                                                            projectStatus === "Paused" && "border-amber-300 bg-amber-100 text-amber-700",
                                                             projectStatus === "Completed" && "border-emerald-300 bg-emerald-100 text-emerald-700",
                                                             projectStatus === "Closed" && "border-slate-300 bg-slate-200 text-slate-700",
                                                         )}
@@ -755,7 +826,7 @@ export function ProjectsBoardRows({
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                                                    {(["Active", "Completed", "Closed"] as const).map((option) => (
+                                                    {(["Active", "Paused", "Completed", "Closed"] as const).map((option) => (
                                                         <DropdownMenuItem
                                                             key={option}
                                                             onSelect={() => void setProjectStatus(project, option)}
@@ -764,6 +835,7 @@ export function ProjectsBoardRows({
                                                             <span className={cn(
                                                                 "mr-2 h-2 w-2 rounded-full",
                                                                 option === "Active" && "bg-blue-500",
+                                                                option === "Paused" && "bg-amber-500",
                                                                 option === "Completed" && "bg-emerald-500",
                                                                 option === "Closed" && "bg-slate-500"
                                                             )} />

@@ -40,6 +40,7 @@ const PAGINATION_THRESHOLD = 250
 const statusOptions = [
     { label: "All", value: "All" },
     { label: "Active", value: "Active" },
+    { label: "Paused", value: "Paused" },
     { label: "Completed", value: "Completed" },
     { label: "Closed", value: "Closed" },
 ]
@@ -80,8 +81,8 @@ export default async function ProjectsPage({
 }) {
     const session = await requireTenantContext()
     const params = await searchParams
-    const queryStatusRaw = params.status === "Paused" ? "Closed" : (params.status || "Active")
-    const queryStatus = ["All", "Active", "Completed", "Closed"].includes(queryStatusRaw) ? queryStatusRaw : "Active"
+    const queryStatusRaw = params.status || "Active"
+    const queryStatus = ["All", "Active", "Paused", "Completed", "Closed"].includes(queryStatusRaw) ? queryStatusRaw : "Active"
     const q = params.q?.trim()
     const partnerId = params.partnerId
     const payment = params.payment || "All"
@@ -131,9 +132,7 @@ export default async function ProjectsPage({
             { tenantId: session.tenantId },
             queryStatus === "All"
                 ? {}
-                : queryStatus === "Closed"
-                    ? { status: { in: ["Closed", "Paused"] } }
-                    : { status: queryStatus },
+                : { status: queryStatus },
             payment === "All" ? {} : { paymentStatus: payment },
             partnerId ? { site: { partnerId } } : {},
             recurring === "Recurring" ? { services: { some: { isRecurring: true } } } :
@@ -221,6 +220,13 @@ export default async function ProjectsPage({
     const projectsForClient = JSON.parse(JSON.stringify(projects))
     const partnersForClient = JSON.parse(JSON.stringify(partnersFullRaw))
     const servicesForClient = JSON.parse(JSON.stringify(servicesRaw))
+    const projectStatusCounts = projects.reduce(
+        (acc, project) => {
+            acc[project.status] += 1
+            return acc
+        },
+        { Active: 0, Paused: 0, Completed: 0, Closed: 0 } as Record<"Active" | "Paused" | "Completed" | "Closed", number>
+    )
 
     const totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalProjects / PAGE_SIZE)) : 1
     const prevPage = shouldPaginate && page > 1 ? page - 1 : null
@@ -296,6 +302,7 @@ export default async function ProjectsPage({
                     <div className="md:hidden flex flex-col gap-3">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-3">
+                                <MobileMenuTrigger />
                                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-sm">
                                     <Briefcase className="h-5 w-5" strokeWidth={1.8} />
                                 </div>
@@ -381,6 +388,26 @@ export default async function ProjectsPage({
                             )}
                         </div>
 
+                        {queryStatus === "All" && totalProjects > 0 && (
+                            <div className="-mx-1 overflow-x-auto px-1 hidescrollbar">
+                                <div className="inline-flex min-w-max items-center gap-2">
+                                    {([
+                                        { label: "Active", value: projectStatusCounts.Active, tone: "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]" },
+                                        { label: "Paused", value: projectStatusCounts.Paused, tone: "bg-[#FFFBEB] text-[#B45309] border-[#FCD34D]" },
+                                        { label: "Completed", value: projectStatusCounts.Completed, tone: "bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]" },
+                                        { label: "Closed", value: projectStatusCounts.Closed, tone: "bg-slate-100 text-slate-600 border-slate-200" },
+                                    ]).map((item) => (
+                                        <span
+                                            key={item.label}
+                                            className={cn("inline-flex h-8 items-center rounded-full border px-3 text-[11px] font-semibold", item.tone)}
+                                        >
+                                            {item.value} {item.label}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {activeFilters.length > 0 && (
                             <div className="flex flex-wrap items-center gap-2">
                                 {activeFilters.map((filter) => (
@@ -457,6 +484,7 @@ export default async function ProjectsPage({
                                                 className={cn(
                                                     "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
                                                     queryStatus === option.value && option.value === "Active" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
+                                                    queryStatus === option.value && option.value === "Paused" && "bg-[#F59E0B] text-white shadow-sm ring-1 ring-[#D97706]",
                                                     queryStatus === option.value && option.value === "Completed" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
                                                     queryStatus === option.value && option.value === "Closed" && "bg-slate-700 text-white shadow-sm ring-1 ring-slate-600",
                                                     queryStatus === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
@@ -528,6 +556,24 @@ export default async function ProjectsPage({
                                 </div>
                             </div>
 
+                            {queryStatus === "All" && totalProjects > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                    {([
+                                        { label: "Active", value: projectStatusCounts.Active, tone: "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]" },
+                                        { label: "Paused", value: projectStatusCounts.Paused, tone: "bg-[#FFFBEB] text-[#B45309] border-[#FCD34D]" },
+                                        { label: "Completed", value: projectStatusCounts.Completed, tone: "bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]" },
+                                        { label: "Closed", value: projectStatusCounts.Closed, tone: "bg-slate-100 text-slate-600 border-slate-200" },
+                                    ]).map((item) => (
+                                        <span
+                                            key={item.label}
+                                            className={cn("inline-flex h-7 items-center rounded-full border px-3 text-[11px] font-semibold", item.tone)}
+                                        >
+                                            {item.value} {item.label}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
                             {activeFilters.length > 0 && (
                                 <div className="flex flex-wrap items-center gap-2 pt-1">
                                     <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Active filters</span>
@@ -559,6 +605,7 @@ export default async function ProjectsPage({
                     layout={layout as "grid" | "list"}
                     partners={partnersForClient}
                     services={servicesForClient}
+                    currentStatusFilter={queryStatus}
                 />
 
                 {shouldPaginate && (

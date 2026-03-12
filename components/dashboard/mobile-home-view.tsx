@@ -31,6 +31,7 @@ import { settlePartnerDebt } from "@/lib/actions/settlement"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { GlobalSearch } from "@/components/dashboard/global-search"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import type { Service } from "@prisma/client"
@@ -183,10 +184,7 @@ export function MobileHomeView({
         <div className="md:hidden flex flex-col gap-6">
             <section className="flex items-center justify-between gap-4 pt-1">
                 <div className="flex min-w-0 items-center gap-3">
-                    <Avatar size="lg" className="ring-2 ring-[#BFDBFE]/70 ring-offset-1 ring-offset-white">
-                        <AvatarImage src={user?.profilePic || "/avatar.png"} alt={name} />
-                        <AvatarFallback>{initials}</AvatarFallback>
-                    </Avatar>
+                    <MobileMenuTrigger />
                     <div className="min-w-0">
                         <p className="text-[13px] text-slate-600 leading-none">{greetingByHour()},</p>
                         <div className="flex items-center gap-3 mt-1">
