@@ -91,29 +91,29 @@ export function ProjectTasks({
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             <div className="relative">
                 <Input
                     value={newTaskName}
                     onChange={(e) => setNewTaskName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
                     placeholder="Type a task..."
-                    className="h-12 rounded-2xl border-slate-200 bg-slate-50 pr-14 text-base placeholder:text-slate-400"
+                    className="h-14 rounded-2xl border-slate-200 bg-slate-50/70 pr-16 text-base placeholder:text-slate-400"
                 />
                 <Button
                     type="button"
                     size="icon"
                     onClick={handleAddTask}
                     disabled={loading === "add" || !newTaskName.trim()}
-                    className="absolute right-1.5 top-1/2 h-9 w-9 -translate-y-1/2 rounded-xl bg-white text-slate-500 shadow-sm hover:bg-slate-100"
+                    className="absolute right-2 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm hover:bg-slate-50 hover:text-slate-600"
                 >
                     {loading === "add" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 </Button>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2">
                 {sortedTasks.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-4 py-8 text-center text-sm text-slate-500">
+                    <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-sm text-slate-500">
                         No tasks yet. Add your first task above.
                     </div>
                 )}
@@ -127,7 +127,7 @@ export function ProjectTasks({
                         <div
                             key={task.id}
                             className={cn(
-                                "group flex items-center gap-3 rounded-3xl border px-4 py-3 transition",
+                                "group flex items-center gap-3 rounded-2xl border px-4 py-2.5 transition",
                                 isCompleted
                                     ? "border-slate-200 bg-slate-50/60"
                                     : "border-slate-200 bg-white hover:border-slate-300"

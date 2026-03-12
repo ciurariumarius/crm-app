@@ -23,15 +23,26 @@ export function GlobalTimer() {
     }
 
     if (!isExpanded) {
+        const minutes = Math.floor(timerState.elapsedSeconds / 60)
+
         return (
-            <Button
-                size="icon"
-                className="timer-pulse fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 z-50 h-12 w-12 rounded-full border border-[#1D4ED8] bg-[#2563EB] text-white shadow-[0_12px_24px_-12px_rgba(37,99,235,0.75)] animate-in fade-in zoom-in duration-300 md:bottom-[max(1rem,env(safe-area-inset-bottom))] md:right-6 md:h-14 md:w-14"
-                onClick={() => setIsExpanded(true)}
-                aria-label="Open timer controls"
-            >
-                <Timer className="timer-tick h-6 w-6 md:h-7 md:w-7" />
-            </Button>
+            <div className="fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 z-50 md:bottom-[max(1rem,env(safe-area-inset-bottom))] md:right-6 animate-in fade-in zoom-in duration-300">
+                <div className="relative h-[3.25rem] w-[3.25rem]">
+                    <div className="timer-heartbeat absolute inset-0 rounded-full bg-[#2563EB] shadow-[0_4px_12px_-4px_rgba(37,99,235,0.75)]" />
+                    <Button
+                        size="icon"
+                        className="relative h-full w-full rounded-full border-0 bg-transparent text-white hover:bg-[#1D4ED8]/10 p-0"
+                        onClick={() => setIsExpanded(true)}
+                        aria-label="Open timer controls"
+                    >
+                        <div className="flex items-center justify-center w-full h-full">
+                            <span className="font-mono font-bold text-lg md:text-xl leading-none tracking-tighter">
+                                {minutes}&apos;
+                            </span>
+                        </div>
+                    </Button>
+                </div>
+            </div>
         )
     }
 

@@ -15,9 +15,10 @@ import {
     ArrowLeft,
     ArrowRight,
     Bold,
+    Check,
+    Code2,
+    Copy,
     Download,
-    Heading1,
-    Heading2,
     List,
     Table as TableIcon,
     Minus,
@@ -126,8 +127,12 @@ export function RichTextEditor({
     const [uploadState, setUploadState] = React.useState<UploadState | null>(null)
     const [viewer, setViewer] = React.useState<ImageViewerState>(INITIAL_VIEWER_STATE)
     const [imageSources, setImageSources] = React.useState<string[]>([])
+    const [codeCopyState, setCodeCopyState] = React.useState<"idle" | "copied" | "error">("idle")
     const editorRef = React.useRef<TiptapEditor | null>(null)
+    const editorViewportRef = React.useRef<HTMLDivElement | null>(null)
     const lastEditorHtmlRef = React.useRef(value)
+    const [codeCopyAnchor, setCodeCopyAnchor] = React.useState<{ top: number; left: number } | null>(null)
+    const [activeCodeBlockElement, setActiveCodeBlockElement] = React.useState<HTMLElement | null>(null)
 
     const syncImageSources = React.useCallback((nextSources: string[]) => {
         setImageSources((current) => {
@@ -284,6 +289,152 @@ export function RichTextEditor({
         [refreshImageSources]
     )
 
+    const resolveActiveCodeBlockElement = React.useCallback((currentEditor: TiptapEditor | null) => {
+        if (!currentEditor || !currentEditor.isActive("codeBlock")) return null
+        const { state, view } = currentEditor
+        const { $from } = state.selection
+
+        const domAtPos = view.domAtPos($from.pos)
+        const selectionElement =
+            domAtPos.node instanceof HTMLElement ? domAtPos.node : domAtPos.node.parentElement
+        const selectionPre = selectionElement?.closest("pre")
+        if (selectionPre instanceof HTMLElement) {
+            return selectionPre
+        }
+
+        for (let depth = $from.depth; depth >= 0; depth -= 1) {
+            const node = $from.node(depth)
+            if (node.type.name !== "codeBlock") continue
+            const pos = $from.before(depth)
+            const domNode = view.nodeDOM(pos)
+            if (domNode instanceof HTMLElement) {
+                if (domNode.tagName === "PRE") return domNode
+                const nestedPre = domNode.querySelector("pre")
+                if (nestedPre instanceof HTMLElement) return nestedPre
+                const closestPre = domNode.closest("pre")
+                if (closestPre instanceof HTMLElement) return closestPre
+            }
+        }
+
+        return null
+    }, [])
+
+    const updateCodeCopyAnchor = React.useCallback(
+        (explicitEditor?: TiptapEditor | null) => {
+            const currentEditor = explicitEditor ?? editorRef.current
+            const viewport = editorViewportRef.current
+            if (!currentEditor || !viewport) {
+                setCodeCopyAnchor(null)
+                setActiveCodeBlockElement(null)
+                return
+            }
+
+            const codeBlockElement = resolveActiveCodeBlockElement(currentEditor)
+            if (!codeBlockElement) {
+                setCodeCopyAnchor(null)
+                setActiveCodeBlockElement(null)
+                return
+            }
+
+            const buttonSize = 28
+            const inset = 8
+            const viewportRect = viewport.getBoundingClientRect()
+            const blockRect = codeBlockElement.getBoundingClientRect()
+            const rawTop = blockRect.top - viewportRect.top + viewport.scrollTop + inset
+            const rawLeft =
+                blockRect.right -
+                viewportRect.left +
+                viewport.scrollLeft -
+                buttonSize -
+                inset
+            const minTop = viewport.scrollTop + inset
+            const maxTop = viewport.scrollTop + viewport.clientHeight - buttonSize - inset
+            const minLeft = viewport.scrollLeft + inset
+            const maxLeft = viewport.scrollLeft + viewport.clientWidth - buttonSize - inset
+            const top = Math.max(minTop, Math.min(rawTop, maxTop))
+            const left = Math.max(minLeft, Math.min(rawLeft, maxLeft))
+
+            setActiveCodeBlockElement(codeBlockElement)
+            setCodeCopyAnchor((current) => {
+                if (current && current.top === top && current.left === left) return current
+                return { top, left }
+            })
+        },
+        [resolveActiveCodeBlockElement]
+    )
+
+    const copyTextToClipboard = React.useCallback(async (text: string) => {
+        if (!text) return false
+
+        try {
+            if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text)
+                return true
+            }
+        } catch {
+            // Fall back to execCommand copy for environments with restricted clipboard APIs.
+        }
+
+        try {
+            const textarea = document.createElement("textarea")
+            textarea.value = text
+            textarea.setAttribute("readonly", "")
+            textarea.style.position = "fixed"
+            textarea.style.left = "-9999px"
+            textarea.style.top = "0"
+            textarea.style.opacity = "0"
+            document.body.appendChild(textarea)
+            textarea.focus()
+            textarea.select()
+            const copied = document.execCommand("copy")
+            document.body.removeChild(textarea)
+            return copied
+        } catch {
+            return false
+        }
+    }, [])
+
+    const copyActiveCodeBlock = React.useCallback(async () => {
+        const editor = editorRef.current
+        if (!editor) return
+
+        const { state } = editor
+        const { $from } = state.selection
+        let codeText = ""
+
+        for (let depth = $from.depth; depth >= 0; depth -= 1) {
+            const node = $from.node(depth)
+            if (node.type.name === "codeBlock") {
+                codeText = node.textContent
+                break
+            }
+        }
+
+        if (!codeText && activeCodeBlockElement) {
+            const codeElement = activeCodeBlockElement.querySelector("code")
+            codeText = (codeElement?.textContent || activeCodeBlockElement.textContent || "").trimEnd()
+        }
+
+        if (!codeText) {
+            codeText = state.doc.textBetween(state.selection.from, state.selection.to, "\n", "\n")
+        }
+
+        if (!codeText.trim()) {
+            setCodeCopyState("error")
+            setTimeout(() => setCodeCopyState("idle"), 1400)
+            return
+        }
+
+        const copied = await copyTextToClipboard(codeText)
+        if (copied) {
+            setCodeCopyState("copied")
+        } else {
+            setCodeCopyState("error")
+        }
+
+        setTimeout(() => setCodeCopyState("idle"), 1400)
+    }, [activeCodeBlockElement, copyTextToClipboard])
+
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -304,7 +455,30 @@ export function RichTextEditor({
         editorProps: {
             attributes: {
                 class:
-                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-slate-200 [&_img]:shadow-sm [&_img]:my-3 [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-slate-200 [&_table]:rounded-lg [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-slate-200 [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-slate-200 [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-amber-200 [&_pre]:bg-amber-50/60 [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-slate-800 [&_pre]:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-amber-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-slate-700 [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-slate-200 [&_table]:rounded-lg [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-slate-200 [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+            },
+            handleKeyDown(_, event) {
+                if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.metaKey &&
+                    !event.ctrlKey &&
+                    !event.altKey
+                ) {
+                    const currentEditor = editorRef.current
+                    if (currentEditor?.isActive("bulletList")) {
+                        const handled = currentEditor
+                            .chain()
+                            .focus()
+                            .splitListItem("listItem")
+                            .run()
+                        if (handled) {
+                            event.preventDefault()
+                            return true
+                        }
+                    }
+                }
+                return false
             },
             handlePaste(_, event) {
                 const files = Array.from(event.clipboardData?.files || []).filter((file) =>
@@ -347,9 +521,20 @@ export function RichTextEditor({
             lastEditorHtmlRef.current = html
             syncImageSources(extractImageSources(currentEditor))
             onChange(html)
+            updateCodeCopyAnchor(currentEditor)
         },
-        onFocus: () => setIsFocused(true),
-        onBlur: () => setIsFocused(false),
+        onSelectionUpdate: ({ editor: currentEditor }) => {
+            updateCodeCopyAnchor(currentEditor)
+        },
+        onFocus: ({ editor: currentEditor }) => {
+            setIsFocused(true)
+            updateCodeCopyAnchor(currentEditor)
+        },
+        onBlur: () => {
+            setIsFocused(false)
+            setCodeCopyAnchor(null)
+            setActiveCodeBlockElement(null)
+        },
         immediatelyRender: false,
     })
 
@@ -357,8 +542,22 @@ export function RichTextEditor({
         editorRef.current = editor
         if (editor) {
             syncImageSources(extractImageSources(editor))
+            updateCodeCopyAnchor(editor)
         }
-    }, [editor])
+    }, [editor, syncImageSources, updateCodeCopyAnchor])
+
+    React.useEffect(() => {
+        const viewport = editorViewportRef.current
+        if (!viewport) return
+
+        const syncAnchor = () => updateCodeCopyAnchor()
+        viewport.addEventListener("scroll", syncAnchor, { passive: true })
+        window.addEventListener("resize", syncAnchor)
+        return () => {
+            viewport.removeEventListener("scroll", syncAnchor)
+            window.removeEventListener("resize", syncAnchor)
+        }
+    }, [updateCodeCopyAnchor])
 
     React.useEffect(() => {
         if (!editor) return
@@ -440,38 +639,53 @@ export function RichTextEditor({
                                 "border-b border-slate-200 bg-white/95",
                             variant === "plain" &&
                                 mode === "document" &&
-                                "mx-auto mb-4 w-full max-w-4xl rounded-xl border border-slate-200/80 bg-white/92 p-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm"
+                                "mx-auto mt-2 mb-4 w-full max-w-4xl rounded-xl border border-slate-200/80 bg-white/92 p-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm"
                         )}
                     >
                         <Toggle
                             size="sm"
+                            pressed={editor.isActive("paragraph")}
+                            onPressedChange={() => editor.chain().focus().setParagraph().run()}
+                            className="h-8 px-3 text-xs font-semibold"
+                            aria-label="Paragraph"
+                        >
+                            P
+                        </Toggle>
+                        <Toggle
+                            size="sm"
                             pressed={editor.isActive("heading", { level: 1 })}
-                            onPressedChange={() =>
-                                editor.chain().focus().toggleHeading({ level: 1 }).run()
+                            onPressedChange={(pressed) =>
+                                pressed
+                                    ? editor.chain().focus().setHeading({ level: 1 }).run()
+                                    : editor.chain().focus().setParagraph().run()
                             }
                             className="h-8 px-3 text-xs font-semibold"
                             aria-label="Heading 1"
                         >
-                            <Heading1 className="mr-1 h-3.5 w-3.5" />
                             H1
                         </Toggle>
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("heading", { level: 2 })}
-                            onPressedChange={() =>
-                                editor.chain().focus().toggleHeading({ level: 2 }).run()
+                            onPressedChange={(pressed) =>
+                                pressed
+                                    ? editor.chain().focus().setHeading({ level: 2 }).run()
+                                    : editor.chain().focus().setParagraph().run()
                             }
                             className="h-8 px-3 text-xs font-semibold"
                             aria-label="Heading 2"
                         >
-                            <Heading2 className="mr-1 h-3.5 w-3.5" />
                             H2
                         </Toggle>
                         <div className="mx-1 h-4 w-px bg-border/50" />
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("bold")}
-                            onPressedChange={() => editor.chain().focus().toggleBold().run()}
+                            onPressedChange={(pressed) =>
+                                pressed
+                                    ? editor.chain().focus().setBold().run()
+                                    : editor.chain().focus().unsetBold().run()
+                            }
                             className="h-8 w-8 p-0"
                             aria-label="Bold"
                         >
@@ -486,6 +700,17 @@ export function RichTextEditor({
                         >
                             <List className="h-4 w-4" />
                         </Toggle>
+                        <Toggle
+                            size="sm"
+                            pressed={editor.isActive("codeBlock")}
+                            onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
+                            className="h-8 w-8 p-0"
+                            aria-label="Code snippet"
+                            title="Code snippet"
+                        >
+                            <Code2 className="h-4 w-4" />
+                        </Toggle>
+                        <div className="mx-1 h-4 w-px bg-border/50" />
                         <button
                             type="button"
                             onClick={() =>
@@ -513,7 +738,8 @@ export function RichTextEditor({
                     <BubbleMenu
                         editor={editor}
                         shouldShow={({ editor: currentEditor }: { editor: TiptapEditor }) =>
-                            currentEditor.isActive("table")
+                            currentEditor.isActive("table") &&
+                            !Boolean(resolveActiveCodeBlockElement(currentEditor))
                         }
                     >
                         <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 p-1 shadow-md">
@@ -559,9 +785,44 @@ export function RichTextEditor({
                             >
                                 Del Row
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => editor.chain().focus().deleteTable().run()}
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-rose-700 hover:bg-rose-50"
+                            >
+                                Delete Table
+                            </button>
                         </div>
                     </BubbleMenu>
                 )}
+
+                {editor &&
+                    codeCopyAnchor && (
+                        <button
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                                void copyActiveCodeBlock()
+                            }}
+                            style={{ top: codeCopyAnchor.top, left: codeCopyAnchor.left }}
+                            className={cn(
+                                "absolute z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-200 bg-white/95 shadow-sm transition",
+                                codeCopyState === "copied"
+                                    ? "text-emerald-600"
+                                    : codeCopyState === "error"
+                                        ? "text-rose-600"
+                                        : "text-slate-700 hover:bg-amber-50"
+                            )}
+                            aria-label="Copy code"
+                            title="Copy code"
+                        >
+                            {codeCopyState === "copied" ? (
+                                <Check className="h-3.5 w-3.5" />
+                            ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                            )}
+                        </button>
+                    )}
 
                 {uploadState && (
                     <div
@@ -582,14 +843,15 @@ export function RichTextEditor({
                 )}
 
                 <div
+                    ref={editorViewportRef}
                     className={cn(
-                        "min-h-[150px] flex-1 overflow-y-auto p-4",
+                        "relative min-h-[150px] flex-1 overflow-y-auto p-4",
                         variant === "plain" && mode === "panel" && "bg-white p-5",
                         variant === "plain" && mode === "document" && "bg-transparent px-0 py-2",
                         minHeightClassName
                     )}
                 >
-                    <div className={cn(mode === "document" && "mx-auto w-full max-w-4xl px-6 pb-8")}>
+                    <div className={cn(mode === "document" && "mx-auto w-full max-w-4xl px-0 pb-8")}>
                         <EditorContent editor={editor} />
                     </div>
                 </div>

@@ -25,7 +25,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus } from "lucide-react"
 import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { cn, formatRelativeDate } from "@/lib/utils"
@@ -37,6 +37,17 @@ interface TaskDetailsProps {
     open: boolean
     onOpenChange: (open: boolean) => void
 }
+
+const TASK_NOTES_TEMPLATE = [
+    "<h2>Context</h2>",
+    "<p></p>",
+    "<h2>Checklist</h2>",
+    "<ul>",
+    "<li></li>",
+    "</ul>",
+    "<h2>Screenshots</h2>",
+    "<p></p>",
+].join("")
 
 function formatClock(totalSeconds: number) {
     const hours = Math.floor(totalSeconds / 3600)
@@ -197,6 +208,13 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         }
         setIsEditingTitle(false)
     }
+
+    const appendTaskNotesTemplate = React.useCallback(() => {
+        setDescription((current) => {
+            if (!current.trim()) return TASK_NOTES_TEMPLATE
+            return `${current}<p></p>${TASK_NOTES_TEMPLATE}`
+        })
+    }, [])
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -380,7 +398,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
 
                         <section className="space-y-4">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Task Notes</h2>
+                                <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Task Notes</h2>
                                 <span
                                     className={cn(
                                         "inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
@@ -405,26 +423,38 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                 onChange={setDescription}
                                 placeholder=""
                                 variant="plain"
-                                minHeightClassName="h-[360px] px-4"
+                                mode="document"
+                                className="rounded-[22px] bg-white"
+                                minHeightClassName="h-[360px]"
                                 uploadProjectId={task?.projectId || task?.id}
                                 toolbarVisibility="always"
                                 toolbarActions={
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setIsNotesModalOpen(true)}
-                                        className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                        aria-label="Open notes in full view"
-                                        title="Open notes in full view"
-                                    >
-                                        <Expand className="h-4 w-4" />
-                                    </Button>
+                                    <>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={appendTaskNotesTemplate}
+                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            aria-label="Add template"
+                                            title="Add template"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setIsNotesModalOpen(true)}
+                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            aria-label="Open notes in full view"
+                                            title="Open notes in full view"
+                                        >
+                                            <Expand className="h-4 w-4" />
+                                        </Button>
+                                    </>
                                 }
                             />
-                            <p className="text-[11px] font-medium text-slate-400">
-                                Paste screenshots with Cmd/Ctrl+V or drag and drop. Click any image to open it in full view.
-                            </p>
                         </section>
 
                     <section className="space-y-4">
@@ -602,6 +632,19 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                 minHeightClassName="min-h-0"
                                 uploadProjectId={task?.projectId || task?.id}
                                 toolbarVisibility="always"
+                                toolbarActions={
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={appendTaskNotesTemplate}
+                                        className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                        aria-label="Add template"
+                                        title="Add template"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                }
                             />
                         </div>
                     </DialogContent>

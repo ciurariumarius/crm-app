@@ -698,7 +698,7 @@ export function ProjectSheetContent({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                            className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
                             aria-label="Close project"
                         >
                             <X className="h-4 w-4" />
@@ -707,13 +707,13 @@ export function ProjectSheetContent({
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
-                    <div className="space-y-8 pb-20">
-                        <div className="space-y-5 pr-60 pt-1 pb-2">
+                    <div className="mx-auto max-w-[980px] space-y-6 pb-20">
+                        <div className="space-y-4 pr-16 pt-1 pb-1">
                             {isEditingTitle ? (
                                 <Textarea
                                     value={localName}
                                     onChange={(event) => setLocalName(event.target.value)}
-                                    className="min-h-[44px] resize-none !rounded-none !border-0 !border-b !border-slate-200 !bg-transparent !px-0 !pt-0 !pb-1 text-2xl md:text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900 !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0"
+                                    className="min-h-[48px] resize-none !rounded-none !border-0 !border-b !border-slate-200 !bg-transparent !px-0 !pt-0 !pb-2 text-2xl font-bold leading-tight tracking-[-0.03em] text-slate-900 !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0 md:text-3xl"
                                     rows={1}
                                     autoFocus
                                     onBlur={commitTitle}
@@ -736,12 +736,12 @@ export function ProjectSheetContent({
                             ) : (
                                 <div className="group flex w-full items-start gap-3 py-1">
                                     <div className="min-w-0 flex-1">
-                                        <h1 className="text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900">
+                                        <h1 className="text-2xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-3xl">
                                             {localName || formatProjectName(project)}
                                         </h1>
                                         <span
                                             className={cn(
-                                                "mt-2 inline-flex rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tighter",
+                                                "mt-2 inline-flex rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em]",
                                                 project.services?.some((service) => service.isRecurring)
                                                     ? "border-blue-200 bg-blue-50 text-blue-600"
                                                     : "border-emerald-200 bg-emerald-50 text-emerald-600"
@@ -772,18 +772,13 @@ export function ProjectSheetContent({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                             <div className={cn(
-                                "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
-                                project.status === "Active"
-                                    ? "border-blue-200/60 bg-blue-50/40"
-                                    : project.status === "Completed"
-                                        ? "border-emerald-200/60 bg-emerald-50/40"
-                                        : "border-slate-300/70 bg-slate-100/70"
+                                "rounded-[26px] border border-slate-200 bg-slate-50/90 p-4 transition-all duration-300"
                             )}>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Project Status</p>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Project Status</p>
 
-                                <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
+                                <div className="mt-4 grid grid-cols-3 gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                                     {(["Active", "Completed", "Closed"] as const).map((statusOption) => (
                                         <Button
                                             key={statusOption}
@@ -792,11 +787,11 @@ export function ProjectSheetContent({
                                             variant="ghost"
                                             onClick={() => updateProjectStatus(statusOption)}
                                             className={cn(
-                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
-                                                project.status === statusOption && statusOption === "Active" && "status-pill-action shadow-md",
-                                                project.status === statusOption && statusOption === "Completed" && "status-pill-success shadow-md",
-                                                project.status === statusOption && statusOption === "Closed" && "status-pill-closed shadow-md",
-                                                project.status !== statusOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                                                "h-10 rounded-xl px-2 text-[13px] font-bold transition-all border border-transparent",
+                                                project.status === statusOption && statusOption === "Active" && "border-blue-100 bg-blue-100 text-blue-700 shadow-sm",
+                                                project.status === statusOption && statusOption === "Completed" && "border-emerald-100 bg-emerald-100 text-emerald-700 shadow-sm",
+                                                project.status === statusOption && statusOption === "Closed" && "border-slate-200 bg-slate-200 text-slate-700 shadow-sm",
+                                                project.status !== statusOption && "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                                             )}
                                         >
                                             {statusOption}
@@ -806,12 +801,11 @@ export function ProjectSheetContent({
                             </div>
 
                             <div className={cn(
-                                "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
-                                project.paymentStatus === "Paid" ? "border-emerald-200/60 bg-emerald-50/40" : "border-rose-200/60 bg-rose-50/40"
+                                "rounded-[26px] border border-slate-200 bg-slate-50/90 p-4 transition-all duration-300"
                             )}>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Payment Status</p>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Payment Status</p>
 
-                                <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
+                                <div className="mt-4 grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                                     {(["Paid", "Unpaid"] as const).map((paymentOption) => (
                                         <Button
                                             key={paymentOption}
@@ -820,10 +814,10 @@ export function ProjectSheetContent({
                                             variant="ghost"
                                             onClick={() => updateProjectPaymentStatus(paymentOption)}
                                             className={cn(
-                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
-                                                project.paymentStatus === paymentOption && paymentOption === "Paid" && "status-pill-success shadow-md",
-                                                project.paymentStatus === paymentOption && paymentOption === "Unpaid" && "status-pill-debt shadow-md",
-                                                project.paymentStatus !== paymentOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                                                "h-10 rounded-xl px-2 text-[13px] font-bold transition-all border border-transparent",
+                                                project.paymentStatus === paymentOption && paymentOption === "Paid" && "border-emerald-100 bg-emerald-100 text-emerald-700 shadow-sm",
+                                                project.paymentStatus === paymentOption && paymentOption === "Unpaid" && "border-rose-100 bg-rose-100 text-rose-700 shadow-sm",
+                                                project.paymentStatus !== paymentOption && "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                                             )}
                                         >
                                             {paymentOption}
@@ -831,11 +825,9 @@ export function ProjectSheetContent({
                                     ))}
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_2fr]">
-                            <div className="rounded-3xl border border-slate-200 bg-white p-6 premium-card shadow-sm">
-                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Amount</p>
+                            <div className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Amount</p>
                                 <div className="mt-2 flex items-end gap-2">
                                     <Input
                                         type="number"
@@ -843,118 +835,35 @@ export function ProjectSheetContent({
                                         value={amountInput}
                                         onChange={(event) => setAmountInput(event.target.value)}
                                         onBlur={handleAmountBlur}
-                                        className="h-auto border-none bg-transparent p-0 text-3xl font-black tracking-tight text-slate-900 shadow-none focus-visible:ring-0 sm:text-4xl"
+                                        className="h-auto border-none bg-transparent p-0 text-3xl font-black tracking-[-0.02em] text-slate-900 shadow-none focus-visible:ring-0 md:text-4xl"
                                         placeholder="0"
                                     />
-                                    <span className="pb-2 text-lg font-bold text-slate-400">RON</span>
-                                </div>
-                            </div>
-
-                            <div className="rounded-3xl border border-slate-200 bg-white p-6 premium-card shadow-sm">
-                                <div className="flex items-center justify-between gap-3">
-                                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Active Services</p>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsEditingServices((current) => !current)}
-                                        className="rounded-xl border border-dashed border-slate-300 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.1em] text-slate-500 hover:border-slate-400"
-                                    >
-                                        + Add
-                                    </button>
-                                </div>
-
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {project.services?.map((service) => (
-                                        <button
-                                            key={service.id}
-                                            type="button"
-                                            onClick={() => toggleService(service.id)}
-                                            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200/60 bg-blue-50/50 px-3.5 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-blue-600 premium-card hover:bg-blue-100/50"
-                                        >
-                                            {service.serviceName}
-                                            <X className="h-3.5 w-3.5" />
-                                        </button>
-                                    ))}
+                                    <span className="pb-2 text-lg font-bold tracking-[0.04em] text-slate-400">RON</span>
                                 </div>
                             </div>
                         </div>
 
-                        {isEditingServices && (
-                            <div className="rounded-3xl border border-slate-200 bg-white p-5">
-                                <div className="grid gap-5 md:grid-cols-2">
-                                    <div>
-                                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-indigo-500">Recurring</p>
-                                        <div className="mt-2 space-y-2">
-                                            {recurringServices.map((service) => {
-                                                const isSelected = project.services?.some((item) => item.id === service.id)
-                                                return (
-                                                    <button
-                                                        key={service.id}
-                                                        type="button"
-                                                        onClick={() => toggleService(service.id)}
-                                                        className={cn(
-                                                            "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
-                                                            isSelected
-                                                                ? "border-blue-300 bg-blue-50 text-blue-700"
-                                                                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
-                                                        )}
-                                                    >
-                                                        {service.serviceName}
-                                                        {isSelected && <Check className="h-4 w-4" />}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-500">One-Time</p>
-                                        <div className="mt-2 space-y-2">
-                                            {oneTimeServices.map((service) => {
-                                                const isSelected = project.services?.some((item) => item.id === service.id)
-                                                return (
-                                                    <button
-                                                        key={service.id}
-                                                        type="button"
-                                                        onClick={() => toggleService(service.id)}
-                                                        className={cn(
-                                                            "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
-                                                            isSelected
-                                                                ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                                                                : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
-                                                        )}
-                                                    >
-                                                        {service.serviceName}
-                                                        {isSelected && <Check className="h-4 w-4" />}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <section className="space-y-4">
-                            <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Project Tasks</h2>
+                        <section className="space-y-3 border-t border-slate-200/80 pt-4">
+                            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Tasks</h2>
                             <ProjectTasks projectId={project.id} initialTasks={project.tasks || []} />
                         </section>
 
-                        <section className="space-y-4">
+                        <section className="space-y-3 border-t border-slate-200/80 pt-4">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Project Notes</h2>
+                                <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Notes</h2>
                                 <span
                                     className={cn(
-                                        "inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
+                                        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
                                         notesSaveState === "error" &&
-                                        "bg-rose-50 text-rose-600",
+                                        "border-rose-200 bg-rose-50 text-rose-600",
                                         notesSaveState === "saving" &&
-                                        "bg-blue-50 text-blue-600",
+                                        "border-blue-200 bg-blue-50 text-blue-600",
                                         notesSaveState === "typing" &&
-                                        "bg-slate-100 text-slate-500",
+                                        "border-slate-200 bg-slate-100 text-slate-500",
                                         notesSaveState === "saved" &&
-                                        "bg-emerald-50 text-emerald-600",
+                                        "border-emerald-200 bg-emerald-50 text-emerald-600",
                                         notesSaveState === "idle" &&
-                                        "bg-slate-100 text-slate-500"
+                                        "border-slate-200 bg-slate-100 text-slate-500"
                                     )}
                                 >
                                     {notesSaveState === "saving" && (
@@ -979,7 +888,9 @@ export function ProjectSheetContent({
                                 onChange={setDescription}
                                 placeholder=""
                                 variant="plain"
-                                minHeightClassName="h-[360px] px-4"
+                                mode="document"
+                                className="rounded-[22px] bg-white"
+                                minHeightClassName="h-[360px]"
                                 uploadProjectId={project.id}
                                 toolbarVisibility="always"
                                 toolbarActions={
@@ -1025,24 +936,21 @@ export function ProjectSheetContent({
                                     </>
                                 }
                             />
-                            <p className="text-[11px] font-medium text-slate-400">
-                                Paste screenshots with Cmd/Ctrl+V or drag and drop. Click any image to open it in full view.
-                            </p>
                         </section>
 
-                        <section className="space-y-3">
+                        <section className="space-y-2 border-t border-slate-200/80 pt-4">
                             <div className="flex items-center justify-between">
-                                <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                                     <Target className="h-3.5 w-3.5" />
                                     Hour Recommendation
                                 </h2>
                                 {budgetInsights.hasHourlyRate && budgetInsights.hasFee && (
                                     <span
                                         className={cn(
-                                            "inline-flex h-7 items-center rounded-full px-3 text-[10px] font-black uppercase tracking-[0.08em]",
+                                            "inline-flex h-7 items-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.08em]",
                                             budgetInsights.isOverBudget
-                                                ? "bg-rose-50 text-rose-600"
-                                                : "bg-emerald-50 text-emerald-600"
+                                                ? "border-rose-200 bg-rose-50 text-rose-600"
+                                                : "border-emerald-200 bg-emerald-50 text-emerald-600"
                                         )}
                                     >
                                         {budgetInsights.isOverBudget ? "Over Budget" : "On Track"}
@@ -1051,7 +959,7 @@ export function ProjectSheetContent({
                             </div>
 
                             {!budgetInsights.hasHourlyRate ? (
-                                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-3">
+                                <div className="rounded-[26px] border border-dashed border-slate-200 bg-white px-4 py-2.5">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hourly Budget</p>
                                     <p className="mt-1 text-sm font-medium text-slate-600">
                                         Set your hourly rate to enable fee based hour recommendations.
@@ -1061,16 +969,16 @@ export function ProjectSheetContent({
                                     </Link>
                                 </div>
                             ) : !budgetInsights.hasFee ? (
-                                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-3">
+                                <div className="rounded-[26px] border border-dashed border-slate-200 bg-white px-4 py-2.5">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hourly Budget</p>
                                     <p className="mt-1 text-sm font-medium text-slate-600">
                                         Set project amount to compute recommended hours.
                                     </p>
                                 </div>
                             ) : (
-                                <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                                <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                     <div className="overflow-x-auto">
-                                        <div className="flex min-w-[640px] items-center gap-4">
+                                        <div className="flex min-w-[640px] items-center gap-3">
                                             <div className="shrink-0">
                                                 <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-500">Recommended</p>
                                                 <p className="mt-1 font-mono text-xl font-black tabular-nums text-blue-700">
@@ -1111,7 +1019,7 @@ export function ProjectSheetContent({
                                                     <span>Progress</span>
                                                     <span>{budgetInsights.progressPercent.toFixed(0)}%</span>
                                                 </div>
-                                                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                                                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
                                                     <div
                                                         className={cn(
                                                             "h-full transition-all duration-500",
@@ -1139,9 +1047,9 @@ export function ProjectSheetContent({
                         </section>
 
 
-                        <section className="space-y-3">
+                        <section className="space-y-2 border-t border-slate-200/80 pt-4">
                             <div className="flex items-center justify-between">
-                                <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                                     <Clock3 className="h-3.5 w-3.5" />
                                     Recent Time Logs
                                 </h2>
@@ -1149,14 +1057,14 @@ export function ProjectSheetContent({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setIsManualTimeOpen((current) => !current)}
-                                    className="h-8 rounded-xl border border-slate-200 bg-slate-100 px-3 text-xs font-black uppercase tracking-[0.08em] text-slate-600 hover:bg-slate-200"
+                                    className="h-8 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-600 hover:bg-slate-50"
                                 >
                                     <Plus className="mr-1 h-3.5 w-3.5" />
                                     Add Time
                                 </Button>
                             </div>
 
-                            <div className="rounded-2xl border border-slate-200 bg-white/90 p-4">
+                            <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <div>
                                         <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Project Time Tracker</p>
@@ -1209,7 +1117,7 @@ export function ProjectSheetContent({
                             </div>
 
                             {isManualTimeOpen && (
-                                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                     <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
                                         <Input
                                             type="number"
@@ -1235,9 +1143,9 @@ export function ProjectSheetContent({
                                 </div>
                             )}
 
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 {recentLogs.length === 0 && (
-                                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
+                                    <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500">
                                         No time logged for this project yet.
                                     </div>
                                 )}
@@ -1253,7 +1161,7 @@ export function ProjectSheetContent({
                                                 setSelectedTimeLog(log)
                                                 setIsTimeLogSheetOpen(true)
                                             }}
-                                            className="w-full text-left rounded-3xl border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-300 hover:bg-slate-50"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-left transition hover:border-slate-300 hover:bg-slate-50"
                                         >
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="min-w-0">
@@ -1282,24 +1190,24 @@ export function ProjectSheetContent({
                             </div>
                         </section>
 
-                        <section className="space-y-3">
-                            <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                        <section className="space-y-2 border-t border-slate-200/80 pt-4">
+                            <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                                 <History className="h-3.5 w-3.5" />
                                 Payment History (Log)
                             </h2>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 {isLoadingHistory && paymentHistory.length === 0 ? (
                                     <div className="flex items-center justify-center py-6 text-slate-400">
                                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                         <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
                                     </div>
                                 ) : paymentHistory.length === 0 ? (
-                                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-4 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                    <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
                                         No payment records found.
                                     </div>
                                 ) : (
                                     paymentHistory.map((entry) => (
-                                        <div key={entry.id} className="glass flex items-center justify-between p-3 rounded-2xl border border-slate-200">
+                                        <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
                                             <div className="flex items-center gap-3">
                                                 <div className={cn(
                                                     "h-7 w-7 rounded-full flex items-center justify-center shrink-0",
@@ -1326,15 +1234,15 @@ export function ProjectSheetContent({
                             </div>
                         </section>
 
-                        <section className="space-y-4">
-                            <h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Context & Assets</h2>
+                        <section className="space-y-3 border-t border-slate-200/80 pt-4">
+                            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Info</h2>
 
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <Link
                                     href={`/vault/${project.site.partner.id}`}
-                                    className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-[var(--shadow-card)] transition hover:border-slate-300"
+                                    className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300"
                                 >
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Partner</p>
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Partner</p>
                                     <div className="mt-1 flex items-center justify-between gap-3">
                                         <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
                                             {project.site.partner.name}
@@ -1345,9 +1253,9 @@ export function ProjectSheetContent({
 
                                 <Link
                                     href={`/vault/${project.site.partner.id}/${project.site.id}`}
-                                    className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-[var(--shadow-card)] transition hover:border-slate-300"
+                                    className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300"
                                 >
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Domain</p>
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Domain</p>
                                     <div className="mt-1 flex items-center justify-between gap-3">
                                         <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
                                             {project.site.domainName}
@@ -1356,23 +1264,107 @@ export function ProjectSheetContent({
                                     </div>
                                 </Link>
                             </div>
+
+                            <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Services</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditingServices((current) => !current)}
+                                        className="rounded-full border border-slate-300 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600 transition hover:border-slate-400 hover:bg-slate-50"
+                                    >
+                                        + Add
+                                    </button>
+                                </div>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {project.services?.map((service) => (
+                                        <button
+                                            key={service.id}
+                                            type="button"
+                                            onClick={() => toggleService(service.id)}
+                                            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-blue-700 transition hover:bg-blue-100/70"
+                                        >
+                                            {service.serviceName}
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {isEditingServices && (
+                                <div className="rounded-[26px] border border-slate-200 bg-white p-4">
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <div>
+                                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-indigo-500">Recurring</p>
+                                            <div className="mt-2 space-y-2">
+                                                {recurringServices.map((service) => {
+                                                    const isSelected = project.services?.some((item) => item.id === service.id)
+                                                    return (
+                                                        <button
+                                                            key={service.id}
+                                                            type="button"
+                                                            onClick={() => toggleService(service.id)}
+                                                            className={cn(
+                                                                "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
+                                                                isSelected
+                                                                    ? "border-blue-300 bg-blue-50 text-blue-700"
+                                                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                                                            )}
+                                                        >
+                                                            {service.serviceName}
+                                                            {isSelected && <Check className="h-4 w-4" />}
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-500">One-Time</p>
+                                            <div className="mt-2 space-y-2">
+                                                {oneTimeServices.map((service) => {
+                                                    const isSelected = project.services?.some((item) => item.id === service.id)
+                                                    return (
+                                                        <button
+                                                            key={service.id}
+                                                            type="button"
+                                                            onClick={() => toggleService(service.id)}
+                                                            className={cn(
+                                                                "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
+                                                                isSelected
+                                                                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                                                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                                                            )}
+                                                        >
+                                                            {service.serviceName}
+                                                            {isSelected && <Check className="h-4 w-4" />}
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </section>
 
-                        <section>
+                        <section className="flex justify-end">
                             <Button
                                 type="button"
+                                variant="ghost"
                                 onClick={handleDelete}
                                 disabled={isDeleting}
-                                className="h-11 rounded-xl bg-rose-50 px-4 text-sm font-semibold text-rose-600 hover:bg-rose-100"
+                                className="h-9 rounded-full border border-rose-200 bg-rose-50 px-4 text-xs font-bold uppercase tracking-[0.08em] text-rose-600 hover:bg-rose-100"
                             >
-                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                                Delete Project
+                                {isDeleting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-1.5 h-3.5 w-3.5" />}
+                                Delete
                             </Button>
                         </section>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-3 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-1 flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-2.5 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                     <span># Project ID: {project.id.split("-")[0]}</span>
                     <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                         <span className="inline-flex items-center gap-1.5">
@@ -1465,21 +1457,6 @@ export function ProjectSheetContent({
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={exportNotesAsPdf}
-                                        disabled={isExportingNotes}
-                                        className="h-11 w-11 rounded-xl border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-                                        aria-label="Export notes as PDF"
-                                        title="Export notes as PDF"
-                                    >
-                                        {isExportingNotes ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <FileDown className="h-4 w-4" />
-                                        )}
-                                    </Button>
                                     <DialogClose asChild>
                                         <Button
                                             type="button"
@@ -1505,17 +1482,35 @@ export function ProjectSheetContent({
                                 uploadProjectId={project.id}
                                 toolbarVisibility="always"
                                 toolbarActions={
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={appendRequirementsTemplate}
-                                        className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                        aria-label="Add template"
-                                        title="Add template"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
+                                    <>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={appendRequirementsTemplate}
+                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            aria-label="Add template"
+                                            title="Add template"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={exportNotesAsPdf}
+                                            disabled={isExportingNotes}
+                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            aria-label="Export notes as PDF"
+                                            title="Export notes as PDF"
+                                        >
+                                            {isExportingNotes ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <FileDown className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </>
                                 }
                             />
                         </div>

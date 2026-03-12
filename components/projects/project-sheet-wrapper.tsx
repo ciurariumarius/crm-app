@@ -71,7 +71,7 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
                 <SheetContent
                     side="right"
                     showCloseButton={false}
-                    className="w-screen max-w-none p-0 border-l border-border bg-white shadow-[var(--shadow-drawer)] flex flex-col overflow-hidden sm:w-full sm:max-w-[900px] sm:rounded-l-[12px]"
+                    className="w-screen max-w-none p-0 border-l border-border bg-white shadow-[var(--shadow-drawer)] flex flex-col overflow-hidden sm:w-full sm:max-w-[1020px] sm:rounded-l-[12px]"
                 >
                     <SheetTitle className="sr-only">Project details</SheetTitle>
                     {selectedProject && (
