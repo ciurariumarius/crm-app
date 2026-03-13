@@ -773,14 +773,14 @@ export function ProjectSheetContent({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <div className="flex min-h-[78px] items-center">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-3">
+                            <div className="flex items-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
                                             className={cn(
-                                                "group/status relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-4 transition-all duration-300 active:scale-[0.98]",
+                                                "group/status relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
                                                 project.status === "Active" && "border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-100/50 text-blue-600 shadow-[0_2px_10px_-4px_rgba(37,99,235,0.15)] hover:border-blue-300/60",
                                                 project.status === "Paused" && "border-amber-200/50 bg-gradient-to-br from-amber-50/80 to-amber-100/50 text-amber-600 shadow-[0_2px_10px_-4px_rgba(217,119,6,0.15)] hover:border-amber-300/60",
                                                 project.status === "Completed" && "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60",
@@ -792,7 +792,7 @@ export function ProjectSheetContent({
                                             {project.status === "Paused" && <Pause className="relative z-10 h-3.5 w-3.5" />}
                                             {project.status === "Completed" && <Check className="relative z-10 h-3.5 w-3.5" />}
                                             {project.status === "Closed" && <Square className="relative z-10 h-3.5 w-3.5 fill-current" />}
-                                            <span className="relative z-10 text-[13px] font-bold tracking-[0.01em]">{project.status}</span>
+                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.status}</span>
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -817,13 +817,13 @@ export function ProjectSheetContent({
                                 </DropdownMenu>
                             </div>
 
-                            <div className="flex min-h-[78px] items-center">
+                            <div className="flex items-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
                                             className={cn(
-                                                "group/payment relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-4 transition-all duration-300 active:scale-[0.98]",
+                                                "group/payment relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
                                                 project.paymentStatus === "Paid" 
                                                     ? "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60" 
                                                     : "border-rose-200/50 bg-gradient-to-br from-rose-50/80 to-rose-100/50 text-rose-600 shadow-[0_2px_10px_-4px_rgba(225,29,72,0.15)] hover:border-rose-300/60"
@@ -834,7 +834,7 @@ export function ProjectSheetContent({
                                                 "relative z-10 h-2.5 w-2.5 rounded-full shadow-sm", 
                                                 project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
                                             )} />
-                                            <span className="relative z-10 text-[13px] font-bold tracking-[0.01em]">{project.paymentStatus}</span>
+                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.paymentStatus}</span>
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -853,28 +853,28 @@ export function ProjectSheetContent({
                                 </DropdownMenu>
                             </div>
 
-                            <div className="flex min-h-[78px] flex-col justify-center">
-                                <div className="group/amount relative flex h-11 items-center overflow-hidden rounded-full border border-slate-200/80 bg-white px-5 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-blue-200 hover:shadow-[0_4px_12px_-4px_rgba(37,99,235,0.08)]">
+                            <div className="flex flex-col justify-center">
+                                <div className="group/amount relative flex h-10 items-center overflow-hidden rounded-full border border-slate-200/80 bg-white px-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-blue-200 hover:shadow-[0_4px_12px_-4px_rgba(37,99,235,0.08)] sm:h-11 sm:px-5">
                                     <Input
                                         type="number"
                                         step={1}
                                         value={amountInput}
                                         onChange={(event) => setAmountInput(event.target.value)}
                                         onBlur={handleAmountBlur}
-                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-xl font-black tracking-[-0.02em] text-slate-900 shadow-none focus-visible:ring-0 md:text-[24px]"
+                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-lg font-black tracking-[-0.02em] text-slate-900 shadow-none focus-visible:ring-0 sm:text-xl md:text-[24px]"
                                         placeholder="0"
                                     />
-                                    <span className="relative z-10 ml-3 inline-flex items-center rounded-full bg-slate-100/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 transition-colors group-hover/amount:bg-blue-50 group-hover/amount:text-blue-600">RON</span>
+                                    <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-slate-100/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-slate-500 transition-colors group-hover/amount:bg-blue-50 group-hover/amount:text-blue-600 sm:ml-3 sm:px-2.5 sm:py-1 sm:text-[10px]">RON</span>
                                 </div>
                             </div>
                         </div>
 
-                        <section className="space-y-3 border-t border-slate-200/80 pt-4">
+                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
                             <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Tasks</h2>
                             <ProjectTasks projectId={project.id} initialTasks={project.tasks || []} />
                         </section>
 
-                        <section className="space-y-3 border-t border-slate-200/80 pt-4">
+                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Notes</h2>
                                 <span
@@ -964,7 +964,7 @@ export function ProjectSheetContent({
                             />
                         </section>
 
-                        <section className="space-y-2 border-t border-slate-200/80 pt-4">
+                        <section className="space-y-2 border-t border-slate-200/80 pt-3">
                             <div className="flex items-center justify-between">
                                 <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                                     <Target className="h-3.5 w-3.5" />
@@ -1003,69 +1003,68 @@ export function ProjectSheetContent({
                                 </div>
                             ) : (
                                 <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                                    <div className="overflow-x-auto">
-                                        <div className="flex min-w-[640px] items-center gap-3">
-                                            <div className="shrink-0">
-                                                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-blue-500">Recommended</p>
-                                                <p className="mt-1 font-mono text-xl font-black tabular-nums text-blue-700">
+                                    <div className="grid w-full grid-cols-1 gap-2 lg:grid-cols-4">
+                                        <div className="grid grid-cols-3 gap-1.5 lg:col-span-3 lg:gap-2">
+                                            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 px-2.5 py-2 sm:px-3 sm:py-2.5">
+                                                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-blue-500 sm:text-[10px]">Recommended</p>
+                                                <p className="mt-1 font-mono text-lg font-black tabular-nums text-blue-700 sm:text-xl">
                                                     {budgetInsights.recommendedHours.toFixed(1)}h
                                                 </p>
                                             </div>
 
-                                            <div className="h-10 w-px shrink-0 bg-slate-200" />
-
-                                            <div className="shrink-0">
-                                                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Tracked</p>
-                                                <p className="mt-1 font-mono text-xl font-black tabular-nums text-slate-800">
+                                            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 px-2.5 py-2 sm:px-3 sm:py-2.5">
+                                                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500 sm:text-[10px]">Tracked</p>
+                                                <p className="mt-1 font-mono text-lg font-black tabular-nums text-slate-800 sm:text-xl">
                                                     {budgetInsights.trackedHoursNow.toFixed(1)}h
                                                 </p>
                                             </div>
 
-                                            <div className="h-10 w-px shrink-0 bg-slate-200" />
-
-                                            <div className="shrink-0">
+                                            <div className={cn(
+                                                "rounded-2xl border px-2.5 py-2 sm:px-3 sm:py-2.5",
+                                                budgetInsights.isOverBudget
+                                                    ? "border-rose-100 bg-rose-50/50"
+                                                    : "border-emerald-100 bg-emerald-50/50"
+                                            )}>
                                                 <p className={cn(
-                                                    "text-[10px] font-bold uppercase tracking-[0.08em]",
+                                                    "text-[9px] font-bold uppercase tracking-[0.08em] sm:text-[10px]",
                                                     budgetInsights.isOverBudget ? "text-rose-500" : "text-emerald-500"
                                                 )}>
                                                     {budgetInsights.isOverBudget ? "Overrun" : "Remaining"}
                                                 </p>
                                                 <p className={cn(
-                                                    "mt-1 font-mono text-xl font-black tabular-nums",
+                                                    "mt-1 font-mono text-lg font-black tabular-nums sm:text-xl",
                                                     budgetInsights.isOverBudget ? "text-rose-700" : "text-emerald-700"
                                                 )}>
                                                     {Math.abs(budgetInsights.remainingHours).toFixed(1)}h
                                                 </p>
                                             </div>
+                                        </div>
 
-                                            <div className="h-10 w-px shrink-0 bg-slate-200" />
-
-                                            <div className="min-w-[240px] flex-1">
-                                                <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                                                    <span>Progress</span>
-                                                    <span>{budgetInsights.progressPercent.toFixed(0)}%</span>
-                                                </div>
-                                                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                                                    <div
-                                                        className={cn(
-                                                            "h-full transition-all duration-500",
-                                                            budgetInsights.isOverBudget
-                                                                ? "bg-rose-500"
-                                                                : budgetInsights.progressPercent > 80
-                                                                    ? "bg-amber-500"
-                                                                    : "bg-emerald-500"
-                                                        )}
-                                                        style={{ width: `${budgetInsights.progressBarPercent}%` }}
-                                                    />
-                                                </div>
-                                                <p className="mt-1 text-right text-[11px] font-medium text-slate-500">
-                                                    {new Intl.NumberFormat("ro-RO", {
-                                                        style: "currency",
-                                                        currency: "RON",
-                                                        maximumFractionDigits: 0,
-                                                    }).format(budgetInsights.feeValue)}
-                                                </p>
+                                        <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 lg:col-span-1">
+                                            <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                                <span>Progress</span>
+                                                <span>{budgetInsights.progressPercent.toFixed(0)}%</span>
                                             </div>
+                                            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                                                <div
+                                                    className={cn(
+                                                        "h-full transition-all duration-500",
+                                                        budgetInsights.isOverBudget
+                                                            ? "bg-rose-500"
+                                                            : budgetInsights.progressPercent > 80
+                                                                ? "bg-amber-500"
+                                                                : "bg-emerald-500"
+                                                    )}
+                                                    style={{ width: `${budgetInsights.progressBarPercent}%` }}
+                                                />
+                                            </div>
+                                            <p className="mt-1 text-right text-[11px] font-medium text-slate-500">
+                                                {new Intl.NumberFormat("ro-RO", {
+                                                    style: "currency",
+                                                    currency: "RON",
+                                                    maximumFractionDigits: 0,
+                                                }).format(budgetInsights.feeValue)}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -1073,7 +1072,7 @@ export function ProjectSheetContent({
                         </section>
 
 
-                        <section className="space-y-2 border-t border-slate-200/80 pt-4">
+                        <section className="space-y-2 border-t border-slate-200/80 pt-3">
                             <div className="flex items-center justify-between">
                                 <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                                     <Clock3 className="h-3.5 w-3.5" />
@@ -1216,7 +1215,7 @@ export function ProjectSheetContent({
                             </div>
                         </section>
 
-                        <section className="space-y-2 border-t border-slate-200/80 pt-4">
+                        <section className="space-y-2 border-t border-slate-200/80 pt-3">
                             <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                                 <History className="h-3.5 w-3.5" />
                                 Payment History (Log)
@@ -1260,7 +1259,7 @@ export function ProjectSheetContent({
                             </div>
                         </section>
 
-                        <section className="space-y-3 border-t border-slate-200/80 pt-4">
+                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
                             <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Info</h2>
 
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

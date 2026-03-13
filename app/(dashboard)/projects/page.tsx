@@ -1,7 +1,6 @@
 import prisma from "@/lib/prisma"
 import Link from "next/link"
 import {
-    Briefcase,
     CalendarDays,
     ChevronDown,
     SlidersHorizontal,
@@ -333,13 +332,13 @@ export default async function ProjectsPage({
                         <div className="-mx-1 overflow-x-auto px-1 hidescrollbar">
                             <div className="inline-flex min-w-max items-center gap-3">
                                 <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                                    {paymentOptions.map((option) => (
+                                    {statusOptions.map((option) => (
                                         <Link
                                             key={option.value}
-                                            href={buildHref({ payment: option.value, page: "1" })}
+                                            href={buildHref({ status: option.value, page: "1" })}
                                             className={cn(
                                                 "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
-                                                payment === option.value
+                                                queryStatus === option.value
                                                     ? "bg-white text-[#2563EB] shadow-sm"
                                                     : "text-slate-600"
                                             )}
@@ -352,13 +351,13 @@ export default async function ProjectsPage({
                                 <div className="h-8 w-px shrink-0 bg-slate-200" />
 
                                 <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                                    {statusOptions.map((option) => (
+                                    {paymentOptions.map((option) => (
                                         <Link
                                             key={option.value}
-                                            href={buildHref({ status: option.value, page: "1" })}
+                                            href={buildHref({ payment: option.value, page: "1" })}
                                             className={cn(
                                                 "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
-                                                queryStatus === option.value
+                                                payment === option.value
                                                     ? "bg-white text-[#2563EB] shadow-sm"
                                                     : "text-slate-600"
                                             )}
@@ -451,27 +450,6 @@ export default async function ProjectsPage({
                         <div className="flex flex-col gap-3">
                             <div className="flex flex-wrap items-end gap-4">
                                 <div className={cn("space-y-1.5", mobileFiltersOpen && "hidden md:block")}>
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Payment</p>
-                                    <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
-                                        {paymentOptions.map((option) => (
-                                            <Link
-                                                key={option.value}
-                                                href={buildHref({ payment: option.value, page: "1" })}
-                                                className={cn(
-                                                    "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
-                                                    payment === option.value && option.value === "Paid" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
-                                                    payment === option.value && option.value === "Unpaid" && "bg-[#E11D48] text-white shadow-sm ring-1 ring-[#BE123C]",
-                                                    payment === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
-                                                    payment !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
-                                                )}
-                                            >
-                                                {option.label}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={cn("space-y-1.5", mobileFiltersOpen && "hidden md:block")}>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Status</p>
                                     <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
                                         {statusOptions.map((option) => (
@@ -486,6 +464,27 @@ export default async function ProjectsPage({
                                                     queryStatus === option.value && option.value === "Closed" && "bg-slate-700 text-white shadow-sm ring-1 ring-slate-600",
                                                     queryStatus === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
                                                     queryStatus !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                                )}
+                                            >
+                                                {option.label}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className={cn("space-y-1.5", mobileFiltersOpen && "hidden md:block")}>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Payment</p>
+                                    <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
+                                        {paymentOptions.map((option) => (
+                                            <Link
+                                                key={option.value}
+                                                href={buildHref({ payment: option.value, page: "1" })}
+                                                className={cn(
+                                                    "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
+                                                    payment === option.value && option.value === "Paid" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
+                                                    payment === option.value && option.value === "Unpaid" && "bg-[#E11D48] text-white shadow-sm ring-1 ring-[#BE123C]",
+                                                    payment === option.value && option.value === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
+                                                    payment !== option.value && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
                                                 )}
                                             >
                                                 {option.label}
@@ -610,7 +609,6 @@ export default async function ProjectsPage({
                     layout={layout as "grid" | "list"}
                     partners={partnersForClient}
                     services={servicesForClient}
-                    currentStatusFilter={queryStatus}
                 />
 
                 {shouldPaginate && (

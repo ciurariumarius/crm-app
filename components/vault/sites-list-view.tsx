@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { Globe, ExternalLink } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 
 interface SitesListViewProps {
@@ -60,6 +60,9 @@ export function SitesListView({ sites, partnerId }: SitesListViewProps) {
 
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
                 <SheetContent className="sm:max-w-2xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Site Details</SheetTitle>
+                    </SheetHeader>
                     {selectedSite && (
                         <SiteSheetContent
                             site={selectedSite}

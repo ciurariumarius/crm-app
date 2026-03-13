@@ -1,25 +1,32 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
 import { cn } from "@/lib/utils"
-import { ListChecks, ChevronDown, ChevronUp } from "lucide-react"
+import { ListChecks, ArrowRight } from "lucide-react"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { isPast, isToday } from "date-fns"
 
 interface FocusMatrixProps {
-    tasks: any[]
+    tasks: FocusTask[]
+}
+
+interface FocusTask {
+    id: string
+    urgency?: string | null
+    deadline?: Date | string | null
+    [key: string]: unknown
 }
 
 const COLS = 3   // lg grid columns — must match grid class below
-const ROWS = 2   // how many rows to show before "See more"
-const VISIBLE_LIMIT = COLS * ROWS  // 6 cards
+const ROWS = 3   // how many rows to show before "See all"
+const VISIBLE_LIMIT = COLS * ROWS  // 9 cards
 
 export function FocusMatrix({ tasks }: FocusMatrixProps) {
     const { openTask } = React.useContext(TaskSheetContext)
-    const [expanded, setExpanded] = React.useState(false)
     const [optimisticTasks, setOptimisticTasks] = React.useOptimistic(
         tasks,
         (state, updatedTaskId: string) => state.filter((task) => task.id !== updatedTaskId)
@@ -54,7 +61,7 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
         return aDate - bDate
     })
 
-    const visible = expanded ? sorted : sorted.slice(0, VISIBLE_LIMIT)
+    const visible = sorted.slice(0, VISIBLE_LIMIT)
     const hasMore = sorted.length > VISIBLE_LIMIT
 
     if (sorted.length === 0) {
@@ -80,21 +87,18 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
             </div>
 
             {hasMore && (
-                <button
-                    onClick={() => setExpanded(e => !e)}
+                <Link
+                    href="/tasks"
                     className={cn(
                         "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed",
-                        "text-xs font-bold uppercase tracking-widest transition-all duration-200",
+                        "text-xs font-semibold transition-all duration-200",
                         "border-muted-foreground/20 text-muted-foreground/60",
                         "hover:border-emerald-400/50 hover:text-emerald-600 hover:bg-emerald-50/50"
                     )}
                 >
-                    {expanded ? (
-                        <><ChevronUp className="h-3.5 w-3.5" /> Show less</>
-                    ) : (
-                        <><ChevronDown className="h-3.5 w-3.5" /> {sorted.length - VISIBLE_LIMIT} more tasks</>
-                    )}
-                </button>
+                    <span>See all tasks</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
             )}
         </div>
     )

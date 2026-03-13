@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { SettlementPartner } from "@/types"
 import { settlePartnerDebt } from "@/lib/actions/settlement"
 import { toast } from "sonner"
-import { Wallet, CheckCircle2, Loader2, Calendar, ChevronDown, ChevronUp, ExternalLink } from "lucide-react"
-import { format } from "date-fns"
+import { Wallet, CheckCircle2, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface SettleUpLedgerProps {
@@ -27,7 +26,7 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
             } else {
                 toast.error(result.error || "Failed to settle debt")
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred")
         } finally {
             setSettlingId(null)
@@ -46,7 +45,7 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
     if (partners.length === 0) return (
         <Card className="p-4 border border-border bg-card/50 backdrop-blur-sm shadow-sm flex flex-col items-center justify-center gap-2 py-8 grayscale opacity-50">
             <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Accounts Clear</p>
+            <p className="text-xs font-semibold text-muted-foreground">Accounts clear</p>
         </Card>
     )
 
@@ -57,7 +56,7 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
                     <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
                         <Wallet className="h-4 w-4" />
                     </div>
-                    <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Due Payment</h3>
+                    <h3 className="font-semibold text-sm text-muted-foreground">Due payments</h3>
                 </div>
             </div>
 
@@ -78,9 +77,9 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
                                     <ChevronDown className="h-4 w-4 text-muted-foreground/50" />
                                 )}
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 flex-1">
-                                    <span className="font-bold text-xs uppercase tracking-tight truncate sm:w-48">{partner.name}</span>
+                                    <span className="font-semibold text-sm truncate sm:w-48">{partner.name}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] uppercase font-medium text-muted-foreground">Owed Sum:</span>
+                                        <span className="text-[11px] font-medium text-muted-foreground">Owed:</span>
                                         <span className="text-sm font-black text-red-600 tabular-nums">{partner.totalUnpaid} RON</span>
                                     </div>
                                 </div>
@@ -89,7 +88,7 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-[10px] font-bold h-8 border-red-50/50 hover:bg-emerald-50/50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-none uppercase px-4"
+                                className="text-[11px] font-semibold h-8 border-red-50/50 hover:bg-emerald-50/50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-none px-4"
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     handleSettle(partner.id)

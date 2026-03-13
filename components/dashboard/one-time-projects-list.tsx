@@ -3,7 +3,7 @@
 import { useState, useContext } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { CheckSquare, ChevronLeft, ChevronRight, Plus, ArrowRight, Clock, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -21,8 +21,8 @@ interface OneTimeProject {
 
 interface OneTimeProjectsListProps {
     projects: OneTimeProject[]
-    partners: any[]
-    services: any[]
+    partners: unknown[]
+    services: unknown[]
 }
 
 const ITEMS_PER_PAGE = 5
@@ -38,7 +38,7 @@ export function OneTimeProjectsList({ projects, partners, services }: OneTimePro
 
     return (
         <>
-            <Card className="flex flex-col bento-card p-0 overflow-hidden shadow-sm">
+            <Card className="flex h-full flex-col bento-card p-0 overflow-hidden shadow-sm">
                 <CardHeader className="py-4 px-6 flex flex-row items-center justify-between bg-card/80">
                     <div className="flex items-center gap-3">
                         {totalPages > 1 && (

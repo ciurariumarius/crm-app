@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Card } from "@/components/ui/card"
-import { format } from "date-fns"
 import { History, CheckCircle, ChevronRight } from "lucide-react"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { cn, formatCurrency, formatRelativeDate } from "@/lib/utils"
@@ -33,11 +32,11 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
                     <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                         <History className="h-3.5 w-3.5" />
                     </div>
-                    <h3 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Payment History (Log)</h3>
+                    <h3 className="font-semibold text-sm text-muted-foreground">Payment history</h3>
                 </div>
                 <Link
                     href="/payments"
-                    className="text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 group"
+                    className="text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 group"
                 >
                     View All
                     <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
@@ -58,10 +57,10 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
                                 <CheckCircle className="h-4 w-4" />
                             </div>
                             <div className="min-w-0 flex flex-col">
-                                <h4 className="font-bold text-sm uppercase tracking-tight truncate shrink-0">{item.projectName}</h4>
+                                <h4 className="font-semibold text-sm truncate shrink-0">{item.projectName}</h4>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{item.partnerName}</span>
-                                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-40 shrink-0">
+                                    <span className="text-[11px] text-muted-foreground font-medium">{item.partnerName}</span>
+                                    <span className="text-[11px] text-muted-foreground font-medium opacity-60 shrink-0">
                                         • {formatRelativeDate(item.date)}
                                     </span>
                                 </div>
@@ -79,7 +78,7 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
 
             {history.length > 5 && (
                 <div className="mt-auto pt-2 border-t border-border/50">
-                    <p className="text-center text-[8px] text-muted-foreground uppercase font-bold tracking-widest opacity-50">
+                    <p className="text-center text-[10px] text-muted-foreground font-medium opacity-60">
                         Showing latest 5 of {history.length} entries
                     </p>
                 </div>

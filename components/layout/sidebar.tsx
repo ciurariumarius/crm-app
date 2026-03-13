@@ -27,7 +27,7 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
     DropdownMenu,
@@ -150,6 +150,9 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         <>
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetContent side="left" className="w-[290px] p-0 glass text-sidebar-foreground border-r border-sidebar-border shadow-lg">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Navigation Menu</SheetTitle>
+                    </SheetHeader>
                     <div className="flex h-full flex-col overflow-y-auto py-6">
                         <div className="px-6 pb-6 border-b border-sidebar-border">
                             <div className="flex items-center gap-3">

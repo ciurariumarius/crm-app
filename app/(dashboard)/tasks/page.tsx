@@ -8,7 +8,7 @@ import { normalizeProjectStatus, normalizeTaskStatus } from "@/lib/status"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
-import { LayoutGrid, SlidersHorizontal, X } from "lucide-react"
+import { SlidersHorizontal, X } from "lucide-react"
 import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
@@ -213,9 +213,6 @@ export default async function TasksPage({
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                         <MobileMenuTrigger />
-                        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2563EB] text-white shadow-sm">
-                            <LayoutGrid className="h-5 w-5" strokeWidth={1.8} />
-                        </div>
                         <h1 className="page-title text-slate-900">Tasks</h1>
                     </div>
                     <CreateTaskButton
@@ -240,47 +237,53 @@ export default async function TasksPage({
                     </Link>
                 </div>
 
-                <div className="inline-flex h-12 w-full items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                    {[
-                        { label: "ALL", value: "All" },
-                        { label: "ACTIVE", value: "Active" },
-                        { label: "COMPLETED", value: "Completed" },
-                    ].map((option) => (
-                        <Link
-                            key={option.value}
-                            href={buildTasksHref({ status: option.value, page: "1" })}
-                            className={
-                                "inline-flex h-10 flex-1 items-center justify-center rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
-                                (statusFilter === option.value
-                                    ? "bg-white text-[#2563EB] shadow-sm"
-                                    : "text-slate-600")
-                            }
-                        >
-                            {option.label}
-                        </Link>
-                    ))}
-                </div>
+                <div className="-mx-1 overflow-x-auto px-1 hidescrollbar">
+                    <div className="inline-flex min-w-max items-center gap-3">
+                        <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                            {[
+                                { label: "ALL", value: "All" },
+                                { label: "ACTIVE", value: "Active" },
+                                { label: "COMPLETED", value: "Completed" },
+                            ].map((option) => (
+                                <Link
+                                    key={option.value}
+                                    href={buildTasksHref({ status: option.value, page: "1" })}
+                                    className={
+                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                        (statusFilter === option.value
+                                            ? "bg-white text-[#2563EB] shadow-sm"
+                                            : "text-slate-600")
+                                    }
+                                >
+                                    {option.label}
+                                </Link>
+                            ))}
+                        </div>
 
-                <div className="inline-flex h-12 w-full items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                    {[
-                        { label: "ALL", value: "all" },
-                        { label: "URGENT", value: "Urgent" },
-                        { label: "NORMAL", value: "Normal" },
-                        { label: "IDEA", value: "Idea" },
-                    ].map((option) => (
-                        <Link
-                            key={option.value}
-                            href={buildTasksHref({ urgency: option.value, page: "1" })}
-                            className={
-                                "inline-flex h-10 flex-1 items-center justify-center rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
-                                (urgencyFilter === option.value
-                                    ? "bg-white text-[#2563EB] shadow-sm"
-                                    : "text-slate-600")
-                            }
-                        >
-                            {option.label}
-                        </Link>
-                    ))}
+                        <div className="h-8 w-px shrink-0 bg-slate-200" />
+
+                        <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                            {[
+                                { label: "ALL", value: "all" },
+                                { label: "URGENT", value: "Urgent" },
+                                { label: "NORMAL", value: "Normal" },
+                                { label: "IDEA", value: "Idea" },
+                            ].map((option) => (
+                                <Link
+                                    key={option.value}
+                                    href={buildTasksHref({ urgency: option.value, page: "1" })}
+                                    className={
+                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                        (urgencyFilter === option.value
+                                            ? "bg-white text-[#2563EB] shadow-sm"
+                                            : "text-slate-600")
+                                    }
+                                >
+                                    {option.label}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2">

@@ -65,8 +65,12 @@ export function formatProjectName(project: {
   return `${domain} - ${serviceNames}`
 }
 
-export function formatRelativeDate(date: Date | string | number): string {
+export function formatRelativeDate(date: Date | string | number | null | undefined): string {
+  if (date === null || date === undefined || date === "") return "—"
+
   const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return "—"
+
   if (isToday(d)) {
     return `Today @ ${format(d, "HH:mm")}`
   }

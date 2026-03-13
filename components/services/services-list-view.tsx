@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ServiceSheetContent } from "@/components/services/service-sheet-content"
@@ -142,6 +142,9 @@ export function ServicesListView({ services }: ServicesListViewProps) {
 
             <Sheet open={!!selectedService} onOpenChange={(open) => !open && setSelectedService(null)}>
                 <SheetContent className="w-screen max-w-none p-0 overflow-hidden flex flex-col border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none sm:w-full sm:max-w-[900px]">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Service Template Details</SheetTitle>
+                    </SheetHeader>
                     {selectedService && (
                         <ServiceSheetContent
                             service={selectedService}

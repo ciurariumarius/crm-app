@@ -24,7 +24,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { cn, formatRelativeDate } from "@/lib/utils"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 
 interface SitesTableProps {
@@ -139,6 +139,9 @@ export function SitesTable({ sites }: SitesTableProps) {
 
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
                 <SheetContent className="sm:max-w-xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Site Asset Details</SheetTitle>
+                    </SheetHeader>
                     {selectedSite && (
                         <SiteSheetContent
                             site={selectedSite}

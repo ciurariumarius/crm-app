@@ -257,8 +257,8 @@ export default async function Home() {
                     <p className="text-[11px] text-blue-600/70 font-medium">Monthly subscriptions &amp; fixed-fee work</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                  <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-stretch">
+                  <div className="flex flex-col gap-4 h-full">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                       <span className="text-xs font-bold uppercase tracking-widest text-blue-600/80">Monthly Subscriptions</span>
@@ -269,7 +269,7 @@ export default async function Home() {
                       services={formattedServices}
                     />
                   </div>
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-4 h-full">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
                       <span className="text-xs font-bold uppercase tracking-widest text-indigo-600/80">Fixed-Fee Projects</span>
@@ -291,7 +291,7 @@ export default async function Home() {
                     <Wallet className="h-5 w-5 text-amber-600" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-black uppercase tracking-[0.15em] text-amber-700">Payments</h2>
+                    <h2 className="text-base font-bold text-amber-700">Payments</h2>
                     <p className="text-[11px] text-amber-600/70 font-medium">Due balances &amp; settlement history</p>
                   </div>
                 </div>

@@ -1,12 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { format, isToday, isYesterday } from "date-fns"
+import { format } from "date-fns"
 import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Repeat2, Square } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
-import { normalizeProjectStatus, projectStatusSortOrder } from "@/lib/status"
+import { normalizeProjectStatus } from "@/lib/status"
 import { updateProject } from "@/lib/actions/projects"
 import { toast } from "sonner"
 import {
@@ -33,22 +33,36 @@ function formatDuration(totalSeconds: number) {
     return `${hours}h ${minutes}m`
 }
 
-const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_72px_90px_95px_60px_78px_120px_78px_150px]"
+const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_72px_90px_78px_95px_60px_78px_96px_116px_116px]"
 
-function formatRelativeDateTime(value: Date | string | null | undefined) {
-    if (!value) return "—"
+function toTimestamp(value: Date | string | null | undefined) {
+    if (!value) return null
     const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return "—"
+    const timestamp = date.getTime()
+    return Number.isNaN(timestamp) ? null : timestamp
+}
 
-    if (isToday(date)) {
-        return `Today, ${format(date, "HH:mm")}`
+function formatDateTimeParts(value: Date | string | null | undefined) {
+    if (!value) return { dateLabel: "—", timeLabel: "—" }
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return { dateLabel: "—", timeLabel: "—" }
+    return {
+        dateLabel: format(date, "dd/MM/yy"),
+        timeLabel: format(date, "HH:mm"),
     }
+}
 
-    if (isYesterday(date)) {
-        return `Yest, ${format(date, "HH:mm")}`
-    }
-
-    return format(date, "dd/MM/yy")
+function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
+    const { dateLabel, timeLabel } = formatDateTimeParts(value)
+    return (
+        <div className="flex items-center justify-start gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+            <span className="flex flex-col items-start leading-tight">
+                <span className="text-[11px] font-medium text-slate-500">{dateLabel}</span>
+                <span className="text-[10px] font-medium text-slate-400">{timeLabel}</span>
+            </span>
+        </div>
+    )
 }
 
 function getStatusBadge(status: string) {
@@ -113,6 +127,7 @@ type BoardProject = {
     secondsLogged: number
     completedTasks: number
     createdAt: string | Date
+    updatedAt: string | Date
     isRecurring: boolean
     serviceLabel: string
     site: {
@@ -127,28 +142,32 @@ type BoardProject = {
     tasks?: unknown[]
 }
 
+type TotalsSummary = {
+    count: number
+    totalAmount: number
+    totalSeconds: number
+}
+
 export function ProjectsBoardRows({
     projects,
     layout,
     partners = [],
     services = [],
-    currentStatusFilter = "Active",
 }: {
     projects: BoardProject[]
     layout: "grid" | "list"
     partners?: BoardPartner[]
     services?: BoardService[]
-    currentStatusFilter?: string
 }) {
     const { openProject } = React.useContext(ProjectSheetContext)
-    const [sortBy, setSortBy] = React.useState<"createdAt" | "amount" | "name" | "time">("createdAt")
+    const [sortBy, setSortBy] = React.useState<"createdAt" | "updatedAt" | "amount" | "name" | "time">("createdAt")
     const [sortDirection, setSortDirection] = React.useState<"desc" | "asc">("desc")
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
     const [inlineEdits, setInlineEdits] = React.useState<Record<string, { status?: string; paymentStatus?: string; amount?: number }>>({})
     const [amountEditorProjectId, setAmountEditorProjectId] = React.useState<string | null>(null)
     const [amountDraft, setAmountDraft] = React.useState("")
 
-    const setSort = (key: "createdAt" | "amount" | "name" | "time") => {
+    const setSort = (key: "createdAt" | "updatedAt" | "amount" | "name" | "time") => {
         if (sortBy === key) {
             setSortDirection((current) => (current === "desc" ? "asc" : "desc"))
             return
@@ -161,13 +180,8 @@ export function ProjectsBoardRows({
     const sortProjects = React.useCallback(
         (items: BoardProject[]) =>
             [...items].sort((a, b) => {
-                if (currentStatusFilter === "All") {
-                    const statusDiff = projectStatusSortOrder(a.status) - projectStatusSortOrder(b.status)
-                    if (statusDiff !== 0) return statusDiff
-                }
-
-                let leftValue: number | string
-                let rightValue: number | string
+                let leftValue: number | string | null
+                let rightValue: number | string | null
 
                 if (sortBy === "name") {
                     leftValue = (a.site?.domainName || a.name || "").toLowerCase()
@@ -178,23 +192,43 @@ export function ProjectsBoardRows({
                 } else if (sortBy === "time") {
                     leftValue = Number(a.secondsLogged || 0)
                     rightValue = Number(b.secondsLogged || 0)
+                } else if (sortBy === "updatedAt") {
+                    leftValue = toTimestamp(a.updatedAt)
+                    rightValue = toTimestamp(b.updatedAt)
                 } else {
-                    const left = new Date(a.createdAt).getTime()
-                    const right = new Date(b.createdAt).getTime()
-                    leftValue = Number.isNaN(left) ? 0 : left
-                    rightValue = Number.isNaN(right) ? 0 : right
+                    leftValue = toTimestamp(a.createdAt)
+                    rightValue = toTimestamp(b.createdAt)
                 }
+
+                if (leftValue === null && rightValue === null) return 0
+                if (leftValue === null) return 1
+                if (rightValue === null) return -1
 
                 if (leftValue < rightValue) return sortDirection === "desc" ? 1 : -1
                 if (leftValue > rightValue) return sortDirection === "desc" ? -1 : 1
                 return 0
             }),
-        [currentStatusFilter, sortBy, sortDirection]
+        [sortBy, sortDirection]
     )
 
     const monthlyProjects = sortProjects(projects.filter((project) => project.isRecurring))
     const oneTimeProjects = sortProjects(projects.filter((project) => !project.isRecurring))
     const orderedProjects = [...oneTimeProjects, ...monthlyProjects]
+
+    const totals = React.useMemo(() => {
+        return projects.reduce<TotalsSummary>(
+            (acc, project) => {
+                acc.count += 1
+                acc.totalAmount += Number(inlineEdits[project.id]?.amount ?? project.amount ?? 0)
+                acc.totalSeconds += Number(project.secondsLogged || 0)
+                return acc
+            },
+            { count: 0, totalAmount: 0, totalSeconds: 0 }
+        )
+    }, [projects, inlineEdits])
+
+    const oneTimeCount = oneTimeProjects.length
+    const monthlyCount = monthlyProjects.length
 
     const openDetails = (projectId: string) => {
         openProject(projectId)
@@ -373,7 +407,7 @@ export function ProjectsBoardRows({
                         <h2 className="text-lg font-semibold tracking-tight text-slate-900">One-time Projects</h2>
                     </div>
 
-                    <div className={cn("hidden md:grid items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-5", LIST_GRID_COLUMNS)}>
+                    <div className={cn("hidden md:grid items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-x-2", LIST_GRID_COLUMNS)}>
                         <button
                             type="button"
                             onClick={() => setSort("name")}
@@ -388,6 +422,7 @@ export function ProjectsBoardRows({
                         </button>
                         <span className="text-center">Status</span>
                         <span className="text-center">Payment</span>
+                        <span className="text-center">Type</span>
                         <button
                             type="button"
                             onClick={() => setSort("amount")}
@@ -414,7 +449,18 @@ export function ProjectsBoardRows({
                             <ArrowDownUp className="h-3 w-3" />
                         </button>
                         <span>Partner</span>
-                        <span className="text-center">Type</span>
+                        <button
+                            type="button"
+                            onClick={() => setSort("updatedAt")}
+                            className={cn(
+                                "inline-flex items-center justify-end gap-1 text-right text-[11px] font-bold uppercase tracking-wider",
+                                sortBy === "updatedAt" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
+                            )}
+                            title={`Sort by last edit (${sortBy === "updatedAt" && sortDirection === "desc" ? "newest first" : "oldest first"})`}
+                        >
+                            Last Edit
+                            <ArrowDownUp className="h-3 w-3" />
+                        </button>
                         <button
                             type="button"
                             onClick={() => setSort("createdAt")}
@@ -506,12 +552,12 @@ export function ProjectsBoardRows({
                                                 openDetails(project.id)
                                             }
                                         }}
-                                        className={cn("hidden w-full text-left md:grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
+                                        className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
                                     >
                                         <div className="min-w-0">
-                                            <p className={cn("font-bold truncate tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                            <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
                                             <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
-                                                <span className="truncate">{project.serviceLabel}</span>
+                                                <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
                                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0 uppercase tracking-tighter">
                                                     {format(new Date(project.createdAt), "MMM yyyy")}
                                                 </span>
@@ -595,6 +641,15 @@ export function ProjectsBoardRows({
                                                     ))}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
+                                        </div>
+                                        <div className="flex justify-center">
+                                            <span
+                                                title="One-time"
+                                                aria-label="One-time"
+                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                            >
+                                                <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                            </span>
                                         </div>
                                         <div className="flex justify-end">
                                             <Popover
@@ -683,19 +738,12 @@ export function ProjectsBoardRows({
                                         <div className="flex justify-center">
                                             <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
                                         </div>
-                                        <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
-                                        <div className="flex justify-center">
-                                            <span
-                                                title="One-time"
-                                                aria-label="One-time"
-                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
-                                            >
-                                                <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />
-                                            </span>
+                                        <span className="text-sm font-medium text-slate-700 truncate block">{project.site.partner.name}</span>
+                                        <div className="flex w-full justify-end justify-self-end">
+                                            <DateTimeCell value={project.updatedAt} />
                                         </div>
-                                        <div className="flex items-center justify-end gap-1.5">
-                                            <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-                                            <span className="text-[11px] font-medium text-slate-500">{formatRelativeDateTime(project.createdAt)}</span>
+                                        <div className="flex w-full justify-end justify-self-end">
+                                            <DateTimeCell value={project.createdAt} />
                                         </div>
                                     </div>
                                 </React.Fragment>
@@ -789,12 +837,12 @@ export function ProjectsBoardRows({
                                                 openDetails(project.id)
                                             }
                                         }}
-                                        className={cn("hidden w-full text-left md:grid gap-5 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
+                                        className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
                                     >
                                         <div className="min-w-0">
-                                            <p className={cn("font-bold truncate tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                            <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
                                             <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
-                                                <span className="truncate">{project.serviceLabel}</span>
+                                                <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
                                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
                                                     {format(new Date(project.createdAt), "MMM yyyy")}
                                                 </span>
@@ -878,6 +926,15 @@ export function ProjectsBoardRows({
                                                     ))}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
+                                        </div>
+                                        <div className="flex justify-center">
+                                            <span
+                                                title="Monthly"
+                                                aria-label="Monthly"
+                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
+                                            >
+                                                <Repeat2 className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                            </span>
                                         </div>
                                         <div className="flex justify-end">
                                             <Popover
@@ -966,19 +1023,12 @@ export function ProjectsBoardRows({
                                         <div className="flex justify-center">
                                             <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
                                         </div>
-                                        <span className="text-sm font-medium text-slate-700 truncate">{project.site.partner.name}</span>
-                                        <div className="flex justify-center">
-                                            <span
-                                                title="Monthly"
-                                                aria-label="Monthly"
-                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
-                                            >
-                                                <Repeat2 className="h-3.5 w-3.5 [stroke-width:1.5]" />
-                                            </span>
+                                        <span className="text-sm font-medium text-slate-700 truncate block">{project.site.partner.name}</span>
+                                        <div className="flex w-full justify-end justify-self-end">
+                                            <DateTimeCell value={project.updatedAt} />
                                         </div>
-                                        <div className="flex items-center justify-end gap-1.5">
-                                            <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-                                            <span className="text-[11px] font-medium text-slate-500">{formatRelativeDateTime(project.createdAt)}</span>
+                                        <div className="flex w-full justify-end justify-self-end">
+                                            <DateTimeCell value={project.createdAt} />
                                         </div>
                                     </div>
                                 </React.Fragment>
@@ -988,6 +1038,47 @@ export function ProjectsBoardRows({
 
                     </div>
                 </section>
+
+                <div className={cn("hidden md:grid w-full gap-x-2 items-center rounded-xl border border-slate-300/80 bg-slate-50/90 px-6 py-3", LIST_GRID_COLUMNS)}>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">Totals</p>
+                        <p className="text-sm font-semibold text-slate-800">{totals.count} projects</p>
+                    </div>
+                    <div />
+                    <div />
+                    <div className="flex justify-center">
+                        <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                            One-time {oneTimeCount} · Monthly {monthlyCount}
+                        </span>
+                    </div>
+                    <div className="flex justify-end">
+                        <span className="font-bold text-slate-800">
+                            {currencyFormatter.format(totals.totalAmount)} <span className="text-[10px] text-slate-400">RON</span>
+                        </span>
+                    </div>
+                    <div />
+                    <div className="flex justify-center">
+                        <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-tight text-slate-600">
+                            {formatDuration(totals.totalSeconds)}
+                        </span>
+                    </div>
+                    <div />
+                    <div />
+                    <div />
+                </div>
+                <div className="md:hidden rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">Totals</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <span className="text-slate-500">Projects</span>
+                        <span className="text-right font-semibold text-slate-800">{totals.count}</span>
+                        <span className="text-slate-500">Types</span>
+                        <span className="text-right font-medium text-slate-700">One-time {oneTimeCount} · Monthly {monthlyCount}</span>
+                        <span className="text-slate-500">Amount</span>
+                        <span className="text-right font-semibold text-slate-800">{currencyFormatter.format(totals.totalAmount)} RON</span>
+                        <span className="text-slate-500">Time worked</span>
+                        <span className="text-right font-semibold text-slate-800">{formatDuration(totals.totalSeconds)}</span>
+                    </div>
+                </div>
 
                 {/* Global Shadow Row - Bottom */}
                 {layout === "list" && (
@@ -1004,7 +1095,7 @@ export function ProjectsBoardRows({
                             <button
                                 type="button"
                                 onClick={() => setCreateProjectOpen(true)}
-                                className={cn("w-full text-left grid gap-5 items-center rounded-xl border border-dashed border-primary/30 bg-primary/5 px-6 py-4 transition-all hover:bg-primary/10 group/shadow", LIST_GRID_COLUMNS)}
+                                className={cn("w-full text-left grid gap-x-2 items-center rounded-xl border border-dashed border-primary/30 bg-primary/5 px-6 py-4 transition-all hover:bg-primary/10 group/shadow", LIST_GRID_COLUMNS)}
                             >
                                 <div className="min-w-0 flex items-center gap-4">
                                     <div className="h-6 w-16 bg-primary/10 rounded-full animate-pulse flex-shrink-0" />

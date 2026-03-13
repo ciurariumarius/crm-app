@@ -24,13 +24,21 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus } from "lucide-react"
 import { updateTask, deleteTask } from "@/lib/actions/tasks"
+import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { cn, formatRelativeDate } from "@/lib/utils"
 import { normalizeTaskStatus } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
+import { useRouter } from "next/navigation"
 
 interface TaskDetailsProps {
     task: any
@@ -68,6 +76,7 @@ function formatDurationLabel(totalSeconds: number) {
 
 export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
+    const router = useRouter()
     const [loading, setLoading] = React.useState(false)
     const [isDeleting, setIsDeleting] = React.useState(false)
 
@@ -77,7 +86,10 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     const [status, setStatus] = React.useState("")
     const [urgency, setUrgency] = React.useState("")
     const [deadline, setDeadline] = React.useState<Date | undefined>(undefined)
-    const [estimatedMinutes, setEstimatedMinutes] = React.useState<string>("")
+    const [isManualTimeOpen, setIsManualTimeOpen] = React.useState(false)
+    const [manualMinutes, setManualMinutes] = React.useState("")
+    const [manualNotes, setManualNotes] = React.useState("")
+    const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [isNotesModalOpen, setIsNotesModalOpen] = React.useState(false)
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
 
@@ -90,7 +102,9 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             setStatus(normalizeTaskStatus(task.status))
             setUrgency(task.urgency || "Normal")
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
-            setEstimatedMinutes(task.estimatedMinutes?.toString() || "")
+            setIsManualTimeOpen(false)
+            setManualMinutes("")
+            setManualNotes("")
             setIsEditingTitle(false)
             skipNextAutoSave.current = true
         }
@@ -106,7 +120,6 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                 status,
                 urgency,
                 deadline,
-                estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : null,
             })
 
             if (result.success) {
@@ -135,7 +148,6 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         const normalizedTaskStatus = normalizeTaskStatus(task.status)
         const normalizedTaskUrgency = task.urgency || "Normal"
         const normalizedTaskDeadline = task.deadline ? new Date(task.deadline).getTime() : undefined
-        const normalizedTaskEstimatedMinutes = task.estimatedMinutes?.toString() || ""
 
         const timer = setTimeout(() => {
             if (
@@ -143,15 +155,14 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                 description !== normalizedTaskDescription ||
                 status !== normalizedTaskStatus ||
                 urgency !== normalizedTaskUrgency ||
-                deadline?.getTime() !== normalizedTaskDeadline ||
-                estimatedMinutes !== normalizedTaskEstimatedMinutes
+                deadline?.getTime() !== normalizedTaskDeadline
             ) {
                 handleUpdate()
             }
         }, 400)
 
         return () => clearTimeout(timer)
-    }, [name, description, status, urgency, deadline, estimatedMinutes])
+    }, [name, description, status, urgency, deadline])
 
     const handleDelete = async () => {
         if (!task) return
@@ -192,13 +203,16 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
     const loggedSeconds = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
     const runningSeconds = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
     const totalTrackedSeconds = loggedSeconds + runningSeconds
-    const useEstimatedFallback = task.status === "Completed" && totalTrackedSeconds === 0 && Boolean(task.estimatedMinutes)
-    const timerDisplaySeconds = useEstimatedFallback ? task.estimatedMinutes * 60 : totalTrackedSeconds
+    const timerDisplaySeconds = totalTrackedSeconds
     const loggedHours = Math.floor(loggedSeconds / 3600)
     const loggedMinutes = Math.floor((loggedSeconds % 3600) / 60)
     const timerStatusLabel = isTaskRunning ? "Running" : isTaskPaused ? "Paused" : "Ready"
     const timerPrimaryLabel = isTaskRunning ? "Pause" : isTaskPaused ? "Resume" : "Start"
-    const sortedTimeLogs = [...(task.timeLogs || [])].sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+    const sortedTimeLogs = [...(task.timeLogs || [])].sort((a: any, b: any) => {
+        const aTime = new Date(a.startTime).getTime()
+        const bTime = new Date(b.startTime).getTime()
+        return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime)
+    })
     const updatedLabel = task.updatedAt ? formatRelativeDate(task.updatedAt) : "—"
 
     const handleTaskTimerPrimaryAction = () => {
@@ -221,6 +235,42 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             void handleUpdate()
         }
         setIsEditingTitle(false)
+    }
+
+    const handleManualLog = async () => {
+        const minutes = Number.parseInt(manualMinutes, 10)
+        if (!manualMinutes || Number.isNaN(minutes) || minutes <= 0) {
+            toast.error("Please enter a valid number of minutes")
+            return
+        }
+
+        setIsLoggingTime(true)
+        try {
+            const now = new Date()
+            const response = await logTime({
+                projectId: task.projectId,
+                taskId: task.id,
+                durationSeconds: minutes * 60,
+                description: manualNotes || undefined,
+                startTime: new Date(now.getTime() - minutes * 60 * 1000),
+                endTime: now,
+            })
+
+            if (!response.success) {
+                toast.error(response.error || "Failed to log time")
+                return
+            }
+
+            toast.success("Time logged")
+            setManualMinutes("")
+            setManualNotes("")
+            setIsManualTimeOpen(false)
+            router.refresh()
+        } catch {
+            toast.error("Failed to log time")
+        } finally {
+            setIsLoggingTime(false)
+        }
     }
 
     return (
@@ -303,84 +353,107 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
 
                 <div className="flex-1 overflow-y-auto px-8 pb-6 pt-0">
                     <div className="space-y-8 pb-20">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div className={cn(
-                                "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
-                                status === "Active"
-                                    ? "border-blue-200/60 bg-blue-50/40"
-                                    : "border-emerald-200/60 bg-emerald-50/40"
-                            )}>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Task Status</p>
-                                <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
-                                    {(["Active", "Completed"] as const).map((statusOption) => (
-                                        <Button
-                                            key={statusOption}
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-3">
+                            <div className="flex items-center">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
                                             type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => setStatus(statusOption)}
                                             className={cn(
-                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
-                                                status === statusOption && statusOption === "Active" && "status-pill-action shadow-md",
-                                                status === statusOption && statusOption === "Completed" && "status-pill-success shadow-md",
-                                                status !== statusOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                                                "group/status relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
+                                                status === "Active"
+                                                    ? "border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-100/50 text-blue-600 shadow-[0_2px_10px_-4px_rgba(37,99,235,0.15)] hover:border-blue-300/60"
+                                                    : "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60"
                                             )}
                                         >
-                                            {statusOption}
-                                        </Button>
-                                    ))}
-                                </div>
+                                            <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover/status:translate-y-0" />
+                                            {status === "Active" ? <Play className="relative z-10 h-3.5 w-3.5 fill-current" /> : <Check className="relative z-10 h-3.5 w-3.5" />}
+                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{status}</span>
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                        {(["Active", "Completed"] as const).map((statusOption) => (
+                                            <DropdownMenuItem
+                                                key={statusOption}
+                                                onSelect={() => setStatus(statusOption)}
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                            >
+                                                <span className={cn("mr-2 h-2 w-2 rounded-full", statusOption === "Active" ? "bg-blue-500" : "bg-emerald-500")} />
+                                                {statusOption}
+                                                {status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
 
-                            <div className={cn(
-                                "rounded-2xl border p-4 premium-card shadow-sm transition-all duration-300",
-                                urgency === "Urgent"
-                                    ? "border-rose-200/60 bg-rose-50/40"
-                                    : urgency === "Idea"
-                                        ? "border-blue-200/60 bg-blue-50/40"
-                                        : "border-amber-200/60 bg-amber-50/40"
-                            )}>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500/80">Priority</p>
-                                <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-white/80 bg-white/65 p-1 backdrop-blur-[8px] shadow-sm">
-                                    {(["Urgent", "Normal", "Idea"] as const).map((urgencyOption) => (
-                                        <Button
-                                            key={urgencyOption}
+                            <div className="flex items-center">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
                                             type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => setUrgency(urgencyOption)}
                                             className={cn(
-                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
-                                                urgency === urgencyOption && urgencyOption === "Urgent" && "status-pill-debt shadow-md",
-                                                urgency === urgencyOption && urgencyOption === "Normal" && "status-pill-warning shadow-md",
-                                                urgency === urgencyOption && urgencyOption === "Idea" && "status-pill-action shadow-md",
-                                                urgency !== urgencyOption && "text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                                                "group/priority relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
+                                                urgency === "Urgent" && "border-rose-200/50 bg-gradient-to-br from-rose-50/80 to-rose-100/50 text-rose-600 shadow-[0_2px_10px_-4px_rgba(225,29,72,0.15)] hover:border-rose-300/60",
+                                                urgency === "Normal" && "border-amber-200/50 bg-gradient-to-br from-amber-50/80 to-amber-100/50 text-amber-600 shadow-[0_2px_10px_-4px_rgba(217,119,6,0.15)] hover:border-amber-300/60",
+                                                urgency === "Idea" && "border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-100/50 text-blue-600 shadow-[0_2px_10px_-4px_rgba(37,99,235,0.15)] hover:border-blue-300/60"
                                             )}
                                         >
-                                            {urgencyOption}
-                                        </Button>
-                                    ))}
-                                </div>
+                                            <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover/priority:translate-y-0" />
+                                            <span className={cn(
+                                                "relative z-10 h-2.5 w-2.5 rounded-full shadow-sm",
+                                                urgency === "Urgent" && "bg-rose-500",
+                                                urgency === "Normal" && "bg-amber-500",
+                                                urgency === "Idea" && "bg-blue-500"
+                                            )} />
+                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{urgency}</span>
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                        {(["Urgent", "Normal", "Idea"] as const).map((urgencyOption) => (
+                                            <DropdownMenuItem
+                                                key={urgencyOption}
+                                                onSelect={() => setUrgency(urgencyOption)}
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                            >
+                                                <span className={cn(
+                                                    "mr-2 h-2 w-2 rounded-full",
+                                                    urgencyOption === "Urgent" && "bg-rose-500",
+                                                    urgencyOption === "Normal" && "bg-amber-500",
+                                                    urgencyOption === "Idea" && "bg-blue-500"
+                                                )} />
+                                                {urgencyOption}
+                                                {urgency === urgencyOption && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div className="rounded-2xl border border-slate-200 bg-white p-5 premium-card shadow-sm">
-                                <label className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Deadline Tracking</label>
+                            <div className="flex flex-col justify-center">
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
+                                        <button
+                                            type="button"
                                             className={cn(
-                                                "mt-3 h-12 w-full justify-start rounded-xl border border-slate-200 bg-slate-50 text-left text-sm font-semibold shadow-none",
-                                                !deadline && "text-slate-400"
+                                                "group/deadline relative flex h-10 w-full items-center justify-between overflow-hidden rounded-full border px-3 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
+                                                deadline
+                                                    ? "border-blue-200/70 bg-blue-50/40 text-blue-700 hover:border-blue-300/70"
+                                                    : "border-slate-200/80 bg-white text-slate-500 hover:border-slate-300"
                                             )}
                                         >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {deadline ? format(deadline, "PPP") : <span>Set Deadline</span>}
-                                        </Button>
+                                            <span className="flex min-w-0 items-center gap-2">
+                                                <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+                                                <span className="truncate text-xs font-bold tracking-[0.01em] sm:text-[13px]">
+                                                    {deadline ? format(deadline, "dd MMM yyyy") : "Set deadline"}
+                                                </span>
+                                            </span>
+                                            <span className="ml-2 inline-flex shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                                {deadline ? format(deadline, "EEE") : "None"}
+                                            </span>
+                                        </button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 rounded-xl pointer-events-auto" align="start">
+                                    <PopoverContent className="w-auto rounded-xl p-0 pointer-events-auto" align="start">
                                         <Calendar
                                             mode="single"
                                             selected={deadline}
@@ -390,28 +463,17 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     </PopoverContent>
                                 </Popover>
                             </div>
-
-                            <div className="rounded-2xl border border-slate-200 bg-white p-5 premium-card shadow-sm">
-                                <label className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Estimated Time (min)</label>
-                                <Input
-                                    type="number"
-                                    placeholder="ex. 60"
-                                    value={estimatedMinutes}
-                                    onChange={(e) => setEstimatedMinutes(e.target.value)}
-                                    className="mt-3 h-12 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
-                                />
-                            </div>
                         </div>
 
-                        <section className="space-y-4">
+                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Task Notes</h2>
                                 <span
                                     className={cn(
-                                        "inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
-                                        notesSaveState === "saving" && "bg-blue-50 text-blue-600",
-                                        notesSaveState === "typing" && "bg-slate-100 text-slate-500",
-                                        notesSaveState === "ready" && "bg-emerald-50 text-emerald-600"
+                                        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
+                                        notesSaveState === "saving" && "border-blue-200 bg-blue-50 text-blue-600",
+                                        notesSaveState === "typing" && "border-slate-200 bg-slate-100 text-slate-500",
+                                        notesSaveState === "ready" && "border-emerald-200 bg-emerald-50 text-emerald-600"
                                     )}
                                 >
                                     {notesSaveState === "saving" && (
@@ -466,10 +528,21 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
 
                     <section className="space-y-4">
                         <div className="space-y-3">
-                            <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                                <Clock className="h-3.5 w-3.5" />
-                                Task Time Tracker
-                            </h2>
+                            <div className="flex items-center justify-between">
+                                <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    Task Time Tracker
+                                </h2>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsManualTimeOpen((current) => !current)}
+                                    className="h-8 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-600 hover:bg-slate-50"
+                                >
+                                    <Plus className="mr-1 h-3.5 w-3.5" />
+                                    Add Time
+                                </Button>
+                            </div>
                             <div className="rounded-2xl border border-slate-200 bg-white p-4 premium-card shadow-sm">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <div>
@@ -484,11 +557,8 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                                 {timerStatusLabel}
                                             </span>
                                         </div>
-                                        <div className={cn(
-                                            "mt-1 text-[11px] font-medium",
-                                            useEstimatedFallback ? "text-[#D97706]" : "text-slate-500"
-                                        )}>
-                                            {useEstimatedFallback ? "Estimated from completed task" : `${loggedHours}h ${loggedMinutes}m logged`}
+                                        <div className="mt-1 text-[11px] font-medium text-slate-500">
+                                            {loggedHours}h {loggedMinutes}m logged
                                         </div>
                                     </div>
 
@@ -532,6 +602,33 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     </div>
                                 </div>
                             </div>
+
+                            {isManualTimeOpen && (
+                                <div className="rounded-2xl border border-slate-200 bg-white p-3 premium-card shadow-sm">
+                                    <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
+                                        <Input
+                                            type="number"
+                                            value={manualMinutes}
+                                            onChange={(event) => setManualMinutes(event.target.value)}
+                                            placeholder="Minutes"
+                                            className="h-10 rounded-xl border-slate-200"
+                                        />
+                                        <Input
+                                            value={manualNotes}
+                                            onChange={(event) => setManualNotes(event.target.value)}
+                                            placeholder="Optional note"
+                                            className="h-10 rounded-xl border-slate-200"
+                                        />
+                                        <Button
+                                            onClick={handleManualLog}
+                                            disabled={isLoggingTime || !manualMinutes}
+                                            className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500"
+                                        >
+                                            {isLoggingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-3">
@@ -552,26 +649,33 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                     </div>
                                 )}
 
-                                {sortedTimeLogs.map((log: any) => (
-                                    <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-bold text-foreground">
-                                                {formatRelativeDate(log.startTime)}
-                                            </span>
-                                            <span className="text-xs font-medium text-muted-foreground/60">
-                                                {format(new Date(log.startTime), "HH:mm")} - {log.endTime ? format(new Date(log.endTime), "HH:mm") : "Ongoing"}
-                                            </span>
-                                            {log.notes && (
-                                                <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
-                                                    {log.notes}
+                                {sortedTimeLogs.map((log: any) => {
+                                    const startDate = log.startTime ? new Date(log.startTime) : null
+                                    const endDate = log.endTime ? new Date(log.endTime) : null
+                                    const hasValidStart = Boolean(startDate && !Number.isNaN(startDate.getTime()))
+                                    const hasValidEnd = Boolean(endDate && !Number.isNaN(endDate.getTime()))
+
+                                    return (
+                                        <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-xs font-bold text-foreground">
+                                                    {formatRelativeDate(log.startTime)}
                                                 </span>
-                                            )}
+                                                <span className="text-xs font-medium text-muted-foreground/60">
+                                                    {hasValidStart ? format(startDate as Date, "HH:mm") : "—"} - {hasValidEnd ? format(endDate as Date, "HH:mm") : log.endTime ? "—" : "Ongoing"}
+                                                </span>
+                                                {log.notes && (
+                                                    <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
+                                                        {log.notes}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-sm font-bold text-foreground tabular-nums">
+                                                {formatDurationLabel(log.durationSeconds || 0)}
+                                            </div>
                                         </div>
-                                        <div className="text-sm font-bold text-foreground tabular-nums">
-                                            {formatDurationLabel(log.durationSeconds || 0)}
-                                        </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         </div>
                     </section>
@@ -588,20 +692,20 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                                 Delete Task
                             </Button>
                         </section>
+
+                        <div className="flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-3 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                            <span># Task ID: {task.id.slice(0, 8)}</span>
+                            <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                                <span className="inline-flex items-center gap-1.5">
+                                    Created: {formatRelativeDate(task.createdAt)}
+                                </span>
+                                <span className="inline-flex items-center gap-1.5">
+                                    Last updated: {updatedLabel}
+                                </span>
+                            </div>
+                        </div>
                 </div>
             </div>
-
-                <div className="flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-3 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                    <span># Task ID: {task.id.slice(0, 8)}</span>
-                    <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                        <span className="inline-flex items-center gap-1.5">
-                            Created: {formatRelativeDate(task.createdAt)}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                            Last updated: {updatedLabel}
-                        </span>
-                    </div>
-                </div>
 
                 <Dialog open={isNotesModalOpen} onOpenChange={setIsNotesModalOpen}>
                     <DialogContent
