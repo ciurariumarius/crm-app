@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
+import type { Service } from "@prisma/client"
+import type { PartnerWithSites } from "@/types"
 
 interface RecurringProject {
     id: string
@@ -21,8 +23,8 @@ interface RecurringProject {
 
 interface RecurringProjectsListProps {
     projects: RecurringProject[]
-    partners: unknown[]
-    services: unknown[]
+    partners: PartnerWithSites[]
+    services: Service[]
 }
 
 const ITEMS_PER_PAGE = 5

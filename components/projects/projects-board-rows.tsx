@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Repeat2, Square } from "lucide-react"
+import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Repeat2, Square, RefreshCcw, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
@@ -537,7 +537,7 @@ export function ProjectsBoardRows({
                                                     aria-label="One-time"
                                                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
                                                 >
-                                                    <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                                    <Zap className="h-3.5 w-3.5 [stroke-width:1.5]" />
                                                 </span>
                                             </div>
                                         </div>
@@ -648,7 +648,7 @@ export function ProjectsBoardRows({
                                                 aria-label="One-time"
                                                 className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
                                             >
-                                                <Circle className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                                <Zap className="h-3.5 w-3.5 [stroke-width:1.5]" />
                                             </span>
                                         </div>
                                         <div className="flex justify-end">
@@ -822,7 +822,7 @@ export function ProjectsBoardRows({
                                                     aria-label="Monthly"
                                                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
                                                 >
-                                                    <Repeat2 className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                                    <RefreshCcw className="h-3.5 w-3.5 [stroke-width:1.5]" />
                                                 </span>
                                             </div>
                                         </div>
@@ -933,7 +933,7 @@ export function ProjectsBoardRows({
                                                 aria-label="Monthly"
                                                 className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
                                             >
-                                                <Repeat2 className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                                <RefreshCcw className="h-3.5 w-3.5 [stroke-width:1.5]" />
                                             </span>
                                         </div>
                                         <div className="flex justify-end">

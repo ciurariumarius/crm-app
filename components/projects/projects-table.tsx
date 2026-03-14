@@ -28,7 +28,9 @@ import {
     Activity,
     Sparkles,
     MoreVertical,
-    ChevronDown
+    ChevronDown,
+    Zap,
+    RefreshCcw
 } from "lucide-react"
 import { ProjectTasks } from "@/components/projects/project-tasks"
 import { format } from "date-fns"
@@ -341,6 +343,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                 {/* 3. Type Pill */}
                 <div className="w-[70px] shrink-0 flex items-center justify-center">
                     <div className="flex items-center gap-1.5 px-1.5 py-1 bg-slate-50 rounded-lg text-[9px] font-bold uppercase tracking-tight text-slate-600 truncate w-full justify-center border border-slate-200">
+                        {isMonthly ? <RefreshCcw className="h-3 w-3 mr-0.5" /> : <Zap className="h-3 w-3 mr-0.5" />}
                         {isMonthly ? "Monthly" : "One-Time"}
                     </div>
                 </div>

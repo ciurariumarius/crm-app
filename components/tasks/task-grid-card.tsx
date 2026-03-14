@@ -13,8 +13,8 @@ import {
     MoreHorizontal,
     Pause,
     Play,
-    RotateCw,
-    Circle,
+    RefreshCcw,
+    Zap,
     ArrowUpRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -165,8 +165,8 @@ export function TaskGridCard({
                 {/* Project subtitle */}
                 <div className="flex items-center gap-1.5 min-w-0 -mt-0.5">
                     {isRecurring
-                        ? <RotateCw className="h-3.5 w-3.5 text-violet-500 shrink-0" />
-                        : <Circle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                        ? <RefreshCcw className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+                        : <Zap className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     }
                     <p className="text-[12px] font-bold text-slate-600 truncate tracking-tight">{projectFullName}</p>
                 </div>

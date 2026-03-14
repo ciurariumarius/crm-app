@@ -32,9 +32,10 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
         (state, updatedTaskId: string) => state.filter((task) => task.id !== updatedTaskId)
     )
 
-    const isOverdueTask = (deadline: Date | string | null) => {
+    const isOverdueTask = (deadline: Date | string | null | undefined) => {
         if (!deadline) return false
         const date = new Date(deadline)
+        if (Number.isNaN(date.getTime())) return false
         return isPast(date) && !isToday(date)
     }
 
@@ -56,8 +57,10 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
         if (aHot && !bHot) return -1
         if (!aHot && bHot) return 1
         // both hot or both not — sort by deadline asc, nulls last
-        const aDate = a.deadline ? new Date(a.deadline).getTime() : Infinity
-        const bDate = b.deadline ? new Date(b.deadline).getTime() : Infinity
+        const aDateRaw = a.deadline ? new Date(a.deadline).getTime() : Infinity
+        const bDateRaw = b.deadline ? new Date(b.deadline).getTime() : Infinity
+        const aDate = Number.isNaN(aDateRaw) ? Infinity : aDateRaw
+        const bDate = Number.isNaN(bDateRaw) ? Infinity : bDateRaw
         return aDate - bDate
     })
 
