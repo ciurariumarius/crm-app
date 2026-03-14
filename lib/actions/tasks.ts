@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client"
 import { requireTenantContext } from "@/lib/tenant"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
-import { TASK_STATUS_VALUES, normalizeTaskStatus } from "@/lib/status"
+import { TASK_STATUS_VALUES, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { z } from "zod"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
@@ -19,7 +19,7 @@ function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?
 
 const TaskStatusSchema = z.enum(TASK_STATUS_VALUES)
 const LegacyTaskStatusSchema = z.enum(["Active", "Paused", "Completed"])
-const TaskUrgencySchema = z.enum(["Low", "Normal", "High", "Urgent"])
+const TaskUrgencySchema = z.enum(["Low", "Normal", "High", "Urgent", "Idea"])
 const TaskIdSchema = z.string().uuid()
 const TaskIdsSchema = z.array(TaskIdSchema).max(500)
 const ProjectIdSchema = z.string().uuid()
@@ -68,7 +68,7 @@ export async function addTask(projectId: string, name: string, options?: { deadl
                 projectId: validated.projectId,
                 name: validated.name,
                 status: validated.options?.status || "Active",
-                urgency: validated.options?.urgency || "Normal",
+                urgency: normalizeTaskUrgency(validated.options?.urgency),
                 deadline: validated.options?.deadline,
                 estimatedMinutes: validated.options?.estimatedMinutes
             },
@@ -142,6 +142,9 @@ export async function updateTask(taskId: string, data: {
         const validated = UpdateTaskSchema.parse({ taskId, ...data })
         const { isCompleted, taskId: validatedTaskId, ...restData } = validated
         const updateData: Prisma.TaskUpdateInput = { ...restData }
+        if (restData.urgency !== undefined) {
+            updateData.urgency = normalizeTaskUrgency(restData.urgency)
+        }
 
         if (isCompleted === true) {
             updateData.status = "Completed"

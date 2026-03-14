@@ -3,17 +3,17 @@
 import * as React from "react"
 import { format, isToday, isPast } from "date-fns"
 import { cn } from "@/lib/utils"
+import { normalizeTaskUrgency } from "@/lib/status"
 import {
     AlertTriangle,
     Calendar as CalendarIcon,
-    CheckCircle2,
     CheckCheck,
-    Clock,
     Lightbulb,
     MoreHorizontal,
     Pause,
     Play,
     RefreshCcw,
+    Square,
     Zap,
     ArrowUpRight,
 } from "lucide-react"
@@ -35,12 +35,13 @@ interface TaskGridCardProps {
     renderMenu?: (task: any) => React.ReactNode
     isSelected?: boolean
     onSelect?: (taskId: string) => void
-    showActions?: boolean
     className?: string
 }
 
 function PriorityBadge({ urgency }: { urgency: string }) {
-    if (urgency === "Urgent") {
+    const normalizedUrgency = normalizeTaskUrgency(urgency)
+
+    if (normalizedUrgency === "Urgent") {
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.08em] bg-rose-50 text-rose-600 border border-rose-200">
                 <AlertTriangle className="h-2.5 w-2.5" />
@@ -48,7 +49,7 @@ function PriorityBadge({ urgency }: { urgency: string }) {
             </span>
         )
     }
-    if (urgency === "Idea") {
+    if (normalizedUrgency === "Idea") {
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.08em] bg-sky-50 text-sky-600 border border-sky-200">
                 <Lightbulb className="h-2.5 w-2.5" />
@@ -62,14 +63,15 @@ function PriorityBadge({ urgency }: { urgency: string }) {
 function DeadlineBadge({ deadline }: { deadline: string | null | undefined }) {
     if (!deadline) return null
     const date = new Date(deadline)
+    if (Number.isNaN(date.getTime())) return null
     const overdue = isPast(date) && !isToday(date)
     const dueToday = isToday(date)
 
-    const label = overdue ? "Overdue" : dueToday ? "Today" : format(date, "MMM d")
+    const label = dueToday ? "Today" : format(date, "d MMMM")
 
     return (
         <span className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.08em] border",
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black tracking-[0.08em] border",
             overdue
                 ? "bg-rose-50 text-rose-600 border-rose-200"
                 : dueToday
@@ -88,10 +90,9 @@ export function TaskGridCard({
     onComplete,
     renderMenu,
     isSelected,
-    showActions = true,
     className,
 }: TaskGridCardProps) {
-    const { timerState, startTimer, pauseTimer, resumeTimer } = useTimer()
+    const { timerState, startTimer, stopTimer, pauseTimer, resumeTimer } = useTimer()
 
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isRunning = isActiveTimerThisTask && timerState.isRunning
@@ -142,12 +143,12 @@ export function TaskGridCard({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 rounded-lg text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-100 transition-all"
+                                    className="h-7 w-7 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
                                 >
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-xl border-slate-100">
+                            <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl border-slate-100">
                                 <DropdownMenuItem
                                     onClick={() => onOpen(task.id)}
                                     className="gap-2 text-sm font-medium cursor-pointer"
@@ -156,7 +157,57 @@ export function TaskGridCard({
                                     Open panel
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                {renderMenu && renderMenu(task)}
+
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        if (isRunning) {
+                                            pauseTimer()
+                                            toast.success("Timer paused")
+                                            return
+                                        }
+                                        if (isPaused) {
+                                            resumeTimer()
+                                            toast.success("Timer resumed")
+                                            return
+                                        }
+                                        startTimer(task.projectId, task.id, task.name)
+                                        toast.success("Timer started")
+                                    }}
+                                    className="gap-2 text-sm font-medium cursor-pointer"
+                                >
+                                    {isRunning ? <Pause className="h-3.5 w-3.5 fill-current text-slate-500" /> : <Play className="h-3.5 w-3.5 fill-current text-slate-500" />}
+                                    {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
+                                </DropdownMenuItem>
+
+                                {isActiveTimerThisTask && (
+                                    <DropdownMenuItem
+                                        onClick={() => {
+                                            stopTimer()
+                                            toast.success("Timer stopped")
+                                        }}
+                                        className="gap-2 text-sm font-medium cursor-pointer"
+                                    >
+                                        <Square className="h-3.5 w-3.5 fill-current text-slate-500" />
+                                        Stop timer
+                                    </DropdownMenuItem>
+                                )}
+
+                                {task.status !== "Completed" && (
+                                    <DropdownMenuItem
+                                        onClick={() => onComplete(task.id)}
+                                        className="gap-2 text-sm font-medium cursor-pointer"
+                                    >
+                                        <CheckCheck className="h-3.5 w-3.5 text-slate-500" />
+                                        Mark completed
+                                    </DropdownMenuItem>
+                                )}
+
+                                {renderMenu ? (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        {renderMenu(task)}
+                                    </>
+                                ) : null}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -177,78 +228,6 @@ export function TaskGridCard({
                     <DeadlineBadge deadline={task.deadline} />
                 </div>
             </div>
-
-            {/* Hover action bar — slides up from bottom */}
-            {showActions && (
-                <div
-                    className={cn(
-                        "absolute inset-x-0 bottom-0 rounded-b-2xl px-3 py-2.5 flex items-center justify-between",
-                        "border-t border-slate-100 bg-white/95 backdrop-blur-sm",
-                        "translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100",
-                        "transition-all duration-200 ease-out pointer-events-none group-hover:pointer-events-auto"
-                    )}
-                    onClick={e => e.stopPropagation()}
-                >
-                    <div className="flex items-center gap-1">
-                        {/* Timer button */}
-                        {isRunning ? (
-                            <Button
-                                size="icon"
-                                className="h-7 w-7 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-sm shadow-rose-200 transition-all"
-                                onClick={() => {
-                                    pauseTimer()
-                                    toast.success("Timer paused")
-                                }}
-                            >
-                                <Pause className="h-3 w-3 fill-current" />
-                            </Button>
-                        ) : isPaused ? (
-                            <Button
-                                size="icon"
-                                className="h-7 w-7 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-200 transition-all"
-                                onClick={() => {
-                                    resumeTimer()
-                                    toast.success("Timer resumed")
-                                }}
-                            >
-                                <Play className="h-3 w-3 fill-current ml-0.5" />
-                            </Button>
-                        ) : (
-                            <Button
-                                size="icon"
-                                className="h-7 w-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200 transition-all"
-                                onClick={() => {
-                                    startTimer(task.projectId, task.id, task.name)
-                                    toast.success("Timer started")
-                                }}
-                            >
-                                <Play className="h-3 w-3 fill-current ml-0.5" />
-                            </Button>
-                        )}
-
-                        {/* Running indicator */}
-                        {isRunning && (
-                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider animate-pulse">
-                                Live
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Complete button */}
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2.5 rounded-full text-[11px] font-bold text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 gap-1 transition-all"
-                        onClick={() => onComplete(task.id)}
-                    >
-                        <CheckCheck className="h-3.5 w-3.5" />
-                        Done
-                    </Button>
-                </div>
-            )}
-
-            {/* Bottom padding to make room for the hover bar */}
-            {showActions && <div className="h-10" />}
         </div>
     )
 }

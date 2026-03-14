@@ -2,8 +2,28 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import {
+    Circle,
+    CheckCheck,
+    LayoutGrid,
+    Play,
+    AlertTriangle,
+    Lightbulb,
+    X,
+    SlidersHorizontal,
+    Briefcase,
+    Users,
+    ChevronDown,
+    ArrowUpDown,
+    Check,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 import {
     Command,
     CommandEmpty,
@@ -12,158 +32,152 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
-import { Check, ChevronDown, Briefcase, Users, SlidersHorizontal, X } from "lucide-react"
-import { cn } from "@/lib/utils"
 
-interface TasksToolbarProps {
+const SORT_OPTIONS = [
+    { label: "Newest", value: "newest" },
+    { label: "Oldest", value: "oldest" },
+    { label: "Recently Updated", value: "updated" },
+    { label: "Name A-Z", value: "name_asc" },
+    { label: "Name Z-A", value: "name_desc" },
+]
+
+export function TasksToolbar({
+    projects,
+    partners,
+    currentStatus,
+    currentUrgency,
+    currentSort,
+    currentProject,
+    currentPartner,
+    totalTasks,
+    mobileSecondaryOnly = false,
+}: {
     projects: { id: string; name: string }[]
     partners: { id: string; name: string }[]
+    currentStatus: string
+    currentUrgency: string
+    currentSort: string
+    currentProject: string
+    currentPartner: string
     totalTasks: number
     mobileSecondaryOnly?: boolean
-}
-
-function statusPillClass(currentStatus: string, option: string) {
-    return cn(
-        "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
-        currentStatus === option && option === "Active" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
-        currentStatus === option && option === "Completed" && "bg-[#10B981] text-white shadow-sm ring-1 ring-[#059669]",
-        currentStatus === option && option === "All" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
-        currentStatus !== option && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
-    )
-}
-
-function urgencyPillClass(currentUrgency: string, option: string) {
-    return cn(
-        "inline-flex h-8 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.1em] transition-all",
-        currentUrgency === option && option === "Urgent" && "bg-[#E11D48] text-white shadow-sm ring-1 ring-[#BE123C]",
-        currentUrgency === option && option === "Normal" && "bg-[#2563EB] text-white shadow-sm ring-1 ring-[#1D4ED8]",
-        currentUrgency === option && option === "Idea" && "bg-[#F59E0B] text-white shadow-sm ring-1 ring-[#D97706]",
-        currentUrgency === option && option === "all" && "bg-white text-slate-700 shadow-sm ring-1 ring-slate-300",
-        currentUrgency !== option && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
-    )
-}
-
-export function TasksToolbar({ projects, partners, totalTasks, mobileSecondaryOnly = false }: TasksToolbarProps) {
+}) {
     const router = useRouter()
+    const pathname = usePathname()
     const searchParams = useSearchParams()
 
-    const currentQ = searchParams.get("q")?.trim() || ""
-    const currentStatusParam = searchParams.get("status") || "Active"
-    const normalizedStatusParam = currentStatusParam === "Paused" ? "Active" : currentStatusParam
-    const currentStatus = ["All", "Active", "Completed"].includes(normalizedStatusParam) ? normalizedStatusParam : "Active"
-    const currentUrgency = searchParams.get("urgency") || "all"
-    const currentProject = searchParams.get("projectId") || "all"
-    const currentPartner = searchParams.get("partnerId") || "all"
-    const currentSort = searchParams.get("sort") || "newest"
-    const currentView = searchParams.get("view") || "grid"
-    const currentCols = searchParams.get("cols") || "3"
+    const buildHref = (overrides: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString())
+        Object.entries(overrides).forEach(([key, value]) => {
+            const isDefaultStatus = key === "status" && value === "Active"
+            const isDefaultUrgency = key === "urgency" && value === "all"
+            const isDefaultSort = key === "sort" && value === "newest"
+            const isDefaultProject = key === "projectId" && value === "all"
+            const isDefaultPartner = key === "partnerId" && value === "all"
 
-    const selectedProject = projects.find((project) => project.id === currentProject)
-    const selectedPartner = partners.find((partner) => partner.id === currentPartner)
-
-    const buildHref = (overrides: Record<string, string | null | undefined>) => {
-        const next = new URLSearchParams()
-
-        if (currentQ) next.set("q", currentQ)
-        if (currentStatus) next.set("status", currentStatus)
-        if (currentUrgency !== "all") next.set("urgency", currentUrgency)
-        if (currentProject !== "all") next.set("projectId", currentProject)
-        if (currentPartner !== "all") next.set("partnerId", currentPartner)
-        if (currentSort) next.set("sort", currentSort)
-        if (currentView) next.set("view", currentView)
-        if (currentCols) next.set("cols", currentCols)
-        next.set("page", "1")
-
-        for (const [key, value] of Object.entries(overrides)) {
             if (
                 value === null ||
-                value === undefined ||
-                value === "" ||
-                ((key === "projectId" || key === "partnerId" || key === "urgency") && value === "all")
+                isDefaultStatus ||
+                isDefaultUrgency ||
+                isDefaultSort ||
+                isDefaultProject ||
+                isDefaultPartner
             ) {
-                next.delete(key)
+                params.delete(key)
             } else {
-                next.set(key, value)
+                params.set(key, value)
             }
-        }
-
-        return `/tasks?${next.toString()}`
+        })
+        return `${pathname}?${params.toString()}`
     }
 
-    const pushWithOverrides = (overrides: Record<string, string | null | undefined>) => {
+    const pushWithOverrides = (overrides: Record<string, string | null>) => {
         router.push(buildHref(overrides))
     }
 
-    const activeFilters: { key: string; label: string; href: string }[] = []
-    if (currentQ) activeFilters.push({ key: "q", label: `Search: ${currentQ}`, href: buildHref({ q: null }) })
-    if (currentStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${currentStatus}`, href: buildHref({ status: "Active" }) })
-    if (currentUrgency !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${currentUrgency}`, href: buildHref({ urgency: "all" }) })
-    if (currentProject !== "all") activeFilters.push({ key: "projectId", label: `Project: ${selectedProject?.name || "Selected"}`, href: buildHref({ projectId: null }) })
-    if (currentPartner !== "all") activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner?.name || "Selected"}`, href: buildHref({ partnerId: null }) })
-
     const clearAllHref = buildHref({
-        q: null,
         status: "Active",
         urgency: "all",
+        sort: "newest",
         projectId: null,
         partnerId: null,
     })
 
-    const resultsSummaryParts = [`${totalTasks} results`, `Status: ${currentStatus}`]
-    if (currentUrgency !== "all") resultsSummaryParts.push(`Priority: ${currentUrgency}`)
+    const selectedProject = projects.find(p => p.id === currentProject)
+    const selectedPartner = partners.find(p => p.id === currentPartner)
+
+    const resultsSummaryParts = [`${totalTasks} results`]
     if (selectedProject) resultsSummaryParts.push(`Project: ${selectedProject.name}`)
     if (selectedPartner) resultsSummaryParts.push(`Partner: ${selectedPartner.name}`)
     const resultsSummary = resultsSummaryParts.join(" · ")
 
+    const activeFilters: { key: string; label: string; href: string }[] = []
+    if (currentStatus && currentStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${currentStatus}`, href: buildHref({ status: "Active" }) })
+    if (currentUrgency && currentUrgency !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${currentUrgency}`, href: buildHref({ urgency: "all" }) })
+    if (currentProject && currentProject !== "all" && selectedProject) activeFilters.push({ key: "projectId", label: `Project: ${selectedProject.name}`, href: buildHref({ projectId: null }) })
+    if (currentPartner && currentPartner !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: null }) })
+
     return (
-        <div className="md:sticky md:top-3 z-20 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 md:px-4 md:py-4 shadow-sm backdrop-blur-[6px]">
-            <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-end gap-4">
-                    <div className={cn("space-y-1.5", mobileSecondaryOnly && "hidden")}>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Status</p>
-                        <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
-                            {[
-                                { label: "All", value: "All" },
-                                { label: "Active", value: "Active" },
-                                { label: "Completed", value: "Completed" },
-                            ].map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildHref({ status: option.value })}
-                                    className={statusPillClass(currentStatus, option.value)}
-                                >
-                                    {option.label}
-                                </Link>
-                            ))}
+        <div className="md:sticky md:top-3 z-20 rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-4 shadow-sm backdrop-blur-md">
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-6">
+                    <div className="flex flex-wrap items-center gap-6">
+                        <div className={cn(mobileSecondaryOnly && "hidden")}>
+                            <div className="inline-flex h-11 items-center rounded-2xl border border-slate-300/40 bg-slate-200/50 p-1 shadow-inner">
+                                {[
+                                    { label: "All", value: "All", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+                                    { label: "Active", value: "Active", icon: <Play className="h-3.5 w-3.5 fill-current" /> },
+                                    { label: "Completed", value: "Completed", icon: <CheckCheck className="h-3.5 w-3.5" /> },
+                                ].map((option) => (
+                                    <Link
+                                        key={option.value}
+                                        href={buildHref({ status: option.value })}
+                                        className={cn(
+                                            "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all",
+                                            currentStatus === option.value
+                                                ? "bg-white text-blue-700 shadow-md ring-1 ring-black/[0.05] scale-[1.02]"
+                                                : "text-slate-600 hover:text-slate-900"
+                                        )}
+                                    >
+                                        {option.icon}
+                                        {option.label}
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className={cn(mobileSecondaryOnly && "hidden")}>
+                            <div className="inline-flex h-11 items-center rounded-2xl border border-slate-300/40 bg-slate-200/50 p-1 shadow-inner">
+                                {[
+                                    { label: "All", value: "all", icon: <Circle className="h-3.5 w-3.5" /> },
+                                    { label: "Urgent", value: "Urgent", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
+                                    { label: "Normal", value: "Normal", icon: <Circle className="h-3.5 w-3.5 fill-current" /> },
+                                    { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3.5 w-3.5" /> },
+                                ].map((option) => (
+                                    <Link
+                                        key={option.value}
+                                        href={buildHref({ urgency: option.value })}
+                                        className={cn(
+                                            "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all",
+                                            currentUrgency === option.value
+                                                ? "bg-white text-blue-700 shadow-md ring-1 ring-black/[0.05] scale-[1.02]"
+                                                : "text-slate-600 hover:text-slate-900"
+                                        )}
+                                    >
+                                        {option.icon}
+                                        {option.label}
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    <div className={cn("space-y-1.5", mobileSecondaryOnly && "hidden")}>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Priority</p>
-                        <div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1">
-                            {[
-                                { label: "All", value: "all" },
-                                { label: "Urgent", value: "Urgent" },
-                                { label: "Normal", value: "Normal" },
-                                { label: "Idea", value: "Idea" },
-                            ].map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildHref({ urgency: option.value })}
-                                    className={urgencyPillClass(currentUrgency, option.value)}
-                                >
-                                    {option.label}
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="ml-auto flex flex-wrap items-end gap-2">
+                    <div className="flex items-center gap-2">
                         <ProjectCombobox
                             projects={projects}
                             currentProject={currentProject}
                             onSelect={(value) => {
-                                const overrides: Record<string, string | null | undefined> = { projectId: value }
+                                const overrides: Record<string, string | null> = { projectId: value }
                                 if (value !== "all") overrides.partnerId = null
                                 pushWithOverrides(overrides)
                             }}
@@ -173,37 +187,46 @@ export function TasksToolbar({ projects, partners, totalTasks, mobileSecondaryOn
                             partners={partners}
                             currentPartner={currentPartner}
                             onSelect={(value) => {
-                                const overrides: Record<string, string | null | undefined> = { partnerId: value }
+                                const overrides: Record<string, string | null> = { partnerId: value }
                                 if (value !== "all") overrides.projectId = null
                                 pushWithOverrides(overrides)
                             }}
                         />
 
-                        <div className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-50 px-3 text-[11px] text-slate-500 font-semibold" title={resultsSummary}>
-                            <SlidersHorizontal className="h-3.5 w-3.5" />
-                            <span className="hidden xl:inline max-w-[420px] truncate">{resultsSummary}</span>
-                            <span className="xl:hidden">{totalTasks} results</span>
+                        <div className="hidden h-7 w-px bg-slate-200 sm:block mx-1" />
+
+                        <SortCombobox
+                            currentSort={currentSort}
+                            onSelect={(value) => {
+                                pushWithOverrides({ sort: value })
+                            }}
+                        />
+
+                        <div className="hidden h-7 w-px bg-slate-200 sm:block mx-1" />
+
+                        <div className="h-9 inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 text-[11px] font-extrabold text-slate-500 ring-1 ring-slate-200/50" title={resultsSummary}>
+                            <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600" />
+                            <span>{totalTasks}</span>
                         </div>
                     </div>
                 </div>
 
                 {activeFilters.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Active filters</span>
+                    <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                         {activeFilters.map((filter) => (
                             <Link
                                 key={filter.key}
                                 href={filter.href}
-                                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 pl-2.5 pr-2 text-[11px] font-medium text-slate-700 hover:bg-white"
+                                className="group inline-flex h-7 items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/50 pl-2 pr-1.5 text-[10px] font-extrabold text-blue-700 transition-all hover:bg-blue-100"
                                 title={`Remove ${filter.label}`}
                             >
-                                <span className="max-w-[200px] truncate">{filter.label}</span>
-                                <X className="h-3 w-3 text-slate-400" />
+                                <span className="max-w-[150px] truncate">{filter.label}</span>
+                                <X className="h-2.5 w-2.5 opacity-60" />
                             </Link>
                         ))}
                         <Link
                             href={clearAllHref}
-                            className="inline-flex h-7 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                            className="inline-flex h-7 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-extrabold text-slate-600 shadow-sm transition-all hover:bg-slate-50"
                         >
                             Clear all
                         </Link>
@@ -211,6 +234,60 @@ export function TasksToolbar({ projects, partners, totalTasks, mobileSecondaryOn
                 )}
             </div>
         </div>
+    )
+}
+
+function SortCombobox({
+    currentSort,
+    onSelect,
+}: {
+    currentSort: string
+    onSelect: (value: string) => void
+}) {
+    const [open, setOpen] = React.useState(false)
+    const isActive = currentSort !== "newest"
+    const selectedSort = SORT_OPTIONS.find((option) => option.value === currentSort) ?? SORT_OPTIONS[0]
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    title={`Sort: ${selectedSort.label}`}
+                    aria-label={`Sort: ${selectedSort.label}`}
+                    className={cn(
+                        "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all shadow-sm",
+                        isActive
+                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
+                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
+                    )}
+                >
+                    <ArrowUpDown className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[260px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+                <Command className="rounded-xl">
+                    <CommandList>
+                        <CommandGroup>
+                            {SORT_OPTIONS.map((option) => (
+                                <CommandItem
+                                    key={option.value}
+                                    value={option.label}
+                                    onSelect={() => {
+                                        onSelect(option.value)
+                                        setOpen(false)
+                                    }}
+                                    className="cursor-pointer rounded-lg"
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", currentSort === option.value ? "opacity-100" : "opacity-0")} />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
     )
 }
 
@@ -233,13 +310,13 @@ function ProjectCombobox({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] transition-colors",
+                        "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-extrabold transition-all shadow-sm",
                         isActive
-                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
-                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
+                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
                     )}
                 >
-                    <Briefcase className={cn("h-4 w-4", isActive ? "text-[#3B82F6]" : "text-slate-400")} />
+                    <Briefcase className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
                     <span className="max-w-[180px] truncate">{selectedProject?.name || "Project"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
@@ -302,13 +379,13 @@ function PartnerCombobox({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] transition-colors",
+                        "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-extrabold transition-all shadow-sm",
                         isActive
-                            ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
-                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
+                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
                     )}
                 >
-                    <Users className={cn("h-4 w-4", isActive ? "text-[#3B82F6]" : "text-slate-400")} />
+                    <Users className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
                     <span className="max-w-[180px] truncate">{selectedPartner?.name || "Partner"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Repeat2, Square, RefreshCcw, Zap } from "lucide-react"
+import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Repeat2, Square, RefreshCcw, Zap, Wallet, Timer, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
@@ -148,26 +148,40 @@ type TotalsSummary = {
     totalSeconds: number
 }
 
+type BoardSortBy = "createdAt" | "updatedAt" | "amount" | "name" | "time"
+type BoardSortDirection = "asc" | "desc"
+
 export function ProjectsBoardRows({
     projects,
     layout,
     partners = [],
     services = [],
+    hourlyRate = 0,
+    initialSortBy = "updatedAt",
+    initialSortDirection = "desc",
 }: {
     projects: BoardProject[]
     layout: "grid" | "list"
     partners?: BoardPartner[]
     services?: BoardService[]
+    hourlyRate?: number
+    initialSortBy?: BoardSortBy
+    initialSortDirection?: BoardSortDirection
 }) {
     const { openProject } = React.useContext(ProjectSheetContext)
-    const [sortBy, setSortBy] = React.useState<"createdAt" | "updatedAt" | "amount" | "name" | "time">("createdAt")
-    const [sortDirection, setSortDirection] = React.useState<"desc" | "asc">("desc")
+    const [sortBy, setSortBy] = React.useState<BoardSortBy>(initialSortBy)
+    const [sortDirection, setSortDirection] = React.useState<BoardSortDirection>(initialSortDirection)
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
     const [inlineEdits, setInlineEdits] = React.useState<Record<string, { status?: string; paymentStatus?: string; amount?: number }>>({})
     const [amountEditorProjectId, setAmountEditorProjectId] = React.useState<string | null>(null)
     const [amountDraft, setAmountDraft] = React.useState("")
 
-    const setSort = (key: "createdAt" | "updatedAt" | "amount" | "name" | "time") => {
+    React.useEffect(() => {
+        setSortBy(initialSortBy)
+        setSortDirection(initialSortDirection)
+    }, [initialSortBy, initialSortDirection])
+
+    const setSort = (key: BoardSortBy) => {
         if (sortBy === key) {
             setSortDirection((current) => (current === "desc" ? "asc" : "desc"))
             return
@@ -242,6 +256,20 @@ export function ProjectsBoardRows({
 
     const getDisplayAmount = (project: BoardProject) =>
         Number(inlineEdits[project.id]?.amount ?? project.amount ?? 0)
+
+    const getAllocatedSeconds = (project: BoardProject) => {
+        const rate = Number(hourlyRate || 0)
+        if (rate <= 0) return null
+        const amount = getDisplayAmount(project)
+        if (amount <= 0) return null
+        return (amount / rate) * 3600
+    }
+
+    const isTimeOverAllocated = (project: BoardProject) => {
+        const allocatedSeconds = getAllocatedSeconds(project)
+        if (!allocatedSeconds) return false
+        return Number(project.secondsLogged || 0) > allocatedSeconds
+    }
 
     const getProjectToneClass = (status: string) => {
         if (status === "Paused") return "project-state-paused"
@@ -329,6 +357,7 @@ export function ProjectsBoardRows({
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {orderedProjects.map((project) => {
                     const projectStatus = normalizeProjectStatus(project.status)
+                    const overAllocated = isTimeOverAllocated(project)
                     const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                     const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
                     const statusBadge = getStatusBadge(projectStatus)
@@ -378,7 +407,16 @@ export function ProjectsBoardRows({
                                 </div>
                                 <div>
                                     <p className="text-slate-400 text-xs font-medium">Time</p>
-                                    <p className="font-medium text-slate-700">{formatDuration(project.secondsLogged)}</p>
+                                    <p
+                                        className={cn(
+                                            "font-semibold",
+                                            overAllocated
+                                                ? "inline-flex items-center rounded-md border border-rose-300 bg-rose-100 px-2 py-0.5 text-rose-800 shadow-sm"
+                                                : "text-slate-700"
+                                        )}
+                                    >
+                                        {formatDuration(project.secondsLogged)}
+                                    </p>
                                 </div>
                             </div>
 
@@ -484,6 +522,7 @@ export function ProjectsBoardRows({
                         {oneTimeProjects.map((project) => {
                             const projectStatus = getDisplayStatus(project)
                             const projectPayment = getDisplayPayment(project)
+                            const overAllocated = isTimeOverAllocated(project)
                             const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                             const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
                             const statusBadge = getStatusBadge(projectStatus)
@@ -526,7 +565,7 @@ export function ProjectsBoardRows({
                                                     title={statusBadge.label}
                                                     aria-label={statusBadge.label}
                                                     className={cn(
-                                                        "inline-flex h-7 w-7 items-center justify-center rounded-lg border",
+                                                        "inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all",
                                                         statusBadge.className
                                                     )}
                                                 >
@@ -535,9 +574,9 @@ export function ProjectsBoardRows({
                                                 <span
                                                     title="One-time"
                                                     aria-label="One-time"
-                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm transition-all"
                                                 >
-                                                    <Zap className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                                    <Zap className="h-4 w-4 [stroke-width:1.5]" />
                                                 </span>
                                             </div>
                                         </div>
@@ -578,7 +617,7 @@ export function ProjectsBoardRows({
                                                         aria-label={`Status: ${statusBadge.label}`}
                                                         onClick={(event) => event.stopPropagation()}
                                                         className={cn(
-                                                            "inline-flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-all",
+                                                            "inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all",
                                                             projectStatus === "Active" && "border-blue-300 bg-blue-100 text-blue-700",
                                                             projectStatus === "Paused" && "border-amber-300 bg-amber-100 text-amber-700",
                                                             projectStatus === "Completed" && "border-emerald-300 bg-emerald-100 text-emerald-700",
@@ -616,7 +655,7 @@ export function ProjectsBoardRows({
                                                         type="button"
                                                         onClick={(event) => event.stopPropagation()}
                                                         className={cn(
-                                                            "status-pill min-w-[84px] justify-center transition-all",
+                                                            "status-pill h-9 min-w-[84px] justify-center transition-all rounded-xl",
                                                             projectPayment === "Paid" ? "status-pill-success" : "status-pill-debt"
                                                         )}
                                                         title={`Payment: ${projectPayment}`}
@@ -646,9 +685,9 @@ export function ProjectsBoardRows({
                                             <span
                                                 title="One-time"
                                                 aria-label="One-time"
-                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm transition-all"
                                             >
-                                                <Zap className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                                <Zap className="h-4 w-4 [stroke-width:1.5]" />
                                             </span>
                                         </div>
                                         <div className="flex justify-end">
@@ -736,7 +775,16 @@ export function ProjectsBoardRows({
                                             </div>
                                         </div>
                                         <div className="flex justify-center">
-                                            <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
+                                            <span
+                                                className={cn(
+                                                    "px-2 py-1 rounded-lg text-[10px] font-bold text-center uppercase tracking-tight min-w-[50px] border",
+                                                    overAllocated
+                                                        ? "text-rose-800 bg-rose-100 border-rose-300 ring-1 ring-rose-200 shadow-sm font-black"
+                                                        : "text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700"
+                                                )}
+                                            >
+                                                {formatDuration(project.secondsLogged)}
+                                            </span>
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 truncate block">{project.site.partner.name}</span>
                                         <div className="flex w-full justify-end justify-self-end">
@@ -769,6 +817,7 @@ export function ProjectsBoardRows({
                         {monthlyProjects.map((project) => {
                             const projectStatus = getDisplayStatus(project)
                             const projectPayment = getDisplayPayment(project)
+                            const overAllocated = isTimeOverAllocated(project)
                             const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                             const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
                             const statusBadge = getStatusBadge(projectStatus)
@@ -811,7 +860,7 @@ export function ProjectsBoardRows({
                                                     title={statusBadge.label}
                                                     aria-label={statusBadge.label}
                                                     className={cn(
-                                                        "inline-flex h-7 w-7 items-center justify-center rounded-lg border",
+                                                        "inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all",
                                                         statusBadge.className
                                                     )}
                                                 >
@@ -820,9 +869,9 @@ export function ProjectsBoardRows({
                                                 <span
                                                     title="Monthly"
                                                     aria-label="Monthly"
-                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-700 shadow-sm transition-all"
                                                 >
-                                                    <RefreshCcw className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                                    <RefreshCcw className="h-4 w-4 [stroke-width:1.5]" />
                                                 </span>
                                             </div>
                                         </div>
@@ -863,7 +912,7 @@ export function ProjectsBoardRows({
                                                         aria-label={`Status: ${statusBadge.label}`}
                                                         onClick={(event) => event.stopPropagation()}
                                                         className={cn(
-                                                            "inline-flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-all",
+                                                            "inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all",
                                                             projectStatus === "Active" && "border-blue-300 bg-blue-100 text-blue-700",
                                                             projectStatus === "Paused" && "border-amber-300 bg-amber-100 text-amber-700",
                                                             projectStatus === "Completed" && "border-emerald-300 bg-emerald-100 text-emerald-700",
@@ -901,7 +950,7 @@ export function ProjectsBoardRows({
                                                         type="button"
                                                         onClick={(event) => event.stopPropagation()}
                                                         className={cn(
-                                                            "status-pill min-w-[84px] justify-center transition-all",
+                                                            "status-pill h-9 min-w-[84px] justify-center transition-all rounded-xl",
                                                             projectPayment === "Paid" ? "status-pill-success" : "status-pill-debt"
                                                         )}
                                                         title={`Payment: ${projectPayment}`}
@@ -931,9 +980,9 @@ export function ProjectsBoardRows({
                                             <span
                                                 title="Monthly"
                                                 aria-label="Monthly"
-                                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-700 shadow-sm transition-all"
                                             >
-                                                <RefreshCcw className="h-3.5 w-3.5 [stroke-width:1.5]" />
+                                                <RefreshCcw className="h-4 w-4 [stroke-width:1.5]" />
                                             </span>
                                         </div>
                                         <div className="flex justify-end">
@@ -1021,7 +1070,16 @@ export function ProjectsBoardRows({
                                             </div>
                                         </div>
                                         <div className="flex justify-center">
-                                            <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center uppercase tracking-tight min-w-[50px]">{formatDuration(project.secondsLogged)}</span>
+                                            <span
+                                                className={cn(
+                                                    "px-2 py-1 rounded-lg text-[10px] font-bold text-center uppercase tracking-tight min-w-[50px] border",
+                                                    overAllocated
+                                                        ? "text-rose-800 bg-rose-100 border-rose-300 ring-1 ring-rose-200 shadow-sm font-black"
+                                                        : "text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700"
+                                                )}
+                                            >
+                                                {formatDuration(project.secondsLogged)}
+                                            </span>
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 truncate block">{project.site.partner.name}</span>
                                         <div className="flex w-full justify-end justify-self-end">
@@ -1039,44 +1097,58 @@ export function ProjectsBoardRows({
                     </div>
                 </section>
 
-                <div className={cn("hidden md:grid w-full gap-x-2 items-center rounded-xl border border-slate-300/80 bg-slate-50/90 px-6 py-3", LIST_GRID_COLUMNS)}>
-                    <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">Totals</p>
-                        <p className="text-sm font-semibold text-slate-800">{totals.count} projects</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    {/* Projects Card */}
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-inner">
+                                <Layers className="h-5 w-5" />
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Inventory</span>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">{totals.count} Projects</p>
+                            <div className="flex items-center gap-2">
+                                <span className="flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                    <Zap className="h-3 w-3" />
+                                    {oneTimeCount} One-time
+                                </span>
+                                <span className="flex items-center gap-1.5 rounded-lg border border-violet-100 bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                                    <RefreshCcw className="h-3 w-3" />
+                                    {monthlyCount} Monthly
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div />
-                    <div />
-                    <div className="flex justify-center">
-                        <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                            One-time {oneTimeCount} · Monthly {monthlyCount}
-                        </span>
+
+                    {/* Revenue Card */}
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
+                                <Wallet className="h-5 w-5" />
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Total Value</span>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">
+                                {currencyFormatter.format(totals.totalAmount)} <span className="text-sm font-medium text-slate-400 uppercase tracking-tighter ml-0.5">RON</span>
+                            </p>
+                            <p className="text-[11px] font-medium text-slate-500">Gross revenue for visible projects</p>
+                        </div>
                     </div>
-                    <div className="flex justify-end">
-                        <span className="font-bold text-slate-800">
-                            {currencyFormatter.format(totals.totalAmount)} <span className="text-[10px] text-slate-400">RON</span>
-                        </span>
-                    </div>
-                    <div />
-                    <div className="flex justify-center">
-                        <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-tight text-slate-600">
-                            {formatDuration(totals.totalSeconds)}
-                        </span>
-                    </div>
-                    <div />
-                    <div />
-                    <div />
-                </div>
-                <div className="md:hidden rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">Totals</p>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                        <span className="text-slate-500">Projects</span>
-                        <span className="text-right font-semibold text-slate-800">{totals.count}</span>
-                        <span className="text-slate-500">Types</span>
-                        <span className="text-right font-medium text-slate-700">One-time {oneTimeCount} · Monthly {monthlyCount}</span>
-                        <span className="text-slate-500">Amount</span>
-                        <span className="text-right font-semibold text-slate-800">{currencyFormatter.format(totals.totalAmount)} RON</span>
-                        <span className="text-slate-500">Time worked</span>
-                        <span className="text-right font-semibold text-slate-800">{formatDuration(totals.totalSeconds)}</span>
+
+                    {/* Effort Card */}
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-100 shadow-inner">
+                                <Timer className="h-5 w-5" />
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Logged Time</span>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">{formatDuration(totals.totalSeconds)}</p>
+                            <p className="text-[11px] font-medium text-slate-500">Total accumulated effort</p>
+                        </div>
                     </div>
                 </div>
 

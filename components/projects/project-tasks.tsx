@@ -12,6 +12,7 @@ import { useTimer } from "@/components/providers/timer-provider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
+import { normalizeTaskUrgency } from "@/lib/status"
 
 type TaskWithLogs = {
     id: string
@@ -120,7 +121,7 @@ export function ProjectTasks({
 
                 {sortedTasks.map((task) => {
                     const dueDate = toDate(task.deadline) ?? toDate(task.createdAt)
-                    const urgencyLabel = (task.urgency || "Normal").toUpperCase()
+                    const urgencyLabel = normalizeTaskUrgency(task.urgency).toUpperCase()
                     const isCompleted = task.status === "Completed"
 
                     return (

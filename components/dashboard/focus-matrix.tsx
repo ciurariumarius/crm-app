@@ -4,11 +4,14 @@ import * as React from "react"
 import Link from "next/link"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
 import { cn } from "@/lib/utils"
-import { ListChecks, ArrowRight } from "lucide-react"
+import { ListChecks, ArrowRight, Clock, Trash2 } from "lucide-react"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
-import { updateTask } from "@/lib/actions/tasks"
+import { deleteTasks, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { isPast, isToday } from "date-fns"
+import { normalizeTaskUrgency } from "@/lib/status"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
 
 interface FocusMatrixProps {
     tasks: FocusTask[]
@@ -16,6 +19,7 @@ interface FocusMatrixProps {
 
 interface FocusTask {
     id: string
+    name?: string | null
     urgency?: string | null
     deadline?: Date | string | null
     [key: string]: unknown
@@ -24,9 +28,12 @@ interface FocusTask {
 const COLS = 3   // lg grid columns — must match grid class below
 const ROWS = 3   // how many rows to show before "See all"
 const VISIBLE_LIMIT = COLS * ROWS  // 9 cards
+const URGENT_VISIBLE_CAP_WHEN_OVERDUE_EXISTS = 6
+const OVERDUE_VISIBLE_CAP = 3
 
 export function FocusMatrix({ tasks }: FocusMatrixProps) {
     const { openTask } = React.useContext(TaskSheetContext)
+    const [quickLogTask, setQuickLogTask] = React.useState<any>(null)
     const [optimisticTasks, setOptimisticTasks] = React.useOptimistic(
         tasks,
         (state, updatedTaskId: string) => state.filter((task) => task.id !== updatedTaskId)
@@ -50,21 +57,79 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
         }
     }
 
-    // Sort: urgent/overdue first, then by deadline asc, then by name
+    const handleDeleteTask = async (taskId: string) => {
+        if (!confirm("Delete this task?")) return
+        React.startTransition(() => setOptimisticTasks(taskId))
+        try {
+            const result = await deleteTasks([taskId])
+            if (result.success) {
+                toast.success("Task deleted")
+            } else {
+                toast.error(result.error || "Failed to delete task")
+            }
+        } catch {
+            toast.error("Process failed")
+        }
+    }
+
+    const renderTaskActionMenu = (task: any) => (
+        <>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task) }} className="gap-2 text-sm font-medium cursor-pointer">
+                <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
+            </DropdownMenuItem>
+            <DropdownMenuItem
+                className="gap-2 text-sm font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
+                onClick={(e) => {
+                    e.stopPropagation()
+                    void handleDeleteTask(task.id)
+                }}
+            >
+                <Trash2 className="h-3.5 w-3.5" /> Delete Task
+            </DropdownMenuItem>
+        </>
+    )
+
+    const getSortBucket = (task: FocusTask) => {
+        const urgency = normalizeTaskUrgency(task.urgency)
+        if (urgency === "Urgent") return 0
+        if (isOverdueTask(task.deadline)) return 1
+        return 2
+    }
+
+    // Sort: urgent first, then overdue, then everything else
     const sorted = [...optimisticTasks].sort((a, b) => {
-        const aHot = a.urgency === "Urgent" || isOverdueTask(a.deadline)
-        const bHot = b.urgency === "Urgent" || isOverdueTask(b.deadline)
-        if (aHot && !bHot) return -1
-        if (!aHot && bHot) return 1
-        // both hot or both not — sort by deadline asc, nulls last
+        const bucketDiff = getSortBucket(a) - getSortBucket(b)
+        if (bucketDiff !== 0) return bucketDiff
+
+        // same bucket — sort by deadline asc, nulls/invalids last
         const aDateRaw = a.deadline ? new Date(a.deadline).getTime() : Infinity
         const bDateRaw = b.deadline ? new Date(b.deadline).getTime() : Infinity
         const aDate = Number.isNaN(aDateRaw) ? Infinity : aDateRaw
         const bDate = Number.isNaN(bDateRaw) ? Infinity : bDateRaw
-        return aDate - bDate
+        if (aDate !== bDate) return aDate - bDate
+
+        return (a.name ?? "").localeCompare(b.name ?? "")
     })
 
-    const visible = sorted.slice(0, VISIBLE_LIMIT)
+    const urgentTasks = sorted.filter((task) => getSortBucket(task) === 0)
+    const overdueTasks = sorted.filter((task) => getSortBucket(task) === 1)
+    const otherTasks = sorted.filter((task) => getSortBucket(task) === 2)
+
+    const urgentCap = overdueTasks.length > 0 ? URGENT_VISIBLE_CAP_WHEN_OVERDUE_EXISTS : VISIBLE_LIMIT
+    const urgentVisible = urgentTasks.slice(0, urgentCap)
+    const overdueVisible = overdueTasks.slice(
+        0,
+        Math.min(OVERDUE_VISIBLE_CAP, VISIBLE_LIMIT - urgentVisible.length)
+    )
+
+    const visible = [...urgentVisible, ...overdueVisible]
+    if (visible.length < VISIBLE_LIMIT) {
+        const overflowUrgent = urgentTasks.slice(urgentVisible.length)
+        const overflowOverdue = overdueTasks.slice(overdueVisible.length)
+        const fillPool = [...overflowUrgent, ...overflowOverdue, ...otherTasks]
+        visible.push(...fillPool.slice(0, VISIBLE_LIMIT - visible.length))
+    }
+
     const hasMore = sorted.length > VISIBLE_LIMIT
 
     if (sorted.length === 0) {
@@ -78,13 +143,14 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
 
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {visible.map(task => (
                     <TaskGridCard
                         key={task.id}
                         task={task}
                         onOpen={openTask}
                         onComplete={() => handleComplete(task.id)}
+                        renderMenu={renderTaskActionMenu}
                     />
                 ))}
             </div>
@@ -102,6 +168,17 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
                     <span>See all tasks</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
+            )}
+
+            {quickLogTask && (
+                <QuickTimeLogDialog
+                    open={!!quickLogTask}
+                    onOpenChange={(open) => !open && setQuickLogTask(null)}
+                    projectId={quickLogTask.projectId}
+                    taskId={quickLogTask.id}
+                    taskName={quickLogTask.name}
+                    projectName={quickLogTask.project?.name || quickLogTask.project?.site?.domainName}
+                />
             )}
         </div>
     )

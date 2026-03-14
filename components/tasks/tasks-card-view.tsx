@@ -4,6 +4,7 @@ import * as React from "react"
 import { format, isToday, isPast } from "date-fns"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
+import { normalizeTaskUrgency } from "@/lib/status"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
@@ -146,8 +147,9 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
     }
 
     const getUrgencyIcon = (urgency: string) => {
-        if (urgency === "Urgent") return <Zap className="h-3 w-3 fill-current" />
-        if (urgency === "Idea") return <Lightbulb className="h-3 w-3" />
+        const normalizedUrgency = normalizeTaskUrgency(urgency)
+        if (normalizedUrgency === "Urgent") return <Zap className="h-3 w-3 fill-current" />
+        if (normalizedUrgency === "Idea") return <Lightbulb className="h-3 w-3" />
         return <ArrowRight className="h-3 w-3" strokeWidth={3} />
     }
 

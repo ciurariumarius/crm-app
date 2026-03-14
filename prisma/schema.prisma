@@ -140,7 +140,7 @@ model Task {
   name             String
   description      String?
   status           String    @default("Active") // Active, Completed
-  urgency          String    @default("Normal") // Low, Normal, High, Urgent
+  urgency          String    @default("Normal") // Normal, Idea, Urgent
   deadline         DateTime?
   estimatedMinutes Int?      @map("estimated_minutes")
 

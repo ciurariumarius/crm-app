@@ -12,12 +12,11 @@ import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { BusinessHealthPulse } from "@/components/dashboard/business-health-pulse"
 import { FocusMatrix } from "@/components/dashboard/focus-matrix"
 import { SettleUpLedger } from "@/components/dashboard/settle-up-ledger"
-import { ProfitabilityAlerts } from "@/components/dashboard/profitability-alerts"
 import { SettlementHistory } from "@/components/dashboard/settlement-history"
 import { GlobalSearch } from "@/components/dashboard/global-search"
 import { MobileHomeView } from "@/components/dashboard/mobile-home-view"
 import type { MobileHomeViewProps } from "@/components/dashboard/mobile-home-view"
-import { normalizeProjectStatus, normalizeTaskStatus } from "@/lib/status"
+import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
@@ -93,10 +92,10 @@ export default async function Home() {
           status: { not: 'Completed' }
         },
         orderBy: [
-          { urgency: 'desc' },
-          { deadline: 'asc' }
+          { deadline: 'asc' },
+          { updatedAt: 'desc' }
         ],
-        take: 20,
+        take: 100,
         include: {
           project: {
             include: {
@@ -143,6 +142,7 @@ export default async function Home() {
   const normalizedUpcomingTasks = (upcomingTasks as any[]).map((task: any) => ({
     ...task,
     status: normalizeTaskStatus(task.status),
+    urgency: normalizeTaskUrgency(task.urgency),
   }))
   const metrics = calculateDashboardMetrics(
     normalizedActiveProjects,
@@ -240,7 +240,6 @@ export default async function Home() {
                   </div>
                 </div>
                 <div className="space-y-6">
-                  <ProfitabilityAlerts alerts={serialize(metrics.timeSinkAlerts)} />
                   <FocusMatrix tasks={serializedUpcomingTasks} />
                 </div>
               </div>

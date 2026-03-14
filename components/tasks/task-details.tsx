@@ -36,7 +36,7 @@ import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { cn, formatRelativeDate } from "@/lib/utils"
-import { normalizeTaskStatus } from "@/lib/status"
+import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
 import { useRouter } from "next/navigation"
 
@@ -100,7 +100,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
             setName(task.name || "")
             setDescription(task.description || "")
             setStatus(normalizeTaskStatus(task.status))
-            setUrgency(task.urgency || "Normal")
+            setUrgency(normalizeTaskUrgency(task.urgency))
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
             setIsManualTimeOpen(false)
             setManualMinutes("")
@@ -146,7 +146,7 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         const normalizedTaskName = task.name || ""
         const normalizedTaskDescription = task.description || ""
         const normalizedTaskStatus = normalizeTaskStatus(task.status)
-        const normalizedTaskUrgency = task.urgency || "Normal"
+        const normalizedTaskUrgency = normalizeTaskUrgency(task.urgency)
         const normalizedTaskDeadline = task.deadline ? new Date(task.deadline).getTime() : undefined
 
         const timer = setTimeout(() => {

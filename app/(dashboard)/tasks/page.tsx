@@ -4,7 +4,7 @@ import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { formatProjectName } from "@/lib/utils"
-import { normalizeProjectStatus, normalizeTaskStatus } from "@/lib/status"
+import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
@@ -14,6 +14,14 @@ import { requireTenantContext } from "@/lib/tenant"
 export const dynamic = "force-dynamic"
 
 const PAGE_SIZE = 30
+const SORT_OPTIONS = [
+    { label: "Newest", value: "newest" },
+    { label: "Oldest", value: "oldest" },
+    { label: "Updated", value: "updated" },
+    { label: "Name A-Z", value: "name_asc" },
+    { label: "Name Z-A", value: "name_desc" },
+] as const
+const SORT_VALUES = new Set(SORT_OPTIONS.map((option) => option.value))
 
 function buildSort(sort: string): Prisma.TaskOrderByWithRelationInput[] {
     switch (sort) {
@@ -52,9 +60,11 @@ export default async function TasksPage({
     const statusFilter = ["All", "Active", "Completed"].includes(statusFilterRaw) ? statusFilterRaw : "Active"
     const partnerId = params.partnerId
     const projectId = params.projectId
-    const urgencyFilter = params.urgency || "all"
-    const sort = params.sort || "newest"
-    const view: "grid" = "grid"
+    const urgencyFilterRaw = params.urgency || "all"
+    const urgencyFilter = urgencyFilterRaw === "all" ? "all" : normalizeTaskUrgency(urgencyFilterRaw)
+    const sortRaw = params.sort || "newest"
+    const sort = SORT_VALUES.has(sortRaw as (typeof SORT_OPTIONS)[number]["value"]) ? sortRaw : "newest"
+    const view = "grid" as const
     const cols = 3
     const mobileFiltersOpen = params.filters === "1"
     const page = Math.max(1, Number(params.page) || 1)
@@ -76,7 +86,12 @@ export default async function TasksPage({
     }
 
     if (urgencyFilter !== "all") {
-        where.urgency = urgencyFilter
+        where.urgency =
+            urgencyFilter === "Urgent"
+                ? { in: ["Urgent", "High"] }
+                : urgencyFilter === "Idea"
+                    ? { in: ["Idea", "Low"] }
+                    : { in: ["Normal"] }
     }
 
     if (q) {
@@ -141,6 +156,7 @@ export default async function TasksPage({
     const normalizedTasksRaw = tasksRaw.map((task) => ({
         ...task,
         status: normalizeTaskStatus(task.status),
+        urgency: normalizeTaskUrgency(task.urgency),
     }))
     const normalizedProjectsRaw = allProjectsRaw.map((project) => ({
         ...project,
@@ -175,7 +191,7 @@ export default async function TasksPage({
         if (partnerId) next.set("partnerId", partnerId)
         if (projectId) next.set("projectId", projectId)
         if (urgencyFilter) next.set("urgency", urgencyFilter)
-        if (sort) next.set("sort", sort)
+        if (sort && sort !== "newest") next.set("sort", sort)
         if (mobileFiltersOpen) next.set("filters", "1")
         next.set("page", String(page))
 
@@ -202,6 +218,7 @@ export default async function TasksPage({
         q: null,
         status: "Active",
         urgency: "all",
+        sort: "newest",
         projectId: null,
         partnerId: null,
         page: "1",
@@ -283,6 +300,31 @@ export default async function TasksPage({
                                 </Link>
                             ))}
                         </div>
+
+                        <div className="h-8 w-px shrink-0 bg-slate-200" />
+
+                        <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                            {[
+                                { label: "NEWEST", value: "newest" },
+                                { label: "OLDEST", value: "oldest" },
+                                { label: "UPDATED", value: "updated" },
+                                { label: "A-Z", value: "name_asc" },
+                                { label: "Z-A", value: "name_desc" },
+                            ].map((option) => (
+                                <Link
+                                    key={option.value}
+                                    href={buildTasksHref({ sort: option.value, page: "1" })}
+                                    className={
+                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                        (sort === option.value
+                                            ? "bg-white text-[#2563EB] shadow-sm"
+                                            : "text-slate-600")
+                                    }
+                                >
+                                    {option.label}
+                                </Link>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
@@ -340,6 +382,11 @@ export default async function TasksPage({
                     <TasksToolbar
                         projects={projectsList}
                         partners={partnersList}
+                        currentStatus={statusFilter}
+                        currentUrgency={urgencyFilter}
+                        currentSort={sort}
+                        currentProject={projectId || "all"}
+                        currentPartner={partnerId || "all"}
                         totalTasks={totalTasks}
                         mobileSecondaryOnly
                     />
@@ -383,6 +430,11 @@ export default async function TasksPage({
                 <TasksToolbar
                     projects={projectsList}
                     partners={partnersList}
+                    currentStatus={statusFilter}
+                    currentUrgency={urgencyFilter}
+                    currentSort={sort}
+                    currentProject={projectId || "all"}
+                    currentPartner={partnerId || "all"}
                     totalTasks={totalTasks}
                 />
                 <TasksCardView

@@ -14,6 +14,7 @@ import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
 import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { normalizeTaskUrgency } from "@/lib/status"
 
 interface UpcomingTasksProps {
     tasks: any[]
@@ -48,7 +49,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
             case "overdue":
                 return optimisticTasks.filter(t => t.deadline && isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)))
             case "urgent":
-                return optimisticTasks.filter(t => t.urgency === "Urgent")
+                return optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "Urgent")
             default:
                 return optimisticTasks
         }
@@ -75,8 +76,8 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
 
 
     // Progress Calculation
-    const totalUrgent = tasks.filter(t => t.urgency === "Urgent").length
-    const completedUrgentTasks = tasks.filter(t => t.urgency === "Urgent" && t.status === "Completed").length
+    const totalUrgent = tasks.filter(t => normalizeTaskUrgency(t.urgency) === "Urgent").length
+    const completedUrgentTasks = tasks.filter(t => normalizeTaskUrgency(t.urgency) === "Urgent" && t.status === "Completed").length
     // Since we filter out completed tasks from the main list, we might need to rely on a prop or a separate fetch if we want to show *recently* completed urgent tasks in the count.
     // However, for "Your Today Work", typically we show remaining. 
     // If the requirement is "1 of 4 urgent tasks completed", we need the total count of urgent tasks for *today* regardless of completion.
@@ -90,7 +91,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
     // but the `upcomingTasks` query in `page.tsx` filters out completed.
     // I'll stick to a visual representation of "Urgent" tasks available.
 
-    const urgentTasks = optimisticTasks.filter(t => t.urgency === "Urgent")
+    const urgentTasks = optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "Urgent")
     const overdueTasks = optimisticTasks.filter(t => t.deadline && isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)))
     const dueTodayTasks = optimisticTasks.filter(t => t.deadline && isToday(new Date(t.deadline)))
 
