@@ -8,7 +8,7 @@ import { normalizeTaskUrgency } from "@/lib/status"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight, Plus, Lightbulb } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight, Plus, Lightbulb, CalendarClock } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 import { TaskGridCard } from "./task-grid-card"
@@ -176,9 +176,8 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 />
             ))}
 
-            {/* Quick Add Task Card */}
             <div
-                className="border-2 border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/50 cursor-pointer transition-all min-h-[220px] group"
+                className="border-2 border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/50 cursor-pointer transition-all h-full group"
                 onClick={() => setCreateTaskOpen(true)}
             >
                 <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-0 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
@@ -211,7 +210,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                     const currentTimerDuration = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
                     const totalSeconds = logsDuration + currentTimerDuration
                     const timeString = formatTimer(totalSeconds)
-                    const isOverdue = task.deadline && isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline))
+                    const isOverdue = task.deadline && isPast(new Date(task.deadline))
                     const isDueToday = task.deadline && isToday(new Date(task.deadline))
                     const activeHighlight = isRunning ? "text-blue-600" : "text-foreground"
 
@@ -276,9 +275,12 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
 
                                 <div className="w-auto lg:w-32 flex lg:justify-center shrink-0">
                                     {task.deadline ? (
-                                        <div className={cn("flex items-center gap-1.5 text-xs font-semibold tracking-tight", isOverdue || isDueToday ? "text-rose-500" : "text-muted-foreground")}>
-                                            <Target className="w-3.5 h-3.5" />
-                                            {isDueToday ? "Today, 18:00" : format(new Date(task.deadline), "MMM dd")}
+                                        <div className={cn(
+                                            "flex items-center gap-1.5 text-xs font-semibold tracking-tight",
+                                            isOverdue ? "text-rose-600" : isDueToday ? "text-orange-600 font-bold" : "text-blue-600"
+                                        )}>
+                                            {isOverdue ? <Clock className="w-3.5 h-3.5" /> : isDueToday ? <CalendarClock className="w-4 h-4" /> : <Target className="w-3.5 h-3.5" />}
+                                            {isOverdue && isDueToday ? "Overdue" : isDueToday ? "Today" : format(new Date(task.deadline), "MMM dd")}
                                         </div>
                                     ) : (
                                         <div className="text-xs font-medium text-muted-foreground/30">-</div>

@@ -2,13 +2,15 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Repeat2, Square, RefreshCcw, Zap, Wallet, Timer, Layers } from "lucide-react"
+import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Square, RefreshCcw, Zap, Wallet, Timer, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
-import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
+import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { normalizeProjectStatus } from "@/lib/status"
 import { updateProject } from "@/lib/actions/projects"
 import { toast } from "sonner"
+import { PartnerWithSites } from "@/types"
+import { Service } from "@prisma/client"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -105,19 +107,6 @@ function getStatusBadge(status: string) {
     }
 }
 
-type BoardPartner = {
-    id: string
-    name: string
-    sites?: { id: string; domainName: string }[]
-}
-
-type BoardService = {
-    id: string
-    serviceName: string
-    isRecurring: boolean
-    baseFee?: number | string | null
-}
-
 type BoardProject = {
     id: string
     name?: string | null
@@ -162,8 +151,8 @@ export function ProjectsBoardRows({
 }: {
     projects: BoardProject[]
     layout: "grid" | "list"
-    partners?: BoardPartner[]
-    services?: BoardService[]
+    partners?: PartnerWithSites[]
+    services?: Service[]
     hourlyRate?: number
     initialSortBy?: BoardSortBy
     initialSortDirection?: BoardSortDirection
@@ -437,7 +426,7 @@ export function ProjectsBoardRows({
     }
 
     return (
-        <div className="space-y-7 overflow-x-auto pb-24 hidescrollbar">
+        <div className="space-y-7 overflow-x-auto pb-0 hidescrollbar">
             <div className="md:min-w-[1280px] space-y-7">
                 <section className="space-y-3">
                     <div className="flex items-center gap-3">
@@ -1097,6 +1086,27 @@ export function ProjectsBoardRows({
                     </div>
                 </section>
 
+                {/* Global Shadow Row - Before Overview */}
+                {layout === "list" && (
+                    <div className="pt-2 overflow-x-auto hidescrollbar text-slate-900">
+                        <div className="md:min-w-[1280px]">
+                            <button
+                                type="button"
+                                onClick={() => setCreateProjectOpen(true)}
+                                className={cn("w-full text-left grid gap-x-2 items-center rounded-xl border border-dashed border-primary/30 bg-primary/5 px-6 py-4 transition-all hover:bg-primary/10 group/shadow", LIST_GRID_COLUMNS)}
+                            >
+                                <div className="min-w-0 flex items-center gap-4">
+                                    <div className="h-6 w-16 bg-primary/10 rounded-full animate-pulse flex-shrink-0" />
+                                    <div className="flex items-center gap-2">
+                                        <Plus className="h-4 w-4 text-primary group-hover/shadow:scale-110 transition-transform" />
+                                        <span className="text-sm font-semibold text-primary">Add new project...</span>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                     {/* Projects Card */}
                     <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
@@ -1152,34 +1162,12 @@ export function ProjectsBoardRows({
                     </div>
                 </div>
 
-                {/* Global Shadow Row - Bottom */}
-                {layout === "list" && (
-                    <div className="pt-8 pb-24">
-                        {createProjectOpen ? (
-                            <InlineQuickAddRow
-                                partners={partners}
-                                services={services}
-                                onCancel={() => setCreateProjectOpen(false)}
-                                gridColumns={LIST_GRID_COLUMNS}
-                                autoFocus
-                            />
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => setCreateProjectOpen(true)}
-                                className={cn("w-full text-left grid gap-x-2 items-center rounded-xl border border-dashed border-primary/30 bg-primary/5 px-6 py-4 transition-all hover:bg-primary/10 group/shadow", LIST_GRID_COLUMNS)}
-                            >
-                                <div className="min-w-0 flex items-center gap-4">
-                                    <div className="h-6 w-16 bg-primary/10 rounded-full animate-pulse flex-shrink-0" />
-                                    <div className="flex items-center gap-2">
-                                        <Plus className="h-4 w-4 text-primary group-hover/shadow:scale-110 transition-transform" />
-                                        <span className="text-sm font-semibold text-primary">Add new project...</span>
-                                    </div>
-                                </div>
-                            </button>
-                        )}
-                    </div>
-                )}
+                <GlobalCreateProjectDialog
+                    open={createProjectOpen}
+                    onOpenChange={setCreateProjectOpen}
+                    partners={partners}
+                    services={services}
+                />
             </div>
         </div>
     )

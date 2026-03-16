@@ -10,6 +10,7 @@ import {
     Play,
     AlertTriangle,
     Lightbulb,
+    CalendarClock,
     X,
     SlidersHorizontal,
     Briefcase,
@@ -46,6 +47,7 @@ export function TasksToolbar({
     partners,
     currentStatus,
     currentUrgency,
+    currentOverdue,
     currentSort,
     currentProject,
     currentPartner,
@@ -56,6 +58,7 @@ export function TasksToolbar({
     partners: { id: string; name: string }[]
     currentStatus: string
     currentUrgency: string
+    currentOverdue: boolean
     currentSort: string
     currentProject: string
     currentPartner: string
@@ -98,6 +101,7 @@ export function TasksToolbar({
     const clearAllHref = buildHref({
         status: "Active",
         urgency: "all",
+        overdue: null,
         sort: "newest",
         projectId: null,
         partnerId: null,
@@ -107,6 +111,7 @@ export function TasksToolbar({
     const selectedPartner = partners.find(p => p.id === currentPartner)
 
     const resultsSummaryParts = [`${totalTasks} results`]
+    if (currentOverdue) resultsSummaryParts.push("Overdue")
     if (selectedProject) resultsSummaryParts.push(`Project: ${selectedProject.name}`)
     if (selectedPartner) resultsSummaryParts.push(`Partner: ${selectedPartner.name}`)
     const resultsSummary = resultsSummaryParts.join(" · ")
@@ -114,6 +119,7 @@ export function TasksToolbar({
     const activeFilters: { key: string; label: string; href: string }[] = []
     if (currentStatus && currentStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${currentStatus}`, href: buildHref({ status: "Active" }) })
     if (currentUrgency && currentUrgency !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${currentUrgency}`, href: buildHref({ urgency: "all" }) })
+    if (currentOverdue) activeFilters.push({ key: "overdue", label: "Overdue", href: buildHref({ overdue: null }) })
     if (currentProject && currentProject !== "all" && selectedProject) activeFilters.push({ key: "projectId", label: `Project: ${selectedProject.name}`, href: buildHref({ projectId: null }) })
     if (currentPartner && currentPartner !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: null }) })
 
@@ -201,6 +207,20 @@ export function TasksToolbar({
                                 pushWithOverrides({ sort: value })
                             }}
                         />
+
+                        <Link
+                            href={buildHref({ overdue: currentOverdue ? null : "1" })}
+                            className={cn(
+                                "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-extrabold transition-all shadow-sm",
+                                currentOverdue
+                                    ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
+                                    : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
+                            )}
+                            title={currentOverdue ? "Show all deadlines" : "Show only overdue tasks"}
+                        >
+                            <CalendarClock className={cn("h-4 w-4", currentOverdue ? "text-blue-600" : "text-slate-400")} />
+                            <span>Overdue</span>
+                        </Link>
 
                         <div className="hidden h-7 w-px bg-slate-200 sm:block mx-1" />
 

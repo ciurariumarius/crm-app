@@ -16,6 +16,8 @@ import {
     Square,
     Zap,
     ArrowUpRight,
+    Clock,
+    CalendarClock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -43,16 +45,16 @@ function PriorityBadge({ urgency }: { urgency: string }) {
 
     if (normalizedUrgency === "Urgent") {
         return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.08em] bg-rose-50 text-rose-600 border border-rose-200">
-                <AlertTriangle className="h-2.5 w-2.5" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.1em] bg-rose-600 text-white shadow-sm ring-1 ring-rose-600">
+                <Zap className="h-3 w-3 fill-white" />
                 Urgent
             </span>
         )
     }
     if (normalizedUrgency === "Idea") {
         return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.08em] bg-sky-50 text-sky-600 border border-sky-200">
-                <Lightbulb className="h-2.5 w-2.5" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.1em] bg-sky-50 text-sky-600 border border-sky-200">
+                <Lightbulb className="h-3 w-3" />
                 Idea
             </span>
         )
@@ -64,21 +66,29 @@ function DeadlineBadge({ deadline }: { deadline: string | null | undefined }) {
     if (!deadline) return null
     const date = new Date(deadline)
     if (Number.isNaN(date.getTime())) return null
-    const overdue = isPast(date) && !isToday(date)
+    
+    // overdue is anytime in the past
+    const overdue = isPast(date)
     const dueToday = isToday(date)
-
     const label = dueToday ? "Today" : format(date, "d MMMM")
+
+    if (overdue) {
+        return (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black tracking-[0.1em] bg-white text-rose-600 border-2 border-rose-500 shadow-sm">
+                <Clock className="h-3 w-3" />
+                {dueToday ? "Overdue Today" : label}
+            </span>
+        )
+    }
 
     return (
         <span className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black tracking-[0.08em] border",
-            overdue
-                ? "bg-rose-50 text-rose-600 border-rose-200"
-                : dueToday
-                    ? "bg-orange-50 text-orange-600 border-orange-200"
-                    : "bg-slate-50 text-slate-500 border-slate-200"
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black tracking-[0.1em] border shadow-sm transition-all",
+            dueToday
+                ? "bg-orange-500 text-white border-transparent"
+                : "bg-blue-50 text-blue-600 border-blue-200"
         )}>
-            {overdue ? <AlertTriangle className="h-2.5 w-2.5" /> : <CalendarIcon className="h-2.5 w-2.5" />}
+            {dueToday ? <CalendarClock className="h-3 w-3" /> : <CalendarIcon className="h-3 w-3" />}
             {label}
         </span>
     )
@@ -110,7 +120,7 @@ export function TaskGridCard({
     return (
         <div
             className={cn(
-                "group relative rounded-2xl border bg-white cursor-pointer transition-all duration-200",
+                "group relative rounded-2xl border bg-white cursor-pointer transition-all duration-200 h-full",
                 "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5",
                 isRunning
                     ? "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"

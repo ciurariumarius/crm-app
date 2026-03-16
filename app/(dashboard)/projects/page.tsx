@@ -42,7 +42,9 @@ import {
 
 export const dynamic = "force-dynamic"
 
-const PAGE_SIZE = 50
+const PAGE_SIZE_OPTIONS = [100, 250, 500] as const
+const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
+const PAGE_SIZE_VALUES = new Set<number>(PAGE_SIZE_OPTIONS)
 const PAGINATION_THRESHOLD = 250
 
 const statusOptions = [
@@ -125,6 +127,7 @@ export default async function ProjectsPage({
         recurring?: string
         period?: string
         sort?: string
+        perPage?: string
         filters?: string
         page?: string
     }>
@@ -140,6 +143,8 @@ export default async function ProjectsPage({
     const period = params.period || "all_time"
     const sortRaw = params.sort || DEFAULT_SORT
     const sort = SORT_VALUES.has(sortRaw as (typeof sortOptions)[number]["value"]) ? sortRaw : DEFAULT_SORT
+    const perPageRaw = Number(params.perPage)
+    const perPage = PAGE_SIZE_VALUES.has(perPageRaw) ? perPageRaw : DEFAULT_PAGE_SIZE
     const layout = "list"
     const mobileFiltersOpen = params.filters === "1"
     const requestedPage = Math.max(1, Number(params.page) || 1)
@@ -230,7 +235,7 @@ export default async function ProjectsPage({
                 },
             },
             orderBy: { updatedAt: "desc" },
-            ...(shouldPaginate ? { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE } : {}),
+            ...(shouldPaginate ? { skip: (page - 1) * perPage, take: perPage } : {}),
         }),
         prisma.partner.findMany({
             where: { tenantId: session.tenantId },
@@ -282,9 +287,11 @@ export default async function ProjectsPage({
         { Active: 0, Paused: 0, Completed: 0, Closed: 0 } as Record<"Active" | "Paused" | "Completed" | "Closed", number>
     )
 
-    const totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalProjects / PAGE_SIZE)) : 1
+    const totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalProjects / perPage)) : 1
     const prevPage = shouldPaginate && page > 1 ? page - 1 : null
     const nextPage = shouldPaginate && page < totalPages ? page + 1 : null
+    const pageStart = totalProjects === 0 ? 0 : (page - 1) * perPage + 1
+    const pageEnd = shouldPaginate ? Math.min(page * perPage, totalProjects) : totalProjects
 
     const buildHref = (overrides: Record<string, string | null | undefined>) => {
         const next = new URLSearchParams()
@@ -295,13 +302,20 @@ export default async function ProjectsPage({
         if (recurring) next.set("recurring", recurring)
         if (period) next.set("period", period)
         if (sort && sort !== DEFAULT_SORT) next.set("sort", sort)
+        if (perPage !== DEFAULT_PAGE_SIZE) next.set("perPage", String(perPage))
         if (mobileFiltersOpen) next.set("filters", "1")
         if (shouldPaginate) {
             next.set("page", String(page))
         }
 
         for (const [key, value] of Object.entries(overrides)) {
-            if (value === null || value === undefined || value === "" || (key === "sort" && value === DEFAULT_SORT)) {
+            if (
+                value === null ||
+                value === undefined ||
+                value === "" ||
+                (key === "sort" && value === DEFAULT_SORT) ||
+                (key === "perPage" && Number(value) === DEFAULT_PAGE_SIZE)
+            ) {
                 next.delete(key)
             } else {
                 next.set(key, value)
@@ -657,27 +671,47 @@ export default async function ProjectsPage({
                     initialSortDirection={boardSort.direction}
                 />
 
-                {shouldPaginate && (
-                    <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
-                        <span className="text-muted-foreground">Page {page} of {totalPages} · {totalProjects} projects</span>
-                        <div className="flex items-center gap-2">
-                            {prevPage ? (
-                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(prevPage) })}>
-                                    Previous
-                                </Link>
-                            ) : (
-                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
-                            )}
-                            {nextPage ? (
-                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(nextPage) })}>
-                                    Next
-                                </Link>
-                            ) : (
-                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
-                            )}
-                        </div>
+                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
+                    <span className="text-muted-foreground">Page {page} of {totalPages} · Showing {pageStart}-{pageEnd} of {totalProjects} projects</span>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-foreground hover:bg-muted transition-colors"
+                                    title="Projects per page"
+                                >
+                                    {perPage}
+                                    <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                {PAGE_SIZE_OPTIONS.map((size) => (
+                                    <DropdownMenuItem key={size} asChild className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700">
+                                        <Link href={buildHref({ perPage: String(size), page: "1" })}>
+                                            {size}
+                                        </Link>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {prevPage ? (
+                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(prevPage) })}>
+                                Previous
+                            </Link>
+                        ) : (
+                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                        )}
+                        {nextPage ? (
+                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(nextPage) })}>
+                                Next
+                            </Link>
+                        ) : (
+                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
         </ProjectSheetWrapper>
     )

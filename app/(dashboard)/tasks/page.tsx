@@ -8,12 +8,21 @@ import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } fro
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
-import { SlidersHorizontal, X } from "lucide-react"
+import { SlidersHorizontal, X, ListChecks, Play, AlertTriangle, CalendarClock, ChevronDown } from "lucide-react"
 import { requireTenantContext } from "@/lib/tenant"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export const dynamic = "force-dynamic"
 
-const PAGE_SIZE = 30
+const PAGE_SIZE_OPTIONS = [100, 250, 500] as const
+const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
+const PAGE_SIZE_VALUES = new Set<number>(PAGE_SIZE_OPTIONS)
+const PAGINATION_THRESHOLD = 200
 const SORT_OPTIONS = [
     { label: "Newest", value: "newest" },
     { label: "Oldest", value: "oldest" },
@@ -48,7 +57,9 @@ export default async function TasksPage({
         partnerId?: string
         projectId?: string
         urgency?: string
+        overdue?: string
         sort?: string
+        perPage?: string
         filters?: string
         page?: string
     }>
@@ -62,12 +73,16 @@ export default async function TasksPage({
     const projectId = params.projectId
     const urgencyFilterRaw = params.urgency || "all"
     const urgencyFilter = urgencyFilterRaw === "all" ? "all" : normalizeTaskUrgency(urgencyFilterRaw)
+    const overdueOnly = params.overdue === "1" || params.overdue === "true"
     const sortRaw = params.sort || "newest"
     const sort = SORT_VALUES.has(sortRaw as (typeof SORT_OPTIONS)[number]["value"]) ? sortRaw : "newest"
+    const perPageRaw = Number(params.perPage)
+    const perPage = PAGE_SIZE_VALUES.has(perPageRaw) ? perPageRaw : DEFAULT_PAGE_SIZE
     const view = "grid" as const
     const cols = 3
     const mobileFiltersOpen = params.filters === "1"
-    const page = Math.max(1, Number(params.page) || 1)
+    const requestedPage = Math.max(1, Number(params.page) || 1)
+    const now = new Date()
 
     const where: Prisma.TaskWhereInput = { tenantId: session.tenantId }
 
@@ -104,7 +119,19 @@ export default async function TasksPage({
         ]
     }
 
-    const [tasksRaw, totalTasks, allServicesRaw, activeTimerRaw, allProjectsRaw, userRaw] = await Promise.all([
+    if (overdueOnly) {
+        where.AND = [
+            ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+            { status: { in: ["Active", "Paused"] } },
+            { deadline: { not: null, lte: now } },
+        ]
+    }
+
+    const totalTasks = await prisma.task.count({ where })
+    const shouldPaginate = totalTasks > PAGINATION_THRESHOLD
+    const page = shouldPaginate ? requestedPage : 1
+
+    const [tasksRaw, totalTasksOverall, totalActiveTasks, urgentTasksCount, dueTasksCount, allServicesRaw, activeTimerRaw, allProjectsRaw, userRaw] = await Promise.all([
         prisma.task.findMany({
             where,
             include: {
@@ -121,10 +148,31 @@ export default async function TasksPage({
                 timeLogs: true,
             },
             orderBy: buildSort(sort),
-            skip: (page - 1) * PAGE_SIZE,
-            take: PAGE_SIZE,
+            ...(shouldPaginate ? { skip: (page - 1) * perPage, take: perPage } : {}),
         }),
-        prisma.task.count({ where }),
+        prisma.task.count({
+            where: { tenantId: session.tenantId },
+        }),
+        prisma.task.count({
+            where: {
+                tenantId: session.tenantId,
+                status: { in: ["Active", "Paused"] },
+            },
+        }),
+        prisma.task.count({
+            where: {
+                tenantId: session.tenantId,
+                status: { in: ["Active", "Paused"] },
+                urgency: { in: ["Urgent", "High"] },
+            },
+        }),
+        prisma.task.count({
+            where: {
+                tenantId: session.tenantId,
+                status: { in: ["Active", "Paused"] },
+                deadline: { not: null, lte: now },
+            },
+        }),
         prisma.service.findMany({ where: { tenantId: session.tenantId }, orderBy: { serviceName: "asc" } }),
         prisma.timeLog.findFirst({
             where: { endTime: null, tenantId: session.tenantId },
@@ -181,9 +229,11 @@ export default async function TasksPage({
     })
     const partnersList = Array.from(partnersMap.values()).sort((a, b) => a.name.localeCompare(b.name))
 
-    const totalPages = Math.max(1, Math.ceil(totalTasks / PAGE_SIZE))
-    const prevPage = page > 1 ? page - 1 : null
-    const nextPage = page < totalPages ? page + 1 : null
+    const totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalTasks / perPage)) : 1
+    const prevPage = shouldPaginate && page > 1 ? page - 1 : null
+    const nextPage = shouldPaginate && page < totalPages ? page + 1 : null
+    const pageStart = totalTasks === 0 ? 0 : (page - 1) * perPage + 1
+    const pageEnd = shouldPaginate ? Math.min(page * perPage, totalTasks) : totalTasks
     const buildTasksHref = (overrides: Record<string, string | null | undefined> = {}) => {
         const next = new URLSearchParams()
         if (q) next.set("q", q)
@@ -191,16 +241,33 @@ export default async function TasksPage({
         if (partnerId) next.set("partnerId", partnerId)
         if (projectId) next.set("projectId", projectId)
         if (urgencyFilter) next.set("urgency", urgencyFilter)
+        if (overdueOnly) next.set("overdue", "1")
         if (sort && sort !== "newest") next.set("sort", sort)
+        if (perPage !== DEFAULT_PAGE_SIZE) next.set("perPage", String(perPage))
         if (mobileFiltersOpen) next.set("filters", "1")
-        next.set("page", String(page))
+        if (shouldPaginate) {
+            next.set("page", String(page))
+        }
 
         for (const [key, value] of Object.entries(overrides)) {
-            if (value === null || value === undefined || value === "") {
+            if (
+                value === null ||
+                value === undefined ||
+                value === "" ||
+                (key === "sort" && value === "newest") ||
+                (key === "perPage" && Number(value) === DEFAULT_PAGE_SIZE)
+            ) {
                 next.delete(key)
             } else {
                 next.set(key, value)
             }
+        }
+
+        if (shouldPaginate && !next.get("page")) {
+            next.set("page", "1")
+        }
+        if (!shouldPaginate) {
+            next.delete("page")
         }
 
         return `/tasks?${next.toString()}`
@@ -212,17 +279,119 @@ export default async function TasksPage({
     if (q) activeFilters.push({ key: "q", label: `Search: ${q}`, href: buildTasksHref({ q: null, page: "1" }) })
     if (statusFilter !== "Active") activeFilters.push({ key: "status", label: `Status: ${statusFilter}`, href: buildTasksHref({ status: "Active", page: "1" }) })
     if (urgencyFilter !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${urgencyFilter}`, href: buildTasksHref({ urgency: "all", page: "1" }) })
+    if (overdueOnly) activeFilters.push({ key: "overdue", label: "Overdue", href: buildTasksHref({ overdue: null, page: "1" }) })
     if (projectId && projectId !== "all") activeFilters.push({ key: "projectId", label: `Project: ${selectedProject?.name || "Selected"}`, href: buildTasksHref({ projectId: null, page: "1" }) })
     if (partnerId && partnerId !== "all") activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner?.name || "Selected"}`, href: buildTasksHref({ partnerId: null, page: "1" }) })
     const clearAllHref = buildTasksHref({
         q: null,
         status: "Active",
         urgency: "all",
+        overdue: null,
         sort: "newest",
         projectId: null,
         partnerId: null,
         page: "1",
     })
+
+    const renderTasksSummaryRow = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-inner">
+                        <ListChecks className="h-5 w-5" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Inventory</span>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">{totalTasksOverall} Total</p>
+                    <p className="text-[11px] font-medium text-slate-500">All tasks, including completed</p>
+                </div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
+                        <Play className="h-5 w-5 fill-current" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Active</span>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">{totalActiveTasks} Active</p>
+                    <p className="text-[11px] font-medium text-slate-500">Open tasks in progress</p>
+                </div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100 shadow-inner">
+                        <AlertTriangle className="h-5 w-5" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Priority</span>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">{urgentTasksCount} Urgent</p>
+                    <p className="text-[11px] font-medium text-slate-500">High-priority open tasks</p>
+                </div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-100 shadow-inner">
+                        <CalendarClock className="h-5 w-5" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Due</span>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">{dueTasksCount} Due</p>
+                    <p className="text-[11px] font-medium text-slate-500">Overdue or due right now</p>
+                </div>
+            </div>
+        </div>
+    )
+
+    const renderPaginationBar = () => (
+        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
+            <span className="text-muted-foreground">Page {page} of {totalPages} · Showing {pageStart}-{pageEnd} of {totalTasks} tasks</span>
+            <div className="flex items-center gap-2">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-foreground hover:bg-muted transition-colors"
+                            title="Tasks per page"
+                        >
+                            {perPage}
+                            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                        {PAGE_SIZE_OPTIONS.map((size) => (
+                            <DropdownMenuItem key={size} asChild className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700">
+                                <Link href={buildTasksHref({ perPage: String(size), page: "1" })}>
+                                    {size}
+                                </Link>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {prevPage ? (
+                    <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(prevPage)}>
+                        Previous
+                    </Link>
+                ) : (
+                    <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                )}
+                {nextPage ? (
+                    <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(nextPage)}>
+                        Next
+                    </Link>
+                ) : (
+                    <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                )}
+            </div>
+        </div>
+    )
 
     return (
         <div className="flex flex-col gap-6">
@@ -325,6 +494,20 @@ export default async function TasksPage({
                                 </Link>
                             ))}
                         </div>
+
+                        <div className="h-8 w-px shrink-0 bg-slate-200" />
+
+                        <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
+                            <Link
+                                href={buildTasksHref({ overdue: overdueOnly ? null : "1", page: "1" })}
+                                className={
+                                    "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                    (overdueOnly ? "bg-white text-[#2563EB] shadow-sm" : "text-slate-600")
+                                }
+                            >
+                                OVERDUE
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
@@ -384,6 +567,7 @@ export default async function TasksPage({
                         partners={partnersList}
                         currentStatus={statusFilter}
                         currentUrgency={urgencyFilter}
+                        currentOverdue={overdueOnly}
                         currentSort={sort}
                         currentProject={projectId || "all"}
                         currentPartner={partnerId || "all"}
@@ -401,29 +585,11 @@ export default async function TasksPage({
                     view="grid"
                     cols={1}
                 />
+                {renderTasksSummaryRow()}
 
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500 shadow-[var(--shadow-apple)] space-y-2">
-                    <div className="flex items-center justify-between">
-                        <span>Page {page}/{totalPages}</span>
-                        <span>{totalTasks} tasks</span>
-                    </div>
-                    <div className="flex items-center justify-end gap-2">
-                        {prevPage ? (
-                            <Link className="inline-flex h-7 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50" href={buildPageHref(prevPage)}>
-                                Previous
-                            </Link>
-                        ) : (
-                            <span className="inline-flex h-7 items-center rounded-full border border-slate-200 px-3 text-[11px] text-slate-400">Previous</span>
-                        )}
-                        {nextPage ? (
-                            <Link className="inline-flex h-7 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50" href={buildPageHref(nextPage)}>
-                                Next
-                            </Link>
-                        ) : (
-                            <span className="inline-flex h-7 items-center rounded-full border border-slate-200 px-3 text-[11px] text-slate-400">Next</span>
-                        )}
-                    </div>
-                </div>
+                {shouldPaginate && (
+                    renderPaginationBar()
+                )}
             </div>
 
             <div className="hidden md:block space-y-4">
@@ -432,6 +598,7 @@ export default async function TasksPage({
                     partners={partnersList}
                     currentStatus={statusFilter}
                     currentUrgency={urgencyFilter}
+                    currentOverdue={overdueOnly}
                     currentSort={sort}
                     currentProject={projectId || "all"}
                     currentPartner={partnerId || "all"}
@@ -446,30 +613,15 @@ export default async function TasksPage({
                     view={view}
                     cols={cols}
                 />
+                {renderTasksSummaryRow()}
 
                 <div className="flex justify-center w-full py-4">
                     <CreateTaskButton projects={activeProjects} />
                 </div>
 
-                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm mt-4">
-                    <span className="text-muted-foreground">Page {page} of {totalPages} · {totalTasks} tasks</span>
-                    <div className="flex items-center gap-2">
-                        {prevPage ? (
-                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(prevPage)}>
-                                Previous
-                            </Link>
-                        ) : (
-                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
-                        )}
-                        {nextPage ? (
-                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(nextPage)}>
-                                Next
-                            </Link>
-                        ) : (
-                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
-                        )}
-                    </div>
-                </div>
+                {shouldPaginate && (
+                    renderPaginationBar()
+                )}
             </div>
         </div>
     )
