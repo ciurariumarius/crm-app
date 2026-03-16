@@ -45,24 +45,21 @@ function toTimestamp(value: Date | string | null | undefined) {
 }
 
 function formatDateTimeParts(value: Date | string | null | undefined) {
-    if (!value) return { dateLabel: "—", timeLabel: "—" }
+    if (!value) return { dateLabel: "—", dateTimeLabel: "—" }
     const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return { dateLabel: "—", timeLabel: "—" }
+    if (Number.isNaN(date.getTime())) return { dateLabel: "—", dateTimeLabel: "—" }
     return {
         dateLabel: format(date, "dd/MM/yy"),
-        timeLabel: format(date, "HH:mm"),
+        dateTimeLabel: format(date, "dd/MM/yy, HH:mm"),
     }
 }
 
 function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
-    const { dateLabel, timeLabel } = formatDateTimeParts(value)
+    const { dateLabel, dateTimeLabel } = formatDateTimeParts(value)
     return (
-        <div className="flex items-center justify-start gap-1.5">
+        <div className="flex items-center justify-start gap-1.5" title={dateTimeLabel}>
             <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-            <span className="flex flex-col items-start leading-tight">
-                <span className="text-[11px] font-medium text-slate-500">{dateLabel}</span>
-                <span className="text-[10px] font-medium text-slate-400">{timeLabel}</span>
-            </span>
+            <span className="text-[11px] font-medium text-slate-500">{dateLabel}</span>
         </div>
     )
 }
@@ -527,9 +524,6 @@ export function ProjectsBoardRows({
                                                 <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
                                                 <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
                                                     <span className="break-words">{project.serviceLabel}</span>
-                                                    <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-emerald-600">
-                                                        {format(new Date(project.createdAt), "MMM yyyy")}
-                                                    </span>
                                                     {projectStatus !== "Active" && (
                                                         <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
                                                             {statusBadge.icon}
@@ -586,9 +580,6 @@ export function ProjectsBoardRows({
                                             <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
                                             <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
                                                 <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
-                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0 uppercase tracking-tighter">
-                                                    {format(new Date(project.createdAt), "MMM yyyy")}
-                                                </span>
                                                 {projectStatus !== "Active" && (
                                                     <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
                                                         {statusBadge.icon}
@@ -1107,57 +1098,64 @@ export function ProjectsBoardRows({
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                    {/* Projects Card */}
-                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-inner">
-                                <Layers className="h-5 w-5" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100 shadow-inner">
+                                <Layers className="h-4 w-4" />
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Inventory</span>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">{totals.count} Projects</p>
-                            <div className="flex items-center gap-2">
-                                <span className="flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                                    <Zap className="h-3 w-3" />
-                                    {oneTimeCount} One-time
-                                </span>
-                                <span className="flex items-center gap-1.5 rounded-lg border border-violet-100 bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">
-                                    <RefreshCcw className="h-3 w-3" />
-                                    {monthlyCount} Monthly
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Revenue Card */}
-                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
-                                <Wallet className="h-5 w-5" />
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Total Value</span>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">
-                                {currencyFormatter.format(totals.totalAmount)} <span className="text-sm font-medium text-slate-400 uppercase tracking-tighter ml-0.5">RON</span>
+                            <p className="flex items-baseline gap-1.5 leading-none">
+                                <span className="text-lg font-bold tracking-tight text-slate-900">{totals.count}</span>
+                                <span className="text-[12px] font-semibold text-slate-500">Total</span>
                             </p>
-                            <p className="text-[11px] font-medium text-slate-500">Gross revenue for visible projects</p>
                         </div>
                     </div>
 
-                    {/* Effort Card */}
-                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-100 shadow-inner">
-                                <Timer className="h-5 w-5" />
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
+                                <Zap className="h-4 w-4" />
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">Logged Time</span>
+                            <p className="flex items-baseline gap-1.5 leading-none">
+                                <span className="text-lg font-bold tracking-tight text-slate-900">{oneTimeCount}</span>
+                                <span className="text-[12px] font-semibold text-slate-500">One-time</span>
+                            </p>
                         </div>
-                        <div className="space-y-1">
-                            <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none mb-1">{formatDuration(totals.totalSeconds)}</p>
-                            <p className="text-[11px] font-medium text-slate-500">Total accumulated effort</p>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600 border border-violet-100 shadow-inner">
+                                <RefreshCcw className="h-4 w-4" />
+                            </div>
+                            <p className="flex items-baseline gap-1.5 leading-none">
+                                <span className="text-lg font-bold tracking-tight text-slate-900">{monthlyCount}</span>
+                                <span className="text-[12px] font-semibold text-slate-500">Monthly</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
+                                <Wallet className="h-4 w-4" />
+                            </div>
+                            <p className="flex items-baseline gap-1.5 leading-none">
+                                <span className="text-lg font-bold tracking-tight text-slate-900">{currencyFormatter.format(totals.totalAmount)}</span>
+                                <span className="text-[12px] font-semibold text-slate-500">RON</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-100 shadow-inner">
+                                <Timer className="h-4 w-4" />
+                            </div>
+                            <p className="flex items-baseline gap-1.5 leading-none">
+                                <span className="text-lg font-bold tracking-tight text-slate-900">{formatDuration(totals.totalSeconds)}</span>
+                                <span className="text-[12px] font-semibold text-slate-500">Logged</span>
+                            </p>
                         </div>
                     </div>
                 </div>

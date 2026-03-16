@@ -632,14 +632,14 @@ export function RichTextEditor({
                             event.preventDefault()
                         }}
                         className={cn(
-                            "flex items-center gap-1 p-1.5",
+                            "flex items-center gap-1.5 p-1.5",
                             variant === "default" && "border-b bg-muted/20",
                             variant === "plain" &&
                                 mode === "panel" &&
                                 "border-b border-slate-200 bg-white/95",
                             variant === "plain" &&
                                 mode === "document" &&
-                                "mx-auto mt-2 mb-4 w-full max-w-4xl rounded-xl border border-slate-200/80 bg-white/92 p-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm"
+                                "mx-4 md:mx-auto mt-4 mb-6 w-full md:w-[calc(100%-2rem)] max-w-4xl rounded-xl border border-slate-200/80 bg-white/92 px-3 pt-2 pb-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm"
                         )}
                     >
                         <Toggle
@@ -851,7 +851,7 @@ export function RichTextEditor({
                         minHeightClassName
                     )}
                 >
-                    <div className={cn(mode === "document" && "mx-auto w-full max-w-4xl px-0 pb-8")}>
+                    <div className={cn(mode === "document" && "mx-auto w-full max-w-4xl px-6 pb-8")}>
                         <EditorContent editor={editor} />
                     </div>
                 </div>

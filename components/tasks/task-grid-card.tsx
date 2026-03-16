@@ -31,13 +31,35 @@ import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
 
 interface TaskGridCardProps {
-    task: any
+    task: TaskCardItem
     onOpen: (taskId: string) => void
     onComplete: (taskId: string) => void
-    renderMenu?: (task: any) => React.ReactNode
+    renderMenu?: (task: TaskCardItem) => React.ReactNode
     isSelected?: boolean
     onSelect?: (taskId: string) => void
     className?: string
+}
+
+type TaskCardService = {
+    isRecurring?: boolean | null
+    serviceName?: string | null
+}
+
+type TaskCardProject = {
+    name?: string | null
+    createdAt?: string | Date | null
+    site?: { domainName?: string | null } | null
+    services?: TaskCardService[] | null
+}
+
+type TaskCardItem = {
+    id: string
+    name?: string | null
+    status?: string | null
+    projectId?: string | null
+    urgency?: string | null
+    deadline?: string | Date | null
+    project?: TaskCardProject | null
 }
 
 function PriorityBadge({ urgency }: { urgency: string }) {
@@ -45,16 +67,16 @@ function PriorityBadge({ urgency }: { urgency: string }) {
 
     if (normalizedUrgency === "Urgent") {
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.1em] bg-rose-600 text-white shadow-sm ring-1 ring-rose-600">
-                <Zap className="h-3 w-3 fill-white" />
-                Urgent
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-[#F84444] text-white shadow-sm ring-1 ring-[#F84444]">
+                <AlertTriangle className="h-3.5 w-3.5 fill-white text-[#F84444]" />
+                URGENT
             </span>
         )
     }
     if (normalizedUrgency === "Idea") {
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.1em] bg-sky-50 text-sky-600 border border-sky-200">
-                <Lightbulb className="h-3 w-3" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-sky-50 text-sky-600 border border-sky-200">
+                <Lightbulb className="h-3.5 w-3.5" />
                 Idea
             </span>
         )
@@ -62,7 +84,7 @@ function PriorityBadge({ urgency }: { urgency: string }) {
     return null
 }
 
-function DeadlineBadge({ deadline }: { deadline: string | null | undefined }) {
+function DeadlineBadge({ deadline }: { deadline: string | Date | null | undefined }) {
     if (!deadline) return null
     const date = new Date(deadline)
     if (Number.isNaN(date.getTime())) return null
@@ -74,22 +96,22 @@ function DeadlineBadge({ deadline }: { deadline: string | null | undefined }) {
 
     if (overdue) {
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black tracking-[0.1em] bg-white text-rose-600 border-2 border-rose-500 shadow-sm">
-                <Clock className="h-3 w-3" />
-                {dueToday ? "Overdue Today" : label}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-[#FFF1F2] text-[#F84444] border border-[#FECDD3]">
+                <Clock className="h-3.5 w-3.5" />
+                {dueToday ? "TODAY" : label.toUpperCase()}
             </span>
         )
     }
 
     return (
         <span className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black tracking-[0.1em] border shadow-sm transition-all",
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border transition-all",
             dueToday
                 ? "bg-orange-500 text-white border-transparent"
                 : "bg-blue-50 text-blue-600 border-blue-200"
         )}>
-            {dueToday ? <CalendarClock className="h-3 w-3" /> : <CalendarIcon className="h-3 w-3" />}
-            {label}
+            {dueToday ? <CalendarClock className="h-3.5 w-3.5" /> : <CalendarIcon className="h-3.5 w-3.5" />}
+            {label.toUpperCase()}
         </span>
     )
 }
@@ -110,10 +132,17 @@ export function TaskGridCard({
 
     const domainName = task.project?.site?.domainName || task.project?.name || "No Project"
     const services = task.project?.services || []
-    const isRecurring = services.some((s: any) => s.isRecurring)
+    const isRecurring = services.some((s: TaskCardService) => s.isRecurring)
     const serviceName = services.length > 0
-        ? services.map((s: any) => s.serviceName).join(" + ")
+        ? services.map((s: TaskCardService) => s.serviceName).filter(Boolean).join(" + ")
         : null
+
+    const recurringMonthLabel = (() => {
+        if (!isRecurring || !task.project?.createdAt) return null
+        const createdDate = new Date(task.project.createdAt)
+        if (Number.isNaN(createdDate.getTime())) return null
+        return format(createdDate, "MMM yyyy")
+    })()
 
     const projectFullName = serviceName ? `${domainName} — ${serviceName}` : domainName
 
@@ -143,7 +172,7 @@ export function TaskGridCard({
                         "text-[14px] font-semibold leading-snug text-slate-900 line-clamp-2 flex-1",
                         task.status === "Completed" && "line-through opacity-50"
                     )}>
-                        {task.name}
+                        {task.name || "Untitled task"}
                     </h4>
 
                     {/* Options menu — always visible via ··· */}
@@ -180,7 +209,11 @@ export function TaskGridCard({
                                             toast.success("Timer resumed")
                                             return
                                         }
-                                        startTimer(task.projectId, task.id, task.name)
+                                        if (!task.projectId) {
+                                            toast.error("Task has no project")
+                                            return
+                                        }
+                                        startTimer(task.projectId, task.id, task.name || "Task")
                                         toast.success("Timer started")
                                     }}
                                     className="gap-2 text-sm font-medium cursor-pointer"
@@ -224,17 +257,24 @@ export function TaskGridCard({
                 </div>
 
                 {/* Project subtitle */}
-                <div className="flex items-center gap-1.5 min-w-0 -mt-0.5">
+                <div className="flex items-start gap-1.5 min-w-0 -mt-0.5">
                     {isRecurring
                         ? <RefreshCcw className="h-3.5 w-3.5 text-violet-500 shrink-0" />
                         : <Zap className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     }
-                    <p className="text-[12px] font-bold text-slate-600 truncate tracking-tight">{projectFullName}</p>
+                    <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+                        <p className="text-[12px] font-bold text-slate-600 tracking-tight leading-tight break-words">{projectFullName}</p>
+                        {recurringMonthLabel ? (
+                            <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-blue-600">
+                                {recurringMonthLabel}
+                            </span>
+                        ) : null}
+                    </div>
                 </div>
 
                 {/* Badges: priority + deadline */}
                 <div className="flex flex-wrap items-center gap-1.5">
-                    <PriorityBadge urgency={task.urgency} />
+                    <PriorityBadge urgency={task.urgency || "Normal"} />
                     <DeadlineBadge deadline={task.deadline} />
                 </div>
             </div>

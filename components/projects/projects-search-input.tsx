@@ -1,13 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
 import { Search, X } from "lucide-react"
 
 export function ProjectsSearchInput() {
     const router = useRouter()
+    const pathname = usePathname()
     const searchParams = useSearchParams()
 
     const [searchTerm, setSearchTerm] = React.useState(searchParams.get("q") || "")
@@ -15,10 +16,8 @@ export function ProjectsSearchInput() {
 
     React.useEffect(() => {
         const urlQ = searchParams.get("q") || ""
-        if (urlQ !== searchTerm) {
-            setSearchTerm(urlQ)
-        }
-    }, [searchParams, searchTerm])
+        setSearchTerm((current) => (current === urlQ ? current : urlQ))
+    }, [searchParams])
 
     React.useEffect(() => {
         const params = new URLSearchParams(searchParams.toString())
@@ -31,9 +30,10 @@ export function ProjectsSearchInput() {
                 params.delete("q")
             }
             params.delete("page")
-            router.replace(`/projects?${params.toString()}`)
+            const queryString = params.toString()
+            router.replace(queryString ? `${pathname}?${queryString}` : pathname)
         }
-    }, [debouncedSearch, router, searchParams])
+    }, [debouncedSearch, pathname, router, searchParams])
 
     return (
         <div className="relative h-11 w-full">
@@ -58,4 +58,3 @@ export function ProjectsSearchInput() {
         </div>
     )
 }
-

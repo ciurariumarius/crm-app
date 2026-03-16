@@ -1,19 +1,8 @@
 import prisma from "@/lib/prisma"
 import Link from "next/link"
 import {
-    CalendarDays,
     ChevronDown,
     SlidersHorizontal,
-    ArrowUpDown,
-    X,
-    LayoutGrid,
-    Play,
-    Circle,
-    CheckCheck,
-    XCircle,
-    Wallet,
-    CheckCircle2,
-    AlertCircle,
 } from "lucide-react"
 import {
     endOfMonth,
@@ -31,7 +20,7 @@ import { requireTenantContext } from "@/lib/tenant"
 import { Prisma } from "@prisma/client"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
-import { PartnerFilterCombobox } from "@/components/projects/partner-filter-combobox"
+import { ProjectsFiltersToolbar } from "@/components/projects/projects-filters-toolbar"
 import { ProjectsSearchInput } from "@/components/projects/projects-search-input"
 import {
     DropdownMenu,
@@ -59,20 +48,6 @@ const paymentOptions = [
     { label: "All", value: "All" },
     { label: "Paid", value: "Paid" },
     { label: "Unpaid", value: "Unpaid" },
-]
-
-const recurringOptions = [
-    { label: "All", value: "All" },
-    { label: "Monthly", value: "Recurring" },
-    { label: "One-time", value: "OneTime" },
-]
-
-const periodOptions = [
-    { label: "All Time", value: "all_time" },
-    { label: "This Month", value: "this_month" },
-    { label: "Last Month", value: "last_month" },
-    { label: "This Year", value: "this_year" },
-    { label: "Last Year", value: "last_year" },
 ]
 
 const sortOptions = [
@@ -253,11 +228,6 @@ export default async function ProjectsPage({
     ])
 
     const partnersList = partnersFullRaw.map((partner) => ({ id: partner.id, name: partner.name }))
-    const filteredPartner = partnersList.find((partner) => partner.id === partnerId)
-    const selectedPeriodLabel = periodOptions.find((option) => option.value === period)?.label || "All Time"
-    const selectedPaymentLabel = paymentOptions.find((option) => option.value === payment)?.label || "All"
-    const selectedRecurringLabel = recurringOptions.find((option) => option.value === recurring)?.label || "All"
-    const selectedSortLabel = sortOptions.find((option) => option.value === sort)?.label || sortOptions[0].label
     const boardSort = resolveBoardSort(sort)
 
     const projects = projectsRaw.map((project) => {
@@ -279,13 +249,6 @@ export default async function ProjectsPage({
     const projectsForClient = JSON.parse(JSON.stringify(projects))
     const partnersForClient = JSON.parse(JSON.stringify(partnersFullRaw))
     const servicesForClient = JSON.parse(JSON.stringify(servicesRaw))
-    const projectStatusCounts = projects.reduce(
-        (acc, project) => {
-            acc[project.status] += 1
-            return acc
-        },
-        { Active: 0, Paused: 0, Completed: 0, Closed: 0 } as Record<"Active" | "Paused" | "Completed" | "Closed", number>
-    )
 
     const totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalProjects / perPage)) : 1
     const prevPage = shouldPaginate && page > 1 ? page - 1 : null
@@ -331,25 +294,6 @@ export default async function ProjectsPage({
 
         return `/projects?${next.toString()}`
     }
-
-    const activeFilters: { key: string; label: string; href: string }[] = []
-    if (q) activeFilters.push({ key: "q", label: `Search: ${q}`, href: buildHref({ q: null, page: "1" }) })
-    if (queryStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${queryStatus}`, href: buildHref({ status: "Active", page: "1" }) })
-    if (payment !== "All") activeFilters.push({ key: "payment", label: `Payment: ${selectedPaymentLabel}`, href: buildHref({ payment: "All", page: "1" }) })
-    if (recurring !== "All") activeFilters.push({ key: "recurring", label: `Type: ${selectedRecurringLabel}`, href: buildHref({ recurring: "All", page: "1" }) })
-    if (partnerId) activeFilters.push({ key: "partnerId", label: `Partner: ${filteredPartner?.name || "Selected"}`, href: buildHref({ partnerId: null, page: "1" }) })
-    if (period !== "all_time") activeFilters.push({ key: "period", label: `Period: ${selectedPeriodLabel}`, href: buildHref({ period: "all_time", page: "1" }) })
-    const clearAllHref = buildHref({
-        q: null,
-        status: "Active",
-        payment: "All",
-        recurring: "All",
-        sort: DEFAULT_SORT,
-        partnerId: null,
-        period: "all_time",
-        page: "1",
-    })
-    const resultsSummary = `${totalProjects} results`
 
     const user = await prisma.user.findFirst({
         where: { id: session.userId, tenantId: session.tenantId },
@@ -481,183 +425,17 @@ export default async function ProjectsPage({
                         </div>
                     </div>
 
-                    <div className={cn(
-                        "z-20 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 md:px-4 md:py-4 shadow-sm backdrop-blur-[6px]",
-                        mobileFiltersOpen ? "block" : "hidden",
-                        "md:sticky md:top-3 md:block"
-                    )}>
-                        <div className="flex flex-col gap-3">
-                            <div className="flex flex-wrap items-center justify-between gap-4">
-                                <div className="flex flex-wrap items-center gap-4">
-                                    <div className={cn(mobileFiltersOpen && "hidden md:block")}>
-                                        <div className="inline-flex h-11 items-center rounded-2xl border border-slate-300/40 bg-slate-200/50 p-1 shadow-inner">
-                                            {[
-                                                { label: "All", value: "All", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
-                                                { label: "Active", value: "Active", icon: <Play className="h-3.5 w-3.5 fill-current" /> },
-                                                { label: "Paused", value: "Paused", icon: <Circle className="h-3.5 w-3.5" /> },
-                                                { label: "Done", value: "Completed", icon: <CheckCheck className="h-3.5 w-3.5" /> },
-                                                { label: "Closed", value: "Closed", icon: <XCircle className="h-3.5 w-3.5" /> },
-                                            ].map((option) => (
-                                                <Link
-                                                    key={option.value}
-                                                    href={buildHref({ status: option.value, page: "1" })}
-                                                    className={cn(
-                                                        "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all",
-                                                        queryStatus === option.value
-                                                            ? "bg-white text-blue-700 shadow-md ring-1 ring-black/[0.05] scale-[1.02]"
-                                                            : "text-slate-600 hover:text-slate-900"
-                                                    )}
-                                                >
-                                                    {option.icon}
-                                                    {option.label}
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className={cn(mobileFiltersOpen && "hidden md:block")}>
-                                        <div className="inline-flex h-11 items-center rounded-2xl border border-slate-300/40 bg-slate-200/50 p-1 shadow-inner">
-                                            {[
-                                                { label: "All", value: "All", icon: <Wallet className="h-3.5 w-3.5" /> },
-                                                { label: "Paid", value: "Paid", icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
-                                                { label: "Unpaid", value: "Unpaid", icon: <AlertCircle className="h-3.5 w-3.5" /> },
-                                            ].map((option) => (
-                                                <Link
-                                                    key={option.value}
-                                                    href={buildHref({ payment: option.value, page: "1" })}
-                                                    className={cn(
-                                                        "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all",
-                                                        payment === option.value
-                                                            ? "bg-white text-blue-700 shadow-md ring-1 ring-black/[0.05] scale-[1.02]"
-                                                            : "text-slate-600 hover:text-slate-900"
-                                                    )}
-                                                >
-                                                    {option.icon}
-                                                    {option.label}
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button
-                                                    type="button"
-                                                    className={cn(
-                                                        "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-extrabold transition-all shadow-sm",
-                                                        recurring !== "All"
-                                                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
-                                                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
-                                                    )}
-                                                >
-                                                    <span>{selectedRecurringLabel}</span>
-                                                    <ChevronDown className="h-4 w-4 opacity-70" />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="start" className="w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                                                {recurringOptions.map((option) => (
-                                                    <DropdownMenuItem key={option.value} asChild className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-700">
-                                                        <Link href={buildHref({ recurring: option.value, page: "1" })}>
-                                                            {option.label}
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                ))}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <PartnerFilterCombobox partners={partnersList} currentPartnerId={partnerId} />
-
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button
-                                                    type="button"
-                                                    className={cn(
-                                                        "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-extrabold transition-all shadow-sm",
-                                                        period !== "all_time"
-                                                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
-                                                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
-                                                    )}
-                                                >
-                                                    <CalendarDays className={cn("h-4 w-4", period !== "all_time" ? "text-blue-600" : "text-slate-400")} />
-                                                    <span>{selectedPeriodLabel}</span>
-                                                    <ChevronDown className="h-4 w-4 opacity-70" />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="start" className="w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                                                {periodOptions.map((option) => (
-                                                    <DropdownMenuItem key={option.value} asChild className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-700">
-                                                        <Link href={buildHref({ period: option.value, page: "1" })}>
-                                                            {option.label}
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                ))}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-
-                                        <div className="hidden h-7 w-px bg-slate-200 sm:block mx-1" />
-
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button
-                                                    type="button"
-                                                    title={`Sort: ${selectedSortLabel}`}
-                                                    aria-label={`Sort: ${selectedSortLabel}`}
-                                                    className={cn(
-                                                        "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all shadow-sm",
-                                                        sort !== DEFAULT_SORT
-                                                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
-                                                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
-                                                    )}
-                                                >
-                                                    <ArrowUpDown className={cn("h-4 w-4", sort !== DEFAULT_SORT ? "text-blue-600" : "text-slate-400")} />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                                                {sortOptions.map((option) => (
-                                                    <DropdownMenuItem key={option.value} asChild className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-700">
-                                                        <Link href={buildHref({ sort: option.value, page: "1" })}>
-                                                            {option.label}
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                ))}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-
-                                        <div className="hidden h-7 w-px bg-slate-200 sm:block mx-1" />
-
-                                        <div className="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-50 px-3 text-[11px] font-extrabold text-slate-500 ring-1 ring-slate-200/50" title={resultsSummary}>
-                                            <SlidersHorizontal className="h-3.5 w-3.5 text-blue-500" />
-                                            <span>{totalProjects}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {activeFilters.length > 0 && !mobileFiltersOpen && (
-                                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100/50 pt-3">
-                                    {activeFilters.map((filter) => (
-                                        <Link
-                                            key={filter.key}
-                                            href={filter.href}
-                                            className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50/50 pl-2 pr-1.5 text-[10px] font-extrabold text-blue-700 hover:bg-blue-100 transition-colors"
-                                            title={`Remove ${filter.label}`}
-                                        >
-                                            <span className="max-w-[120px] truncate">{filter.label}</span>
-                                            <X className="h-2.5 w-2.5 opacity-60" />
-                                        </Link>
-                                    ))}
-                                    <Link
-                                        href={clearAllHref}
-                                        className="inline-flex h-7 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-extrabold text-slate-600 hover:bg-slate-50"
-                                    >
-                                        Clear all
-                                    </Link>
-                                </div>
-                            )}
-                        </div>
+                    <div className={cn(mobileFiltersOpen ? "block" : "hidden", "md:block")}>
+                        <ProjectsFiltersToolbar
+                            partners={partnersList}
+                            currentStatus={queryStatus}
+                            currentPayment={payment}
+                            currentRecurring={recurring}
+                            currentPeriod={period}
+                            currentSort={sort}
+                            currentPartnerId={partnerId || "all"}
+                            totalProjects={totalProjects}
+                        />
                     </div>
                 </div>
 

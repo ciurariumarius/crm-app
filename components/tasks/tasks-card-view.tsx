@@ -8,7 +8,7 @@ import { normalizeTaskUrgency } from "@/lib/status"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight, Plus, Lightbulb, CalendarClock } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 import { TaskGridCard } from "./task-grid-card"
@@ -148,7 +148,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
 
     const getUrgencyIcon = (urgency: string) => {
         const normalizedUrgency = normalizeTaskUrgency(urgency)
-        if (normalizedUrgency === "Urgent") return <Zap className="h-3 w-3 fill-current" />
+        if (normalizedUrgency === "Urgent") return <AlertTriangle className="h-4 w-4 fill-[#F84444] text-white" />
         if (normalizedUrgency === "Idea") return <Lightbulb className="h-3 w-3" />
         return <ArrowRight className="h-3 w-3" strokeWidth={3} />
     }
@@ -276,11 +276,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                 <div className="w-auto lg:w-32 flex lg:justify-center shrink-0">
                                     {task.deadline ? (
                                         <div className={cn(
-                                            "flex items-center gap-1.5 text-xs font-semibold tracking-tight",
-                                            isOverdue ? "text-rose-600" : isDueToday ? "text-orange-600 font-bold" : "text-blue-600"
+                                            "flex items-center gap-1.5 text-xs font-semibold tracking-tight uppercase",
+                                            isOverdue ? "text-[#F84444]" : "text-blue-600"
                                         )}>
                                             {isOverdue ? <Clock className="w-3.5 h-3.5" /> : isDueToday ? <CalendarClock className="w-4 h-4" /> : <Target className="w-3.5 h-3.5" />}
-                                            {isOverdue && isDueToday ? "Overdue" : isDueToday ? "Today" : format(new Date(task.deadline), "MMM dd")}
+                                            {isDueToday ? "TODAY" : format(new Date(task.deadline), "dd MMM")}
                                         </div>
                                     ) : (
                                         <div className="text-xs font-medium text-muted-foreground/30">-</div>
@@ -410,11 +410,15 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 task={selectedTask}
                 open={!!selectedTask}
                 onOpenChange={(open) => !open && setSelectedTask(null)}
+                onOpenProject={(project) => {
+                    setSelectedTask(null)
+                    setSelectedProject(project)
+                }}
             />
 
             {/* Project Details Sheet */}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <SheetContent side="right" className="w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-background overflow-hidden sm:w-full sm:max-w-[900px]">
+                <SheetContent side="right" className="w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-background overflow-hidden sm:w-full sm:max-w-[760px]">
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}

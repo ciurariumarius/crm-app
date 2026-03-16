@@ -5,14 +5,11 @@ import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
     Circle,
-    CheckCheck,
-    LayoutGrid,
     Play,
+    CheckCircle2,
     AlertTriangle,
     Lightbulb,
     CalendarClock,
-    X,
-    SlidersHorizontal,
     Briefcase,
     Users,
     ChevronDown,
@@ -48,7 +45,9 @@ export function TasksToolbar({
     currentStatus,
     currentUrgency,
     currentOverdue,
+    currentDueToday,
     currentSort,
+    currentCols,
     currentProject,
     currentPartner,
     totalTasks,
@@ -59,7 +58,9 @@ export function TasksToolbar({
     currentStatus: string
     currentUrgency: string
     currentOverdue: boolean
+    currentDueToday: boolean
     currentSort: string
+    currentCols: number
     currentProject: string
     currentPartner: string
     totalTasks: number
@@ -75,6 +76,7 @@ export function TasksToolbar({
             const isDefaultStatus = key === "status" && value === "Active"
             const isDefaultUrgency = key === "urgency" && value === "all"
             const isDefaultSort = key === "sort" && value === "newest"
+            const isDefaultCols = key === "cols" && value === "3"
             const isDefaultProject = key === "projectId" && value === "all"
             const isDefaultPartner = key === "partnerId" && value === "all"
 
@@ -83,6 +85,7 @@ export function TasksToolbar({
                 isDefaultStatus ||
                 isDefaultUrgency ||
                 isDefaultSort ||
+                isDefaultCols ||
                 isDefaultProject ||
                 isDefaultPartner
             ) {
@@ -102,83 +105,115 @@ export function TasksToolbar({
         status: "Active",
         urgency: "all",
         overdue: null,
+        dueToday: null,
         sort: "newest",
         projectId: null,
         partnerId: null,
     })
 
-    const selectedProject = projects.find(p => p.id === currentProject)
-    const selectedPartner = partners.find(p => p.id === currentPartner)
-
-    const resultsSummaryParts = [`${totalTasks} results`]
-    if (currentOverdue) resultsSummaryParts.push("Overdue")
-    if (selectedProject) resultsSummaryParts.push(`Project: ${selectedProject.name}`)
-    if (selectedPartner) resultsSummaryParts.push(`Partner: ${selectedPartner.name}`)
-    const resultsSummary = resultsSummaryParts.join(" · ")
-
+    const selectedProject = projects.find((project) => project.id === currentProject)
+    const selectedPartner = partners.find((partner) => partner.id === currentPartner)
+    const selectedSort = SORT_OPTIONS.find((option) => option.value === currentSort)
     const activeFilters: { key: string; label: string; href: string }[] = []
-    if (currentStatus && currentStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${currentStatus}`, href: buildHref({ status: "Active" }) })
-    if (currentUrgency && currentUrgency !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${currentUrgency}`, href: buildHref({ urgency: "all" }) })
+    if (currentStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${currentStatus}`, href: buildHref({ status: "Active" }) })
+    if (currentUrgency !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${currentUrgency}`, href: buildHref({ urgency: "all" }) })
     if (currentOverdue) activeFilters.push({ key: "overdue", label: "Overdue", href: buildHref({ overdue: null }) })
-    if (currentProject && currentProject !== "all" && selectedProject) activeFilters.push({ key: "projectId", label: `Project: ${selectedProject.name}`, href: buildHref({ projectId: null }) })
-    if (currentPartner && currentPartner !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: null }) })
+    if (currentDueToday) activeFilters.push({ key: "dueToday", label: "Due today", href: buildHref({ dueToday: null }) })
+    if (currentProject !== "all" && selectedProject) activeFilters.push({ key: "projectId", label: `Project: ${selectedProject.name}`, href: buildHref({ projectId: "all" }) })
+    if (currentPartner !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: "all" }) })
+    if (currentSort !== "newest" && selectedSort) activeFilters.push({ key: "sort", label: `Sort: ${selectedSort.label}`, href: buildHref({ sort: "newest" }) })
 
     return (
-        <div className="md:sticky md:top-3 z-20 rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-4 shadow-sm backdrop-blur-md">
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-wrap items-center justify-between gap-6">
-                    <div className="flex flex-wrap items-center gap-6">
-                        <div className={cn(mobileSecondaryOnly && "hidden")}>
-                            <div className="inline-flex h-11 items-center rounded-2xl border border-slate-300/40 bg-slate-200/50 p-1 shadow-inner">
+        <div className="space-y-3">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <div className="overflow-x-auto hidescrollbar">
+                    <div className="inline-flex min-w-max items-center gap-4 md:flex md:w-full md:min-w-0 md:items-center md:gap-6">
+                        <div className={cn("inline-flex items-center gap-4 md:gap-5", mobileSecondaryOnly && "hidden")}>
+                            <div className="inline-flex h-10 items-center gap-1">
                                 {[
-                                    { label: "All", value: "All", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
-                                    { label: "Active", value: "Active", icon: <Play className="h-3.5 w-3.5 fill-current" /> },
-                                    { label: "Completed", value: "Completed", icon: <CheckCheck className="h-3.5 w-3.5" /> },
+                                    {
+                                        label: "All",
+                                        value: "All",
+                                        icon: <Circle className="h-2.5 w-2.5 fill-current" />,
+                                        activeClass: "bg-slate-100 text-slate-700",
+                                    },
+                                    {
+                                        label: "Active",
+                                        value: "Active",
+                                        icon: <Play className="h-2.5 w-2.5 fill-current" />,
+                                        activeClass: "bg-blue-100 text-blue-700",
+                                    },
+                                    {
+                                        label: "Completed",
+                                        value: "Completed",
+                                        icon: <CheckCircle2 className="h-3 w-3" />,
+                                        activeClass: "bg-emerald-100 text-emerald-700",
+                                    },
                                 ].map((option) => (
-                                    <Link
-                                        key={option.value}
-                                        href={buildHref({ status: option.value })}
-                                        className={cn(
-                                            "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all",
-                                            currentStatus === option.value
-                                                ? "bg-white text-blue-700 shadow-md ring-1 ring-black/[0.05] scale-[1.02]"
-                                                : "text-slate-600 hover:text-slate-900"
-                                        )}
-                                    >
-                                        {option.icon}
-                                        {option.label}
-                                    </Link>
+                                        <Link
+                                            key={option.value}
+                                            href={buildHref({ status: option.value })}
+                                            className={cn(
+                                                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                                                currentStatus === option.value
+                                                    ? option.activeClass
+                                                    : "text-slate-600 hover:text-slate-800"
+                                            )}
+                                        >
+                                            {option.icon}
+                                            {option.label}
+                                        </Link>
                                 ))}
+                            </div>
+
+                            <div className="h-6 w-px bg-slate-200 md:mx-1" />
+
+                            <div className="inline-flex h-10 items-center gap-1">
+                                    {[
+                                        { label: "All", value: "all", icon: <Circle className="h-3 w-3" /> },
+                                        { label: "Urgent", value: "Urgent", icon: <AlertTriangle className="h-3 w-3 text-rose-500" /> },
+                                        { label: "Normal", value: "Normal", icon: <Circle className="h-3 w-3 fill-current" /> },
+                                        { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3 w-3 text-amber-500" /> },
+                                    ].map((option) => (
+                                        <Link
+                                            key={option.value}
+                                            href={buildHref({ urgency: option.value })}
+                                            className={cn(
+                                                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                                                currentUrgency === option.value
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : "text-slate-600 hover:text-slate-800"
+                                            )}
+                                        >
+                                            {option.icon}
+                                            {option.label}
+                                        </Link>
+                                    ))}
                             </div>
                         </div>
 
-                        <div className={cn(mobileSecondaryOnly && "hidden")}>
-                            <div className="inline-flex h-11 items-center rounded-2xl border border-slate-300/40 bg-slate-200/50 p-1 shadow-inner">
-                                {[
-                                    { label: "All", value: "all", icon: <Circle className="h-3.5 w-3.5" /> },
-                                    { label: "Urgent", value: "Urgent", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
-                                    { label: "Normal", value: "Normal", icon: <Circle className="h-3.5 w-3.5 fill-current" /> },
-                                    { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3.5 w-3.5" /> },
-                                ].map((option) => (
-                                    <Link
-                                        key={option.value}
-                                        href={buildHref({ urgency: option.value })}
-                                        className={cn(
-                                            "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all",
-                                            currentUrgency === option.value
-                                                ? "bg-white text-blue-700 shadow-md ring-1 ring-black/[0.05] scale-[1.02]"
-                                                : "text-slate-600 hover:text-slate-900"
-                                        )}
-                                    >
-                                        {option.icon}
-                                        {option.label}
-                                    </Link>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                        <div className={cn("h-6 w-px bg-slate-200 md:mx-1", mobileSecondaryOnly && "hidden")} />
 
-                    <div className="flex items-center gap-2">
+                        <Link
+                            href={buildHref({ overdue: currentOverdue ? null : "1" })}
+                            className={cn(
+                                "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-colors",
+                                currentOverdue
+                                    ? "border-rose-300 bg-rose-50 text-rose-700 ring-1 ring-rose-200"
+                                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                            )}
+                        >
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            <span>Overdue</span>
+                            {currentOverdue ? (
+                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-200/80 text-rose-700">
+                                    <Check className="h-3 w-3" />
+                                </span>
+                            ) : null}
+                        </Link>
+
+                        <div className="h-6 w-px bg-slate-200 md:mx-1" />
+
                         <ProjectCombobox
                             projects={projects}
                             currentProject={currentProject}
@@ -199,7 +234,7 @@ export function TasksToolbar({
                             }}
                         />
 
-                        <div className="hidden h-7 w-px bg-slate-200 sm:block mx-1" />
+                        <div className="h-6 w-px bg-slate-200 md:ml-auto md:mr-1" />
 
                         <SortCombobox
                             currentSort={currentSort}
@@ -208,51 +243,66 @@ export function TasksToolbar({
                             }}
                         />
 
-                        <Link
-                            href={buildHref({ overdue: currentOverdue ? null : "1" })}
-                            className={cn(
-                                "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-extrabold transition-all shadow-sm",
-                                currentOverdue
-                                    ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
-                                    : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
-                            )}
-                            title={currentOverdue ? "Show all deadlines" : "Show only overdue tasks"}
-                        >
-                            <CalendarClock className={cn("h-4 w-4", currentOverdue ? "text-blue-600" : "text-slate-400")} />
-                            <span>Overdue</span>
-                        </Link>
-
-                        <div className="hidden h-7 w-px bg-slate-200 sm:block mx-1" />
-
-                        <div className="h-9 inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 text-[11px] font-extrabold text-slate-500 ring-1 ring-slate-200/50" title={resultsSummary}>
-                            <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600" />
-                            <span>{totalTasks}</span>
-                        </div>
+                        <ColumnsToggle
+                            currentCols={currentCols}
+                            onSelect={(value) => {
+                                pushWithOverrides({ cols: String(value) })
+                            }}
+                        />
                     </div>
                 </div>
+            </div>
 
+            <div className="px-1 flex flex-wrap items-center gap-2">
+                <p className="text-[15px] font-medium text-slate-600">{totalTasks} Results found</p>
+                {activeFilters.length > 0 && <span className="text-slate-300">|</span>}
+                {activeFilters.map((filter) => (
+                    <Link
+                        key={filter.key}
+                        href={filter.href}
+                        className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                        <span>{filter.label}</span>
+                    </Link>
+                ))}
                 {activeFilters.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                        {activeFilters.map((filter) => (
-                            <Link
-                                key={filter.key}
-                                href={filter.href}
-                                className="group inline-flex h-7 items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/50 pl-2 pr-1.5 text-[10px] font-extrabold text-blue-700 transition-all hover:bg-blue-100"
-                                title={`Remove ${filter.label}`}
-                            >
-                                <span className="max-w-[150px] truncate">{filter.label}</span>
-                                <X className="h-2.5 w-2.5 opacity-60" />
-                            </Link>
-                        ))}
-                        <Link
-                            href={clearAllHref}
-                            className="inline-flex h-7 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-extrabold text-slate-600 shadow-sm transition-all hover:bg-slate-50"
-                        >
-                            Clear all
-                        </Link>
-                    </div>
+                    <Link
+                        href={clearAllHref}
+                        className="inline-flex h-7 items-center rounded-md border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                        Clear all
+                    </Link>
                 )}
             </div>
+        </div>
+    )
+}
+
+function ColumnsToggle({
+    currentCols,
+    onSelect,
+}: {
+    currentCols: number
+    onSelect: (value: 3 | 4) => void
+}) {
+    return (
+        <div className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white p-1">
+            {[3, 4].map((col) => (
+                <button
+                    key={col}
+                    type="button"
+                    title={`${col} columns`}
+                    onClick={() => onSelect(col as 3 | 4)}
+                    className={cn(
+                        "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs font-semibold transition-colors",
+                        currentCols === col
+                            ? "bg-slate-100 text-slate-900"
+                            : "text-slate-500 hover:text-slate-700"
+                    )}
+                >
+                    {col}
+                </button>
+            ))}
         </div>
     )
 }
@@ -276,10 +326,10 @@ function SortCombobox({
                     title={`Sort: ${selectedSort.label}`}
                     aria-label={`Sort: ${selectedSort.label}`}
                     className={cn(
-                        "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all shadow-sm",
+                        "inline-flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
-                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                     )}
                 >
                     <ArrowUpDown className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
@@ -330,10 +380,10 @@ function ProjectCombobox({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-extrabold transition-all shadow-sm",
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
-                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                     )}
                 >
                     <Briefcase className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
@@ -399,10 +449,10 @@ function PartnerCombobox({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-extrabold transition-all shadow-sm",
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-blue-100/50"
-                            : "border-slate-200/80 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                     )}
                 >
                     <Users className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />

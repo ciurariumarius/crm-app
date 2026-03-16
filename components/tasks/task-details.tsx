@@ -31,11 +31,11 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus, ArrowUpRight } from "lucide-react"
 import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
-import { cn, formatRelativeDate } from "@/lib/utils"
+import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
 import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
 import { useRouter } from "next/navigation"
@@ -44,6 +44,7 @@ interface TaskDetailsProps {
     task: any
     open: boolean
     onOpenChange: (open: boolean) => void
+    onOpenProject?: (project: any) => void
 }
 
 const TASK_NOTES_TEMPLATE = [
@@ -74,7 +75,7 @@ function formatDurationLabel(totalSeconds: number) {
     return `${seconds}s`
 }
 
-export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
+export function TaskDetails({ task, open, onOpenChange, onOpenProject }: TaskDetailsProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const router = useRouter()
     const [loading, setLoading] = React.useState(false)
@@ -214,6 +215,9 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
         return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime)
     })
     const updatedLabel = task.updatedAt ? formatRelativeDate(task.updatedAt) : "—"
+    const projectLabel = task.project
+        ? formatProjectName(task.project)
+        : task.project?.site?.domainName || task.project?.name || "Project"
 
     const handleTaskTimerPrimaryAction = () => {
         if (isTaskRunning) {
@@ -696,6 +700,25 @@ export function TaskDetails({ task, open, onOpenChange }: TaskDetailsProps) {
                         <div className="flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-3 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                             <span># Task ID: {task.id.slice(0, 8)}</span>
                             <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                                {task.projectId ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!task.projectId || !onOpenProject) return
+                                            onOpenProject({
+                                                ...(task.project || {}),
+                                                id: task.projectId,
+                                                tasks: task.project?.tasks || [],
+                                                timeLogs: task.project?.timeLogs || [],
+                                            })
+                                        }}
+                                        className="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-800 hover:underline"
+                                        title={`Open project: ${projectLabel}`}
+                                    >
+                                        <span className="break-words text-left">Project: {projectLabel}</span>
+                                        <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                                    </button>
+                                ) : null}
                                 <span className="inline-flex items-center gap-1.5">
                                     Created: {formatRelativeDate(task.createdAt)}
                                 </span>
