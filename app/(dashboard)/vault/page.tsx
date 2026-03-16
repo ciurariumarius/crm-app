@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
 import { Card } from "@/components/ui/card"
 import { requireTenantContext } from "@/lib/tenant"
+import { formatProjectName } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -41,9 +42,18 @@ export default async function VaultPage({
                 include: {
                     projects: {
                         select: {
+                            id: true,
+                            name: true,
+                            createdAt: true,
                             status: true,
                             paymentStatus: true,
-                            currentFee: true
+                            currentFee: true,
+                            services: {
+                                select: {
+                                    serviceName: true,
+                                    isRecurring: true,
+                                },
+                            },
                         }
                     }
                 }
@@ -53,6 +63,32 @@ export default async function VaultPage({
     })
 
     let partnersSerialized = JSON.parse(JSON.stringify(partnersRaw))
+    partnersSerialized = partnersSerialized.map((partner: any) => {
+        const allProjects = partner.sites?.flatMap((site: any) =>
+            (site.projects || []).map((project: any) => ({
+                ...project,
+                siteDomainName: site.domainName,
+            }))
+        ) || []
+
+        const unpaidProjects = allProjects
+            .filter((project: any) => project.paymentStatus === "Unpaid")
+            .map((project: any) => ({
+                id: project.id,
+                name: formatProjectName({
+                    site: { domainName: project.siteDomainName },
+                    services: project.services,
+                    createdAt: project.createdAt,
+                    name: project.name,
+                }),
+                amount: Number(project.currentFee || 0),
+            }))
+
+        return {
+            ...partner,
+            unpaidProjects,
+        }
+    })
 
     // Calculate revenue for analysis
     const analysisData = partnersSerialized.map((p: any) => {
@@ -101,7 +137,7 @@ export default async function VaultPage({
 
     const getSortLink = (newSortBy: string) => {
         const newOrder = sortBy === newSortBy && order === "asc" ? "desc" : "asc"
-        return `/vault?tab=partners&sortBy=${newSortBy}&order=${newOrder}`
+        return `/partners?tab=partners&sortBy=${newSortBy}&order=${newOrder}`
     }
 
     return (
@@ -117,7 +153,7 @@ export default async function VaultPage({
                     <div className="flex items-center gap-2">
                         <div className="hidden md:flex items-center gap-2 mr-2">
                             <Link
-                                href={`/vault?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
+                                href={`/partners?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
                                 className={cn(
                                     "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-semibold uppercase tracking-wide",
                                     sortBy === "name"
@@ -130,7 +166,7 @@ export default async function VaultPage({
                             </Link>
 
                             <Link
-                                href={`/vault?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
+                                href={`/partners?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
                                 className={cn(
                                     "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-semibold uppercase tracking-wide"
                                 )}
@@ -145,7 +181,7 @@ export default async function VaultPage({
 
                 <div className="flex md:hidden items-center gap-2">
                     <Link
-                        href={`/vault?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
+                        href={`/partners?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
                         className={cn(
                             "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-semibold uppercase tracking-wide",
                             sortBy === "name"
@@ -158,7 +194,7 @@ export default async function VaultPage({
                     </Link>
 
                     <Link
-                        href={`/vault?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
+                        href={`/partners?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
                         className={cn(
                             "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-semibold uppercase tracking-wide"
                         )}

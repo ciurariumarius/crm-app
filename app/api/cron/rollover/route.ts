@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto'
 import prisma from '@/lib/prisma'
 import { cleanupExpiredRateLimits } from '@/lib/rate-limit'
 import { apiError, apiInternalError, apiMethodNotAllowed, apiOk } from '@/lib/api-response'
+import { formatProjectName } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +38,7 @@ async function rolloverProject(project: {
     siteId: string
     name: string | null
     currentFee: Prisma.Decimal | null
-    services: { id: string; serviceName: string; standardTasks: string }[]
+    services: { id: string; serviceName: string; standardTasks: string; isRecurring: boolean }[]
     site: { domainName: string }
 }, today: Date) {
     const period = currentPeriod(today)
@@ -96,10 +97,11 @@ async function rolloverProject(project: {
 
         const serviceIds = project.services.map((service) => service.id)
         const currentFee = project.currentFee ? Number(project.currentFee) : 0
-        const serviceNames = project.services.map((service) => service.serviceName).join(', ')
-        const month = today.toLocaleString('en-US', { month: 'short' })
-        const year = today.getFullYear()
-        const newProjectName = `${project.site.domainName} - ${serviceNames} - ${month} ${year}`
+        const newProjectName = formatProjectName({
+            siteName: project.site.domainName,
+            services: project.services,
+            createdAt: today,
+        })
 
         const allStandardTasks = project.services.flatMap((service) => {
             try {
@@ -184,6 +186,7 @@ export async function POST(request: Request) {
                         id: true,
                         serviceName: true,
                         standardTasks: true,
+                        isRecurring: true,
                     },
                 },
             },

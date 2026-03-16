@@ -15,6 +15,20 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/vault",
+        destination: "/partners",
+        permanent: true,
+      },
+      {
+        source: "/vault/sites",
+        destination: "/domains",
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {

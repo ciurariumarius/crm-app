@@ -1,39 +1,46 @@
 import prisma from "@/lib/prisma"
-import { Search as SearchIcon, ChevronLeft, ChevronRight } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { SitesTable } from "@/components/vault/sites-table"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { PageHeader } from "@/components/layout/page-header"
 import { requireTenantContext } from "@/lib/tenant"
+import { DomainsFilters } from "@/components/vault/domains-filters"
+import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
+
+const PAGE_SIZE = 50
 
 export default async function SitesPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; page?: string }>
+    searchParams: Promise<{ q?: string; partnerId?: string; page?: string }>
 }) {
     const session = await requireTenantContext()
-    const { q, page: pageStr } = await searchParams
+    const { q, partnerId, page: pageStr } = await searchParams
     const page = parseInt(pageStr || "1")
-    const pageSize = 10
-    const skip = (page - 1) * pageSize
+    const skip = (page - 1) * PAGE_SIZE
 
-    const where = q ? {
-        tenantId: session.tenantId,
-        OR: [
+    const where: any = { tenantId: session.tenantId }
+    
+    if (q) {
+        where.OR = [
             { domainName: { contains: q } },
             { partner: { name: { contains: q } } }
         ]
-    } : { tenantId: session.tenantId }
+    }
+    
+    if (partnerId && partnerId !== "all") {
+        where.partnerId = partnerId
+    }
 
     // Fetch sites with pagination
     const sitesPromise = prisma.site.findMany({
         where,
         skip,
-        take: pageSize,
+        take: PAGE_SIZE,
         include: {
             partner: true,
             _count: {
@@ -45,7 +52,7 @@ export default async function SitesPage({
 
     const totalSitesPromise = prisma.site.count({ where })
 
-    // Fetch partners for the "Add Site" dialog selection
+    // Fetch partners for filters and dialog
     const partnersPromise = prisma.partner.findMany({
         where: { tenantId: session.tenantId },
         select: { id: true, name: true },
@@ -58,76 +65,75 @@ export default async function SitesPage({
         partnersPromise
     ])
 
-    // Serialize for Client Component
-    const sites = JSON.parse(JSON.stringify(sitesRaw))
-    const totalPages = Math.ceil(totalSites / pageSize)
+    const totalPages = Math.ceil(totalSites / PAGE_SIZE)
+
+    const buildPageHref = (targetPage: number) => {
+        const next = new URLSearchParams()
+        if (q) next.set("q", q)
+        if (partnerId && partnerId !== "all") next.set("partnerId", partnerId)
+        next.set("page", String(targetPage))
+        return `/domains?${next.toString()}`
+    }
 
     return (
-        <div className="flex flex-col gap-6 pb-20">
-            <PageHeader title="Sites" actions={<CreateSiteDialog partners={partners as any} />} />
+        <div className="flex flex-col gap-8 pb-8">
+            <PageHeader title="Domains" actions={<CreateSiteDialog partners={partners as any} />} />
 
-            {/* Filters & Search - Modern Layout */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                    <SearchIcon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
-                    <form action="/vault/sites" method="GET">
-                        <Input
-                            name="q"
-                            placeholder="Search by domain, partner, ID..."
-                            className="pl-12 h-12 bg-card/50 border-none shadow-none text-base font-medium placeholder:font-normal"
-                            defaultValue={q}
-                        />
-                        <input type="hidden" name="page" value="1" />
-                    </form>
-                </div>
-            </div>
+            <DomainsFilters 
+                partners={partners} 
+                totalLogs={totalSites} 
+            />
 
-            <SitesTable sites={sites} />
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4">
-                    <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-[0.15em]">
-                        Showing page {page} of {totalPages}
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur-md transition-all">
+                <SitesTable sites={sitesRaw} />
+                
+                {/* Pagination Footer */}
+                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-4">
+                    <p className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
+                        Page {page} of {totalPages || 1}
                     </p>
+                    
                     <div className="flex items-center gap-2">
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             asChild={page > 1}
                             disabled={page <= 1}
-                            className="h-9 px-4 font-bold"
+                            className={cn(
+                                "h-8 w-8 p-0 rounded-lg border border-slate-200 bg-white shadow-sm transition-all active:scale-95",
+                                page <= 1 ? "opacity-40" : "hover:bg-slate-50 hover:text-blue-600"
+                            )}
                         >
                             {page > 1 ? (
-                                <Link href={`/vault/sites?page=${page - 1}${q ? `&q=${q}` : ""}`}>
-                                    <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                                <Link href={buildPageHref(page - 1)}>
+                                    <ChevronLeft className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className="flex items-center">
-                                    <ChevronLeft className="h-4 w-4 mr-1" /> Prev
-                                </span>
+                                <ChevronLeft className="h-4 w-4" />
                             )}
                         </Button>
+                        
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             asChild={page < totalPages}
                             disabled={page >= totalPages}
-                            className="h-9 px-4 font-bold"
+                            className={cn(
+                                "h-8 w-8 p-0 rounded-lg border border-slate-200 bg-white shadow-sm transition-all active:scale-95",
+                                page >= totalPages ? "opacity-40" : "hover:bg-slate-50 hover:text-blue-600"
+                            )}
                         >
                             {page < totalPages ? (
-                                <Link href={`/vault/sites?page=${page + 1}${q ? `&q=${q}` : ""}`}>
-                                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                                <Link href={buildPageHref(page + 1)}>
+                                    <ChevronRight className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className="flex items-center">
-                                    Next <ChevronRight className="h-4 w-4 ml-1" />
-                                </span>
+                                <ChevronRight className="h-4 w-4" />
                             )}
                         </Button>
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     )
 }

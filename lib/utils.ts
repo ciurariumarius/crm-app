@@ -40,29 +40,74 @@ export function formatCurrency(value: number | string): string {
   }).format(num)
 }
 
+type ProjectServiceInput = {
+  serviceName?: string | null
+  isRecurring?: boolean | null
+}
+
+function addMonthlyQualifier(serviceName: string): string {
+  if (/\bmonthly\b/i.test(serviceName)) return serviceName
+
+  const parts = serviceName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length <= 1) return `${serviceName} Monthly`
+
+  const lastWord = parts.pop()
+  return `${parts.join(" ")} Monthly ${lastWord}`
+}
+
+export function formatProjectServiceName(service: ProjectServiceInput): string {
+  const baseName = (service.serviceName || "").trim()
+  if (!baseName) return ""
+
+  if (!service.isRecurring) return baseName
+  return addMonthlyQualifier(baseName)
+}
+
+export function formatProjectServiceList(
+  services: ProjectServiceInput[] | null | undefined,
+  fallback = "No Service"
+): string {
+  if (!services || services.length === 0) return fallback
+
+  const seen = new Set<string>()
+  const normalized = services
+    .map((service) => formatProjectServiceName(service))
+    .filter(Boolean)
+    .filter((serviceName) => {
+      const key = serviceName.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+  return normalized.length > 0 ? normalized.join(", ") : fallback
+}
+
 export function formatProjectName(project: {
-  site?: { domainName?: string },
-  services?: { serviceName: string, isRecurring?: boolean }[],
-  createdAt?: Date | string,
+  site?: { domainName?: string | null } | null,
+  services?: ProjectServiceInput[] | null,
+  createdAt?: Date | string | null,
   siteName?: string // fallback
+  name?: string | null
 }) {
-  const domain = project.site?.domainName || project.siteName || "Unknown Site"
+  const domain = (project.site?.domainName || project.siteName || "").trim()
+  const serviceNames = formatProjectServiceList(project.services, "")
+  const hasServiceNames = serviceNames.length > 0
+  const leftPart = domain || project.name || "Unknown Site"
 
-  // Get unique service names
-  const serviceNames = project.services && project.services.length > 0
-    ? Array.from(new Set(project.services.map(s => s.serviceName))).join(" + ")
-    : "No Service"
+  const isRecurring = project.services?.some((service) => Boolean(service.isRecurring)) ?? false
+  const createdDate = project.createdAt ? new Date(project.createdAt) : null
+  const monthYear = createdDate && !Number.isNaN(createdDate.getTime())
+    ? format(createdDate, "MMMM yyyy")
+    : null
 
-  // Check if any service is recurring
-  const isRecurring = project.services?.some(s => s.isRecurring) ?? false
+  const baseLabel = hasServiceNames ? `${leftPart} - ${serviceNames}` : leftPart
 
-  if (isRecurring && project.createdAt) {
-    const date = new Date(project.createdAt)
-    const monthYear = date.toLocaleString('default', { month: 'long', year: 'numeric' })
-    return `${domain} - ${serviceNames} - ${monthYear}`
+  if (isRecurring && monthYear) {
+    return `${baseLabel} - ${monthYear}`
   }
 
-  return `${domain} - ${serviceNames}`
+  return baseLabel
 }
 
 export function formatRelativeDate(date: Date | string | number | null | undefined): string {

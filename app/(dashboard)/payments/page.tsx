@@ -12,16 +12,16 @@ const PAGE_SIZE = 50
 export default async function PaymentsPage({
     searchParams,
 }: {
-    searchParams: Promise<{ projectId?: string; partnerId?: string; page?: string }>
+    searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string }>
 }) {
     const session = await requireTenantContext()
-    const { projectId, partnerId, page: pageParam } = await searchParams
+    const { projectId, partnerId, q, page: pageParam } = await searchParams
     const page = Math.max(1, Number(pageParam) || 1)
 
     const [projects, partners, logsResult] = await Promise.all([
         prisma.project.findMany({
             where: { tenantId: session.tenantId },
-            include: { site: true }
+            include: { site: true, services: true }
         }),
         prisma.partner.findMany({
             where: { tenantId: session.tenantId },
@@ -30,6 +30,7 @@ export default async function PaymentsPage({
         getPaymentLogs({
             projectId,
             partnerId,
+            q,
             take: PAGE_SIZE,
             skip: (page - 1) * PAGE_SIZE,
         })
@@ -45,12 +46,13 @@ export default async function PaymentsPage({
         const next = new URLSearchParams()
         if (projectId) next.set("projectId", projectId)
         if (partnerId) next.set("partnerId", partnerId)
+        if (q) next.set("q", q)
         next.set("page", String(targetPage))
         return `/payments?${next.toString()}`
     }
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-8 pb-8">
             <PageHeader
                 title="Payment Log"
                 description="Comprehensive history of all project payment status changes and settlements."
@@ -60,30 +62,45 @@ export default async function PaymentsPage({
                 <PaymentsFilters
                     partners={partners}
                     projects={projects}
+                    totalLogs={totalLogs}
                 />
 
-                <div className="bg-card rounded-xl border border-border shadow-sm p-4 md:p-6">
+                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur-md transition-all">
                     <PaymentsTable
                         logs={logs}
                         projects={projects}
                     />
 
-                    <div className="mt-4 flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
-                        <span className="text-muted-foreground">Page {page} of {totalPages} · {totalLogs} events</span>
+                    <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-4">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
+                            <span>Page {page} of {totalPages}</span>
+                            <span className="h-1 w-1 rounded-full bg-slate-200" />
+                            <span>{totalLogs} events</span>
+                        </div>
                         <div className="flex items-center gap-2">
                             {prevPage ? (
-                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(prevPage)}>
+                                <Link
+                                    href={buildPageHref(prevPage)}
+                                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                                >
                                     Previous
                                 </Link>
                             ) : (
-                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                                <span className="inline-flex h-9 items-center rounded-xl border border-slate-100 bg-slate-50/50 px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+                                    Previous
+                                </span>
                             )}
                             {nextPage ? (
-                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(nextPage)}>
+                                <Link
+                                    href={buildPageHref(nextPage)}
+                                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                                >
                                     Next
                                 </Link>
                             ) : (
-                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                                <span className="inline-flex h-9 items-center rounded-xl border border-slate-100 bg-slate-50/50 px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+                                    Next
+                                </span>
                             )}
                         </div>
                     </div>

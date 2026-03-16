@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Square, RefreshCcw, Zap, Wallet, Timer, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
+import { useProjectsSearchContext } from "./projects-search-context"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { normalizeProjectStatus } from "@/lib/status"
 import { updateProject } from "@/lib/actions/projects"
@@ -155,6 +156,7 @@ export function ProjectsBoardRows({
     initialSortDirection?: BoardSortDirection
 }) {
     const { openProject } = React.useContext(ProjectSheetContext)
+    const searchContext = useProjectsSearchContext()
     const [sortBy, setSortBy] = React.useState<BoardSortBy>(initialSortBy)
     const [sortDirection, setSortDirection] = React.useState<BoardSortDirection>(initialSortDirection)
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
@@ -211,12 +213,31 @@ export function ProjectsBoardRows({
         [sortBy, sortDirection]
     )
 
-    const monthlyProjects = sortProjects(projects.filter((project) => project.isRecurring))
-    const oneTimeProjects = sortProjects(projects.filter((project) => !project.isRecurring))
+    const normalizedSearch = (searchContext?.searchTerm || "").trim().toLowerCase()
+    const filteredProjects = React.useMemo(() => {
+        if (!normalizedSearch) return projects
+        return projects.filter((project) => {
+            const searchableText = [
+                project.name,
+                project.site?.domainName,
+                project.site?.partner?.name,
+                project.serviceLabel,
+                project.status,
+                project.paymentStatus,
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+            return searchableText.includes(normalizedSearch)
+        })
+    }, [normalizedSearch, projects])
+
+    const monthlyProjects = sortProjects(filteredProjects.filter((project) => project.isRecurring))
+    const oneTimeProjects = sortProjects(filteredProjects.filter((project) => !project.isRecurring))
     const orderedProjects = [...oneTimeProjects, ...monthlyProjects]
 
     const totals = React.useMemo(() => {
-        return projects.reduce<TotalsSummary>(
+        return filteredProjects.reduce<TotalsSummary>(
             (acc, project) => {
                 acc.count += 1
                 acc.totalAmount += Number(inlineEdits[project.id]?.amount ?? project.amount ?? 0)
@@ -225,7 +246,7 @@ export function ProjectsBoardRows({
             },
             { count: 0, totalAmount: 0, totalSeconds: 0 }
         )
-    }, [projects, inlineEdits])
+    }, [filteredProjects, inlineEdits])
 
     const oneTimeCount = oneTimeProjects.length
     const monthlyCount = monthlyProjects.length
@@ -813,8 +834,8 @@ export function ProjectsBoardRows({
                                                 <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
                                                 <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
                                                     <span className="break-words">{project.serviceLabel}</span>
-                                                    <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-blue-600">
-                                                        {format(new Date(project.createdAt), "MMM yyyy")}
+                                                    <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight text-blue-600">
+                                                        {format(new Date(project.createdAt), "MMMM yyyy")}
                                                     </span>
                                                     {projectStatus !== "Active" && (
                                                         <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
@@ -872,8 +893,8 @@ export function ProjectsBoardRows({
                                             <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
                                             <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
                                                 <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
-                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
-                                                    {format(new Date(project.createdAt), "MMM yyyy")}
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
+                                                    {format(new Date(project.createdAt), "MMMM yyyy")}
                                                 </span>
                                                 {projectStatus !== "Active" && (
                                                     <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>

@@ -18,6 +18,7 @@ import {
     Play,
     Plus,
     Expand,
+    ArrowUpRight,
     Pencil,
     Square,
     Target,
@@ -72,6 +73,13 @@ function toDate(value: Date | string | null | undefined) {
     return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+function resolveExternalSiteUrl(domainName: string | null | undefined) {
+    if (!domainName) return null
+    const trimmed = domainName.trim()
+    if (!trimmed) return null
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+}
+
 const PROJECT_REQUIREMENTS_TEMPLATE = [
     "<h2>Requirements</h2>",
     "<ul>",
@@ -119,7 +127,7 @@ export function ProjectSheetContent({
     allServices,
     hourlyRate = 0,
     onUpdate,
-    onOpenSite: _onOpenSite,
+    onOpenSite,
     standalone = false,
     onClose,
 }: ProjectSheetContentProps) {
@@ -170,7 +178,7 @@ export function ProjectSheetContent({
     }, [initialProject])
 
     React.useEffect(() => {
-        setLocalName(project.name || formatProjectName(project))
+        setLocalName(formatProjectName(project))
     }, [project.name, project.id])
 
     React.useEffect(() => {
@@ -394,7 +402,7 @@ export function ProjectSheetContent({
 
     const commitTitle = () => {
         const next = localName.trim()
-        const current = project.name || formatProjectName(project)
+        const current = formatProjectName(project)
 
         if (!next) {
             setLocalName(current)
@@ -450,7 +458,7 @@ export function ProjectSheetContent({
         if (isExportingNotes) return
         setIsExportingNotes(true)
         try {
-            const title = project.name || formatProjectName(project)
+            const title = formatProjectName(project)
             const safeTitle = title.replace(/[/\\?%*:|"<>]/g, "-")
             const createdLabel = formatBottomDate(toDate(project.createdAt) || null)
             const updatedLabel = formatBottomDate(toDate(project.updatedAt) || null)
@@ -639,7 +647,7 @@ export function ProjectSheetContent({
             return
         }
 
-        void globalStartTimer(project.id, undefined, project.name || formatProjectName(project))
+        void globalStartTimer(project.id, undefined, formatProjectName(project))
     }
 
     const recentLogs = [...(project.timeLogs || [])].sort((a, b) => {
@@ -650,6 +658,8 @@ export function ProjectSheetContent({
 
     const recurringServices = allServices.filter((service) => service.isRecurring)
     const oneTimeServices = allServices.filter((service) => !service.isRecurring)
+    const externalSiteUrl = resolveExternalSiteUrl(project.site?.domainName)
+    const sitePanelHref = `/partners/${project.site.partner.id}/${project.site.id}`
     const createdAt = toDate(project.createdAt)
     const updatedAt = toDate(project.updatedAt)
     const createdTimestamp = createdAt || updatedAt || new Date()
@@ -691,6 +701,14 @@ export function ProjectSheetContent({
         }
     }, [hourlyRate, project.currentFee, totalTrackedSeconds])
 
+    const openSitePanel = React.useCallback(() => {
+        if (onOpenSite) {
+            onOpenSite(project.site as Site)
+            return
+        }
+        router.push(sitePanelHref)
+    }, [onOpenSite, project.site, router, sitePanelHref])
+
     return (
         <TaskSheetWrapper tasks={project.tasks || []} project={project}>
             <div className="relative flex h-full flex-col overflow-hidden bg-[#f8fafc]">
@@ -724,7 +742,7 @@ export function ProjectSheetContent({
                                             commitTitle()
                                         }
                                         if (event.key === "Escape") {
-                                            setLocalName(project.name || formatProjectName(project))
+                                            setLocalName(formatProjectName(project))
                                             setIsEditingTitle(false)
                                         }
                                     }}
@@ -740,16 +758,6 @@ export function ProjectSheetContent({
                                         <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-2xl">
                                             {localName || formatProjectName(project)}
                                         </h1>
-                                        <span
-                                            className={cn(
-                                                "mt-2 inline-flex rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-all",
-                                                project.services?.some((service) => service.isRecurring)
-                                                    ? "border-blue-200/60 bg-blue-50/50 text-blue-600"
-                                                    : "border-emerald-200/60 bg-emerald-50/50 text-emerald-600"
-                                            )}
-                                        >
-                                            {format(toDate(project.createdAt) || new Date(), "MMMM yyyy")}
-                                        </span>
                                     </div>
                                     <Button
                                         type="button"
@@ -1264,7 +1272,7 @@ export function ProjectSheetContent({
 
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <Link
-                                    href={`/vault/${project.site.partner.id}`}
+                                    href={`/partners/${project.site.partner.id}`}
                                     className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300"
                                 >
                                     <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Partner</p>
@@ -1276,18 +1284,40 @@ export function ProjectSheetContent({
                                     </div>
                                 </Link>
 
-                                <Link
-                                    href={`/vault/${project.site.partner.id}/${project.site.id}`}
-                                    className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300"
-                                >
+                                <div className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300">
                                     <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Domain</p>
                                     <div className="mt-1 flex items-center justify-between gap-3">
-                                        <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
+                                        <button
+                                            type="button"
+                                            onClick={openSitePanel}
+                                            className="truncate text-left text-base font-black leading-tight tracking-tight text-slate-800 transition hover:text-blue-600 sm:text-lg"
+                                            title="Open site panel"
+                                        >
                                             {project.site.domainName}
-                                        </p>
-                                        <Globe className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+                                        </button>
+                                        <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
+                                            <Globe className="h-4 w-4" />
+                                            <ArrowUpRight className="h-4 w-4" />
+                                        </span>
                                     </div>
-                                </Link>
+                                    <div className="mt-3 flex items-center gap-2">
+                                        {externalSiteUrl ? (
+                                            <a
+                                                href={externalSiteUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700 transition hover:bg-blue-100"
+                                            >
+                                                Open website
+                                                <ArrowUpRight className="h-3.5 w-3.5" />
+                                            </a>
+                                        ) : (
+                                            <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                                                Open website
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -1469,7 +1499,7 @@ export function ProjectSheetContent({
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
                                     <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-slate-900">
-                                        Project Notes - {project.name || formatProjectName(project)}
+                                        Project Notes - {formatProjectName(project)}
                                     </DialogTitle>
                                     <span className="mt-2 inline-flex min-w-[140px] items-center gap-1.5 text-[11px] font-semibold text-slate-500">
                                         {notesSaveState === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />}

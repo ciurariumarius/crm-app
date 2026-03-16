@@ -13,7 +13,10 @@ function revalidateTimePaths(projectId?: string, sitePartnerId?: string, siteId?
     revalidatePath("/tasks")
     revalidatePath("/")
     if (projectId) revalidatePath(`/projects/${projectId}`)
-    if (sitePartnerId && siteId) revalidatePath(`/vault/${sitePartnerId}/${siteId}`)
+    if (sitePartnerId && siteId) {
+        revalidatePath(`/partners/${sitePartnerId}/${siteId}`)
+        revalidatePath(`/vault/${sitePartnerId}/${siteId}`)
+    }
 }
 
 const TimeLogFiltersSchema = z.object({

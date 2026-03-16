@@ -28,7 +28,7 @@ export function DeleteSiteButton({ siteId, partnerId }: { siteId: string, partne
             const result = await deleteSite(siteId)
             if (result.success) {
                 toast.success("Site deleted")
-                router.push(`/vault/${partnerId}`)
+                router.push(`/partners/${partnerId}`)
                 router.refresh()
             } else {
                 toast.error(result.error || "Failed to delete site")

@@ -47,7 +47,9 @@ export async function createSite(partnerId: string, domainName: string) {
             action: "SITE_CREATED",
             details: `siteId=${site.id}; partnerId=${validated.partnerId}`,
         })
+        revalidatePath(`/partners/${validated.partnerId}`)
         revalidatePath(`/vault/${validated.partnerId}`)
+        revalidatePath("/domains")
         revalidatePath("/vault/sites")
         return site
     } catch (error) {
@@ -91,8 +93,11 @@ export async function updateSiteDetails(siteId: string, data: {
             action: "SITE_UPDATED",
             details: `siteId=${site.id}; partnerId=${site.partnerId}`,
         })
+        revalidatePath(`/partners/${site.partnerId}/${validated.siteId}`)
+        revalidatePath(`/partners/${site.partnerId}`)
         revalidatePath(`/vault/${site.partnerId}/${validated.siteId}`)
         revalidatePath(`/vault/${site.partnerId}`)
+        revalidatePath("/domains")
         revalidatePath("/vault/sites")
         revalidatePath("/")
         return { success: true }
@@ -123,7 +128,9 @@ export async function deleteSite(siteId: string) {
             action: "SITE_DELETED",
             details: `siteId=${site.id}; partnerId=${site.partnerId}`,
         })
+        revalidatePath("/partners")
         revalidatePath("/vault")
+        revalidatePath(`/partners/${site.partnerId}`)
         revalidatePath(`/vault/${site.partnerId}`)
         return { success: true }
     } catch (error) {

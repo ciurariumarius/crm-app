@@ -14,7 +14,7 @@ import {
 } from "date-fns"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
-import { cn } from "@/lib/utils"
+import { cn, formatProjectServiceList } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
 import { Prisma } from "@prisma/client"
@@ -22,6 +22,7 @@ import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
 import { ProjectsFiltersToolbar } from "@/components/projects/projects-filters-toolbar"
 import { ProjectsSearchInput } from "@/components/projects/projects-search-input"
+import { ProjectsSearchProvider } from "@/components/projects/projects-search-context"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -234,7 +235,7 @@ export default async function ProjectsPage({
         const completedTasks = project.tasks.filter((task) => task.status === "Completed").length
         const secondsLogged = project.timeLogs.reduce((sum, log) => sum + (log.durationSeconds ?? 0), 0)
         const isRecurring = project.services.some((service) => service.isRecurring)
-        const serviceLabel = project.services.map((service) => service.serviceName).join(" + ") || "No service"
+        const serviceLabel = formatProjectServiceList(project.services, "No service")
         return {
             ...project,
             status: normalizeProjectStatus(project.status),
@@ -306,7 +307,8 @@ export default async function ProjectsPage({
             allServices={servicesForClient}
             hourlyRate={user?.hourlyRate ? Number(user.hourlyRate) : 0}
         >
-            <div className="space-y-6">
+            <ProjectsSearchProvider initialSearch={q || ""}>
+                <div className="space-y-6">
                 <div className="flex flex-col gap-4">
                     <div className="md:hidden flex flex-col gap-3">
                         <div className="flex items-center justify-between gap-3">
@@ -490,7 +492,8 @@ export default async function ProjectsPage({
                         )}
                     </div>
                 </div>
-            </div>
+                </div>
+            </ProjectsSearchProvider>
         </ProjectSheetWrapper>
     )
 }

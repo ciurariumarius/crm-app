@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "security:rotate-2fa-secrets": "ts-node scripts/rotate-two-factor-secrets.ts"
+    "security:rotate-2fa-secrets": "ts-node scripts/rotate-two-factor-secrets.ts",
+    "data:backfill-project-names": "node scripts/backfill-project-names.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

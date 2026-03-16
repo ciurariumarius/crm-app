@@ -1,89 +1,306 @@
 "use client"
 
+import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, User, FolderKanban, X } from "lucide-react"
+import { Search, User, Briefcase, X, ChevronDown, Check } from "lucide-react"
+import { cn, formatProjectName } from "@/lib/utils"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
+import Link from "next/link"
+import { useDebounce } from "@/hooks/use-debounce"
+import { Input } from "@/components/ui/input"
 
 interface PaymentsFiltersProps {
     partners: any[]
     projects: any[]
+    totalLogs: number
 }
 
-export function PaymentsFilters({ partners, projects }: PaymentsFiltersProps) {
+export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFiltersProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
+
+    // Local state for search
+    const [searchTerm, setSearchTerm] = React.useState(searchParams.get("q") || "")
+    const debouncedSearch = useDebounce(searchTerm, 300)
 
     const currentPartnerId = searchParams.get("partnerId") || "all"
     const currentProjectId = searchParams.get("projectId") || "all"
 
-    const updateFilters = (key: string, value: string) => {
+    // Update URL on search
+    React.useEffect(() => {
         const params = new URLSearchParams(searchParams.toString())
-        if (value === "all") {
-            params.delete(key)
-        } else {
-            params.set(key, value)
+        const currentQ = params.get("q") || ""
+
+        if (debouncedSearch !== currentQ) {
+            if (debouncedSearch) {
+                params.set("q", debouncedSearch)
+            } else {
+                params.delete("q")
+            }
+            params.delete("page")
+            router.replace(`/payments?${params.toString()}`)
         }
-        params.delete("page") // Reset to first page on filter change
-        router.push(`/payments?${params.toString()}`)
+    }, [debouncedSearch, router, searchParams])
+
+    const buildHref = (overrides: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString())
+        Object.entries(overrides).forEach(([key, value]) => {
+            if (value === null || value === "all") {
+                params.delete(key)
+            } else {
+                params.set(key, value)
+            }
+        })
+        params.delete("page")
+        return `/payments?${params.toString()}`
     }
 
-    const clearFilters = () => {
-        router.push("/payments")
+    const pushWithOverrides = (overrides: Record<string, string | null>) => {
+        router.push(buildHref(overrides))
     }
 
-    const hasFilters = currentPartnerId !== "all" || currentProjectId !== "all"
+    const clearAllHref = "/payments"
+    const selectedProject = projects.find((p) => p.id === currentProjectId)
+    const selectedPartner = partners.find((p) => p.id === currentPartnerId)
+    const activeFilters: { key: string; label: string; href: string }[] = []
+    
+    if (searchTerm) {
+        activeFilters.push({
+            key: "q",
+            label: `Search: ${searchTerm}`,
+            href: buildHref({ q: null })
+        })
+    }
+    if (currentPartnerId !== "all" && selectedPartner) {
+        activeFilters.push({ 
+            key: "partnerId", 
+            label: `Partner: ${selectedPartner.name}`, 
+            href: buildHref({ partnerId: "all" }) 
+        })
+    }
+    if (currentProjectId !== "all" && selectedProject) {
+        activeFilters.push({ 
+            key: "projectId", 
+            label: `Project: ${formatProjectName(selectedProject)}`, 
+            href: buildHref({ projectId: "all" }) 
+        })
+    }
 
     return (
-        <div className="flex flex-col md:flex-row items-center gap-4 bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex flex-1 items-center gap-4 w-full md:w-auto">
-                <div className="flex-1">
-                    <div className="relative">
-                        <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Select value={currentPartnerId} onValueChange={(v) => updateFilters("partnerId", v)}>
-                            <SelectTrigger className="pl-10">
-                                <SelectValue placeholder="All Partners" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Partners</SelectItem>
-                                {partners.map((p) => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+        <div className="space-y-3">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <div className="flex flex-wrap items-center gap-4">
+                    <div className="relative h-10 w-full md:w-[240px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                            placeholder="Search payments..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="h-10 border-slate-200 bg-white/50 pl-10 text-xs font-bold uppercase tracking-widest text-slate-700 shadow-none transition-all hover:bg-white hover:border-slate-300 focus-visible:ring-0 focus-visible:border-blue-500"
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
                     </div>
-                </div>
 
-                <div className="flex-1">
-                    <div className="relative">
-                        <FolderKanban className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Select value={currentProjectId} onValueChange={(v) => updateFilters("projectId", v)}>
-                            <SelectTrigger className="pl-10">
-                                <SelectValue placeholder="All Projects" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Projects</SelectItem>
-                                {projects.map((p) => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name || p.site?.domainName}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <div className="h-6 w-px bg-slate-200 hidden md:block" />
+
+                    <PartnerCombobox
+                        partners={partners}
+                        currentPartner={currentPartnerId}
+                        onSelect={(value) => pushWithOverrides({ partnerId: value, projectId: "all" })}
+                    />
+
+                    <div className="h-6 w-px bg-slate-200 hidden md:block" />
+
+                    <ProjectCombobox
+                        projects={projects}
+                        currentProject={currentProjectId}
+                        onSelect={(value) => pushWithOverrides({ projectId: value, partnerId: "all" })}
+                    />
+
+                    {activeFilters.length > 0 && (
+                        <div className="ml-auto hidden md:block">
+                            <Link
+                                href={clearAllHref}
+                                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-500 transition-all hover:bg-slate-50 hover:text-rose-600 active:scale-95"
+                            >
+                                Clear All
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {hasFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground">
-                    <X className="h-4 w-4 mr-2" />
-                    Clear Filters
-                </Button>
-            )}
+            <div className="px-1 flex flex-wrap items-center gap-2">
+                <p className="text-[15px] font-medium text-slate-600">{totalLogs} Results found</p>
+                {activeFilters.length > 0 && <span className="text-slate-300">|</span>}
+                {activeFilters.map((filter) => (
+                    <Link
+                        key={filter.key}
+                        href={filter.href}
+                        className="inline-flex h-7 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                        <span>{filter.label}</span>
+                        <X className="h-3 w-3 text-slate-400" />
+                    </Link>
+                ))}
+            </div>
         </div>
+    )
+}
+
+function PartnerCombobox({
+    partners,
+    currentPartner,
+    onSelect,
+}: {
+    partners: any[]
+    currentPartner: string
+    onSelect: (value: string) => void
+}) {
+    const [open, setOpen] = React.useState(false)
+    const isActive = currentPartner !== "all"
+    const selectedPartner = partners.find((p) => p.id === currentPartner)
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className={cn(
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold uppercase tracking-widest transition-all",
+                        isActive
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                    )}
+                >
+                    <User className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <span className="max-w-[150px] truncate">{selectedPartner?.name || "Partner"}</span>
+                    <ChevronDown className="h-4 w-4 opacity-70" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[280px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+                <Command className="rounded-xl">
+                    <CommandInput placeholder="Search partner..." />
+                    <CommandList>
+                        <CommandEmpty>No partner found.</CommandEmpty>
+                        <CommandGroup>
+                            <CommandItem
+                                value="all partners"
+                                onSelect={() => {
+                                    onSelect("all")
+                                    setOpen(false)
+                                }}
+                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                            >
+                                <Check className={cn("mr-2 h-4 w-4", !isActive ? "opacity-100" : "opacity-0")} />
+                                All partners
+                            </CommandItem>
+                            {partners.map((partner) => (
+                                <CommandItem
+                                    key={partner.id}
+                                    value={partner.name}
+                                    onSelect={() => {
+                                        onSelect(partner.id)
+                                        setOpen(false)
+                                    }}
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", currentPartner === partner.id ? "opacity-100" : "opacity-0")} />
+                                    {partner.name}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+function ProjectCombobox({
+    projects,
+    currentProject,
+    onSelect,
+}: {
+    projects: any[]
+    currentProject: string
+    onSelect: (value: string) => void
+}) {
+    const [open, setOpen] = React.useState(false)
+    const isActive = currentProject !== "all"
+    const selectedProject = projects.find((p) => p.id === currentProject)
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className={cn(
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold uppercase tracking-widest transition-all",
+                        isActive
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                    )}
+                >
+                    <Briefcase className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <span className="max-w-[200px] truncate">{selectedProject ? formatProjectName(selectedProject) : "Project"}</span>
+                    <ChevronDown className="h-4 w-4 opacity-70" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[320px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+                <Command className="rounded-xl">
+                    <CommandInput placeholder="Search project..." />
+                    <CommandList>
+                        <CommandEmpty>No project found.</CommandEmpty>
+                        <CommandGroup>
+                            <CommandItem
+                                value="all projects"
+                                onSelect={() => {
+                                    onSelect("all")
+                                    setOpen(false)
+                                }}
+                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                            >
+                                <Check className={cn("mr-2 h-4 w-4", !isActive ? "opacity-100" : "opacity-0")} />
+                                All projects
+                            </CommandItem>
+                            {projects.map((project) => (
+                                <CommandItem
+                                    key={project.id}
+                                    value={formatProjectName(project)}
+                                    onSelect={() => {
+                                        onSelect(project.id)
+                                        setOpen(false)
+                                    }}
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", currentProject === project.id ? "opacity-100" : "opacity-0")} />
+                                    {formatProjectName(project)}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
     )
 }

@@ -5,21 +5,27 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
 import { Search, X } from "lucide-react"
+import { useProjectsSearchContext } from "./projects-search-context"
 
 export function ProjectsSearchInput() {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const searchContext = useProjectsSearchContext()
 
-    const [searchTerm, setSearchTerm] = React.useState(searchParams.get("q") || "")
+    const [urlSearchTerm, setUrlSearchTerm] = React.useState(searchParams.get("q") || "")
+    const searchTerm = searchContext ? searchContext.searchTerm : urlSearchTerm
+    const setSearchTerm = searchContext ? searchContext.setSearchTerm : setUrlSearchTerm
     const debouncedSearch = useDebounce(searchTerm, 300)
 
     React.useEffect(() => {
+        if (searchContext) return
         const urlQ = searchParams.get("q") || ""
-        setSearchTerm((current) => (current === urlQ ? current : urlQ))
-    }, [searchParams])
+        setUrlSearchTerm((current) => (current === urlQ ? current : urlQ))
+    }, [searchContext, searchParams])
 
     React.useEffect(() => {
+        if (searchContext) return
         const params = new URLSearchParams(searchParams.toString())
         const currentQ = params.get("q") || ""
 
@@ -33,7 +39,7 @@ export function ProjectsSearchInput() {
             const queryString = params.toString()
             router.replace(queryString ? `${pathname}?${queryString}` : pathname)
         }
-    }, [debouncedSearch, pathname, router, searchParams])
+    }, [debouncedSearch, pathname, router, searchContext, searchParams])
 
     return (
         <div className="relative h-11 w-full">
@@ -41,7 +47,7 @@ export function ProjectsSearchInput() {
                 <Search className="h-4 w-4" />
             </div>
             <Input
-                placeholder="Search projects, clients or campaigns..."
+                placeholder="Search projects..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 text-sm shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-blue-100 focus-visible:ring-offset-0 focus-visible:border-blue-300 placeholder:text-slate-400 text-slate-900"

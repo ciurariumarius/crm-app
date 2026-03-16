@@ -3,7 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Briefcase, CheckCircle2, Clock } from "lucide-react"
+import { Briefcase, CheckCircle2 } from "lucide-react"
+import { formatProjectName } from "@/lib/utils"
 
 interface ActiveProjectsQuickLookProps {
     projects: any[]
@@ -34,7 +35,7 @@ export function ActiveProjectsQuickLook({ projects }: ActiveProjectsQuickLookPro
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
                                         <div className="font-semibold text-sm truncate uppercase tracking-tight italic">
-                                            {project.name || (project.services?.[0]?.serviceName || "Unnamed Project")}
+                                            {formatProjectName(project)}
                                         </div>
                                         <div className="text-xs text-muted-foreground truncate">
                                             {project.site.partner.name}

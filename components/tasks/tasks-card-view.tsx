@@ -3,7 +3,7 @@
 import * as React from "react"
 import { format, isToday, isPast } from "date-fns"
 import { Checkbox } from "@/components/ui/checkbox"
-import { cn } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
@@ -26,6 +26,7 @@ import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
 
 import { useTimer } from "@/components/providers/timer-provider"
+import { useTasksSearchContext } from "./tasks-search-context"
 
 interface TasksCardViewProps {
     tasks: any[]
@@ -39,6 +40,7 @@ interface TasksCardViewProps {
 
 export function TasksCardView({ tasks, allServices, initialActiveTimer, projects = [], view = "grid", cols = 3, hourlyRate = 0 }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
+    const searchContext = useTasksSearchContext()
     const [selectedProject, setSelectedProject] = React.useState<any>(null)
     const [selectedSite, setSelectedSite] = React.useState<any>(null)
     const [selectedTask, setSelectedTask] = React.useState<any>(null)
@@ -159,14 +161,37 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
         4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
     }[cols] ?? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
 
+    const normalizedSearch = (searchContext?.searchTerm || "").trim().toLowerCase()
+    const visibleTasks = React.useMemo(() => {
+        if (!normalizedSearch) return tasks
+        return tasks.filter((task) => {
+            const fields = [
+                task.name,
+                task.description,
+                task.status,
+                task.urgency,
+                task.project?.name,
+                task.project?.site?.domainName,
+                task.project?.site?.partner?.name,
+                formatProjectName(task.project || {}),
+                (task.project?.services || []).map((service: { serviceName?: string }) => service.serviceName || "").join(" "),
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+
+            return fields.includes(normalizedSearch)
+        })
+    }, [normalizedSearch, tasks])
+
     const renderGridView = () => (
         <div className={cn("grid gap-6", colsClass)}>
-            {tasks.map((task) => (
+            {visibleTasks.map((task) => (
                 <TaskGridCard
                     key={task.id}
                     task={task}
                     onOpen={(taskId) => {
-                        const found = tasks.find(t => t.id === taskId)
+                        const found = visibleTasks.find(t => t.id === taskId)
                         if (found) setSelectedTask(found)
                     }}
                     onComplete={handleComplete}
@@ -202,7 +227,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
             </div>
 
             <div className="flex flex-col gap-3">
-                {tasks.map((task) => {
+                {visibleTasks.map((task) => {
                     const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
                     const isActiveTimerThisTask = timerState.taskId === task.id
                     const isRunning = isActiveTimerThisTask && timerState.isRunning
@@ -234,31 +259,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                                 <h3 className={cn("text-base font-bold text-foreground/90 break-words whitespace-normal", task.status === "Completed" && "line-through opacity-50")}>
                                     {task.name}
                                 </h3>
-                                {task.project && (() => {
-                                    const domainName = task.project?.site?.domainName || task.project?.name || "No Project"
-                                    const services = task.project?.services || []
-                                    const isRecurring = services.some((s: any) => s.isRecurring)
-
-                                    const serviceName = services.length > 0
-                                        ? services.map((s: any) => s.serviceName).join(" + ")
-                                        : "No Service"
-
-                                    return (
-                                        <div className="flex flex-col gap-1 mt-1">
-                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 break-words whitespace-normal leading-tight">{domainName}</span>
-                                            <div className="flex items-center gap-2 flex-wrap mt-1">
-                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 break-words whitespace-normal">
-                                                    {serviceName}
-                                                </span>
-                                                {isRecurring && task.project?.createdAt && (
-                                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-[10px] font-medium shrink-0">
-                                                        {format(new Date(task.project.createdAt), "MMM yyyy")}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )
-                                })()}
+                                {task.project ? (
+                                    <p className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-300 break-words whitespace-normal leading-tight">
+                                        {formatProjectName(task.project)}
+                                    </p>
+                                ) : null}
                                 {task.description && (
                                     <p className="text-sm text-muted-foreground/70 truncate mt-1.5 hidden lg:block">
                                         {task.description}
@@ -395,11 +400,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 </div>
             )}
 
-            {tasks.length === 0 ? (
+            {visibleTasks.length === 0 ? (
                 <div className="col-span-full h-64 flex flex-col items-center justify-center border border-dashed border-border rounded-3xl bg-muted/30">
                     <Clock className="h-8 w-8 text-muted-foreground/20 mb-4" strokeWidth={1} />
                     <p className="text-sm text-muted-foreground/60 font-medium">
-                        No active tasks found in this view.
+                        {normalizedSearch ? "No tasks match your search." : "No active tasks found in this view."}
                     </p>
                 </div>
             ) : (
@@ -411,14 +416,16 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 open={!!selectedTask}
                 onOpenChange={(open) => !open && setSelectedTask(null)}
                 onOpenProject={(project) => {
-                    setSelectedTask(null)
                     setSelectedProject(project)
+                }}
+                onOpenSite={(site) => {
+                    setSelectedSite(site)
                 }}
             />
 
             {/* Project Details Sheet */}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <SheetContent side="right" className="w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-background overflow-hidden sm:w-full sm:max-w-[760px]">
+                <SheetContent side="right" className="z-[80] w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-background overflow-hidden sm:w-full sm:max-w-[760px]">
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}
@@ -451,7 +458,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                     projectId={quickLogTask.projectId}
                     taskId={quickLogTask.id}
                     taskName={quickLogTask.name}
-                    projectName={quickLogTask.project.name || quickLogTask.project.site.domainName}
+                    projectName={quickLogTask.project ? formatProjectName(quickLogTask.project) : "Unknown Project"}
                 />
             )}
 

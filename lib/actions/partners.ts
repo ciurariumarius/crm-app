@@ -44,6 +44,7 @@ export async function createPartner(data: {
             action: "PARTNER_CREATED",
             details: `partnerId=${partner.id}`,
         })
+        revalidatePath("/partners")
         revalidatePath("/vault")
         return { success: true }
     } catch (error) {
@@ -87,6 +88,8 @@ export async function updatePartner(partnerId: string, data: {
             action: "PARTNER_UPDATED",
             details: `partnerId=${validated.partnerId}`,
         })
+        revalidatePath("/partners")
+        revalidatePath(`/partners/${validated.partnerId}`)
         revalidatePath("/vault")
         revalidatePath(`/vault/${validated.partnerId}`)
         return { success: true }
@@ -114,6 +117,7 @@ export async function deletePartner(partnerId: string) {
             action: "PARTNER_DELETED",
             details: `partnerId=${validatedPartnerId}`,
         })
+        revalidatePath("/partners")
         revalidatePath("/vault")
         return { success: true }
     } catch (error) {

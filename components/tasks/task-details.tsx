@@ -31,7 +31,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus, ArrowUpRight } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus, ArrowUpRight, FolderOpen, Globe } from "lucide-react"
 import { updateTask, deleteTask } from "@/lib/actions/tasks"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
@@ -45,6 +45,7 @@ interface TaskDetailsProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onOpenProject?: (project: any) => void
+    onOpenSite?: (site: any) => void
 }
 
 const TASK_NOTES_TEMPLATE = [
@@ -75,7 +76,25 @@ function formatDurationLabel(totalSeconds: number) {
     return `${seconds}s`
 }
 
-export function TaskDetails({ task, open, onOpenChange, onOpenProject }: TaskDetailsProps) {
+function toDate(value: Date | string | null | undefined) {
+    if (!value) return null
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatBottomDate(value: Date | null) {
+    if (!value) return "—"
+    return format(value, "dd MMMM yyyy, HH:mm")
+}
+
+function resolveExternalSiteUrl(domainName: string | null | undefined) {
+    if (!domainName) return null
+    const trimmed = domainName.trim()
+    if (!trimmed) return null
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+}
+
+export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSite }: TaskDetailsProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const router = useRouter()
     const [loading, setLoading] = React.useState(false)
@@ -214,10 +233,18 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject }: TaskDet
         const bTime = new Date(b.startTime).getTime()
         return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime)
     })
-    const updatedLabel = task.updatedAt ? formatRelativeDate(task.updatedAt) : "—"
     const projectLabel = task.project
         ? formatProjectName(task.project)
         : task.project?.site?.domainName || task.project?.name || "Project"
+    const projectPartnerLabel = task.project?.site?.partner?.name || "Partner"
+    const projectDomainLabel = task.project?.site?.domainName || "Domain"
+    const projectDomainUrl = resolveExternalSiteUrl(task.project?.site?.domainName)
+    const projectSitePanelHref =
+        task.project?.site?.partner?.id && task.project?.site?.id
+            ? `/partners/${task.project.site.partner.id}/${task.project.site.id}`
+            : null
+    const createdTimestamp = toDate(task.createdAt)
+    const lastUpdatedTimestamp = toDate(task.updatedAt)
 
     const handleTaskTimerPrimaryAction = () => {
         if (isTaskRunning) {
@@ -231,6 +258,26 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject }: TaskDet
         }
 
         void globalStartTimer(task.projectId, task.id, task.name)
+    }
+
+    const openProjectDetails = () => {
+        if (!task.projectId || !onOpenProject) return
+        onOpenProject({
+            ...(task.project || {}),
+            id: task.projectId,
+            tasks: task.project?.tasks || [],
+            timeLogs: task.project?.timeLogs || [],
+        })
+    }
+
+    const openSitePanel = () => {
+        if (task.project?.site && onOpenSite) {
+            onOpenSite(task.project.site)
+            return
+        }
+        if (projectSitePanelHref) {
+            router.push(projectSitePanelHref)
+        }
     }
 
     const commitTitle = () => {
@@ -281,7 +328,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject }: TaskDet
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none sm:w-full sm:max-w-[900px]"
+                className="w-screen max-w-none p-0 flex flex-col overflow-y-auto md:overflow-hidden border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none sm:w-full sm:max-w-[900px]"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 showCloseButton={false}
             >
@@ -355,7 +402,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject }: TaskDet
                     </div>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto px-8 pb-6 pt-0">
+                <div className="px-8 pb-6 pt-0 md:flex-1 md:overflow-y-auto">
                     <div className="space-y-8 pb-20">
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-3">
                             <div className="flex items-center">
@@ -697,34 +744,88 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject }: TaskDet
                             </Button>
                         </section>
 
-                        <div className="flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-3 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                            <span># Task ID: {task.id.slice(0, 8)}</span>
-                            <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                                {task.projectId ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (!task.projectId || !onOpenProject) return
-                                            onOpenProject({
-                                                ...(task.project || {}),
-                                                id: task.projectId,
-                                                tasks: task.project?.tasks || [],
-                                                timeLogs: task.project?.timeLogs || [],
-                                            })
-                                        }}
-                                        className="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-800 hover:underline"
-                                        title={`Open project: ${projectLabel}`}
-                                    >
-                                        <span className="break-words text-left">Project: {projectLabel}</span>
-                                        <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
-                                    </button>
-                                ) : null}
-                                <span className="inline-flex items-center gap-1.5">
-                                    Created: {formatRelativeDate(task.createdAt)}
-                                </span>
-                                <span className="inline-flex items-center gap-1.5">
-                                    Last updated: {updatedLabel}
-                                </span>
+                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
+                            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Task Info</h2>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    onClick={openProjectDetails}
+                                    disabled={!task.projectId || !onOpenProject}
+                                    className={cn(
+                                        "group rounded-[22px] border border-slate-200 bg-white p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition",
+                                        task.projectId && onOpenProject
+                                            ? "hover:border-slate-300"
+                                            : "cursor-not-allowed opacity-60"
+                                    )}
+                                >
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Project</p>
+                                    <div className="mt-1 flex items-center justify-between gap-3">
+                                        <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
+                                            {projectLabel}
+                                        </p>
+                                        <FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+                                    </div>
+                                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                        <span className="truncate">{projectPartnerLabel}</span>
+                                    </div>
+                                </button>
+
+                                <div className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300">
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Domain</p>
+                                    <div className="mt-1 flex items-center justify-between gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={openSitePanel}
+                                            disabled={!projectSitePanelHref && !onOpenSite}
+                                            className={cn(
+                                                "truncate text-left text-base font-black leading-tight tracking-tight transition sm:text-lg",
+                                                projectSitePanelHref || onOpenSite
+                                                    ? "text-slate-800 hover:text-blue-600"
+                                                    : "cursor-not-allowed text-slate-400"
+                                            )}
+                                            title="Open site panel"
+                                        >
+                                            {projectDomainLabel}
+                                        </button>
+                                        <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
+                                            <Globe className="h-4 w-4" />
+                                            <ArrowUpRight className="h-4 w-4" />
+                                        </span>
+                                    </div>
+                                    <div className="mt-3 flex items-center gap-2">
+                                        {projectDomainUrl ? (
+                                            <a
+                                                href={projectDomainUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700 transition hover:bg-blue-100"
+                                            >
+                                                Open website
+                                                <ArrowUpRight className="h-3.5 w-3.5" />
+                                            </a>
+                                        ) : (
+                                            <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                                                Open website
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="mt-12 border-t border-slate-200 pt-8 text-[11px] font-semibold text-slate-400">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <span># Task ID: {task.id.split("-")[0]}</span>
+                                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                                    <span className="inline-flex items-center gap-1.5">
+                                        Created: {formatBottomDate(createdTimestamp)}
+                                    </span>
+                                    {lastUpdatedTimestamp && (
+                                        <span className="inline-flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                                            Last Updated: {formatBottomDate(lastUpdatedTimestamp)}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                 </div>

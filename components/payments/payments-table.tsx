@@ -3,7 +3,7 @@
 import { useState, Fragment } from "react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
-import { cn, formatNumber, formatRelativeDate } from "@/lib/utils"
+import { cn, formatCurrency, formatProjectName, formatRelativeDate } from "@/lib/utils"
 import {
     Table,
     TableBody,
@@ -67,7 +67,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
 
             if (project) {
                 return {
-                    projectName: project.name || `${project.site?.domainName || 'Unknown site'}`,
+                    projectName: formatProjectName(project),
                     extraProjects: [],
                     totalAmount: fee
                 }
@@ -105,16 +105,15 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
     }
 
     return (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto px-6">
             <Table className="table-cockpit">
                 <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-10"></TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead className="text-right">Status</TableHead>
+                    <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                        <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Project</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Action</TableHead>
+                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Total</TableHead>
+                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Status</TableHead>
+                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Date</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -125,29 +124,22 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
 
                         return (
                             <Fragment key={log.id}>
-                                <TableRow className={cn(isExpanded && "bg-muted/30 border-b-0")}>
-                                    <TableCell>
-                                        {isExpandable && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-muted-foreground"
-                                                onClick={() => toggleRow(log.id, isExpandable)}
-                                            >
-                                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                            </Button>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="whitespace-nowrap font-medium text-xs">
-                                        {formatRelativeDate(log.date)}
-                                    </TableCell>
+                                <TableRow className={cn(
+                                    "border-b border-slate-50 transition-colors hover:bg-slate-50/50",
+                                    isExpanded && "bg-slate-50/50 border-b-0"
+                                )}>
                                     <TableCell
                                         className={cn("cursor-default", isExpandable && "cursor-pointer group")}
                                         onClick={() => toggleRow(log.id, isExpandable)}
                                     >
-                                        <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
+                                            {isExpandable && (
+                                                <div className="text-muted-foreground/60 group-hover:text-blue-600 transition-colors">
+                                                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                                </div>
+                                            )}
                                             <span className={cn(
-                                                "font-semibold text-sm",
+                                                "text-sm font-bold tracking-tight text-slate-800",
                                                 isExpandable && "group-hover:text-blue-600 transition-colors"
                                             )}>
                                                 {projectName}
@@ -166,27 +158,30 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                             </span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-right font-mono font-bold text-sm">
-                                        ${formatNumber(totalAmount)}
+                                    <TableCell className="text-right font-mono font-bold text-sm text-slate-900">
+                                        {formatCurrency(totalAmount)}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Badge
                                             variant="outline"
                                             className={cn(
-                                                "font-bold uppercase tracking-tighter transition-all",
+                                                "h-6 px-3 text-[10px] font-bold uppercase tracking-widest transition-all",
                                                 log.status === "Paid"
-                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                    : "bg-rose-50 text-rose-700 border-rose-200"
+                                                    ? "bg-emerald-100/50 text-emerald-700 border-emerald-200"
+                                                    : "bg-rose-100/50 text-rose-700 border-rose-200"
                                             )}
                                         >
-                                            {log.status}
+                                            {log.status === "Paid" ? "PAID" : "UNPAID"}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right whitespace-nowrap text-[11px] font-medium text-slate-500">
+                                        {formatRelativeDate(log.date)}
                                     </TableCell>
                                 </TableRow>
                                 {isExpanded && (
-                                    <TableRow className="bg-muted/30 hover:bg-muted/30 border-t-0">
-                                        <TableCell colSpan={6} className="pb-4 pt-0 px-12">
-                                            <div className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm">
+                                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-none">
+                                        <TableCell colSpan={5} className="pb-4 pt-0 px-8">
+                                            <div className="rounded-xl border border-slate-200 bg-white/50 overflow-hidden shadow-inner">
                                                 <Table className="table-cockpit">
                                                     <TableHeader className="bg-muted/50">
                                                         <TableRow>
@@ -196,12 +191,12 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                                     </TableHeader>
                                                     <TableBody>
                                                         {extraProjects.map((p: any) => (
-                                                            <TableRow key={p.id} className="hover:bg-muted/20 border-border/50 last:border-0">
-                                                                <TableCell className="py-2.5 text-xs font-semibold px-4">
+                                                            <TableRow key={p.id} className="hover:bg-slate-50/80 border-slate-100 last:border-0">
+                                                                <TableCell className="py-2.5 text-xs font-bold text-slate-600 px-4">
                                                                     {p.name}
                                                                 </TableCell>
-                                                                <TableCell className="py-2.5 text-xs text-right font-mono px-4 text-muted-foreground">
-                                                                    ${formatNumber(p.fee)}
+                                                                <TableCell className="py-2.5 text-xs text-right font-mono font-bold px-4 text-slate-500">
+                                                                    {formatCurrency(p.fee)}
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))}

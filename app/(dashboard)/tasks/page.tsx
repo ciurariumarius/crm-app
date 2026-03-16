@@ -6,6 +6,7 @@ import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
+import { TasksSearchProvider } from "@/components/tasks/tasks-search-context"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
 import { SlidersHorizontal, X, ListChecks, Play, AlertTriangle, CalendarClock, CalendarDays, ChevronDown } from "lucide-react"
@@ -447,7 +448,8 @@ export default async function TasksPage({
     )
 
     return (
-        <div className="flex flex-col gap-6">
+        <TasksSearchProvider initialSearch={q || ""}>
+            <div className="flex flex-col gap-6">
             <div className="md:hidden flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -680,6 +682,7 @@ export default async function TasksPage({
                     {renderPaginationBar()}
                 </div>
             </div>
-        </div>
+            </div>
+        </TasksSearchProvider>
     )
 }

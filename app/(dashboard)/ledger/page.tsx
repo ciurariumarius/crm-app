@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/layout/page-header"
 import { requireTenantContext } from "@/lib/tenant"
 import Link from "next/link"
+import { formatProjectName } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 const PAGE_SIZE = 24
@@ -87,16 +88,14 @@ export default async function LedgerPage({
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <div className="space-y-1">
                                         <CardTitle className="text-base flex items-center gap-2 flex-wrap">
-                                            {project.services.length > 0
-                                                ? project.services.map((s: any) => s.serviceName).join(", ")
-                                                : "No Service"}
+                                            {formatProjectName(project)}
                                             {project.currentFee != null && (
                                                 <span className="text-sm font-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
                                                     {project.currentFee} RON
                                                 </span>
                                             )}
                                         </CardTitle>
-                                        <CardDescription>{project.site.domainName}</CardDescription>
+                                        <CardDescription>{project.site.partner.name}</CardDescription>
                                     </div>
                                     <Badge variant={project.paymentStatus === "Paid" ? "secondary" : "destructive"}>
                                         {project.paymentStatus}

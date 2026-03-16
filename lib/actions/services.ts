@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { Prisma } from "@prisma/client"
 import { z } from "zod"
 
 const ServicePayloadSchema = z.object({
@@ -13,6 +14,12 @@ const ServicePayloadSchema = z.object({
     standardTasks: z.array(z.string().trim().min(1)).max(200),
     sopLink: z.string().url().optional().or(z.literal("")),
     baseFee: z.number().min(0).optional(),
+})
+
+const SearchProjectServicesSchema = z.object({
+    query: z.string().trim().max(100),
+    cadence: z.enum(["all", "recurring", "one-time"]).default("all"),
+    limit: z.number().int().min(1).max(100).default(40),
 })
 
 export async function createService(data: {
@@ -113,5 +120,48 @@ export async function deleteService(serviceId: string) {
         return { success: true }
     } catch (error) {
         return { success: false, error: getActionErrorMessage(error, "Failed to delete service") }
+    }
+}
+
+export async function searchProjectServices(
+    query: string,
+    cadence: "all" | "recurring" | "one-time" = "all",
+    limit = 40
+) {
+    try {
+        const session = await requireTenantContext()
+        const validated = SearchProjectServicesSchema.parse({ query, cadence, limit })
+
+        if (!validated.query) {
+            return []
+        }
+
+        const where: Prisma.ServiceWhereInput = {
+            tenantId: session.tenantId,
+            serviceName: { contains: validated.query },
+        }
+
+        if (validated.cadence === "recurring") {
+            where.isRecurring = true
+        } else if (validated.cadence === "one-time") {
+            where.isRecurring = false
+        }
+
+        const services = await prisma.service.findMany({
+            where,
+            orderBy: { serviceName: "asc" },
+            take: validated.limit,
+            select: {
+                id: true,
+                serviceName: true,
+                isRecurring: true,
+                baseFee: true,
+            },
+        })
+
+        return JSON.parse(JSON.stringify(services))
+    } catch (error) {
+        console.error("[services] searchProjectServices failed", error)
+        return []
     }
 }

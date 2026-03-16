@@ -67,6 +67,10 @@ export async function settlePartnerDebt(partnerId: string) {
 
         revalidatePath("/")
         revalidatePath("/projects")
+        revalidatePath("/partners")
+        revalidatePath("/vault")
+        revalidatePath(`/partners/${partnerId}`)
+        revalidatePath(`/vault/${partnerId}`)
         return { success: true, count: unpaidProjects.length, amount: totalAmount }
     } catch (error) {
         console.error("[settlePartnerDebt] failed", error)
@@ -119,6 +123,12 @@ export async function voidSettlement(auditLogId: string) {
 
         revalidatePath("/")
         revalidatePath("/projects")
+        revalidatePath("/partners")
+        revalidatePath("/vault")
+        if (details.partnerId) {
+            revalidatePath(`/partners/${details.partnerId}`)
+            revalidatePath(`/vault/${details.partnerId}`)
+        }
         return { success: true }
     } catch (error) {
         console.error("[voidSettlement] failed", error)

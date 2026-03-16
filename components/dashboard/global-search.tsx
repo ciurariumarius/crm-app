@@ -76,7 +76,7 @@ export function GlobalSearch() {
                 className="hidden md:flex items-center gap-3 w-full max-w-[500px] px-6 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all text-slate-400 group shadow-sm mx-auto"
             >
                 <Search className="h-4 w-4 text-slate-400" />
-                <span className="text-[13px] text-slate-500 font-medium">Search projects, clients or campaigns...</span>
+                <span className="text-[13px] text-slate-500 font-medium">Search projects, tasks or partners...</span>
                 <div className="ml-auto flex items-center gap-1">
                     <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-400 opacity-100 group-hover:bg-slate-100">
                         <span className="text-xs">⌘</span>K
@@ -98,7 +98,7 @@ export function GlobalSearch() {
                 shouldFilter={false} // Disable internal cmdk filtering for instant server results
             >
                 <CommandInput
-                    placeholder="Search projects, tasks, or partners..."
+                    placeholder="Search projects, tasks or partners..."
                     value={query}
                     onValueChange={setQuery}
                 />
@@ -128,7 +128,7 @@ export function GlobalSearch() {
                                         <FolderDot className="h-4 w-4 text-blue-500" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="font-semibold text-slate-700">{project.name || formatProjectName(project)}</span>
+                                        <span className="font-semibold text-slate-700">{formatProjectName(project)}</span>
                                         <span className="text-[10px] text-slate-400 uppercase font-black">{project.site?.partner?.name}</span>
                                     </div>
                                 </CommandItem>
@@ -149,7 +149,7 @@ export function GlobalSearch() {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="font-semibold text-slate-700">{task.name}</span>
-                                        <span className="text-[10px] text-slate-400 uppercase font-black">{task.project?.name || (task.project ? formatProjectName(task.project) : "No Project")}</span>
+                                        <span className="text-[10px] text-slate-400 uppercase font-black">{task.project ? formatProjectName(task.project) : "No Project"}</span>
                                     </div>
                                 </CommandItem>
                             ))}

@@ -45,22 +45,33 @@ export async function getProjectPaymentHistory(projectId: string) {
 export async function getPaymentLogs(params: {
     projectId?: string;
     partnerId?: string;
+    q?: string;
     take?: number;
     skip?: number;
 }) {
     try {
         const session = await requireTenantContext()
-        const { projectId, partnerId, take = 50, skip = 0 } = params
+        const { projectId, partnerId, q, take = 50, skip = 0 } = params
 
         const where: Prisma.AuditLogWhereInput = {
             tenantId: session.tenantId,
             action: { in: ["PROJECT_PAYMENT_TOGGLED", "SETTLE_PARTNER", "SETTLE_PARTNER_VOIDED"] }
         }
 
+        const conditions: Prisma.AuditLogWhereInput[] = []
+
+        if (q) {
+            conditions.push({ details: { contains: q } })
+        }
+
         if (projectId) {
-            where.details = { contains: `projectId=${projectId}` }
+            conditions.push({ details: { contains: `projectId=${projectId}` } })
         } else if (partnerId) {
-            where.details = { contains: `partnerId=${partnerId}` }
+            conditions.push({ details: { contains: `partnerId=${partnerId}` } })
+        }
+
+        if (conditions.length > 0) {
+            where.AND = conditions
         }
 
         const [logs, total] = await Promise.all([

@@ -26,7 +26,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { cn, formatCurrency, formatRelativeDate } from "@/lib/utils"
+import { cn, formatCurrency, formatProjectName, formatRelativeDate } from "@/lib/utils"
 import { settlePartnerDebt } from "@/lib/actions/settlement"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
@@ -54,10 +54,12 @@ type TaskLite = {
     status?: string | null
     deadline?: Date | string | null
     project?: {
+        name?: string | null
+        createdAt?: Date | string | null
         site?: {
             domainName?: string | null
         } | null
-        services?: Array<{ serviceName: string }>
+        services?: Array<{ serviceName: string; isRecurring?: boolean | null }>
     } | null
 }
 
@@ -288,10 +290,7 @@ export function MobileHomeView({
                                 isPast(deadline) &&
                                 !isToday(deadline)
                             )
-                            const servicesText = (task?.project?.services || [])
-                                .map((service) => service.serviceName)
-                                .join(" + ")
-                            const domain = task?.project?.site?.domainName || "No domain"
+                            const projectLabel = task?.project ? formatProjectName(task.project) : "No Project"
 
                             return (
                                 <button
@@ -302,8 +301,7 @@ export function MobileHomeView({
                                 >
                                     <h3 className="text-[15px] font-semibold text-slate-900 leading-snug">{task.name}</h3>
                                     <p className="mt-1 truncate text-[12px] text-slate-500">
-                                        {domain}
-                                        {servicesText ? ` — ${servicesText}` : ""}
+                                        {projectLabel}
                                     </p>
                                     <div className="mt-3 flex items-center gap-2">
                                         {isOverdue ? (

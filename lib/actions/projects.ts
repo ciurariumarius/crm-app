@@ -7,13 +7,17 @@ import { requireTenantContext } from "@/lib/tenant"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { PROJECT_STATUS_VALUES, taskStatusSortOrder } from "@/lib/status"
+import { formatProjectName } from "@/lib/utils"
 import { z } from "zod"
 
 function revalidateProjectPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/projects")
     revalidatePath("/")
     if (projectId) revalidatePath(`/projects/${projectId}`)
-    if (sitePartnerId && siteId) revalidatePath(`/vault/${sitePartnerId}/${siteId}`)
+    if (sitePartnerId && siteId) {
+        revalidatePath(`/partners/${sitePartnerId}/${siteId}`)
+        revalidatePath(`/vault/${sitePartnerId}/${siteId}`)
+    }
 }
 
 const CreateProjectSchema = z.object({
@@ -84,16 +88,11 @@ export async function createProject(data: {
 
             let projectName = validated.name
             if (!projectName) {
-                const serviceNames = services.map((s) => s.serviceName).join(", ")
-                const isRecurring = services.some((s) => s.isRecurring)
-
-                projectName = `${site.domainName} - ${serviceNames}`
-                if (isRecurring) {
-                    const date = new Date()
-                    const month = date.toLocaleString('en-US', { month: 'short' })
-                    const year = date.getFullYear()
-                    projectName += ` - ${month} ${year}`
-                }
+                projectName = formatProjectName({
+                    siteName: site.domainName,
+                    services,
+                    createdAt: new Date(),
+                })
             }
 
             const project = await tx.project.create({
@@ -107,6 +106,7 @@ export async function createProject(data: {
                     currentFee: validated.currentFee,
                     status: validated.status || "Active",
                     paymentStatus: validated.paymentStatus || "Unpaid",
+                    paidAt: validated.paymentStatus === "Paid" ? new Date() : null,
                 },
                 include: { site: true }
             })
@@ -139,6 +139,7 @@ export async function createProject(data: {
         })
 
         if (result.site) {
+            revalidatePath(`/partners/${result.site.partnerId}/${validated.siteId}`)
             revalidatePath(`/vault/${result.site.partnerId}/${validated.siteId}`)
         }
         revalidatePath("/")
@@ -234,17 +235,11 @@ export async function updateProject(projectId: string, data: {
             }
 
             if (projectInfo && projectInfo.site && newServices.length > 0) {
-                const serviceNames = newServices.map((s) => s.serviceName).join(", ")
-                const isRecurring = newServices.some((s) => s.isRecurring)
-
-                let newName = `${projectInfo.site.domainName} - ${serviceNames}`
-                if (isRecurring) {
-                    const date = new Date()
-                    const month = date.toLocaleString('en-US', { month: 'short' })
-                    const year = date.getFullYear()
-                    newName += ` - ${month} ${year}`
-                }
-                prismaUpdateData.name = newName
+                prismaUpdateData.name = formatProjectName({
+                    siteName: projectInfo.site.domainName,
+                    services: newServices,
+                    createdAt: projectInfo.createdAt || new Date(),
+                })
             }
 
             prismaUpdateData.services = {

@@ -38,7 +38,8 @@ export async function globalSearch(query: string) {
                 include: {
                     project: {
                         include: {
-                            site: true
+                            site: true,
+                            services: true,
                         }
                     }
                 },

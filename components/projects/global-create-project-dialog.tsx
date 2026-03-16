@@ -3,11 +3,11 @@
 import { useState, useMemo, useEffect } from "react"
 import { createProject } from "@/lib/actions/projects"
 import { createSite } from "@/lib/actions/sites"
+import { searchProjectServices } from "@/lib/actions/services"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -16,12 +16,13 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { toast } from "sonner"
-import { Plus, Globe, Users, Briefcase, Sparkles, Check, X } from "lucide-react"
+import { Check, X, SlidersHorizontal, ChevronDown, ChevronUp, Repeat, Clock3, Loader2, ChevronsUpDown, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { Partner, Service } from "@prisma/client"
+import { Service } from "@prisma/client"
 import { PartnerWithSites } from "@/types"
 
 interface GlobalCreateProjectDialogProps {
@@ -55,11 +56,14 @@ export function GlobalCreateProjectDialog({
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
     const [projectStatus, setProjectStatus] = useState<"Active" | "Paused" | "Completed" | "Closed">("Active")
     const [isPaid, setIsPaid] = useState(false)
+    const [showDetails, setShowDetails] = useState(false)
     const [fee, setFee] = useState("")
+    const [serviceQuery, setServiceQuery] = useState("")
+    const [ajaxServices, setAjaxServices] = useState<Array<Pick<Service, "id" | "serviceName" | "isRecurring" | "baseFee">>>([])
+    const [isSearchingServices, setIsSearchingServices] = useState(false)
+    const [siteComboboxOpen, setSiteComboboxOpen] = useState(false)
+    const [siteQuery, setSiteQuery] = useState("")
 
-    // Quick Add Site state
-    const [showQuickAddSite, setShowQuickAddSite] = useState(false)
-    const [newSiteDomain, setNewSiteDomain] = useState("")
     const [addingSite, setAddingSite] = useState(false)
 
     // Sync with props if they change
@@ -68,13 +72,49 @@ export function GlobalCreateProjectDialog({
         if (defaultSiteId) setSiteId(defaultSiteId)
     }, [defaultPartnerId, defaultSiteId])
 
-    const selectedPartner = useMemo(() =>
-        partners.find(p => p.id === partnerId),
-        [partners, partnerId])
+    const allSites = useMemo(() =>
+        partners.flatMap((partner) =>
+            (partner.sites || []).map((site) => ({
+                id: site.id,
+                domainName: site.domainName,
+                partnerId: partner.id,
+                partnerName: partner.name,
+            }))
+        ),
+        [partners])
+
+    const availableSites = useMemo(() => {
+        if (defaultPartnerId) {
+            return allSites.filter((site) => site.partnerId === defaultPartnerId)
+        }
+        if (partnerId) {
+            return allSites.filter((site) => site.partnerId === partnerId)
+        }
+        return allSites
+    }, [allSites, defaultPartnerId, partnerId])
+
+    const normalizedSiteQuery = siteQuery.trim().toLowerCase()
+    const hasSiteQuery = normalizedSiteQuery.length > 0
+    const suggestedSiteDomain = useMemo(() => {
+        if (!hasSiteQuery) return ""
+        const normalized = normalizedSiteQuery
+            .replace(/^https?:\/\//, "")
+            .replace(/\s+/g, "")
+        if (!normalized) return ""
+        return normalized.includes(".") ? normalized : `${normalized}.ro`
+    }, [hasSiteQuery, normalizedSiteQuery])
+    const siteAlreadyExists = useMemo(
+        () =>
+            availableSites.some(
+                (site) => site.domainName.trim().toLowerCase() === suggestedSiteDomain
+            ),
+        [availableSites, suggestedSiteDomain]
+    )
 
     const selectedServices = useMemo(() =>
         services.filter(s => selectedServiceIds.includes(s.id)),
         [services, selectedServiceIds])
+    const resolvedPartnerId = partnerId || defaultPartnerId || ""
 
     // Determine the "kind" allowed based on the first selected service
     const allowedKind = selectedServices.length > 0 ? selectedServices[0].isRecurring : null
@@ -83,6 +123,54 @@ export function GlobalCreateProjectDialog({
         if (allowedKind === null) return services
         return services.filter(s => s.isRecurring === allowedKind)
     }, [services, allowedKind])
+
+    const filteredServices = useMemo(() => {
+        const query = serviceQuery.trim().toLowerCase()
+        if (!query) return availableServices
+        return availableServices.filter((service) =>
+            service.serviceName.toLowerCase().includes(query)
+        )
+    }, [availableServices, serviceQuery])
+
+    const servicesToRender = useMemo(() => {
+        const query = serviceQuery.trim()
+        if (!query) return filteredServices
+        return ajaxServices
+    }, [serviceQuery, filteredServices, ajaxServices])
+
+    useEffect(() => {
+        const query = serviceQuery.trim()
+        if (!query || !open) {
+            setAjaxServices([])
+            setIsSearchingServices(false)
+            return
+        }
+
+        let cancelled = false
+        const timer = setTimeout(async () => {
+            setIsSearchingServices(true)
+            try {
+                const cadence = allowedKind === null ? "all" : allowedKind ? "recurring" : "one-time"
+                const results = await searchProjectServices(query, cadence)
+                if (!cancelled) {
+                    setAjaxServices(results)
+                }
+            } catch {
+                if (!cancelled) {
+                    setAjaxServices([])
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsSearchingServices(false)
+                }
+            }
+        }, 250)
+
+        return () => {
+            cancelled = true
+            clearTimeout(timer)
+        }
+    }, [serviceQuery, allowedKind, open])
 
     // Auto-calculate sum of base fees when services change
     useEffect(() => {
@@ -99,15 +187,49 @@ export function GlobalCreateProjectDialog({
 
     const handlePartnerChange = (id: string) => {
         setPartnerId(id)
-        setSiteId("")
-        setShowQuickAddSite(false)
+        if (siteId) {
+            const currentSite = allSites.find((site) => site.id === siteId)
+            if (currentSite && currentSite.partnerId !== id) {
+                setSiteId("")
+            }
+        }
+        setSiteQuery("")
+    }
+
+    const handleSiteChange = (id: string) => {
+        setSiteId(id)
+        setSiteComboboxOpen(false)
+        setSiteQuery("")
+        if (defaultPartnerId) return
+
+        const selectedSite = allSites.find((site) => site.id === id)
+        if (selectedSite) {
+            setPartnerId(selectedSite.partnerId)
+        }
+    }
+
+    const handleQuickAddSite = async (rawDomain: string) => {
+        const domain = rawDomain.trim()
+        if (!domain || !resolvedPartnerId) return
+        setAddingSite(true)
+        try {
+            const newSite = await createSite(resolvedPartnerId, domain)
+            toast.success("Site added successfully")
+            setSiteId(newSite.id)
+            setSiteComboboxOpen(false)
+            setSiteQuery("")
+        } catch {
+            toast.error("Failed to add site")
+        } finally {
+            setAddingSite(false)
+        }
     }
 
     const toggleService = (id: string) => {
         if (selectedServiceIds.includes(id)) {
             setSelectedServiceIds(prev => prev.filter(sid => sid !== id))
         } else {
-            const serviceToAdd = services.find(s => s.id === id)
+            const serviceToAdd = services.find(s => s.id === id) || ajaxServices.find(s => s.id === id)
             if (!serviceToAdd) return
 
             // If it's the first service, just add it
@@ -118,25 +240,9 @@ export function GlobalCreateProjectDialog({
                 if (serviceToAdd.isRecurring === allowedKind) {
                     setSelectedServiceIds(prev => [...prev, id])
                 } else {
-                    toast.error(`You can only select multiple ${allowedKind ? 'recurring' : 'one-time'} services at once.`)
+                    toast.error("You can only combine services with compatible billing cadence.")
                 }
             }
-        }
-    }
-
-    const handleQuickAddSite = async () => {
-        if (!newSiteDomain || !partnerId) return
-        setAddingSite(true)
-        try {
-            const newSite = await createSite(partnerId, newSiteDomain)
-            toast.success("Site added successfully")
-            setSiteId(newSite.id)
-            setShowQuickAddSite(false)
-            setNewSiteDomain("")
-        } catch (e) {
-            toast.error("Failed to add site")
-        } finally {
-            setAddingSite(false)
         }
     }
 
@@ -154,8 +260,8 @@ export function GlobalCreateProjectDialog({
                 siteId,
                 serviceIds: selectedServiceIds,
                 currentFee: fee ? parseFloat(fee) : undefined,
-                status: projectStatus,
-                paymentStatus: isPaid ? "Paid" : "Unpaid",
+                status: showDetails ? projectStatus : undefined,
+                paymentStatus: showDetails ? (isPaid ? "Paid" : "Unpaid") : undefined,
             })
 
             setOpen(false)
@@ -172,13 +278,16 @@ export function GlobalCreateProjectDialog({
     const resetForm = () => {
         if (!defaultPartnerId) setPartnerId("")
         if (!defaultSiteId) setSiteId("")
-        if (!defaultSiteId) setSiteId("")
         setSelectedServiceIds([])
         setFee("")
         setProjectStatus("Active")
         setIsPaid(false)
-        setShowQuickAddSite(false)
-        setNewSiteDomain("")
+        setShowDetails(false)
+        setServiceQuery("")
+        setSiteComboboxOpen(false)
+        setSiteQuery("")
+        setAjaxServices([])
+        setIsSearchingServices(false)
     }
 
     return (
@@ -188,27 +297,24 @@ export function GlobalCreateProjectDialog({
                     {trigger}
                 </DialogTrigger>
             )}
-            <DialogContent className="w-[95vw] sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
+            <DialogContent className="w-[96vw] sm:max-w-[860px] p-0 overflow-hidden border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
                 <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
-                    <DialogHeader className="p-8 pb-5 border-b">
-                        <DialogTitle className="text-xl flex items-center gap-3 font-semibold tracking-tight">
-                            <Sparkles className="h-5 w-5 text-primary" />
-                            Add New Project
-                        </DialogTitle>
-                        <DialogDescription className="font-medium">
-                            Bundle services into a single project template.
-                        </DialogDescription>
-                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-primary/10">
+                        <DialogHeader className="p-7 pb-5 border-b border-slate-200">
+                            <DialogTitle className="text-[40px] leading-none font-semibold tracking-tight">
+                                Add New Project
+                            </DialogTitle>
+                        </DialogHeader>
 
-                    <div className="flex-1 overflow-y-auto p-8 py-6 space-y-6 scrollbar-thin scrollbar-thumb-primary/10">
+                        <div className="p-7 space-y-6">
                         {/* 1. Partner Selection */}
                         {!defaultPartnerId && (
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/80">
+                                <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                                     01. Target Partner
                                 </Label>
                                 <Select value={partnerId} onValueChange={handlePartnerChange}>
-                                    <SelectTrigger className="h-11 bg-muted/30 border-none shadow-none focus:ring-1">
+                                    <SelectTrigger className="h-12 rounded-xl bg-white border border-slate-200 shadow-none focus:ring-1 focus:ring-primary/20 px-4">
                                         <SelectValue placeholder="Choose a partner..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -221,77 +327,113 @@ export function GlobalCreateProjectDialog({
                         )}
 
                         {/* 2. Site Selection */}
-                        {(partnerId || defaultPartnerId) && !defaultSiteId && (
-                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        {!defaultSiteId && (
+                            <div className="space-y-2">
                                 <div className="flex justify-between items-center">
-                                    <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/80">
+                                    <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                                         02. Target Site
                                     </Label>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="h-auto p-0 text-xs font-semibold text-primary/60 hover:text-primary"
-                                        onClick={() => setShowQuickAddSite(!showQuickAddSite)}
-                                    >
-                                        {showQuickAddSite ? "Back to list" : "+ Add site"}
-                                    </Button>
                                 </div>
 
-                                {showQuickAddSite ? (
-                                    <div className="flex gap-2 p-2 bg-primary/5 rounded-xl border border-dashed border-primary/20">
-                                        <div className="relative flex-1">
-                                            <Globe className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                            <Input
-                                                placeholder="e.g. domain.com"
-                                                className="pl-8 h-9 text-sm bg-transparent border-none focus-visible:ring-0"
-                                                value={newSiteDomain}
-                                                onChange={(e) => setNewSiteDomain(e.target.value)}
-                                            />
-                                        </div>
+                                <Popover open={siteComboboxOpen} onOpenChange={setSiteComboboxOpen}>
+                                    <PopoverTrigger asChild>
                                         <Button
-                                            type="button"
-                                            size="sm"
-                                            className="h-9 px-4 rounded-lg font-bold"
-                                            disabled={addingSite || !newSiteDomain}
-                                            onClick={handleQuickAddSite}
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={siteComboboxOpen}
+                                            className="w-full justify-between h-12 rounded-xl bg-white border border-slate-200 shadow-none hover:bg-white px-4 font-semibold text-slate-900"
                                         >
-                                            {addingSite ? "..." : "ADD"}
+                                            <span className="truncate text-left">
+                                                {siteId
+                                                    ? (() => {
+                                                        const site = allSites.find((item) => item.id === siteId)
+                                                        if (!site) return "Select a site..."
+                                                        return !partnerId && !defaultPartnerId
+                                                            ? `${site.domainName} - ${site.partnerName}`
+                                                            : site.domainName
+                                                    })()
+                                                    : "Select a site..."}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
-                                    </div>
-                                ) : (
-                                    <Select value={siteId} onValueChange={setSiteId}>
-                                        <SelectTrigger className="h-11 bg-muted/30 border-none shadow-none focus:ring-1">
-                                            <SelectValue placeholder="Select site..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {selectedPartner?.sites.map((s) => (
-                                                <SelectItem key={s.id} value={s.id}>{s.domainName}</SelectItem>
-                                            ))}
-                                            {(!selectedPartner?.sites || selectedPartner.sites.length === 0) && (
-                                                <div className="p-4 text-center space-y-2">
-                                                    <p className="text-xs text-muted-foreground">No sites found for this partner.</p>
-                                                    <Button variant="link" size="sm" onClick={() => setShowQuickAddSite(true)}>Add one now</Button>
-                                                </div>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                )}
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                                        <Command>
+                                            <CommandInput
+                                                placeholder="Search site or type new domain..."
+                                                value={siteQuery}
+                                                onValueChange={setSiteQuery}
+                                            />
+                                            <CommandList className="max-h-[260px]">
+                                                <CommandEmpty>
+                                                    {resolvedPartnerId
+                                                        ? "No sites found."
+                                                        : "No sites found. Choose a partner to add a site."}
+                                                </CommandEmpty>
+                                                <CommandGroup>
+                                                    {availableSites.map((s) => (
+                                                        <CommandItem
+                                                            key={s.id}
+                                                            value={`${s.domainName} ${s.partnerName}`}
+                                                            onSelect={() => handleSiteChange(s.id)}
+                                                            className="py-2.5"
+                                                        >
+                                                            <div className="flex min-w-0 flex-col">
+                                                                <span className="truncate font-medium text-slate-800">
+                                                                    {s.domainName}
+                                                                </span>
+                                                                {!partnerId && !defaultPartnerId && (
+                                                                    <span className="truncate text-[11px] font-medium text-slate-500">
+                                                                        {s.partnerName}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {siteId === s.id && <Check className="ml-auto h-4 w-4 text-primary" />}
+                                                        </CommandItem>
+                                                    ))}
+                                                    {hasSiteQuery && (
+                                                        <div className="px-3 py-2 text-sm font-semibold text-slate-400 border-t border-slate-100">
+                                                            {suggestedSiteDomain}
+                                                        </div>
+                                                    )}
+                                                    {resolvedPartnerId && hasSiteQuery && !siteAlreadyExists && (
+                                                        <CommandItem
+                                                            value={`add-site-${suggestedSiteDomain}`}
+                                                            onSelect={() => {
+                                                                void handleQuickAddSite(suggestedSiteDomain)
+                                                            }}
+                                                            disabled={addingSite}
+                                                            className="py-2.5"
+                                                        >
+                                                            {addingSite ? (
+                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <Plus className="mr-2 h-4 w-4 text-primary" />
+                                                            )}
+                                                            <span className="truncate font-semibold text-primary">
+                                                                Add site "{suggestedSiteDomain}"
+                                                            </span>
+                                                        </CommandItem>
+                                                    )}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         )}
 
-                        {/* 2.5 Removed Nickname per request */}
-
                         {/* 3. Service Selection (Multi) */}
-                        {(siteId || defaultSiteId) && (
-                            <div className="space-y-4 pt-4 border-t border-dashed animate-in fade-in slide-in-from-top-2 duration-300">
-                                <div className="space-y-3">
-                                    <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/80">
-                                        03. Service Bundle {allowedKind !== null && `(${allowedKind ? 'Recurring' : 'One-time'})`}
-                                    </Label>
+                        <div className="space-y-4 pt-4 border-t border-dashed">
+                            <div className="space-y-3">
+                                <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                    03. Services
+                                </Label>
 
-                                    <div className="flex flex-wrap gap-2 min-h-[44px] p-2 bg-muted/20 rounded-xl border">
+                                {selectedServices.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200">
                                         {selectedServices.map(s => (
-                                            <Badge key={s.id} variant="secondary" className="pl-2 pr-1 h-7 gap-1 font-bold bg-background shadow-sm border-primary/10">
+                                            <Badge key={s.id} variant="secondary" className="pl-2 pr-1 h-7 gap-1 font-bold bg-white shadow-sm border-slate-200 text-slate-700">
                                                 {s.serviceName}
                                                 <button
                                                     type="button"
@@ -302,118 +444,147 @@ export function GlobalCreateProjectDialog({
                                                 </button>
                                             </Badge>
                                         ))}
-                                        {selectedServiceIds.length === 0 && (
-                                            <span className="text-xs text-muted-foreground self-center px-1">Select one or more services...</span>
-                                        )}
                                     </div>
+                                )}
 
-                                    <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-[160px] pr-2 scrollbar-thin scrollbar-thumb-primary/10">
-                                        {availableServices.map((s) => {
-                                            const isSelected = selectedServiceIds.includes(s.id)
-                                            return (
-                                                <button
-                                                    key={s.id}
-                                                    type="button"
-                                                    onClick={() => toggleService(s.id)}
-                                                    className={cn(
-                                                        "flex flex-col items-start p-3 text-left rounded-xl border transition-all group relative overflow-hidden premium-card",
-                                                        isSelected
-                                                            ? "bg-primary/5 border-primary ring-1 ring-primary/20"
-                                                            : "bg-background hover:bg-muted/50 border-muted hover:border-primary/20"
-                                                    )}
-                                                >
-                                                    <div className="flex items-center justify-between w-full mb-1">
+                                <Input
+                                    placeholder="Select one or more services..."
+                                    value={serviceQuery}
+                                    onChange={(e) => setServiceQuery(e.target.value)}
+                                    className="h-12 rounded-xl bg-white border border-slate-200 shadow-none focus-visible:ring-1 focus-visible:ring-primary/20"
+                                />
+
+                                <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-[160px] pr-2 scrollbar-thin scrollbar-thumb-primary/10">
+                                    {isSearchingServices && (
+                                        <div className="col-span-2 flex items-center gap-2 rounded-xl border border-dashed border-muted p-3 text-xs text-muted-foreground">
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            Searching services...
+                                        </div>
+                                    )}
+                                    {servicesToRender.map((s) => {
+                                        const isSelected = selectedServiceIds.includes(s.id)
+                                        return (
+                                            <button
+                                                key={s.id}
+                                                type="button"
+                                                onClick={() => toggleService(s.id)}
+                                                className={cn(
+                                                    "flex flex-col items-start p-4 text-left rounded-xl border transition-colors relative overflow-hidden",
+                                                    isSelected
+                                                        ? "bg-primary/5 border-primary"
+                                                        : "bg-white border-slate-200 hover:border-slate-300"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between w-full gap-2">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        {s.isRecurring ? (
+                                                            <Repeat className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                                        ) : (
+                                                            <Clock3 className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                                                        )}
                                                         <span className={cn("text-xs font-bold truncate", isSelected ? "text-primary" : "text-foreground")}>
                                                             {s.serviceName}
                                                         </span>
-                                                        {isSelected && <Check className="h-3 w-3 text-primary shrink-0" />}
                                                     </div>
-                                                    <span className="text-xs font-mono font-medium text-muted-foreground/70">
-                                                        {parseFloat(s.baseFee?.toString() || "0")} RON
+                                                    <span className={cn(
+                                                        "h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0",
+                                                        isSelected ? "bg-primary border-primary text-white" : "bg-white border-slate-300 text-transparent"
+                                                    )}>
+                                                        <Check className="h-3 w-3" />
                                                     </span>
-                                                    {isSelected && (
-                                                        <div className="absolute bottom-0 right-0 h-1 w-full bg-primary" />
-                                                    )}
-                                                </button>
-                                            )
-                                        })}
+                                                </div>
+                                            </button>
+                                        )
+                                    })}
+                                    {!isSearchingServices && servicesToRender.length === 0 && (
+                                        <div className="col-span-2 rounded-xl border border-dashed border-muted p-3 text-xs text-muted-foreground">
+                                            No services match your search.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-dashed">
+                                <div className="space-y-2">
+                                    <Label htmlFor="fee" className="text-xs font-semibold text-muted-foreground/70">Total Fee</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-semibold">RON</span>
+                                        <Input
+                                            id="fee"
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            className="pl-12 h-11 bg-primary/5 border-none font-bold"
+                                            value={fee}
+                                            onChange={(e) => setFee(e.target.value)}
+                                        />
                                     </div>
                                 </div>
 
-                                {selectedServiceIds.length > 0 && (
-                                    <div className="space-y-4 pt-4 border-t border-dashed animate-in zoom-in-95 duration-200">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="fee" className="text-xs font-semibold text-muted-foreground/70">Total Fee (RON)</Label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-semibold">RON</span>
-                                                    <Input
-                                                        id="fee"
-                                                        type="number"
-                                                        step="0.01"
-                                                        placeholder="0.00"
-                                                        className="pl-12 h-11 bg-primary/5 border-none font-bold"
-                                                        value={fee}
-                                                        onChange={(e) => setFee(e.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold text-muted-foreground/70 text-right block">Type</Label>
-                                                <div className="h-11 flex items-center justify-end px-4 bg-muted/20 rounded-xl text-xs font-semibold text-primary">
-                                                    {allowedKind ? "Recurring" : "One-time"}
-                                                </div>
+                                <div className="pt-2">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => setShowDetails(!showDetails)}
+                                        className="w-full flex justify-between items-center h-12 bg-muted/10 hover:bg-muted/30 text-muted-foreground font-medium rounded-xl border border-dashed border-border"
+                                    >
+                                        <span className="flex items-center gap-2 text-sm">
+                                            <SlidersHorizontal className="w-4 h-4" />
+                                            Add Additional Details
+                                        </span>
+                                        {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                    </Button>
+                                </div>
+
+                                {showDetails && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="rounded-xl border border-slate-200 bg-slate-100 p-1">
+                                            <div className="grid grid-cols-4 gap-1">
+                                                {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
+                                                    <button
+                                                        key={statusOption}
+                                                        type="button"
+                                                        onClick={() => setProjectStatus(statusOption)}
+                                                        className={cn(
+                                                            "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
+                                                            projectStatus === statusOption && statusOption === "Active" && "status-pill-action shadow-sm",
+                                                            projectStatus === statusOption && statusOption === "Paused" && "status-pill-warning shadow-sm",
+                                                            projectStatus === statusOption && statusOption === "Completed" && "status-pill-success shadow-sm",
+                                                            projectStatus === statusOption && statusOption === "Closed" && "status-pill-closed shadow-sm",
+                                                            projectStatus !== statusOption && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                                        )}
+                                                    >
+                                                        {statusOption}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                                            <div className="rounded-xl border border-slate-200 bg-slate-100 p-1">
-                                                <div className="grid grid-cols-4 gap-1">
-                                                    {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
-                                                        <button
-                                                            key={statusOption}
-                                                            type="button"
-                                                            onClick={() => setProjectStatus(statusOption)}
-                                                            className={cn(
-                                                                "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
-                                                                projectStatus === statusOption && statusOption === "Active" && "status-pill-action shadow-sm",
-                                                                projectStatus === statusOption && statusOption === "Paused" && "status-pill-warning shadow-sm",
-                                                                projectStatus === statusOption && statusOption === "Completed" && "status-pill-success shadow-sm",
-                                                                projectStatus === statusOption && statusOption === "Closed" && "status-pill-closed shadow-sm",
-                                                                projectStatus !== statusOption && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
-                                                            )}
-                                                        >
-                                                            {statusOption}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsPaid(!isPaid)}
+                                            className={cn(
+                                                "flex items-center justify-between p-3.5 rounded-xl border transition-all premium-card",
+                                                isPaid
+                                                    ? "status-pill-action/10 border-blue-500/30 text-blue-600"
+                                                    : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
+                                            )}
+                                        >
+                                            <Label className="text-xs font-semibold cursor-pointer">
+                                                Mark as Paid
+                                            </Label>
+                                            <div className={cn(
+                                                "h-5 w-5 rounded-md border flex items-center justify-center transition-all",
+                                                isPaid ? "bg-blue-500 border-blue-500 text-white" : "border-muted-foreground/30 bg-background"
+                                            )}>
+                                                {isPaid && <Check className="h-3 w-3" />}
                                             </div>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsPaid(!isPaid)}
-                                                className={cn(
-                                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all premium-card",
-                                                    isPaid
-                                                        ? "status-pill-action/10 border-blue-500/30 text-blue-600"
-                                                        : "bg-muted/20 border-transparent text-muted-foreground hover:border-primary/20"
-                                                )}
-                                            >
-                                                <Label className="text-xs font-semibold cursor-pointer">
-                                                    Mark as Paid
-                                                </Label>
-                                                <div className={cn(
-                                                    "h-5 w-5 rounded-md border flex items-center justify-center transition-all",
-                                                    isPaid ? "bg-blue-500 border-blue-500 text-white" : "border-muted-foreground/30 bg-background"
-                                                )}>
-                                                    {isPaid && <Check className="h-3 w-3" />}
-                                                </div>
-                                            </button>
-                                        </div>
+                                        </button>
                                     </div>
                                 )}
                             </div>
-                        )}
+                        </div>
+                        </div>
                     </div>
 
                     <DialogFooter className="p-8 bg-muted/5 border-t">

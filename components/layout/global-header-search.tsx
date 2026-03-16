@@ -19,7 +19,7 @@ export function GlobalHeaderSearch() {
         // I'll make it search projects by default but maybe they can prefix with 's:' for sites.
 
         if (query.toLocaleLowerCase().startsWith("s:")) {
-            router.push(`/vault/sites?q=${query.slice(2).trim()}`)
+            router.push(`/domains?q=${query.slice(2).trim()}`)
         } else {
             router.push(`/projects?q=${query}`)
         }

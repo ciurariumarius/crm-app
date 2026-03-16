@@ -97,35 +97,53 @@ export default async function TimePage({
                 <TimeLogsFilters
                     partners={partners}
                     projects={formattedProjects}
+                    totalLogs={totalLogs}
                 />
 
-                <div className="bg-card rounded-xl border border-border shadow-sm p-4 md:p-6">
+                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur-md transition-all">
                     <TimeLogsTable
                         logs={serializedLogs}
                         projects={formattedProjects}
                         tasks={tasks}
                     />
 
-                    <div className="mt-6 pt-4 border-t border-border flex justify-between items-center px-2">
-                        <span className="font-bold text-sm text-muted-foreground uppercase tracking-widest">Total Hours (Filtered)</span>
-                        <span className="font-mono font-bold text-lg text-primary">{totalHours}h</span>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
-                        <span className="text-muted-foreground">Page {page} of {totalPages} · {totalLogs} logs</span>
+                    <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-4">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
+                                <span>Page {page} of {totalPages}</span>
+                                <span className="h-1 w-1 rounded-full bg-slate-200" />
+                                <span>{totalLogs} logs</span>
+                            </div>
+                            <div className="h-4 w-px bg-slate-200" />
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
+                                <span className="text-slate-500">Total Hours:</span>
+                                <span className="font-mono text-primary text-sm">{totalHours}h</span>
+                            </div>
+                        </div>
                         <div className="flex items-center gap-2">
                             {prevPage ? (
-                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(prevPage)}>
+                                <Link
+                                    href={buildPageHref(prevPage)}
+                                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                                >
                                     Previous
                                 </Link>
                             ) : (
-                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                                <span className="inline-flex h-9 items-center rounded-xl border border-slate-100 bg-slate-50/50 px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+                                    Previous
+                                </span>
                             )}
                             {nextPage ? (
-                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(nextPage)}>
+                                <Link
+                                    href={buildPageHref(nextPage)}
+                                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                                >
                                     Next
                                 </Link>
                             ) : (
-                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                                <span className="inline-flex h-9 items-center rounded-xl border border-slate-100 bg-slate-50/50 px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+                                    Next
+                                </span>
                             )}
                         </div>
                     </div>

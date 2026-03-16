@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
-import { cn } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
 import { ListChecks, ArrowRight, Clock, Trash2 } from "lucide-react"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { deleteTasks, updateTask } from "@/lib/actions/tasks"
@@ -177,7 +177,7 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
                     projectId={quickLogTask.projectId}
                     taskId={quickLogTask.id}
                     taskName={quickLogTask.name}
-                    projectName={quickLogTask.project?.name || quickLogTask.project?.site?.domainName}
+                    projectName={quickLogTask.project ? formatProjectName(quickLogTask.project) : "Unknown Project"}
                 />
             )}
         </div>

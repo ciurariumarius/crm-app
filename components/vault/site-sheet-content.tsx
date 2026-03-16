@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Site } from "@prisma/client"
-import { Copy, ExternalLink, Save, Globe, Users, Expand, MoreHorizontal, Trash2 } from "lucide-react"
+import { Copy, ExternalLink, Save, Globe, Users, Expand, MoreHorizontal, Trash2, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -79,176 +79,175 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
         }
     }
 
-    return (
-        <div className="flex flex-col h-full bg-background md:max-w-4xl w-full">
-            {/* Header */}
-            <div className="p-6 border-b bg-muted/20 relative shrink-0">
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                            {site.partner && (
-                                <>
-                                    <Link href={`/vault/${site.partner.id}`} className="flex items-center gap-1 hover:text-primary transition-colors">
-                                        <Users className="h-3 w-3" />
-                                        {site.partner.name}
-                                    </Link>
-                                    <span className="opacity-30">/</span>
-                                </>
-                            )}
-                            <span className="flex items-center gap-1 text-foreground">
-                                <Globe className="h-3 w-3" />
-                                {site.domainName}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            {site.partner && (
-                                <Link
-                                    href={`/vault/${site.partner.id}/${site.id}`}
-                                    className="p-2 rounded-md hover:bg-muted transition-colors opacity-50 hover:opacity-100 hover:text-primary"
-                                    title="Open Full Page"
-                                >
-                                    <Expand className="h-4 w-4" />
-                                </Link>
-                            )}
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
+    const [isEditingDomain, setIsEditingDomain] = useState(false)
 
-                    <div className="space-y-1">
-                        <Input
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                            className="text-4xl font-black italic tracking-tighter border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto w-full"
-                            placeholder="Site Nickname"
-                        />
-                        <div className="flex items-center gap-2">
-                            <Globe className="h-3 w-3 text-muted-foreground/40" />
+    return (
+        <div className="relative flex h-full flex-col overflow-hidden bg-[#f8fafc]">
+            {/* Header / Title Area */}
+            <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
+                <div className="mx-auto max-w-[980px] space-y-4 pb-12">
+                    <div className="space-y-3 pr-4 pt-1 pb-1">
+                        {isEditingDomain ? (
                             <Input
                                 value={formData.domainName}
                                 onChange={(e) => setFormData({ ...formData, domainName: e.target.value })}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                                className="text-sm font-medium text-muted-foreground border-none bg-transparent p-0 focus-visible:ring-0 h-auto w-full"
-                                placeholder="domain.com"
+                                onBlur={() => {
+                                    setIsEditingDomain(false)
+                                    handleSave()
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        setIsEditingDomain(false)
+                                        handleSave()
+                                    }
+                                    if (e.key === 'Escape') {
+                                        setFormData({ ...formData, domainName: site.domainName || "" })
+                                        setIsEditingDomain(false)
+                                    }
+                                }}
+                                className="text-2xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-3xl h-auto p-0 border-none bg-transparent focus-visible:ring-0"
+                                autoFocus
                             />
+                        ) : (
+                            <div className="group flex w-full items-start gap-3 py-1">
+                                <div className="min-w-0 flex-1">
+                                    <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-2xl">
+                                        {formData.domainName}
+                                    </h1>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setIsEditingDomain(true)}
+                                    className="mt-0.5 h-8 w-8 shrink-0 rounded-lg text-slate-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-slate-100 hover:text-slate-700"
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="h-px w-full bg-slate-200" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">GTM ID</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    value={formData.gtmId}
+                                    onChange={(e) => setFormData({ ...formData, gtmId: e.target.value })}
+                                    onBlur={handleSave}
+                                    className="h-9 bg-white border-slate-200 hover:border-slate-300 transition-colors font-mono text-xs shadow-sm rounded-xl"
+                                    placeholder="GTM-XXXXXX"
+                                />
+                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-slate-100 rounded-xl" onClick={() => handleCopy(formData.gtmId)}>
+                                    <Copy className="h-3.5 w-3.5 text-slate-400" />
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Ads ID</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    value={formData.googleAdsId}
+                                    onChange={(e) => setFormData({ ...formData, googleAdsId: e.target.value })}
+                                    onBlur={handleSave}
+                                    className="h-9 bg-white border-slate-200 hover:border-slate-300 transition-colors font-mono text-xs shadow-sm rounded-xl"
+                                    placeholder="123-456-7890"
+                                />
+                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-slate-100 rounded-xl" onClick={() => handleCopy(formData.googleAdsId)}>
+                                    <Copy className="h-3.5 w-3.5 text-slate-400" />
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="space-y-1 col-span-full">
+                            <Label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Drive Folder</Label>
+                            <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <Globe className="h-3.5 w-3.5" />
+                                    </div>
+                                    <Input
+                                        value={formData.driveLink}
+                                        onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
+                                        onBlur={handleSave}
+                                        className="h-9 bg-white border-slate-200 hover:border-slate-300 transition-colors text-xs shadow-sm rounded-xl pl-9"
+                                        placeholder="https://drive.google.com/..."
+                                    />
+                                </div>
+                                {formData.driveLink && (
+                                    <Link href={formData.driveLink} target="_blank" className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-blue-600 transition-all shadow-sm">
+                                        <ExternalLink className="h-3.5 w-3.5" />
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <Tabs defaultValue="marketing" className="w-full pt-4">
+                        <TabsList className="bg-slate-100 p-1 rounded-xl w-full grid grid-cols-2">
+                            <TabsTrigger value="marketing" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-tight">Marketing Hub</TabsTrigger>
+                            <TabsTrigger value="technical" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-tight">Raw Data</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="marketing" className="space-y-5 pt-6 animate-in slide-in-from-bottom-2 duration-300">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Headlines / Ad Copy</Label>
+                                <Textarea
+                                    className="min-h-[120px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
+                                    value={marketingData.headlines}
+                                    onChange={(e) => setMarketingData({ ...marketingData, headlines: e.target.value })}
+                                    onBlur={handleSave}
+                                    placeholder="Enter headlines (one per line)..."
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Brand Voice & Notes</Label>
+                                <Textarea
+                                    className="min-h-[100px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
+                                    value={marketingData.brandNotes}
+                                    onChange={(e) => setMarketingData({ ...marketingData, brandNotes: e.target.value })}
+                                    onBlur={handleSave}
+                                    placeholder="Target audience, tone, key selling points..."
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Competitor Intelligence</Label>
+                                <Textarea
+                                    className="min-h-[100px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
+                                    value={marketingData.competitors}
+                                    onChange={(e) => setMarketingData({ ...marketingData, competitors: e.target.value })}
+                                    onBlur={handleSave}
+                                    placeholder="Competitor URLs and notes..."
+                                />
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="technical" className="pt-6">
+                            <div className="p-8 bg-slate-50 rounded-2xl border border-slate-200 border-dashed text-xs text-slate-400 font-bold uppercase tracking-widest text-center">
+                                Raw JSON data view coming soon.
+                            </div>
+                        </TabsContent>
+                    </Tabs>
+
+                    {/* Footer / Danger Zone */}
+                    <div className="pt-8 border-t border-slate-200 border-dashed">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                                <span className="text-xs text-rose-500 font-bold uppercase tracking-widest">Danger Zone</span>
+                            </div>
+                            <DeleteSiteButton siteId={site.id} partnerId={site.partnerId} />
                         </div>
                     </div>
                 </div>
             </div>
-
-            {/* Content Scroller */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-8">
-                {/* Properties Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-muted-foreground">GTM ID</Label>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                value={formData.gtmId}
-                                onChange={(e) => setFormData({ ...formData, gtmId: e.target.value })}
-                                onBlur={handleSave}
-                                className="h-8 bg-muted/20 border-transparent hover:border-border transition-colors font-mono text-xs"
-                                placeholder="GTM-XXXXXX"
-                            />
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleCopy(formData.gtmId)}>
-                                <Copy className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-muted-foreground">Ads ID</Label>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                value={formData.googleAdsId}
-                                onChange={(e) => setFormData({ ...formData, googleAdsId: e.target.value })}
-                                onBlur={handleSave}
-                                className="h-8 bg-muted/20 border-transparent hover:border-border transition-colors font-mono text-xs"
-                                placeholder="123-456-7890"
-                            />
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => handleCopy(formData.googleAdsId)}>
-                                <Copy className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    </div>
-                    <div className="space-y-1 col-span-full">
-                        <Label className="text-xs font-semibold text-muted-foreground">Drive Folder</Label>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                value={formData.driveLink}
-                                onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
-                                onBlur={handleSave}
-                                className="h-8 bg-muted/20 border-transparent hover:border-border transition-colors text-xs"
-                                placeholder="https://drive.google.com/..."
-                            />
-                            {formData.driveLink && (
-                                <Link href={formData.driveLink} target="_blank" className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-primary">
-                                    <ExternalLink className="h-3 w-3" />
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <Tabs defaultValue="marketing" className="w-full">
-                    <TabsList className="bg-muted/30 p-1 rounded-xl w-full grid grid-cols-2">
-                        <TabsTrigger value="marketing" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Marketing Hub</TabsTrigger>
-                        <TabsTrigger value="technical" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Raw Data</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="marketing" className="space-y-4 pt-4 animate-in slide-in-from-bottom-2 duration-300">
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold">Headlines / Ad Copy</Label>
-                            <Textarea
-                                className="min-h-[120px] bg-muted/10 border-muted-foreground/10 focus-visible:ring-1"
-                                value={marketingData.headlines}
-                                onChange={(e) => setMarketingData({ ...marketingData, headlines: e.target.value })}
-                                onBlur={handleSave}
-                                placeholder="Enter headlines (one per line)..."
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold">Brand Voice & Notes</Label>
-                            <Textarea
-                                className="min-h-[100px] bg-muted/10 border-muted-foreground/10 focus-visible:ring-1"
-                                value={marketingData.brandNotes}
-                                onChange={(e) => setMarketingData({ ...marketingData, brandNotes: e.target.value })}
-                                onBlur={handleSave}
-                                placeholder="Target audience, tone, key selling points..."
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold">Competitor Intelligence</Label>
-                            <Textarea
-                                className="min-h-[100px] bg-muted/10 border-muted-foreground/10 focus-visible:ring-1"
-                                value={marketingData.competitors}
-                                onChange={(e) => setMarketingData({ ...marketingData, competitors: e.target.value })}
-                                onBlur={handleSave}
-                                placeholder="Competitor URLs and notes..."
-                            />
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="technical" className="pt-4">
-                        <div className="p-4 bg-muted/20 rounded-xl border border-dashed text-xs text-muted-foreground">
-                            Raw JSON data view coming soon.
-                        </div>
-                    </TabsContent>
-                </Tabs>
-
-                {/* Footer / Danger Zone */}
-                <div className="pt-8 border-t border-dashed">
-                    <div className="flex items-center justify-between opacity-60 hover:opacity-100 transition-opacity">
-                        <span className="text-xs text-rose-500 font-medium">Danger Zone</span>
-                        <DeleteSiteButton siteId={site.id} partnerId={site.partnerId} />
-                    </div>
-                </div>
-            </div>
-            <div className="p-4 border-t bg-muted/10 flex justify-end">
-                <Button onClick={handleSave} disabled={loading} size="sm">
+            
+            <div className="p-4 border-t bg-white flex justify-end gap-3 px-8">
+                <Button onClick={handleSave} disabled={loading} size="sm" className="rounded-full px-6 font-bold shadow-sm">
                     {loading ? "Saving..." : "Save Changes"}
                 </Button>
             </div>

@@ -5,7 +5,7 @@ import { SiteDetail } from "@/components/vault/site-detail"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { formatRelativeDate } from "@/lib/utils"
+import { formatProjectName, formatRelativeDate } from "@/lib/utils"
 import { requireTenantContext } from "@/lib/tenant"
 
 export const dynamic = "force-dynamic"
@@ -79,7 +79,12 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
                                     <CardHeader className="pb-2">
                                         <div className="flex justify-between items-start">
                                             <CardTitle className="text-base">
-                                                {project.name || `${site.domainName} - ${project.services.map((s: any) => s.serviceName).join(" & ")}`}
+                                                {formatProjectName({
+                                                    site: { domainName: site.domainName },
+                                                    services: project.services,
+                                                    createdAt: project.createdAt,
+                                                    name: project.name,
+                                                })}
                                             </CardTitle>
                                             <Badge variant={displayStatus === "Active" ? "default" : "secondary"}>
                                                 {displayStatus}

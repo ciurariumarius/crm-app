@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format, isToday, isPast } from "date-fns"
-import { cn } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import {
     AlertTriangle,
@@ -130,21 +130,9 @@ export function TaskGridCard({
     const isRunning = isActiveTimerThisTask && timerState.isRunning
     const isPaused = isActiveTimerThisTask && !timerState.isRunning && timerState.elapsedSeconds > 0
 
-    const domainName = task.project?.site?.domainName || task.project?.name || "No Project"
     const services = task.project?.services || []
     const isRecurring = services.some((s: TaskCardService) => s.isRecurring)
-    const serviceName = services.length > 0
-        ? services.map((s: TaskCardService) => s.serviceName).filter(Boolean).join(" + ")
-        : null
-
-    const recurringMonthLabel = (() => {
-        if (!isRecurring || !task.project?.createdAt) return null
-        const createdDate = new Date(task.project.createdAt)
-        if (Number.isNaN(createdDate.getTime())) return null
-        return format(createdDate, "MMM yyyy")
-    })()
-
-    const projectFullName = serviceName ? `${domainName} — ${serviceName}` : domainName
+    const projectFullName = task.project ? formatProjectName(task.project) : "No Project"
 
     return (
         <div
@@ -262,14 +250,9 @@ export function TaskGridCard({
                         ? <RefreshCcw className="h-3.5 w-3.5 text-violet-500 shrink-0" />
                         : <Zap className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     }
-                    <div className="min-w-0 flex flex-wrap items-center gap-1.5">
-                        <p className="text-[12px] font-bold text-slate-600 tracking-tight leading-tight break-words">{projectFullName}</p>
-                        {recurringMonthLabel ? (
-                            <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-blue-600">
-                                {recurringMonthLabel}
-                            </span>
-                        ) : null}
-                    </div>
+                    <p className="min-w-0 text-[12px] font-bold text-slate-600 tracking-tight leading-tight break-words">
+                        {projectFullName}
+                    </p>
                 </div>
 
                 {/* Badges: priority + deadline */}
