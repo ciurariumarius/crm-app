@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { format, isToday, isPast } from "date-fns"
+import { format, isBefore, startOfDay } from "date-fns"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import {
@@ -14,10 +14,8 @@ import {
     Play,
     RefreshCcw,
     Square,
-    Zap,
     ArrowUpRight,
     Clock,
-    CalendarClock,
     Circle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -60,6 +58,7 @@ type TaskCardItem = {
     projectId?: string | null
     urgency?: string | null
     deadline?: string | Date | null
+    createdAt?: string | Date | null
     project?: TaskCardProject | null
 }
 
@@ -88,12 +87,20 @@ function DeadlineBadge({ deadline }: { deadline: string | Date | null | undefine
     if (!deadline) return null
     const date = new Date(deadline)
     if (Number.isNaN(date.getTime())) return null
-    
+
     const label = format(date, "d MMM").toUpperCase()
+    const overdue = isBefore(date, startOfDay(new Date()))
 
     return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-tight bg-rose-50 text-rose-500 border border-rose-100/50">
-            <Clock className="h-3 w-3 stroke-[3]" />
+        <span
+            className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-tight border",
+                overdue
+                    ? "bg-rose-100 text-rose-700 border-rose-300 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.16)]"
+                    : "bg-rose-50 text-rose-500 border-rose-100/50"
+            )}
+        >
+            {overdue ? <AlertTriangle className="h-3 w-3 stroke-[2.5]" /> : <Clock className="h-3 w-3 stroke-[3]" />}
             {label}
         </span>
     )
@@ -116,12 +123,16 @@ export function TaskGridCard({
     const services = task.project?.services || []
     const isRecurring = services.some((s: TaskCardService) => s.isRecurring)
     const projectFullName = task.project ? formatProjectName(task.project) : "No Project"
+    const createdAtDate = task.createdAt ? new Date(task.createdAt) : null
+    const hasValidCreatedAt = createdAtDate !== null && !Number.isNaN(createdAtDate.getTime())
+    const isOverdue = task.deadline ? isBefore(new Date(task.deadline), startOfDay(new Date())) : false
 
     return (
         <div
             className={cn(
                 "group relative rounded-3xl border bg-white cursor-pointer transition-all duration-200 h-full",
                 "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 border-slate-100",
+                isOverdue && "border-rose-200/80 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]",
                 isRunning && "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]",
                 isSelected && "border-primary/30 bg-primary/[0.02] shadow-[0_0_0_2px_rgba(var(--primary),0.1)]",
                 className
@@ -156,15 +167,6 @@ export function TaskGridCard({
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl border-slate-100">
-                                <DropdownMenuItem
-                                    onClick={() => onOpen(task.id)}
-                                    className="gap-2 text-sm font-medium cursor-pointer"
-                                >
-                                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
-                                    Open panel
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-
                                 <DropdownMenuItem
                                     onClick={() => {
                                         if (isRunning) {
@@ -203,6 +205,8 @@ export function TaskGridCard({
                                     </DropdownMenuItem>
                                 )}
 
+                                <DropdownMenuSeparator />
+
                                 {task.status !== "Completed" && (
                                     <DropdownMenuItem
                                         onClick={() => onComplete(task.id)}
@@ -212,6 +216,15 @@ export function TaskGridCard({
                                         Mark completed
                                     </DropdownMenuItem>
                                 )}
+
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    onClick={() => onOpen(task.id)}
+                                    className="gap-2 text-sm font-medium cursor-pointer"
+                                >
+                                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
+                                    Open panel
+                                </DropdownMenuItem>
 
                                 {renderMenu ? (
                                     <>
@@ -230,23 +243,29 @@ export function TaskGridCard({
                         ? <RefreshCcw className="h-3 w-3 text-slate-400 shrink-0" />
                         : <Circle className="h-3 w-3 text-slate-400 shrink-0" />
                     }
-                    <p className="min-w-0 text-[12px] font-medium text-slate-400 truncate tracking-tight">
+                    <p className="min-w-0 text-[12px] font-medium text-slate-400 line-clamp-2 leading-snug tracking-tight">
                         {projectFullName}
                     </p>
                 </div>
 
                 {/* Badges: priority + deadline + absolute date */}
-                <div className="flex items-center justify-between mt-auto pt-2">
+                <div className="flex items-end justify-between mt-auto pt-2">
                     <div className="flex items-center gap-2">
                         <PriorityBadge urgency={task.urgency || "Normal"} />
                         <DeadlineBadge deadline={task.deadline} />
                     </div>
                     
-                    {task.deadline && (
+                    {hasValidCreatedAt && createdAtDate && (
                         <div className="flex items-center gap-1.5 text-slate-400 shrink-0">
                             <CalendarIcon className="h-3.5 w-3.5" />
-                            <span className="text-[11px] font-medium">
-                                {format(new Date(task.deadline), "d MMM")}
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500/90">
+                                Created
+                            </span>
+                            <span
+                                className="text-[11px] font-medium"
+                                title={format(createdAtDate, "dd MMM yyyy, HH:mm")}
+                            >
+                                {format(createdAtDate, "d MMM")}
                             </span>
                         </div>
                     )}
