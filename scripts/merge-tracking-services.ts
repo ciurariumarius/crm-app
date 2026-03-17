@@ -1,6 +1,4 @@
 import { PrismaClient } from "@prisma/client"
-import path from "path"
-
 const prisma = new PrismaClient()
 const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
@@ -87,8 +85,9 @@ async function mergeTrackingServices() {
                 totalProjectsUpdated++
                 console.log(`   ✅ Updated project ${project.id}`)
 
-            } catch (error: any) {
-                console.error(`   ❌ Error updating project ${project.id}:`, error.message)
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : "Unknown error"
+                console.error(`   ❌ Error updating project ${project.id}:`, message)
             }
         }
 
@@ -98,8 +97,9 @@ async function mergeTrackingServices() {
                 where: { id: oldService.id }
             })
             console.log(`   🗑️  Deleted old service: ${oldService.serviceName}`)
-        } catch (error: any) {
-            console.error(`   ❌ Error deleting service:`, error.message)
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unknown error"
+            console.error(`   ❌ Error deleting service:`, message)
         }
     }
 

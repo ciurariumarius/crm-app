@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import {
     Table,
     TableBody,
@@ -10,29 +9,28 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import {
     Globe,
     Users,
-    ExternalLink,
-    Calendar,
-    FolderOpen,
-    Search as SearchIcon,
-    ArrowUpRight,
-    Fingerprint,
-    Target
 } from "lucide-react"
-import { format } from "date-fns"
-import { cn, formatRelativeDate } from "@/lib/utils"
+import { formatRelativeDate } from "@/lib/utils"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
+import type { Site } from "@prisma/client"
+
+type SiteTableItem = Site & {
+    partner: {
+        id: string
+        name: string
+    }
+}
 
 interface SitesTableProps {
-    sites: any[]
+    sites: SiteTableItem[]
 }
 
 export function SitesTable({ sites }: SitesTableProps) {
-    const [selectedSite, setSelectedSite] = React.useState<any>(null)
+    const [selectedSite, setSelectedSite] = React.useState<SiteTableItem | null>(null)
 
     return (
         <div className="overflow-x-auto">
@@ -106,7 +104,7 @@ export function SitesTable({ sites }: SitesTableProps) {
                         <SiteSheetContent
                             site={selectedSite}
                             onUpdate={(updated) => {
-                                setSelectedSite((prev: any) => ({ ...prev, ...updated }))
+                                setSelectedSite((prev) => (prev ? { ...prev, ...updated } : prev))
                             }}
                         />
                     )}

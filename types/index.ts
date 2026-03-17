@@ -67,15 +67,20 @@ export interface FormattedProject {
     paymentStatus: string
     completedTasks: number
     totalTasks: number
-    services: Service[]
+    services: ProjectServiceSummary[]
     createdAt?: Date | string
     currentFee?: number | null
+}
+
+export interface ProjectServiceSummary {
+    serviceName: string
+    isRecurring?: boolean
 }
 
 export interface QuickActionProject {
     id: string
     siteName: string
-    services: Service[]
+    services: ProjectServiceSummary[]
     status: string
     createdAt?: Date | string
 }

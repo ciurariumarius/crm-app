@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import {
     CommandDialog,
     CommandEmpty,
@@ -17,10 +16,48 @@ import { FolderDot, ListChecks, User, Search, Loader2 } from "lucide-react"
 import { useDebounce } from "react-use"
 import { formatProjectName } from "@/lib/utils"
 
+type SearchProject = {
+    id: string
+    name?: string | null
+    createdAt?: string | Date | null
+    site?: {
+        domainName?: string | null
+        partner?: {
+            id?: string
+            name?: string | null
+        } | null
+    } | null
+    services?: Array<{
+        serviceName?: string | null
+        isRecurring?: boolean | null
+    }> | null
+    [key: string]: unknown
+}
+
+type SearchTask = {
+    id: string
+    name?: string | null
+    project?: SearchProject | null
+    [key: string]: unknown
+}
+
+type SearchPartner = {
+    id: string
+    name?: string | null
+    username?: string | null
+    businessName?: string | null
+}
+
+type GlobalSearchResults = {
+    projects: SearchProject[]
+    tasks: SearchTask[]
+    partners: SearchPartner[]
+}
+
 export function GlobalSearch() {
     const [open, setOpen] = React.useState(false)
     const [query, setQuery] = React.useState("")
-    const [results, setResults] = React.useState<{ projects: any[], tasks: any[], partners: any[] }>({
+    const [results, setResults] = React.useState<GlobalSearchResults>({
         projects: [],
         tasks: [],
         partners: []
@@ -113,7 +150,7 @@ export function GlobalSearch() {
                         results.projects.length === 0 &&
                         results.tasks.length === 0 &&
                         results.partners.length === 0 && (
-                            <CommandEmpty>No results found for "{query}".</CommandEmpty>
+                            <CommandEmpty>No results found for &quot;{query}&quot;.</CommandEmpty>
                         )}
 
                     {!loading && results.projects.length > 0 && (
@@ -121,7 +158,7 @@ export function GlobalSearch() {
                             {results.projects.map((project) => (
                                 <CommandItem
                                     key={project.id}
-                                    onSelect={() => handleSelect(() => openProject(project.id, project))}
+                                    onSelect={() => handleSelect(() => openProject(project.id))}
                                     className="flex items-center gap-3 cursor-pointer p-4"
                                 >
                                     <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">

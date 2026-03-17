@@ -1,5 +1,4 @@
 import { format } from "date-fns"
-import { CheckCircle2, Circle } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { togglePaymentStatus } from "@/lib/actions/projects"
 import { Button } from "@/components/ui/button"
@@ -10,9 +9,16 @@ import { PageHeader } from "@/components/layout/page-header"
 import { requireTenantContext } from "@/lib/tenant"
 import Link from "next/link"
 import { formatProjectName } from "@/lib/utils"
+import type { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 const PAGE_SIZE = 24
+type LedgerProject = Prisma.ProjectGetPayload<{
+    include: {
+        site: { include: { partner: true } }
+        services: true
+    }
+}>
 
 export default async function LedgerPage({
     searchParams,
@@ -83,7 +89,7 @@ export default async function LedgerPage({
 
                 <TabsContent value="payments" className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {unpaidProjects.map((project: any) => (
+                        {unpaidProjects.map((project: LedgerProject) => (
                             <Card key={project.id} className={project.paymentStatus === "Unpaid" ? "border-red-500/50" : ""}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <div className="space-y-1">
@@ -91,7 +97,7 @@ export default async function LedgerPage({
                                             {formatProjectName(project)}
                                             {project.currentFee != null && (
                                                 <span className="text-sm font-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
-                                                    {project.currentFee} RON
+                                                    {Number(project.currentFee)} RON
                                                 </span>
                                             )}
                                         </CardTitle>

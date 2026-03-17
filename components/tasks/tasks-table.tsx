@@ -17,22 +17,43 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { format } from "date-fns"
 import { cn, formatRelativeDate } from "@/lib/utils"
 import { normalizeTaskStatus } from "@/lib/status"
 import { updateTask, toggleTaskStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { Calendar as CalendarIcon, Clock, Users, Globe, Target } from "lucide-react"
-import { TaskDetails } from "./task-details"
+import { TaskDetails, type TaskDetailsTask } from "./task-details"
 import { useTimer } from "@/components/providers/timer-provider"
 
+type TaskTableTimeLog = {
+    durationSeconds?: number | null
+}
+
+type TaskTableTask = TaskDetailsTask & {
+    projectId: string
+    name: string
+    status: string
+    project: {
+        site: {
+            domainName: string
+            partner: {
+                name: string
+            }
+        }
+    }
+    timeLogs?: TaskTableTimeLog[] | null
+    estimatedMinutes?: number | null
+    deadline?: string | Date | null
+    updatedAt?: string | Date | null
+}
+
 interface TasksTableProps {
-    tasks: any[]
+    tasks: TaskTableTask[]
 }
 
 export function TasksTable({ tasks }: TasksTableProps) {
     const { timerState } = useTimer()
-    const [selectedTask, setSelectedTask] = React.useState<any>(null)
+    const [selectedTask, setSelectedTask] = React.useState<TaskTableTask | null>(null)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
 
     const handleStatusChange = async (taskId: string, currentStatus: string, projectId: string) => {
@@ -47,7 +68,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
         }
     }
 
-    const handleUpdate = async (taskId: string, data: any) => {
+    const handleUpdate = async (taskId: string, data: { status?: string }) => {
         setUpdatingId(taskId)
         try {
             await updateTask(taskId, data)
@@ -153,7 +174,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)} className="cell-financial">
                                     {(() => {
-                                        const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+                                        const logsDuration = task.timeLogs?.reduce((acc: number, log: TaskTableTimeLog) => acc + (log.durationSeconds || 0), 0) || 0
                                         const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
                                         const totalSeconds = logsDuration + currentTimerDuration
                                         const hasTimeLogs = totalSeconds > 0
@@ -171,7 +192,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                             return <span className="text-xs text-muted-foreground/50 italic">No tracking</span>
                                         }
 
-                                        const displaySeconds = useFallback ? (task.estimatedMinutes * 60) : totalSeconds
+                                        const displaySeconds = useFallback ? ((task.estimatedMinutes ?? 0) * 60) : totalSeconds
                                         const hours = Math.floor(displaySeconds / 3600)
                                         const mins = Math.floor((displaySeconds % 3600) / 60)
 

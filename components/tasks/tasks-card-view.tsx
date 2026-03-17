@@ -2,23 +2,19 @@
 
 import * as React from "react"
 import { format, isToday, isPast } from "date-fns"
-import { Checkbox } from "@/components/ui/checkbox"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Square, Calendar as CalendarIcon, Target, Zap, CheckSquare, CheckCircle2, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Square, Target, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 import { TaskGridCard } from "./task-grid-card"
 
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
@@ -27,30 +23,85 @@ import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
 
 import { useTimer } from "@/components/providers/timer-provider"
 import { useTasksSearchContext } from "./tasks-search-context"
+import type { ProjectWithDetails } from "@/types"
+import type { Service, Site } from "@prisma/client"
+import type { TaskDialogProject } from "./global-create-task-dialog"
+
+type TimeLogSummary = {
+    id?: string
+    durationSeconds?: number | null
+    startTime?: string | Date | null
+    endTime?: string | Date | null
+    notes?: string | null
+}
+
+type TaskProjectSummary = {
+    id?: string
+    name?: string | null
+    createdAt?: string | Date | null
+    site?: {
+        id?: string
+        domainName?: string | null
+        partner?: { id: string; name: string } | null
+    } | null
+    services?: Array<{
+        serviceName?: string | null
+        isRecurring?: boolean | null
+    }> | null
+    tasks?: Array<{
+        timeLogs?: TimeLogSummary[] | null
+    }> | null
+    timeLogs?: TimeLogSummary[] | null
+}
+
+type TaskCardViewTask = {
+    id: string
+    projectId?: string | null
+    name?: string | null
+    description?: string | null
+    status?: string | null
+    urgency?: string | null
+    deadline?: string | Date | null
+    estimatedMinutes?: number | null
+    timeLogs?: TimeLogSummary[] | null
+    project?: TaskProjectSummary | null
+}
+
+type SiteWithOptionalPartner = {
+    id?: string
+    domainName?: string | null
+    partner?: { id: string; name: string } | null
+    [key: string]: unknown
+}
 
 interface TasksCardViewProps {
-    tasks: any[]
-    allServices: any[]
-    initialActiveTimer?: any
-    projects?: any[]
+    tasks: TaskCardViewTask[]
+    allServices: Service[]
+    initialActiveTimer?: unknown
+    projects?: TaskDialogProject[]
     view?: "grid" | "list"
     cols?: number
     hourlyRate?: number
 }
 
-export function TasksCardView({ tasks, allServices, initialActiveTimer, projects = [], view = "grid", cols = 3, hourlyRate = 0 }: TasksCardViewProps) {
+export function TasksCardView({ tasks, allServices, initialActiveTimer: _initialActiveTimer, projects = [], view = "grid", cols = 3, hourlyRate = 0 }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const searchContext = useTasksSearchContext()
-    const [selectedProject, setSelectedProject] = React.useState<any>(null)
-    const [selectedSite, setSelectedSite] = React.useState<any>(null)
-    const [selectedTask, setSelectedTask] = React.useState<any>(null)
-    const [quickLogTask, setQuickLogTask] = React.useState<any>(null)
+    void _initialActiveTimer
+    const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
+    const [selectedSite, setSelectedSite] = React.useState<SiteWithOptionalPartner | null>(null)
+    const [selectedTask, setSelectedTask] = React.useState<TaskCardViewTask | null>(null)
+    const [quickLogTask, setQuickLogTask] = React.useState<TaskCardViewTask | null>(null)
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
     const [isBulkOperating, setIsBulkOperating] = React.useState(false)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
 
-    const handleStartTimer = async (task: any) => {
-        await globalStartTimer(task.projectId, task.id, task.name)
+    const handleStartTimer = async (task: TaskCardViewTask) => {
+        if (!task.projectId) {
+            toast.error("Task has no project")
+            return
+        }
+        await globalStartTimer(task.projectId, task.id, task.name || "Task")
     }
 
     const handleStopTimer = async () => {
@@ -68,7 +119,6 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
     const formatTimer = (seconds: number) => {
         const h = Math.floor(seconds / 3600)
         const m = Math.floor((seconds % 3600) / 60)
-        const s = seconds % 60
         return `${h > 0 ? `${h}h ` : ''}${m}m`
     }
 
@@ -89,7 +139,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
             } else {
                 toast.error(result.error || "Failed to delete tasks")
             }
-        } catch (error) {
+        } catch {
             toast.error("Process failed")
         } finally {
             setIsBulkOperating(false)
@@ -106,7 +156,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
             } else {
                 toast.error(result.error || "Failed to update tasks")
             }
-        } catch (error) {
+        } catch {
             toast.error("Process failed")
         } finally {
             setIsBulkOperating(false)
@@ -121,12 +171,12 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
             } else {
                 toast.error(result.error || "Failed to complete task")
             }
-        } catch (error) {
+        } catch {
             toast.error("Process failed")
         }
     }
 
-    const renderTaskActionMenu = (task: any) => (
+    const renderTaskActionMenu = (task: TaskCardViewTask) => (
         <>
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task); }} className="gap-2 text-sm font-medium cursor-pointer">
                 <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
@@ -174,7 +224,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 task.project?.site?.domainName,
                 task.project?.site?.partner?.name,
                 formatProjectName(task.project || {}),
-                (task.project?.services || []).map((service: { serviceName?: string }) => service.serviceName || "").join(" "),
+                (task.project?.services || []).map((service) => service.serviceName || "").join(" "),
             ]
                 .filter(Boolean)
                 .join(" ")
@@ -228,7 +278,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
 
             <div className="flex flex-col gap-3">
                 {visibleTasks.map((task) => {
-                    const logsDuration = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+                    const logsDuration = task.timeLogs?.reduce((acc: number, log: TimeLogSummary) => acc + (log.durationSeconds || 0), 0) || 0
                     const isActiveTimerThisTask = timerState.taskId === task.id
                     const isRunning = isActiveTimerThisTask && timerState.isRunning
                     const isPaused = isActiveTimerThisTask && !timerState.isRunning
@@ -250,8 +300,8 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                         >
                             {/* Mobile only elements implicitly stacked, Desktop uses precise widths */}
                             <div className="flex items-center gap-6 lg:w-16 shrink-0">
-                                <div className="w-8 flex justify-center" title={task.urgency}>
-                                    {getUrgencyIcon(task.urgency)}
+                                <div className="w-8 flex justify-center" title={task.urgency || undefined}>
+                                    {getUrgencyIcon(task.urgency || "Normal")}
                                 </div>
                             </div>
 
@@ -273,8 +323,8 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
 
                             <div className="flex items-center justify-between lg:justify-end gap-6 lg:w-auto shrink-0 mt-4 lg:mt-0">
                                 <div className="w-auto lg:w-24 flex lg:justify-center shrink-0">
-                                    <div className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold", getStatusStyle(task.status))}>
-                                        {task.status}
+                                    <div className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold", getStatusStyle(task.status || "Active"))}>
+                                        {task.status || "Active"}
                                     </div>
                                 </div>
 
@@ -416,7 +466,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 open={!!selectedTask}
                 onOpenChange={(open) => !open && setSelectedTask(null)}
                 onOpenProject={(project) => {
-                    setSelectedProject(project)
+                    setSelectedProject(project as unknown as ProjectWithDetails)
                 }}
                 onOpenSite={(site) => {
                     setSelectedSite(site)
@@ -431,7 +481,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                             project={selectedProject}
                             allServices={allServices}
                             hourlyRate={hourlyRate}
-                            onUpdate={(updated) => setSelectedProject((prev: any) => ({ ...prev, ...updated }))}
+                            onUpdate={(updated) => setSelectedProject((prev) => (prev ? { ...prev, ...updated } : prev))}
                             onOpenSite={(site) => setSelectedSite(site)}
                         />
                     )}
@@ -443,21 +493,21 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer, projects
                 <SheetContent className="w-screen max-w-none p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl sm:w-full sm:max-w-xl">
                     {selectedSite && (
                         <SiteSheetContent
-                            site={selectedSite}
-                            onUpdate={(updated) => setSelectedSite({ ...selectedSite, ...updated })}
+                            site={selectedSite as Site & { partner?: { id: string; name: string } }}
+                            onUpdate={(updated) => setSelectedSite((prev) => (prev ? { ...prev, ...updated } : prev))}
                         />
                     )}
                 </SheetContent>
             </Sheet>
 
             {/* Quick Time Log Dialog */}
-            {quickLogTask && (
+            {quickLogTask && quickLogTask.projectId && (
                 <QuickTimeLogDialog
                     open={!!quickLogTask}
                     onOpenChange={(open) => !open && setQuickLogTask(null)}
                     projectId={quickLogTask.projectId}
                     taskId={quickLogTask.id}
-                    taskName={quickLogTask.name}
+                    taskName={quickLogTask.name || "Task"}
                     projectName={quickLogTask.project ? formatProjectName(quickLogTask.project) : "Unknown Project"}
                 />
             )}

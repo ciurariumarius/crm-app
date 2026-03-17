@@ -882,6 +882,7 @@ export function RichTextEditor({
                                         title={`Open screenshot ${index + 1}`}
                                         aria-label={`Open screenshot ${index + 1}`}
                                     >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                             src={src}
                                             alt={`Screenshot ${index + 1}`}
@@ -1030,6 +1031,7 @@ export function RichTextEditor({
                         <div className="relative flex-1 overflow-auto">
                             <div className="absolute inset-0 flex items-center justify-center p-6">
                                 {currentViewerSrc && (
+                                    // eslint-disable-next-line @next/next/no-img-element
                                     <img
                                         src={currentViewerSrc}
                                         alt="Project note attachment"

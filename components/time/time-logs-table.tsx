@@ -37,8 +37,8 @@ interface TimeLogWithDetails {
 
 interface TimeLogsTableProps {
     logs: TimeLogWithDetails[]
-    projects: any[]
-    tasks: any[]
+    projects: Array<{ id: string; displayName: string }>
+    tasks: Array<{ id: string; name: string; projectId: string }>
 }
 
 import { TimeLogSheet } from "@/components/time/time-log-sheet"
@@ -141,7 +141,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                     </TableRow>
 
                                     {/* Rows for this date */}
-                                    {groupedLogs[dateKey].map((log, logIndex) => {
+                                    {groupedLogs[dateKey].map((log) => {
                                         const isRunning = !log.endTime
 
                                         return (

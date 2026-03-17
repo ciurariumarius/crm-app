@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { PrismaClient } = require("@prisma/client")
 const { decryptSensitiveValue, encryptSensitiveValue, shouldRotateSensitiveValue } = require("../lib/crypto")
 

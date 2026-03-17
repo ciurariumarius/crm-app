@@ -9,7 +9,7 @@ import {
     Calendar as CalendarIcon,
     CheckCheck,
     Lightbulb,
-    MoreHorizontal,
+    MoreVertical,
     Pause,
     Play,
     RefreshCcw,
@@ -18,6 +18,7 @@ import {
     ArrowUpRight,
     Clock,
     CalendarClock,
+    Circle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -67,8 +68,7 @@ function PriorityBadge({ urgency }: { urgency: string }) {
 
     if (normalizedUrgency === "Urgent") {
         return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-[#F84444] text-white shadow-sm ring-1 ring-[#F84444]">
-                <AlertTriangle className="h-3.5 w-3.5 fill-white text-[#F84444]" />
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter bg-[#F84444] text-white shadow-sm">
                 URGENT
             </span>
         )
@@ -89,29 +89,12 @@ function DeadlineBadge({ deadline }: { deadline: string | Date | null | undefine
     const date = new Date(deadline)
     if (Number.isNaN(date.getTime())) return null
     
-    // overdue is anytime in the past
-    const overdue = isPast(date)
-    const dueToday = isToday(date)
-    const label = dueToday ? "Today" : format(date, "d MMMM")
-
-    if (overdue) {
-        return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-[#FFF1F2] text-[#F84444] border border-[#FECDD3]">
-                <Clock className="h-3.5 w-3.5" />
-                {dueToday ? "TODAY" : label.toUpperCase()}
-            </span>
-        )
-    }
+    const label = format(date, "d MMM").toUpperCase()
 
     return (
-        <span className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border transition-all",
-            dueToday
-                ? "bg-orange-500 text-white border-transparent"
-                : "bg-blue-50 text-blue-600 border-blue-200"
-        )}>
-            {dueToday ? <CalendarClock className="h-3.5 w-3.5" /> : <CalendarIcon className="h-3.5 w-3.5" />}
-            {label.toUpperCase()}
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-tight bg-rose-50 text-rose-500 border border-rose-100/50">
+            <Clock className="h-3 w-3 stroke-[3]" />
+            {label}
         </span>
     )
 }
@@ -137,42 +120,39 @@ export function TaskGridCard({
     return (
         <div
             className={cn(
-                "group relative rounded-2xl border bg-white cursor-pointer transition-all duration-200 h-full",
-                "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5",
-                isRunning
-                    ? "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
-                    : isSelected
-                        ? "border-primary/30 bg-primary/[0.02] shadow-[0_0_0_2px_rgba(var(--primary),0.1)]"
-                        : "border-slate-200 hover:border-slate-300",
+                "group relative rounded-3xl border bg-white cursor-pointer transition-all duration-200 h-full",
+                "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 border-slate-100",
+                isRunning && "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]",
+                isSelected && "border-primary/30 bg-primary/[0.02] shadow-[0_0_0_2px_rgba(var(--primary),0.1)]",
                 className
             )}
             onClick={() => onOpen(task.id)}
         >
             {/* Running timer indicator */}
             {isRunning && (
-                <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-blue-400 via-blue-500 to-violet-500 animate-pulse" />
+                <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-3xl bg-blue-500 animate-pulse" />
             )}
 
             <div className="p-4 flex flex-col gap-3">
                 {/* Header row: title + options menu */}
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-3">
                     <h4 className={cn(
-                        "text-[14px] font-semibold leading-snug text-slate-900 line-clamp-2 flex-1",
-                        task.status === "Completed" && "line-through opacity-50"
+                        "text-[16px] font-bold leading-tight text-slate-900 line-clamp-2 flex-1 pt-0.5",
+                        task.status === "Completed" && "line-through opacity-40"
                     )}>
                         {task.name || "Untitled task"}
                     </h4>
 
-                    {/* Options menu — always visible via ··· */}
-                    <div onClick={e => e.stopPropagation()} className="shrink-0">
+                    {/* Options menu */}
+                    <div onClick={e => e.stopPropagation()} className="shrink-0 -mr-1">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+                                    className="h-8 w-8 rounded-xl text-slate-300 hover:bg-slate-50 hover:text-slate-500 transition-colors"
                                 >
-                                    <MoreHorizontal className="h-4 w-4" />
+                                    <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl border-slate-100">
@@ -245,20 +225,31 @@ export function TaskGridCard({
                 </div>
 
                 {/* Project subtitle */}
-                <div className="flex items-start gap-1.5 min-w-0 -mt-0.5">
+                <div className="flex items-center gap-1.5 min-w-0">
                     {isRecurring
-                        ? <RefreshCcw className="h-3.5 w-3.5 text-violet-500 shrink-0" />
-                        : <Zap className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                        ? <RefreshCcw className="h-3 w-3 text-slate-400 shrink-0" />
+                        : <Circle className="h-3 w-3 text-slate-400 shrink-0" />
                     }
-                    <p className="min-w-0 text-[12px] font-bold text-slate-600 tracking-tight leading-tight break-words">
+                    <p className="min-w-0 text-[12px] font-medium text-slate-400 truncate tracking-tight">
                         {projectFullName}
                     </p>
                 </div>
 
-                {/* Badges: priority + deadline */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <PriorityBadge urgency={task.urgency || "Normal"} />
-                    <DeadlineBadge deadline={task.deadline} />
+                {/* Badges: priority + deadline + absolute date */}
+                <div className="flex items-center justify-between mt-auto pt-2">
+                    <div className="flex items-center gap-2">
+                        <PriorityBadge urgency={task.urgency || "Normal"} />
+                        <DeadlineBadge deadline={task.deadline} />
+                    </div>
+                    
+                    {task.deadline && (
+                        <div className="flex items-center gap-1.5 text-slate-400 shrink-0">
+                            <CalendarIcon className="h-3.5 w-3.5" />
+                            <span className="text-[11px] font-medium">
+                                {format(new Date(task.deadline), "d MMM")}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

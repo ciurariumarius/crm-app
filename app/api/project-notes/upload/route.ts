@@ -3,6 +3,12 @@ import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
 import { requireTenantContext } from "@/lib/tenant"
+import {
+    buildProjectNoteRelativePath,
+    createSignedProjectNoteUrl,
+    resolveProjectNoteAbsolutePath,
+    sanitizeProjectNoteSegment,
+} from "@/lib/project-note-storage"
 
 export const runtime = "nodejs"
 
@@ -16,17 +22,12 @@ const EXTENSIONS_BY_MIME: Record<string, string> = {
     "image/gif": "gif",
 }
 
-function sanitizeSegment(input: string) {
-    const normalized = input.trim().replace(/[^a-zA-Z0-9_-]/g, "")
-    return normalized || "project"
-}
-
 export async function POST(request: Request) {
     try {
         const session = await requireTenantContext()
         const formData = await request.formData()
         const projectIdRaw = String(formData.get("projectId") || "project")
-        const projectId = sanitizeSegment(projectIdRaw).slice(0, 64)
+        const projectId = sanitizeProjectNoteSegment(projectIdRaw).slice(0, 64)
 
         const files = formData
             .getAll("files")
@@ -49,15 +50,10 @@ export async function POST(request: Request) {
             )
         }
 
-        const uploadDirectory = path.join(
-            process.cwd(),
-            "public",
-            "uploads",
-            "project-notes",
-            session.tenantId,
-            projectId
+        const projectDirectory = resolveProjectNoteAbsolutePath(
+            buildProjectNoteRelativePath(session.tenantId, projectId, "index")
         )
-        await mkdir(uploadDirectory, { recursive: true })
+        await mkdir(path.dirname(projectDirectory), { recursive: true })
 
         const urls: string[] = []
 
@@ -81,13 +77,16 @@ export async function POST(request: Request) {
 
             const extension = EXTENSIONS_BY_MIME[file.type] || "png"
             const filename = `${Date.now()}-${randomUUID()}.${extension}`
-            const absoluteFilePath = path.join(uploadDirectory, filename)
+            const relativePath = buildProjectNoteRelativePath(
+                session.tenantId,
+                projectId,
+                filename
+            )
+            const absoluteFilePath = resolveProjectNoteAbsolutePath(relativePath)
             const buffer = Buffer.from(await file.arrayBuffer())
             await writeFile(absoluteFilePath, buffer)
 
-            urls.push(
-                `/uploads/project-notes/${session.tenantId}/${projectId}/${filename}`
-            )
+            urls.push(createSignedProjectNoteUrl(relativePath))
         }
 
         return NextResponse.json({ success: true, urls })

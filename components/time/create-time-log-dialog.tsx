@@ -54,7 +54,7 @@ export function CreateTimeLogDialog({ projects, tasks }: CreateTimeLogDialogProp
             } else {
                 toast.error(result.error || "Failed to log time")
             }
-        } catch (error) {
+        } catch {
             toast.error("Process failed")
         } finally {
             setIsLoading(false)

@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Plus, Briefcase, CheckSquare, Clock } from "lucide-react"
+import { Plus, CheckSquare, Clock } from "lucide-react"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import { GlobalCreateTimeLogDialog } from "@/components/time/global-create-time-log-dialog"

@@ -1,20 +1,25 @@
 "use client"
 
 import * as React from "react"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { TaskDetails } from "@/components/tasks/task-details"
+import { TaskDetails, type TaskDetailsTask } from "@/components/tasks/task-details"
+
+type TaskSheetTask = {
+    id: string
+    project?: unknown
+    [key: string]: unknown
+}
 
 interface TaskSheetWrapperProps {
-    tasks: any[]
-    project?: any // Optional project context to inject into tasks
+    tasks: TaskSheetTask[]
+    project?: unknown // Optional project context to inject into tasks
     children: React.ReactNode
 }
 
 // Create a context to manage task sheet state
 export const TaskSheetContext = React.createContext<{
-    openTask: (taskId: string, taskData?: any) => void
+    openTask: (taskId: string, taskData?: TaskSheetTask) => void
     closeTask: () => void
-    currentTask: any | null
+    currentTask: TaskSheetTask | null
 }>({
     openTask: () => { },
     closeTask: () => { },
@@ -22,10 +27,10 @@ export const TaskSheetContext = React.createContext<{
 })
 
 export function TaskSheetWrapper({ tasks, project, children }: TaskSheetWrapperProps) {
-    const [selectedTask, setSelectedTask] = React.useState<any>(null)
+    const [selectedTask, setSelectedTask] = React.useState<TaskSheetTask | null>(null)
 
-    const openTask = (taskId: string, taskData?: any) => {
-        const task = taskData || tasks.find(t => t.id === taskId)
+    const openTask = (taskId: string, taskData?: TaskSheetTask) => {
+        const task = taskData || tasks.find((entry) => entry.id === taskId)
         if (task) {
             // Inject project context if available and missing on task
             const taskWithContext = project ? { ...task, project: task.project || project } : task
@@ -40,7 +45,7 @@ export function TaskSheetWrapper({ tasks, project, children }: TaskSheetWrapperP
     // Update selected task if it changes in the list (e.g. after editing)
     React.useEffect(() => {
         if (selectedTask) {
-            const updated = tasks.find(t => t.id === selectedTask.id)
+            const updated = tasks.find((entry) => entry.id === selectedTask.id)
             if (updated) {
                 // Re-inject project context
                 const updatedWithContext = project ? { ...updated, project: updated.project || project } : updated
@@ -57,7 +62,7 @@ export function TaskSheetWrapper({ tasks, project, children }: TaskSheetWrapperP
         <TaskSheetContext.Provider value={{ openTask, closeTask, currentTask: selectedTask }}>
             {children}
             <TaskDetails
-                task={selectedTask}
+                task={selectedTask as TaskDetailsTask | null}
                 open={!!selectedTask}
                 onOpenChange={(open) => !open && closeTask()}
             />

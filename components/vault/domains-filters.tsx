@@ -22,7 +22,7 @@ import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
 
 interface DomainsFiltersProps {
-    partners: any[]
+    partners: Array<{ id: string; name: string }>
     totalLogs: number
 }
 
@@ -154,7 +154,7 @@ function PartnerCombobox({
     currentPartner,
     onSelect,
 }: {
-    partners: any[]
+    partners: Array<{ id: string; name: string }>
     currentPartner: string
     onSelect: (value: string) => void
 }) {

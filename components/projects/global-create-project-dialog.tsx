@@ -411,7 +411,7 @@ export function GlobalCreateProjectDialog({
                                                                 <Plus className="mr-2 h-4 w-4 text-primary" />
                                                             )}
                                                             <span className="truncate font-semibold text-primary">
-                                                                Add site "{suggestedSiteDomain}"
+                                                                Add site &quot;{suggestedSiteDomain}&quot;
                                                             </span>
                                                         </CommandItem>
                                                     )}

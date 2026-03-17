@@ -33,7 +33,7 @@ export function DeleteSiteButton({ siteId, partnerId }: { siteId: string, partne
             } else {
                 toast.error(result.error || "Failed to delete site")
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred")
         } finally {
             setIsDeleting(false)

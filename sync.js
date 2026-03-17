@@ -1,6 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
 
 const REMOTE_USER = 'root';
 const REMOTE_HOST = '152.53.116.233';
@@ -32,7 +31,7 @@ function runSync() {
     isSyncing = true;
     console.log(`[${new Date().toLocaleTimeString()}] ⚡ Syncing to ${REMOTE_HOST}...`);
 
-    exec(rsyncCommand, (error, stdout, stderr) => {
+    exec(rsyncCommand, (error) => {
         if (error) {
             console.error(`❌ Sync Failed: ${error.message}`);
             isSyncing = false;

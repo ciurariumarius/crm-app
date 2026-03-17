@@ -6,8 +6,9 @@ async function main() {
     try {
         const user = await prisma.user.findFirst()
         console.log('Keys on User object:', user ? Object.keys(user) : 'No user found')
-    } catch (e: any) {
-        console.log('Error searching for user:', e.message)
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "Unknown error"
+        console.log('Error searching for user:', message)
     }
 }
 main()

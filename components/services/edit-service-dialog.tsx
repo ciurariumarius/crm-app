@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Edit2 } from "lucide-react"
+import type { Prisma } from "@prisma/client"
 
 interface Service {
     id: string
@@ -25,7 +26,7 @@ interface Service {
     isRecurring: boolean
     standardTasks: string // JSON string
     sopLink: string | null
-    baseFee: any // Decimal
+    baseFee: Prisma.Decimal | null
 }
 
 export function EditServiceDialog({ service }: { service: Service }) {
@@ -35,7 +36,7 @@ export function EditServiceDialog({ service }: { service: Service }) {
     let initialTasks = ""
     try {
         initialTasks = JSON.parse(service.standardTasks).join("\n")
-    } catch (e) { }
+    } catch { }
 
     const [formData, setFormData] = useState({
         serviceName: service.serviceName,

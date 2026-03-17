@@ -9,19 +9,41 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
 import { formatRelativeDate } from "@/lib/utils"
-import { Calendar as CalendarIcon, Clock, Trash2 } from "lucide-react"
+import { Calendar as CalendarIcon, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { updateTimeLog, deleteTimeLog } from "@/lib/actions/time"
 import { toast } from "sonner"
 
+type TimeLogSheetLog = {
+    id: string
+    projectId?: string
+    taskId?: string | null
+    description?: string | null
+    startTime: string | Date
+    endTime?: string | Date | null
+    durationSeconds?: number | null
+    createdAt?: string | Date | null
+}
+
+type TimeLogSheetProject = {
+    id: string
+    displayName: string
+}
+
+type TimeLogSheetTask = {
+    id: string
+    name: string
+    projectId: string
+}
+
 interface TimeLogSheetProps {
-    log: any | null
+    log: TimeLogSheetLog | null
     open: boolean
     onOpenChange: (open: boolean) => void
-    projects: any[]
-    tasks: any[]
+    projects: TimeLogSheetProject[]
+    tasks: TimeLogSheetTask[]
 }
 
 export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeLogSheetProps) {
@@ -36,7 +58,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
 
     React.useEffect(() => {
         if (log && open) {
-            setProjectId(log.projectId)
+            setProjectId(log.projectId || "")
             setTaskId(log.taskId || "no-task")
             setDescription(log.description || "")
 
@@ -52,7 +74,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
 
     const filteredTasks = React.useMemo(() => {
         if (!projectId) return []
-        return tasks.filter((t: any) => t.projectId === projectId)
+        return tasks.filter((task) => task.projectId === projectId)
     }, [projectId, tasks])
 
     const handleSave = async () => {
@@ -86,7 +108,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
             } else {
                 toast.error("Failed to update time entry")
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred")
         } finally {
             setIsSaving(false)
@@ -94,6 +116,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
     }
 
     const handleDelete = async () => {
+        if (!log) return
         if (!confirm("Are you sure you want to delete this time entry?")) return
 
         setIsSaving(true)
@@ -105,7 +128,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
             } else {
                 toast.error("Failed to delete time entry")
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred")
         } finally {
             setIsSaving(false)

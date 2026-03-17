@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { loginUser, verifyTwoFactor } from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +8,6 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Lock, User, ShieldCheck } from "lucide-react"
 
 export default function LoginPage() {
-    const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
 
@@ -39,8 +37,9 @@ export default function LoginPage() {
                 setError(result.error || "Login failed")
                 setLoading(false)
             }
-        } catch (err: any) {
-            setError(err.message || "An unexpected server error occurred.")
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An unexpected server error occurred."
+            setError(message)
             setLoading(false)
         }
     }
@@ -157,6 +156,16 @@ export default function LoginPage() {
                                     />
                                 </div>
                             </div>
+
+                            <label className="flex items-center gap-2 text-xs text-muted-foreground select-none">
+                                <input
+                                    name="rememberDevice"
+                                    value="true"
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-border"
+                                />
+                                Keep me signed in on this device
+                            </label>
 
                             <Button type="submit" className="w-full h-12 rounded-xl font-bold tracking-wide mt-4" disabled={loading}>
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}

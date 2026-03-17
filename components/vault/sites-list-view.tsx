@@ -1,19 +1,19 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import type { Site } from "@prisma/client"
 import { Globe, ExternalLink } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 
 interface SitesListViewProps {
-    sites: any[]
+    sites: Array<Site & { _count?: { projects: number } }>
     partnerId: string
 }
 
-export function SitesListView({ sites, partnerId }: SitesListViewProps) {
-    const [selectedSite, setSelectedSite] = React.useState<any>(null)
+export function SitesListView({ sites }: SitesListViewProps) {
+    const [selectedSite, setSelectedSite] = React.useState<(Site & { _count?: { projects: number } }) | null>(null)
 
     return (
         <>
@@ -40,7 +40,7 @@ export function SitesListView({ sites, partnerId }: SitesListViewProps) {
                                         className="flex items-center text-xs text-blue-500 hover:underline"
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            window.open(site.driveLink, '_blank')
+                                            window.open(site.driveLink || undefined, "_blank")
                                         }}
                                     >
                                         <ExternalLink className="h-3 w-3 mr-1" />

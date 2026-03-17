@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import type { Prisma } from "@prisma/client"
 import { updateService, deleteService } from "@/lib/actions/services"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,10 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Check, X, Clock, CheckCircle2, Expand, Trash2, AlertTriangle, Loader2 } from "lucide-react"
+import { X, CheckCircle2, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
-import { cn, formatRelativeDate } from "@/lib/utils"
+import { formatRelativeDate } from "@/lib/utils"
 
 import {
     SheetHeader,
@@ -19,9 +19,20 @@ import {
 } from "@/components/ui/sheet"
 
 interface ServiceSheetContentProps {
-    service: any
-    onUpdate?: (updatedService: any) => void
+    service: ServiceSheetItem
+    onUpdate?: (updatedService: Partial<ServiceSheetItem> & { id: string }) => void
     onClose?: () => void
+}
+
+type ServiceSheetItem = {
+    id: string
+    serviceName: string
+    isRecurring: boolean
+    standardTasks: string
+    sopLink?: string | null
+    baseFee?: Prisma.Decimal | string | number | null
+    createdAt: Date | string
+    updatedAt?: Date | string | null
 }
 
 export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheetContentProps) {
@@ -31,7 +42,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
     let initialTasks = ""
     try {
         initialTasks = JSON.parse(service.standardTasks).join("\n")
-    } catch (e) { }
+    } catch { }
 
     const [formData, setFormData] = useState({
         serviceName: service.serviceName,
@@ -56,7 +67,14 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
 
             toast.success("Service updated")
             if (onUpdate) {
-                onUpdate({ ...service, ...updatedData, standardTasks: JSON.stringify(updatedData.standardTasks) })
+                onUpdate({
+                    ...service,
+                    serviceName: updatedData.serviceName,
+                    isRecurring: updatedData.isRecurring,
+                    standardTasks: JSON.stringify(updatedData.standardTasks),
+                    sopLink: updatedData.sopLink,
+                    baseFee: updatedData.baseFee ?? null,
+                })
             }
         } catch (error) {
             console.error(error)
@@ -210,7 +228,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                         Created: {formatRelativeDate(service.createdAt)}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                        Last updated: {formatRelativeDate(service.updatedAt)}
+                        Last updated: {formatRelativeDate(service.updatedAt || service.createdAt)}
                     </span>
                 </div>
             </div>

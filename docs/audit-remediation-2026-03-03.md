@@ -303,6 +303,103 @@ Implemented in this batch:
 - `package.json`
 - Added `npm run security:rotate-2fa-secrets` to bulk re-encrypt existing `twoFactorSecret` records with the active key.
 
+## Batch 7 implementation update (2026-03-17)
+
+Implemented in this batch:
+
+1. Debug API hardening
+- `app/api/debug/route.ts`
+- `app/api/debug-server-logs/route.ts`
+- Debug endpoints now require explicit enablement (`DEBUG_API_ENABLED=true`) and a configured `DEBUG_API_SECRET`.
+- Removed permissive fallback behavior when secret was unset.
+- Added stricter no-store/noindex response headers and normalized structured API error codes.
+
+2. Shared constant-time secret auth helper
+- `lib/http-auth.ts`
+- `app/api/cron/rollover/route.ts`
+- `app/api/debug/route.ts`
+- `app/api/debug-server-logs/route.ts`
+- Consolidated timing-safe bearer/header secret matching into a shared helper to reduce copy/paste auth code.
+
+3. Server log endpoint guard rails
+- `app/api/debug-server-logs/route.ts`
+- Added env-configurable log paths and bounded tail length (`DEBUG_API_LOG_TAIL_CHARS`, clamped).
+- Switched to async file reads and centralized tail extraction helper.
+
+4. Documentation update for operational controls
+- `README.md`
+- Added a “Debug API Controls” section describing required/optional environment variables.
+
+## Batch 8 implementation update (2026-03-17)
+
+Implemented in this batch:
+
+1. Auth throttling fail-closed fallback
+- `lib/actions/auth.ts`
+- If the rate-limit store errors, auth now blocks the request instead of allowing unlimited attempts.
+
+2. Protected project note storage + signed delivery route
+- `lib/project-note-storage.ts`
+- `app/api/project-notes/upload/route.ts`
+- `app/api/project-notes/file/route.ts`
+- Uploads are persisted under protected storage (`storage/project-notes` by default), not under `public/`.
+- File access now requires authenticated tenant context and a valid HMAC signature.
+- Added path traversal safeguards and tenant/path ownership checks.
+
+3. CSP tightening defaults
+- `next.config.ts`
+- `README.md`
+- `script-src` now defaults to strict `'self'` with unsafe script allowances disabled by default.
+- Added explicit env toggles for legacy compatibility:
+  - `CSP_ALLOW_UNSAFE_SCRIPT_INLINE=true`
+  - `CSP_ALLOW_UNSAFE_EVAL=true` (dev only)
+
+4. Deprecated Prisma package config cleanup
+- `package.json`
+- Removed deprecated `package.json#prisma` config block, keeping Prisma config centralized in `prisma.config.ts`.
+
+5. Protected storage git hygiene
+- `.gitignore`
+- Added `/storage/` ignore rule to prevent accidental commit of uploaded project-note assets.
+
+## Batch 9 implementation update (2026-03-17)
+
+Implemented in this batch:
+
+1. Device session registry + revocation groundwork
+- `prisma/schema.prisma`
+- `prisma/migrations/20260317190000_add_auth_sessions/migration.sql`
+- `lib/auth.ts`
+- Added `AuthSession` model and migration for per-device server-side session tracking.
+- Added `sid` to JWT payload when registry is enabled (`ENABLE_SESSION_REGISTRY=true`).
+- Added server-side active session validation and revocation checks in `getSession`/`destroySession`.
+
+2. Absolute+sliding session enforcement completion
+- `lib/auth.ts`
+- `proxy.ts`
+- Added absolute max and registry-aware refresh enforcement in middleware/session refresh path.
+- Proxy now rejects registry-enabled JWTs missing `sid` to force migration to tracked sessions.
+
+3. Sensitive action step-up authentication
+- `lib/auth.ts`
+- `lib/actions/auth.ts`
+- Added sensitive action age guard (`SESSION_SENSITIVE_ACTION_MAX_AGE_HOURS`).
+- Applied guard to high-risk account actions:
+  - password change
+  - 2FA secret generation
+  - 2FA enable/disable
+
+4. Active devices UI + controls in settings
+- `app/(dashboard)/settings/page.tsx`
+- `app/(dashboard)/settings/settings-content.tsx`
+- Added active devices list in Settings (current device marker, UA/IP, expiry).
+- Added “Sign out” per device and “Sign out other devices” actions.
+
+5. Rollout flagging for staged adoption
+- `lib/auth.ts`
+- `README.md`
+- Added `ENABLE_SESSION_REGISTRY` and session policy env documentation to support staged rollout.
+
 ## Migration and rollout notes
 
 1. Run Prisma migration for new indexes and tenant model.

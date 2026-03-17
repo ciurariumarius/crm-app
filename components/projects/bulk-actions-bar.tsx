@@ -47,7 +47,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection, totalProjects }:
 
         setIsUpdating(true)
         try {
-            const updateData: any = {}
+            const updateData: { status?: string; paymentStatus?: string } = {}
             if (bulkStatus) updateData.status = bulkStatus
             if (bulkPayment) updateData.paymentStatus = bulkPayment
 
@@ -61,7 +61,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection, totalProjects }:
             setBulkStatus("")
             setBulkPayment("")
             router.refresh()
-        } catch (error) {
+        } catch {
             toast.error("Bulk update failed")
         } finally {
             setIsUpdating(false)
@@ -81,7 +81,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection, totalProjects }:
             } else {
                 toast.error(result.error || "Bulk delete failed")
             }
-        } catch (error) {
+        } catch {
             toast.error("Bulk delete failed")
         } finally {
             setIsDeleting(false)

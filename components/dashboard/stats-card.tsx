@@ -121,8 +121,8 @@ export function StatsCard({
                                         ))}
                                     </Pie>
                                     <Tooltip
-                                        formatter={(value: number, name: string, props: any) => [
-                                            `${ronFormatter.format(value)} (${props.payload.percentage}%)`,
+                                        formatter={(value: number, name: string, props: { payload?: { percentage?: string } }) => [
+                                            `${ronFormatter.format(value)} (${props.payload?.percentage ?? "0.0"}%)`,
                                             name
                                         ]}
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }}

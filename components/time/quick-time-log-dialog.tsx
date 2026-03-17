@@ -6,16 +6,12 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
     DialogDescription
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
-import { Loader2, Plus, Clock } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Loader2, Clock } from "lucide-react"
 
 interface QuickTimeLogDialogProps {
     open: boolean
@@ -57,7 +53,7 @@ export function QuickTimeLogDialog({
             } else {
                 toast.error(result.error || "Failed to log time")
             }
-        } catch (error) {
+        } catch {
             toast.error("Process failed")
         } finally {
             setIsLoading(false)

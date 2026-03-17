@@ -7,6 +7,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { formatProjectName, formatRelativeDate } from "@/lib/utils"
 import { requireTenantContext } from "@/lib/tenant"
+import type { PartnerWithSites } from "@/types"
+import type { Service, Site } from "@prisma/client"
+
+type SiteProjectCard = {
+    id: string
+    status: string
+    services: Array<{
+        serviceName?: string | null
+        isRecurring?: boolean | null
+    }>
+    createdAt?: string | Date | null
+    name?: string | null
+    updatedAt?: string | Date | null
+    paymentStatus: string
+    _count: {
+        tasks: number
+    }
+}
 
 export const dynamic = "force-dynamic"
 
@@ -51,9 +69,11 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
         notFound()
     }
 
-    const site = JSON.parse(JSON.stringify(siteRaw))
-    const services = JSON.parse(JSON.stringify(servicesRaw))
-    const partners = JSON.parse(JSON.stringify(partnersRaw))
+    const site = JSON.parse(JSON.stringify(siteRaw)) as Site & {
+        projects: SiteProjectCard[]
+    }
+    const services = JSON.parse(JSON.stringify(servicesRaw)) as unknown as Service[]
+    const partners = JSON.parse(JSON.stringify(partnersRaw)) as unknown as PartnerWithSites[]
 
     return (
         <div className="space-y-8">
@@ -63,15 +83,15 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ par
                 <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold tracking-[-0.03em] text-foreground">Active Projects</h3>
                     <GlobalCreateProjectDialog
-                        partners={partners as any}
-                        services={services as any}
+                        partners={partners}
+                        services={services}
                         defaultPartnerId={site.partnerId}
                         defaultSiteId={site.id}
                     />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {site.projects.map((project: any) => {
+                    {site.projects.map((project: SiteProjectCard) => {
                         const displayStatus = project.status
                         return (
                             <Link key={project.id} href={`/projects/${project.id}`} className="transition-transform hover:scale-[1.02]">

@@ -3,20 +3,19 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Site } from "@prisma/client"
-import { Copy, ExternalLink, Save, Globe, Users, Expand, MoreHorizontal, Trash2, Pencil } from "lucide-react"
+import { Copy, ExternalLink, Globe, Trash2, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateSiteDetails } from "@/lib/actions/sites"
 import { DeleteSiteButton } from "@/components/vault/delete-site-button"
 
 interface SiteSheetContentProps {
     site: Site & { partner?: { id: string; name: string } }
-    onUpdate?: (updatedSite: Site) => void
+    onUpdate?: (updatedSite: Site & { partner?: { id: string; name: string } }) => void
 }
 
 export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
@@ -69,7 +68,7 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
             })
             toast.success("Saved successfully!")
             if (onUpdate) {
-                onUpdate({ ...site, ...formData, marketingVault: vaultJson } as any)
+                onUpdate({ ...site, ...formData, marketingVault: vaultJson })
             }
         } catch (error) {
             console.error(error)

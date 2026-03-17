@@ -1,28 +1,17 @@
 import { Prisma } from '@prisma/client'
-import { timingSafeEqual } from 'crypto'
 import prisma from '@/lib/prisma'
 import { cleanupExpiredRateLimits } from '@/lib/rate-limit'
 import { apiError, apiInternalError, apiMethodNotAllowed, apiOk } from '@/lib/api-response'
+import { matchesBearerOrHeaderSecret } from '@/lib/http-auth'
 import { formatProjectName } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
-function safeCompare(input: string, expected: string) {
-    const inputBuffer = Buffer.from(input)
-    const expectedBuffer = Buffer.from(expected)
-    if (inputBuffer.length !== expectedBuffer.length) {
-        return false
-    }
-    return timingSafeEqual(inputBuffer, expectedBuffer)
-}
-
 function isAuthorized(request: Request) {
-    const cronSecret = process.env.CRON_SECRET
+    const cronSecret = process.env.CRON_SECRET?.trim()
     if (!cronSecret) return false
 
-    const authHeader = request.headers.get('authorization')
-    const headerSecret = request.headers.get('x-cron-secret')
-    return safeCompare(authHeader || '', `Bearer ${cronSecret}`) || safeCompare(headerSecret || '', cronSecret)
+    return matchesBearerOrHeaderSecret(request, cronSecret, 'x-cron-secret')
 }
 
 function currentPeriod(date: Date) {

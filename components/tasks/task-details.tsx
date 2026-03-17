@@ -40,12 +40,60 @@ import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
 import { useRouter } from "next/navigation"
 
+type TaskTimeLog = {
+    id?: string
+    startTime?: string | Date | null
+    endTime?: string | Date | null
+    durationSeconds?: number | null
+    notes?: string | null
+}
+
+type TaskDetailsSite = {
+    id?: string
+    domainName?: string | null
+    partner?: { id: string; name: string } | null
+    [key: string]: unknown
+}
+
+type TaskDetailsProject = {
+    id?: string
+    name?: string | null
+    createdAt?: string | Date | null
+    site?: TaskDetailsSite | null
+    services?: Array<{
+        serviceName?: string | null
+        isRecurring?: boolean | null
+    }> | null
+    tasks?: Array<{
+        id?: string
+        name?: string | null
+        timeLogs?: TaskTimeLog[] | null
+    }> | null
+    timeLogs?: TaskTimeLog[] | null
+    [key: string]: unknown
+}
+
+export type TaskDetailsTask = {
+    id: string
+    projectId?: string | null
+    name?: string | null
+    description?: string | null
+    status?: string | null
+    urgency?: string | null
+    deadline?: string | Date | null
+    createdAt?: string | Date | null
+    updatedAt?: string | Date | null
+    timeLogs?: TaskTimeLog[] | null
+    project?: TaskDetailsProject | null
+    [key: string]: unknown
+}
+
 interface TaskDetailsProps {
-    task: any
+    task: TaskDetailsTask | null
     open: boolean
     onOpenChange: (open: boolean) => void
-    onOpenProject?: (project: any) => void
-    onOpenSite?: (site: any) => void
+    onOpenProject?: (project: TaskDetailsProject) => void
+    onOpenSite?: (site: TaskDetailsSite) => void
 }
 
 const TASK_NOTES_TEMPLATE = [
@@ -128,9 +176,9 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
             setIsEditingTitle(false)
             skipNextAutoSave.current = true
         }
-    }, [task?.id])
+    }, [task])
 
-    const handleUpdate = async () => {
+    const handleUpdate = React.useCallback(async () => {
         if (!task) return
         setLoading(true)
         try {
@@ -147,12 +195,12 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
             } else {
                 toast.error(result.error || "Failed to update task")
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to update task")
         } finally {
             setLoading(false)
         }
-    }
+    }, [deadline, description, name, status, task, urgency])
 
     // Auto-save logic
     React.useEffect(() => {
@@ -182,12 +230,16 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
         }, 400)
 
         return () => clearTimeout(timer)
-    }, [name, description, status, urgency, deadline])
+    }, [deadline, description, handleUpdate, name, status, task, urgency])
 
     const handleDelete = async () => {
         if (!task) return
         setIsDeleting(true)
         try {
+            if (!task.projectId) {
+                toast.error("Task has no project")
+                return
+            }
             const result = await deleteTask(task.id, task.projectId)
             if (result.success) {
                 toast.success("Task deleted")
@@ -195,7 +247,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
             } else {
                 toast.error(result.error || "Failed to delete task")
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to delete task")
         } finally {
             setIsDeleting(false)
@@ -220,7 +272,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isTaskRunning = isActiveTimerThisTask && timerState.isRunning
     const isTaskPaused = isActiveTimerThisTask && !timerState.isRunning
-    const loggedSeconds = task.timeLogs?.reduce((acc: number, log: any) => acc + (log.durationSeconds || 0), 0) || 0
+    const loggedSeconds = task.timeLogs?.reduce((acc: number, log: TaskTimeLog) => acc + (log.durationSeconds || 0), 0) || 0
     const runningSeconds = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
     const totalTrackedSeconds = loggedSeconds + runningSeconds
     const timerDisplaySeconds = totalTrackedSeconds
@@ -228,14 +280,12 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
     const loggedMinutes = Math.floor((loggedSeconds % 3600) / 60)
     const timerStatusLabel = isTaskRunning ? "Running" : isTaskPaused ? "Paused" : "Ready"
     const timerPrimaryLabel = isTaskRunning ? "Pause" : isTaskPaused ? "Resume" : "Start"
-    const sortedTimeLogs = [...(task.timeLogs || [])].sort((a: any, b: any) => {
-        const aTime = new Date(a.startTime).getTime()
-        const bTime = new Date(b.startTime).getTime()
-        return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime)
+    const sortedTimeLogs = [...(task.timeLogs || [])].sort((a: TaskTimeLog, b: TaskTimeLog) => {
+        const aTime = toDate(a.startTime)?.getTime() ?? 0
+        const bTime = toDate(b.startTime)?.getTime() ?? 0
+        return bTime - aTime
     })
-    const projectLabel = task.project
-        ? formatProjectName(task.project)
-        : task.project?.site?.domainName || task.project?.name || "Project"
+    const projectLabel = task.project ? formatProjectName(task.project) : "Project"
     const projectPartnerLabel = task.project?.site?.partner?.name || "Partner"
     const projectDomainLabel = task.project?.site?.domainName || "Domain"
     const projectDomainUrl = resolveExternalSiteUrl(task.project?.site?.domainName)
@@ -257,7 +307,12 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
             return
         }
 
-        void globalStartTimer(task.projectId, task.id, task.name)
+        if (!task.projectId) {
+            toast.error("Task has no project")
+            return
+        }
+
+        void globalStartTimer(task.projectId, task.id, task.name || "Task")
     }
 
     const openProjectDetails = () => {
@@ -289,6 +344,11 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
     }
 
     const handleManualLog = async () => {
+        if (!task.projectId) {
+            toast.error("Task has no project")
+            return
+        }
+
         const minutes = Number.parseInt(manualMinutes, 10)
         if (!manualMinutes || Number.isNaN(minutes) || minutes <= 0) {
             toast.error("Please enter a valid number of minutes")
@@ -700,7 +760,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                     </div>
                                 )}
 
-                                {sortedTimeLogs.map((log: any) => {
+                                {sortedTimeLogs.map((log: TaskTimeLog) => {
                                     const startDate = log.startTime ? new Date(log.startTime) : null
                                     const endDate = log.endTime ? new Date(log.endTime) : null
                                     const hasValidStart = Boolean(startDate && !Number.isNaN(startDate.getTime()))

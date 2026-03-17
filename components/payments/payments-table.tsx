@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, Fragment } from "react"
-import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { cn, formatCurrency, formatProjectName, formatRelativeDate } from "@/lib/utils"
 import {
@@ -13,11 +12,57 @@ import {
     TableRow
 } from "@/components/ui/table"
 import { CreditCard, History, Undo2, ChevronDown, ChevronRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
+
+type SettlementProjectEntry = {
+    id: string
+    name: string
+    fee: number
+}
+
+type ParsedPaymentDetails = {
+    projectName: string
+    extraProjects: SettlementProjectEntry[]
+    totalAmount: number
+}
+
+type PaymentLogEntry = {
+    id: string
+    action: string
+    status: string
+    details: string | null
+    date: Date | string
+}
+
+type PaymentProjectSummary = {
+    id: string
+    name?: string | null
+    createdAt?: string | Date | null
+    currentFee?: number | string | null | { toNumber: () => number }
+    site?: {
+        domainName?: string | null
+    } | null
+    services?: Array<{
+        serviceName?: string | null
+        isRecurring?: boolean | null
+    }> | null
+}
 
 interface PaymentsTableProps {
-    logs: any[]
-    projects: any[]
+    logs: PaymentLogEntry[]
+    projects: PaymentProjectSummary[]
+}
+
+function toProjectFee(value: PaymentProjectSummary["currentFee"]) {
+    if (value == null) return 0
+    if (typeof value === "number") return value
+    if (typeof value === "string") {
+        const parsed = Number(value)
+        return Number.isFinite(parsed) ? parsed : 0
+    }
+    if (typeof value === "object" && "toNumber" in value && typeof value.toNumber === "function") {
+        return value.toNumber()
+    }
+    return 0
 }
 
 export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
@@ -34,7 +79,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
         setExpandedRows(next)
     }
 
-    const parseDetails = (details: string | null) => {
+    const parseDetails = (details: string | null): ParsedPaymentDetails => {
         if (!details) return { projectName: "Unknown Project", extraProjects: [], totalAmount: 0 }
 
         try {
@@ -50,7 +95,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                 return {
                     projectName: `${data.projectCount || data.projects.length} Projects (${data.partnerName || 'Partner'})`,
                     extraProjects: data.projects,
-                    totalAmount: data.totalAmount || data.projects.reduce((sum: number, p: any) => sum + (Number(p.fee) || 0), 0)
+                    totalAmount: data.totalAmount || data.projects.reduce((sum: number, projectEntry: SettlementProjectEntry) => sum + (Number(projectEntry.fee) || 0), 0)
                 }
             }
         } catch {
@@ -60,10 +105,10 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
         const projectIdMatch = details.match(/projectId=([^;]+)/)
         if (projectIdMatch) {
             const projectId = projectIdMatch[1]
-            const project = projects.find(p => p.id === projectId)
+            const project = projects.find((projectEntry) => projectEntry.id === projectId)
             // Try to extract fee from log details if possible (manual toggle might not store fee, so we check project)
             const feeMatch = details.match(/fee=([^;]+)/)
-            const fee = feeMatch ? Number(feeMatch[1]) : Number(project?.currentFee || 0)
+            const fee = feeMatch ? Number(feeMatch[1]) : toProjectFee(project?.currentFee)
 
             if (project) {
                 return {
@@ -190,13 +235,13 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
-                                                        {extraProjects.map((p: any) => (
-                                                            <TableRow key={p.id} className="hover:bg-slate-50/80 border-slate-100 last:border-0">
+                                                        {extraProjects.map((projectEntry) => (
+                                                            <TableRow key={projectEntry.id} className="hover:bg-slate-50/80 border-slate-100 last:border-0">
                                                                 <TableCell className="py-2.5 text-xs font-bold text-slate-600 px-4">
-                                                                    {p.name}
+                                                                    {projectEntry.name}
                                                                 </TableCell>
                                                                 <TableCell className="py-2.5 text-xs text-right font-mono font-bold px-4 text-slate-500">
-                                                                    {formatCurrency(p.fee)}
+                                                                    {formatCurrency(projectEntry.fee)}
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))}

@@ -14,7 +14,6 @@ import {
     Clock,
     CreditCard,
     Globe,
-    LayoutDashboard,
     LayoutGrid,
     LogOut,
     Package,

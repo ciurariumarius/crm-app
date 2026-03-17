@@ -17,7 +17,6 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,7 +30,6 @@ import { settlePartnerDebt } from "@/lib/actions/settlement"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { GlobalSearch } from "@/components/dashboard/global-search"
-import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import type { Service } from "@prisma/client"
@@ -156,7 +154,6 @@ export function MobileHomeView({
     }
 
     const name = user?.name?.split(" ")[0] || user?.username || "Admin"
-    const initials = name.slice(0, 2).toUpperCase()
     const monthName = new Date().toLocaleString("en-US", { month: "long" })
     const visibleTasks = upcomingTasks.slice(0, 6)
     const visibleMonthlyProjects = recurringProjects
@@ -341,8 +338,6 @@ export function MobileHomeView({
                         <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#2563EB]">Monthly Subscriptions</p>
                         <div className="space-y-2">
                             {visibleMonthlyProjects.map((project) => {
-                                const parsed = splitProjectLabel(project.siteName || "Untitled project")
-                                const minutes = Math.round((Number(project.hoursLogged || 0) % 1) * 60)
                                 return (
                                     <button
                                         key={project.id}

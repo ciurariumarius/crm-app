@@ -25,6 +25,7 @@ model Tenant {
   timeLogs         TimeLog[]
   auditLogs        AuditLog[]
   projectRollovers ProjectRollover[]
+  authSessions     AuthSession[]
 
   @@map("tenants")
 }
@@ -201,6 +202,7 @@ model User {
   updatedAt        DateTime @default(now()) @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  authSessions AuthSession[]
 
   @@index([tenantId])
   @@map("users")
@@ -215,6 +217,30 @@ model RateLimitEntry {
 
   @@index([resetAt])
   @@map("rate_limit_entries")
+}
+
+model AuthSession {
+  id                  String    @id
+  tenantId            String    @map("tenant_id")
+  userId              String    @map("user_id")
+  userAgent           String?   @map("user_agent")
+  ipAddress           String?   @map("ip_address")
+  rememberDevice      Boolean   @default(false) @map("remember_device")
+  expiresAt           DateTime  @map("expires_at")
+  maxSessionExpiresAt DateTime  @map("max_session_expires_at")
+  lastSeenAt          DateTime? @map("last_seen_at")
+  revokedAt           DateTime? @map("revoked_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, revokedAt])
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, maxSessionExpiresAt])
+  @@index([userId])
+  @@map("auth_sessions")
 }
 
 model AuditLog {

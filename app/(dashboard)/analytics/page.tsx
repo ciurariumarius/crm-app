@@ -4,8 +4,54 @@ import { BarChart3, TrendingUp, DollarSign, Clock, Briefcase, Users } from "luci
 import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
 import { PageHeader } from "@/components/layout/page-header"
 import { requireTenantContext } from "@/lib/tenant"
+import type { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
+
+type AnalyticsProject = Prisma.ProjectGetPayload<{
+    select: {
+        id: true
+        status: true
+        paymentStatus: true
+        currentFee: true
+        services: {
+            select: {
+                serviceName: true
+                isRecurring: true
+            }
+        }
+        site: {
+            select: {
+                partner: {
+                    select: { name: true }
+                }
+            }
+        }
+    }
+}>
+
+type ProjectCountByStatus = {
+    status: string
+    _count: { _all: number }
+}
+
+type TimeByProjectEntry = {
+    projectId: string
+    _sum: { durationSeconds: number | null }
+}
+
+type PartnerStat = {
+    name: string
+    projects: number
+    revenue: number
+    hours: number
+}
+
+type ServiceStat = {
+    name: string
+    count: number
+    revenue: number
+}
 
 export default async function AnalyticsPage() {
     const session = await requireTenantContext()
@@ -54,23 +100,29 @@ export default async function AnalyticsPage() {
 
     // Calculate statistics
     const totalProjects = projects.length
-    const activeProjects = projectCounts.find((g: any) => g.status === "Active")?._count._all || 0
-    const pausedProjects = projectCounts.find((g: any) => g.status === "Paused")?._count._all || 0
-    const completedProjects = projectCounts.find((g: any) => g.status === "Completed")?._count._all || 0
-    const closedProjects = projectCounts.find((g: any) => g.status === "Closed")?._count._all || 0
+    const typedProjectCounts = projectCounts as ProjectCountByStatus[]
+    const activeProjects = typedProjectCounts.find((group) => group.status === "Active")?._count._all || 0
+    const pausedProjects = typedProjectCounts.find((group) => group.status === "Paused")?._count._all || 0
+    const completedProjects = typedProjectCounts.find((group) => group.status === "Completed")?._count._all || 0
+    const closedProjects = typedProjectCounts.find((group) => group.status === "Closed")?._count._all || 0
 
-    const totalRevenue = projects.reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
-    const paidRevenue = projects.filter((p: any) => p.paymentStatus === "Paid").reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
-    const unpaidRevenue = projects.filter((p: any) => p.paymentStatus === "Unpaid").reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0)
+    const typedProjects = projects as AnalyticsProject[]
+    const totalRevenue = typedProjects.reduce((sum, project) => sum + (Number(project.currentFee) || 0), 0)
+    const paidRevenue = typedProjects
+        .filter((project) => project.paymentStatus === "Paid")
+        .reduce((sum, project) => sum + (Number(project.currentFee) || 0), 0)
+    const unpaidRevenue = typedProjects
+        .filter((project) => project.paymentStatus === "Unpaid")
+        .reduce((sum, project) => sum + (Number(project.currentFee) || 0), 0)
 
     const totalTimeSeconds = totalTimeAgg._sum.durationSeconds || 0
     const totalHours = Math.round(totalTimeSeconds / 3600)
     const timeByProjectMap = new Map<string, number>(
-        timeByProject.map((entry: any) => [entry.projectId, Number(entry._sum.durationSeconds) || 0])
+        (timeByProject as TimeByProjectEntry[]).map((entry) => [entry.projectId, Number(entry._sum.durationSeconds) || 0])
     )
 
     // Partner statistics
-    const partnerStats = projects.reduce((acc: any, project: any) => {
+    const partnerStats = typedProjects.reduce<Record<string, PartnerStat>>((acc, project) => {
         const partnerName = project.site.partner.name
         if (!acc[partnerName]) {
             acc[partnerName] = {
@@ -84,15 +136,15 @@ export default async function AnalyticsPage() {
         acc[partnerName].revenue += Number(project.currentFee) || 0
         acc[partnerName].hours += (timeByProjectMap.get(project.id) || 0) / 3600
         return acc
-    }, {} as Record<string, { name: string; projects: number; revenue: number; hours: number }>)
+    }, {})
 
     const topPartners = Object.values(partnerStats)
-        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5)
 
     // Service statistics
-    const serviceStats = projects.reduce((acc: any, project: any) => {
-        project.services.forEach((service: any) => {
+    const serviceStats = typedProjects.reduce<Record<string, ServiceStat>>((acc, project) => {
+        project.services.forEach((service) => {
             if (!acc[service.serviceName]) {
                 acc[service.serviceName] = {
                     name: service.serviceName,
@@ -104,10 +156,10 @@ export default async function AnalyticsPage() {
             acc[service.serviceName].revenue += Number(project.currentFee) || 0
         })
         return acc
-    }, {} as Record<string, { name: string; count: number; revenue: number }>)
+    }, {})
 
     const topServices = Object.values(serviceStats)
-        .sort((a: any, b: any) => b.count - a.count)
+        .sort((a, b) => b.count - a.count)
         .slice(0, 5)
 
     const formatCurrency = (value: number) => {
@@ -193,7 +245,7 @@ export default async function AnalyticsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {topPartners.map((partner: any, index: number) => (
+                            {topPartners.map((partner, index) => (
                                 <div key={partner.name} className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
@@ -226,7 +278,7 @@ export default async function AnalyticsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {topServices.map((service: any, index: number) => (
+                            {topServices.map((service, index) => (
                                 <div key={service.name} className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
@@ -262,7 +314,7 @@ export default async function AnalyticsPage() {
                 </div>
 
                 <div className="bg-muted/10 rounded-[2.5rem] border border-muted/50 p-8 lg:p-12 overflow-hidden shadow-sm">
-                    <PartnerRevenueChart data={Object.values(partnerStats).map((p: any) => ({ name: p.name, revenue: p.revenue }))} />
+                    <PartnerRevenueChart data={Object.values(partnerStats).map((partner) => ({ name: partner.name, revenue: partner.revenue }))} />
                 </div>
             </section>
         </div>

@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client"
-import path from "path"
 
 const prisma = new PrismaClient()
 const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"

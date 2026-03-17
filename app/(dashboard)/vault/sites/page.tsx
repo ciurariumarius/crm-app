@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { requireTenantContext } from "@/lib/tenant"
 import { DomainsFilters } from "@/components/vault/domains-filters"
 import { cn } from "@/lib/utils"
+import type { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 
@@ -23,7 +24,7 @@ export default async function SitesPage({
     const page = parseInt(pageStr || "1")
     const skip = (page - 1) * PAGE_SIZE
 
-    const where: any = { tenantId: session.tenantId }
+    const where: Prisma.SiteWhereInput = { tenantId: session.tenantId }
     
     if (q) {
         where.OR = [
@@ -77,7 +78,7 @@ export default async function SitesPage({
 
     return (
         <div className="flex flex-col gap-8 pb-8">
-            <PageHeader title="Domains" actions={<CreateSiteDialog partners={partners as any} />} />
+            <PageHeader title="Domains" actions={<CreateSiteDialog partners={partners} />} />
 
             <DomainsFilters 
                 partners={partners} 

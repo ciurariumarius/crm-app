@@ -33,7 +33,7 @@ export function DeleteProjectButton({ projectId }: { projectId: string }) {
             } else {
                 toast.error(result.error || "Failed to delete project")
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred")
         } finally {
             setIsDeleting(false)

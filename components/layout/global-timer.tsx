@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Play, Pause, Square, Timer } from "lucide-react"
+import { Play, Pause, Square } from "lucide-react"
 import { useTimer } from "@/components/providers/timer-provider"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"

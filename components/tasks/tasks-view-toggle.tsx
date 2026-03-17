@@ -8,7 +8,7 @@ import { useTransition } from "react"
 export function TasksViewToggle({ currentView }: { currentView: string }) {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const [isPending, startTransition] = useTransition()
+    const [, startTransition] = useTransition()
 
     const colsTarget = searchParams.get("cols") || "3"
 

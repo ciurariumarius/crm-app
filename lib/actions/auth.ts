@@ -2,7 +2,15 @@
 
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
-import { createSession, destroySession, getSession, encrypt, decrypt } from "@/lib/auth"
+import {
+    createSession,
+    destroySession,
+    getSession,
+    encrypt,
+    decrypt,
+    isSensitiveActionReauthRequired,
+    isSessionRegistryEnabled,
+} from "@/lib/auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logAuditEvent } from "@/lib/audit"
 import { decryptSensitiveValue, encryptSensitiveValue, shouldRotateSensitiveValue } from "@/lib/crypto"
@@ -18,12 +26,18 @@ async function getRequestContext() {
     return { ipAddress, userAgent }
 }
 
+function parseRememberDeviceValue(value: FormDataEntryValue | undefined) {
+    if (typeof value !== "string") return false
+    const normalized = value.trim().toLowerCase()
+    return normalized === "on" || normalized === "true" || normalized === "1"
+}
+
 const RATE_LIMIT_FALLBACK_WINDOW_MS = 15 * 60 * 1000
 
-function allowRequestWhenRateLimitUnavailable() {
+function blockRequestWhenRateLimitUnavailable() {
     return {
-        allowed: true,
-        remaining: Number.MAX_SAFE_INTEGER,
+        allowed: false,
+        remaining: 0,
         resetAt: new Date(Date.now() + RATE_LIMIT_FALLBACK_WINDOW_MS),
     }
 }
@@ -36,7 +50,7 @@ async function checkRateLimitSafe(
         return await checkRateLimit(key, options)
     } catch (error) {
         console.error(`[auth] rate limit check failed for key "${key}"`, error)
-        return allowRequestWhenRateLimitUnavailable()
+        return blockRequestWhenRateLimitUnavailable()
     }
 }
 
@@ -44,6 +58,7 @@ export async function loginUser(formData: FormData) {
     const data = Object.fromEntries(formData.entries())
     const username = data.username as string
     const password = data.password as string
+    const rememberDevice = parseRememberDeviceValue(data.rememberDevice as FormDataEntryValue | undefined)
 
     if (!username || !password) {
         return { success: false, error: "Username and password required" }
@@ -106,6 +121,7 @@ export async function loginUser(formData: FormData) {
                 userId: user.id,
                 tenantId: user.tenantId,
                 purpose: "2fa_challenge",
+                rememberDevice,
                 exp: Math.floor(Date.now() / 1000) + 300,
             })
             await logAuditEvent({
@@ -119,7 +135,10 @@ export async function loginUser(formData: FormData) {
             return { success: true, requiresTwoFactor: true, challengeToken }
         }
 
-        await createSession(user.id, user.username, user.tenantId, true)
+        await createSession(user.id, user.username, user.tenantId, true, rememberDevice, {
+            ipAddress,
+            userAgent,
+        })
         await logAuditEvent({
             action: "AUTH_LOGIN_SUCCESS",
             success: true,
@@ -150,6 +169,7 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
 
         const userId = challenge.userId as string
         const challengeTenantId = challenge.tenantId as string | undefined
+        const rememberDevice = challenge.rememberDevice === true
 
         const ipRl = await checkRateLimitSafe(`2fa_ip:${ipAddress}`, { maxAttempts: 100 })
         if (!ipRl.allowed) {
@@ -234,7 +254,10 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
             }
         }
 
-        await createSession(user.id, user.username, user.tenantId, true)
+        await createSession(user.id, user.username, user.tenantId, true, rememberDevice, {
+            ipAddress,
+            userAgent,
+        })
         await logAuditEvent({
             action: "AUTH_2FA_SUCCESS",
             success: true,
@@ -267,6 +290,9 @@ export async function logoutUser() {
 export async function changePassword(formData: FormData) {
     const session = await getSession()
     if (!session) return { success: false, error: "Unauthorized" }
+    if (isSensitiveActionReauthRequired(session)) {
+        return { success: false, error: "For security, please sign in again before performing this action." }
+    }
 
     const { ipAddress, userAgent } = await getRequestContext()
     const currentPassword = formData.get("currentPassword") as string
@@ -314,6 +340,9 @@ export async function changePassword(formData: FormData) {
 export async function generateTwoFactorSecret() {
     const session = await getSession()
     if (!session) return { success: false, error: "Unauthorized" }
+    if (isSensitiveActionReauthRequired(session)) {
+        return { success: false, error: "For security, please sign in again before performing this action." }
+    }
 
     const { ipAddress, userAgent } = await getRequestContext()
     const user = await prisma.user.findFirst({ where: { id: session.userId, tenantId: session.tenantId } })
@@ -344,6 +373,9 @@ export async function generateTwoFactorSecret() {
 export async function enableTwoFactor(token: string, secret: string) {
     const session = await getSession()
     if (!session) return { success: false, error: "Unauthorized" }
+    if (isSensitiveActionReauthRequired(session)) {
+        return { success: false, error: "For security, please sign in again before performing this action." }
+    }
     const { ipAddress, userAgent } = await getRequestContext()
 
     const totp = new OTPAuth.TOTP({
@@ -393,6 +425,9 @@ export async function enableTwoFactor(token: string, secret: string) {
 export async function disableTwoFactor(currentPassword: string) {
     const session = await getSession()
     if (!session) return { success: false, error: "Unauthorized" }
+    if (isSensitiveActionReauthRequired(session)) {
+        return { success: false, error: "For security, please sign in again before performing this action." }
+    }
     const { ipAddress, userAgent } = await getRequestContext()
     if (!currentPassword) return { success: false, error: "Current password is required" }
 
@@ -468,4 +503,91 @@ export async function updateProfile(formData: FormData) {
     } catch {
         return { success: false, error: "Failed to update profile" }
     }
+}
+
+export async function revokeOtherDeviceSessions() {
+    const session = await getSession()
+    if (!session) return { success: false, error: "Unauthorized" }
+    if (!isSessionRegistryEnabled()) {
+        return { success: false, error: "Device session management is disabled." }
+    }
+    if (!session.sid) {
+        return { success: false, error: "Current session identifier is missing." }
+    }
+
+    const { ipAddress, userAgent } = await getRequestContext()
+    const revokedAt = new Date()
+    const result = await prisma.authSession.updateMany({
+        where: {
+            tenantId: session.tenantId,
+            userId: session.userId,
+            revokedAt: null,
+            id: { not: session.sid },
+        },
+        data: {
+            revokedAt,
+        },
+    })
+
+    await logAuditEvent({
+        action: "AUTH_SESSIONS_REVOKED_OTHERS",
+        success: true,
+        tenantId: session.tenantId,
+        actorUserId: session.userId,
+        ipAddress,
+        userAgent,
+        details: `revokedCount=${result.count}`,
+    })
+
+    revalidatePath("/settings")
+    return { success: true, revokedCount: result.count }
+}
+
+export async function revokeDeviceSession(sessionId: string) {
+    const session = await getSession()
+    if (!session) return { success: false, error: "Unauthorized" }
+    if (!isSessionRegistryEnabled()) {
+        return { success: false, error: "Device session management is disabled." }
+    }
+
+    const normalizedSessionId = (sessionId || "").trim()
+    if (!normalizedSessionId) {
+        return { success: false, error: "Session ID is required." }
+    }
+
+    const { ipAddress, userAgent } = await getRequestContext()
+    const revokedAt = new Date()
+    const result = await prisma.authSession.updateMany({
+        where: {
+            id: normalizedSessionId,
+            tenantId: session.tenantId,
+            userId: session.userId,
+            revokedAt: null,
+        },
+        data: {
+            revokedAt,
+        },
+    })
+
+    if (result.count === 0) {
+        return { success: false, error: "Session not found or already revoked." }
+    }
+
+    const revokedCurrent = session.sid === normalizedSessionId
+    if (revokedCurrent) {
+        await destroySession()
+    }
+
+    await logAuditEvent({
+        action: "AUTH_SESSION_REVOKED",
+        success: true,
+        tenantId: session.tenantId,
+        actorUserId: session.userId,
+        ipAddress,
+        userAgent,
+        details: `sessionId=${normalizedSessionId}; revokedCurrent=${revokedCurrent}`,
+    })
+
+    revalidatePath("/settings")
+    return { success: true, revokedCurrent }
 }

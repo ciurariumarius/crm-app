@@ -29,7 +29,7 @@ export function BusinessHealthPulse({
 }: BusinessHealthPulseProps) {
     const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' })
     const formattedUnpaid = formatCurrency(unpaidBalance)
-    const displayRevenue = formatCurrency(monthlyRevenue)
+    const displayRevenue = formattedRevenue || formatCurrency(monthlyRevenue)
 
     // Dynamic color for debt based on spec:
     // 0 = Neutral, > 0 = Warning Amber/Orange, > 1500 = Alert Red
@@ -38,7 +38,6 @@ export function BusinessHealthPulse({
 
     const debtTextColor = debtAlert ? "text-red-600" : debtWarning ? "text-amber-600" : "text-foreground"
     const debtBadgeColor = debtAlert ? "bg-red-500/10 text-red-500" : debtWarning ? "bg-amber-500/10 text-amber-500" : "bg-muted text-muted-foreground"
-    const debtBorderColor = debtAlert ? "border-l-red-500" : debtWarning ? "border-l-amber-500" : "border-l-border"
 
     return (
         <div id={id} className={cn("grid grid-cols-1 md:grid-cols-2 gap-6", className)}>

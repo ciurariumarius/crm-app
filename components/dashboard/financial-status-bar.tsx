@@ -1,4 +1,4 @@
-import { CreditCard, Wallet, Target, LayoutGrid, AlertCircle, TrendingUp, Sparkles } from "lucide-react"
+import { LayoutGrid, AlertCircle, TrendingUp, Sparkles } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
@@ -13,7 +13,6 @@ interface FinancialStatusBarProps {
 }
 
 export function FinancialStatusBar({
-    totalRevenue,
     formattedRevenue,
     allTimeUnpaidRevenue,
     activeMonthlyProjectsCount,

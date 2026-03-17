@@ -58,11 +58,6 @@ export default async function TimePage({
     const logs = logsResult.success && logsResult.data ? logsResult.data : []
     const totalLogs = logsResult.success ? logsResult.total ?? logs.length : 0
 
-    // Ensure logs match the expected type or cast appropriately if strict match is complex
-    const formattedLogs = logs?.map(log => ({
-        ...log,
-    }))
-
     // Serialization for client component
     const serializedLogs = JSON.parse(JSON.stringify(logs))
 

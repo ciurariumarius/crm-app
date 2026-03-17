@@ -1,14 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Pie, PieChart, Cell, ResponsiveContainer, Sector } from "recharts"
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
+import { Pie, PieChart, Cell } from "recharts"
 import {
     ChartConfig,
     ChartContainer,

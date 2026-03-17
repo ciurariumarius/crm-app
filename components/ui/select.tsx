@@ -15,7 +15,7 @@ function Select({
 const SelectGroup = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Group>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Group>
->(({ className, ...props }, ref) => (
+>(({ ...props }, ref) => (
   <SelectPrimitive.Group
     ref={ref}
     data-slot="select-group"
@@ -27,7 +27,7 @@ SelectGroup.displayName = SelectPrimitive.Group.displayName
 const SelectValue = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Value>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value>
->(({ className, ...props }, ref) => (
+>(({ ...props }, ref) => (
   <SelectPrimitive.Value
     ref={ref}
     data-slot="select-value"

@@ -21,14 +21,10 @@ const HeaderContext = createContext<HeaderContextType | undefined>(undefined)
 export function HeaderProvider({ children }: { children: ReactNode }) {
     const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([])
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-
-    useEffect(() => {
-        const stored = window.localStorage.getItem("ui:sidebar-collapsed")
-        if (stored === "1") {
-            setIsSidebarCollapsed(true)
-        }
-    }, [])
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        if (typeof window === "undefined") return false
+        return window.localStorage.getItem("ui:sidebar-collapsed") === "1"
+    })
 
     useEffect(() => {
         window.localStorage.setItem("ui:sidebar-collapsed", isSidebarCollapsed ? "1" : "0")

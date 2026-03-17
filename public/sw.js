@@ -1,4 +1,4 @@
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
     console.log('Service Worker installed');
     self.skipWaiting();
 });
@@ -9,6 +9,6 @@ self.addEventListener('activate', (event) => {
 });
 
 // A simple fetch listener is required by most browsers to trigger the PWA install prompt
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', () => {
     // We can add offline caching later
 });

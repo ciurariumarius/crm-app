@@ -1,15 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { Plus, FolderPlus } from "lucide-react"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
+import type { PartnerWithSites } from "@/types"
+import type { Service } from "@prisma/client"
+import type { TaskDialogProject } from "@/components/tasks/global-create-task-dialog"
 
 interface DashboardHeaderActionsProps {
-    partners: any[]
-    services: any[]
-    activeProjects: any[]
+    partners: PartnerWithSites[]
+    services: Service[]
+    activeProjects: TaskDialogProject[]
 }
 
 export function DashboardHeaderActions({ partners, services, activeProjects }: DashboardHeaderActionsProps) {

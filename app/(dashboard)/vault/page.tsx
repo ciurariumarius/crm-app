@@ -2,17 +2,11 @@ import prisma from "@/lib/prisma"
 import { CreatePartnerDialog } from "@/components/vault/create-partner-dialog"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { PartnerCard } from "@/components/vault/partner-card"
-import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
-import { SitesTable } from "@/components/vault/sites-table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Database, Users, Globe, LayoutGrid, Layers, SortAsc, SortDesc, DollarSign, Type, TrendingUp, BarChart3, PieChartIcon } from "lucide-react"
+import { Users, SortAsc, SortDesc, Type, BarChart3 } from "lucide-react"
 import Link from "next/link"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
-import { Card } from "@/components/ui/card"
 import { requireTenantContext } from "@/lib/tenant"
-import { formatProjectName } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
+import type { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 
@@ -23,13 +17,34 @@ export default async function VaultPage({
 }) {
     const session = await requireTenantContext()
     const params = await searchParams
-    const activeTab = params.tab || "partners"
-    const sortBy = params.sortBy || "name"
-    const order = params.order || "asc"
+    const sortBy = params.sortBy === "revenue" ? "revenue" : "name"
+    const order: Prisma.SortOrder = params.order === "desc" ? "desc" : "asc"
 
-    const page = parseInt(params.page || "1")
-    const pageSize = 10
-    const skip = (page - 1) * pageSize
+    type PartnerRow = Prisma.PartnerGetPayload<{
+        include: {
+            _count: { select: { sites: true } }
+            sites: {
+                include: {
+                    projects: {
+                        select: {
+                            id: true
+                            name: true
+                            createdAt: true
+                            status: true
+                            paymentStatus: true
+                            currentFee: true
+                            services: {
+                                select: {
+                                    serviceName: true
+                                    isRecurring: true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }>
 
     // Fetch partners with site projects and billing data
     const partnersRaw = await prisma.partner.findMany({
@@ -59,21 +74,28 @@ export default async function VaultPage({
                 }
             }
         },
-        orderBy: sortBy === "name" ? { name: order as any } : { createdAt: "desc" },
+        orderBy: sortBy === "name" ? { name: order } : { createdAt: "desc" },
     })
 
-    let partnersSerialized = JSON.parse(JSON.stringify(partnersRaw))
-    partnersSerialized = partnersSerialized.map((partner: any) => {
-        const allProjects = partner.sites?.flatMap((site: any) =>
-            (site.projects || []).map((project: any) => ({
+    const partnersWithUnpaidProjects = (partnersRaw as PartnerRow[]).map((partner) => {
+        const normalizedSites = partner.sites.map((site) => ({
+            ...site,
+            projects: site.projects.map((project) => ({
                 ...project,
+                currentFee: Number(project.currentFee || 0),
+            })),
+        }))
+
+        const allProjects = normalizedSites.flatMap((site) =>
+            site.projects.map((project) => ({
                 siteDomainName: site.domainName,
+                ...project,
             }))
-        ) || []
+        )
 
         const unpaidProjects = allProjects
-            .filter((project: any) => project.paymentStatus === "Unpaid")
-            .map((project: any) => ({
+            .filter((project) => project.paymentStatus === "Unpaid")
+            .map((project) => ({
                 id: project.id,
                 name: formatProjectName({
                     site: { domainName: project.siteDomainName },
@@ -86,58 +108,18 @@ export default async function VaultPage({
 
         return {
             ...partner,
+            sites: normalizedSites,
             unpaidProjects,
-        }
-    })
-
-    // Calculate revenue for analysis
-    const analysisData = partnersSerialized.map((p: any) => {
-        const revenue = p.sites?.flatMap((s: any) => s.projects).reduce((sum: number, pr: any) => sum + (Number(pr.currentFee) || 0), 0) || 0
-        return {
-            name: p.name,
-            revenue
         }
     })
 
     // Manual sorting for Revenue if requested
     if (sortBy === "revenue") {
-        partnersSerialized.sort((a: any, b: any) => {
-            const revA = a.sites?.flatMap((s: any) => s.projects).reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0) || 0
-            const revB = b.sites?.flatMap((s: any) => s.projects).reduce((sum: number, p: any) => sum + (Number(p.currentFee) || 0), 0) || 0
+        partnersWithUnpaidProjects.sort((a, b) => {
+            const revA = a.sites.flatMap((site) => site.projects).reduce((sum, project) => sum + (Number(project.currentFee) || 0), 0)
+            const revB = b.sites.flatMap((site) => site.projects).reduce((sum, project) => sum + (Number(project.currentFee) || 0), 0)
             return order === "asc" ? revA - revB : revB - revA
         })
-    }
-
-    // Fetch sites with pagination
-    const sitesPromise = prisma.site.findMany({
-        where: { tenantId: session.tenantId },
-        skip,
-        take: pageSize,
-        include: {
-            partner: true,
-            _count: {
-                select: { projects: true }
-            }
-        },
-        orderBy: { createdAt: "desc" }
-    })
-
-    const totalSitesPromise = prisma.site.count({ where: { tenantId: session.tenantId } })
-
-    const [sitesRaw, totalSites] = await Promise.all([
-        sitesPromise,
-        totalSitesPromise
-    ])
-
-    const sites = JSON.parse(JSON.stringify(sitesRaw))
-    const totalPages = Math.ceil(totalSites / pageSize)
-
-    // Fetch all partners for CreateSiteDialog
-    const allPartners = partnersSerialized.map((p: any) => ({ id: p.id, name: p.name }))
-
-    const getSortLink = (newSortBy: string) => {
-        const newOrder = sortBy === newSortBy && order === "asc" ? "desc" : "asc"
-        return `/partners?tab=partners&sortBy=${newSortBy}&order=${newOrder}`
     }
 
     return (
@@ -208,13 +190,13 @@ export default async function VaultPage({
             <div className="flex flex-col gap-6">
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {partnersSerialized.map((partner: any) => (
+                    {partnersWithUnpaidProjects.map((partner) => (
                         <PartnerCard
                             key={partner.id}
                             partner={partner}
                         />
                     ))}
-                    {partnersSerialized.length === 0 && (
+                    {partnersWithUnpaidProjects.length === 0 && (
                         <div className="col-span-full text-center py-20 bg-muted/20 border-2 border-dashed rounded-2xl">
                             <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
                             <p className="text-sm font-bold text-muted-foreground">No partners found.</p>
@@ -224,8 +206,4 @@ export default async function VaultPage({
             </div>
         </div>
     )
-}
-
-function cn(...inputs: any[]) {
-    return inputs.filter(Boolean).join(" ")
 }

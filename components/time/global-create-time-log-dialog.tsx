@@ -56,7 +56,7 @@ export function GlobalCreateTimeLogDialog({ open, onOpenChange, projects }: Glob
             } else {
                 toast.error(result.error || "Failed to log time")
             }
-        } catch (error) {
+        } catch {
             toast.error("Process failed")
         } finally {
             setIsLoading(false)

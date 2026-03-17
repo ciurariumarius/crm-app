@@ -1,6 +1,4 @@
 import { PrismaClient } from "@prisma/client"
-import path from "path"
-
 const prisma = new PrismaClient()
 
 async function cleanupNotionDomains() {
@@ -63,8 +61,9 @@ async function cleanupNotionDomains() {
 
             console.log(`✅ ${site.partner.name}: ${site.domainName.substring(0, 40)}... → ${newDomain}`)
 
-        } catch (error: any) {
-            console.error(`❌ Error updating site ${site.id}:`, error.message)
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unknown error"
+            console.error(`❌ Error updating site ${site.id}:`, message)
         }
     }
 

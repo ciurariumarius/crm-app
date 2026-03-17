@@ -21,9 +21,27 @@ import Link from "next/link"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
 
+type PaymentsPartnerOption = {
+    id: string
+    name: string
+}
+
+type PaymentsProjectOption = {
+    id: string
+    name?: string | null
+    createdAt?: string | Date | null
+    site?: {
+        domainName?: string | null
+    } | null
+    services?: Array<{
+        serviceName?: string | null
+        isRecurring?: boolean | null
+    }> | null
+}
+
 interface PaymentsFiltersProps {
-    partners: any[]
-    projects: any[]
+    partners: PaymentsPartnerOption[]
+    projects: PaymentsProjectOption[]
     totalLogs: number
 }
 
@@ -172,7 +190,7 @@ function PartnerCombobox({
     currentPartner,
     onSelect,
 }: {
-    partners: any[]
+    partners: PaymentsPartnerOption[]
     currentPartner: string
     onSelect: (value: string) => void
 }) {
@@ -241,7 +259,7 @@ function ProjectCombobox({
     currentProject,
     onSelect,
 }: {
-    projects: any[]
+    projects: PaymentsProjectOption[]
     currentProject: string
     onSelect: (value: string) => void
 }) {

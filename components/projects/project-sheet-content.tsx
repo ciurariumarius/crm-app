@@ -8,7 +8,6 @@ import {
     Check,
     CheckCircle,
     Clock3,
-    Cloud,
     FolderOpen,
     Globe,
     History,
@@ -55,6 +54,19 @@ type UpdateProjectPayload = {
     createdAt?: Date | string
     currentFee?: number | null
     serviceIds?: string[]
+}
+
+type ProjectPaymentHistoryEntry = {
+    id: string
+    action: string
+    date: Date | string
+    status: string
+}
+
+type ProjectTimeLogWithTask = ProjectWithDetails["timeLogs"][number] & {
+    task?: {
+        name?: string | null
+    } | null
 }
 
 interface ProjectSheetContentProps {
@@ -149,7 +161,7 @@ export function ProjectSheetContent({
     const [manualNotes, setManualNotes] = React.useState("")
 
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
-    const [selectedTimeLog, setSelectedTimeLog] = React.useState<any | null>(null)
+    const [selectedTimeLog, setSelectedTimeLog] = React.useState<ProjectTimeLogWithTask | null>(null)
     const [isTimeLogSheetOpen, setIsTimeLogSheetOpen] = React.useState(false)
     const [isExportingNotes, setIsExportingNotes] = React.useState(false)
     const [notesSaveState, setNotesSaveState] = React.useState<
@@ -161,7 +173,7 @@ export function ProjectSheetContent({
     const lastSavedDescriptionRef = React.useRef(initialProject.description || "")
 
     // Payment History State
-    const [paymentHistory, setPaymentHistory] = React.useState<any[]>([])
+    const [paymentHistory, setPaymentHistory] = React.useState<ProjectPaymentHistoryEntry[]>([])
     const [isLoadingHistory, setIsLoadingHistory] = React.useState(false)
 
     const router = useRouter()
@@ -179,7 +191,7 @@ export function ProjectSheetContent({
 
     React.useEffect(() => {
         setLocalName(formatProjectName(project))
-    }, [project.name, project.id])
+    }, [project])
 
     React.useEffect(() => {
         if (activeProjectIdRef.current === project.id) return
@@ -245,7 +257,7 @@ export function ProjectSheetContent({
         async (data: UpdateProjectPayload) => {
             setUpdatingId(project.id)
             try {
-                const result = await updateProject(project.id, data as any)
+                const result = await updateProject(project.id, data)
                 if (!result.success) {
                     toast.error(result.error || "Update failed")
                     return false
@@ -650,7 +662,7 @@ export function ProjectSheetContent({
         void globalStartTimer(project.id, undefined, formatProjectName(project))
     }
 
-    const recentLogs = [...(project.timeLogs || [])].sort((a, b) => {
+    const recentLogs = [...((project.timeLogs || []) as ProjectTimeLogWithTask[])].sort((a, b) => {
         const left = toDate(a.startTime)?.getTime() || 0
         const right = toDate(b.startTime)?.getTime() || 0
         return right - left
@@ -662,15 +674,14 @@ export function ProjectSheetContent({
     const sitePanelHref = `/partners/${project.site.partner.id}/${project.site.id}`
     const createdAt = toDate(project.createdAt)
     const updatedAt = toDate(project.updatedAt)
-    const createdTimestamp = createdAt || updatedAt || new Date()
     const lastUpdatedTimestamp = updatedAt || createdAt || null
     const timeLogProjects = React.useMemo(
         () => [{ id: project.id, displayName: localName || formatProjectName(project) }],
-        [project.id, localName]
+        [localName, project]
     )
     const timeLogTasks = React.useMemo(
         () =>
-            (project.tasks || []).map((task: any) => ({
+            (project.tasks || []).map((task: ProjectWithDetails["tasks"][number]) => ({
                 id: task.id,
                 name: task.name,
                 projectId: task.projectId || project.id,
@@ -703,7 +714,7 @@ export function ProjectSheetContent({
 
     const openSitePanel = React.useCallback(() => {
         if (onOpenSite) {
-            onOpenSite(project.site as Site)
+            onOpenSite(project.site)
             return
         }
         router.push(sitePanelHref)
@@ -1205,9 +1216,9 @@ export function ProjectSheetContent({
                                                         <span>
                                                             {start ? format(start, "HH:mm") : "--:--"} - {end ? format(end, "HH:mm") : "Ongoing"}
                                                         </span>
-                                                        {(log as any).task?.name && (
+                                                        {log.task?.name && (
                                                             <Badge className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em] text-emerald-700">
-                                                                {(log as any).task.name}
+                                                                {log.task.name}
                                                             </Badge>
                                                         )}
                                                     </div>

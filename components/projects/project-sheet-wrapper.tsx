@@ -3,19 +3,21 @@
 import * as React from "react"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
+import type { ProjectWithDetails } from "@/types"
+import type { Service } from "@prisma/client"
 
 interface ProjectSheetWrapperProps {
-    projects: any[]
-    allServices: any[]
+    projects: ProjectWithDetails[]
+    allServices: Service[]
     hourlyRate?: number
     children: React.ReactNode
 }
 
 // Create a context to manage project sheet state
 export const ProjectSheetContext = React.createContext<{
-    openProject: (projectId: string, projectData?: any) => void
+    openProject: (projectId: string, projectData?: ProjectWithDetails) => void
     closeProject: () => void
-    currentProject: any | null
+    currentProject: ProjectWithDetails | null
     hourlyRate: number
 }>({
     openProject: () => { },
@@ -25,11 +27,11 @@ export const ProjectSheetContext = React.createContext<{
 })
 
 export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, children }: ProjectSheetWrapperProps) {
-    const [selectedProject, setSelectedProject] = React.useState<any>(null)
+    const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
     const pendingSyncRef = React.useRef<Record<string, { status?: string; paymentStatus?: string }>>({})
 
-    const openProject = (projectId: string, projectData?: any) => {
-        const project = projectData || projects.find(p => p.id === projectId)
+    const openProject = (projectId: string, projectData?: ProjectWithDetails) => {
+        const project = projectData || projects.find((entry) => entry.id === projectId)
         if (project) {
             setSelectedProject(project)
         }
@@ -42,7 +44,7 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
     // Update selected project if it changes in the list (e.g. after editing)
     React.useEffect(() => {
         if (selectedProject) {
-            const updated = projects.find(p => p.id === selectedProject.id)
+            const updated = projects.find((entry) => entry.id === selectedProject.id)
             if (!updated) return
 
             const pending = pendingSyncRef.current[selectedProject.id]

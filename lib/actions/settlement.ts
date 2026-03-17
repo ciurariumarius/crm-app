@@ -91,8 +91,11 @@ export async function voidSettlement(auditLogId: string) {
             return { success: false, error: "Settlement log not found" }
         }
 
-        const details = JSON.parse(log.details || "{}")
-        const projectIds = (details.projects || []).map((p: any) => p.id)
+        const details = JSON.parse(log.details || "{}") as {
+            partnerId?: string
+            projects?: Array<{ id: string }>
+        }
+        const projectIds = (details.projects || []).map((p) => p.id)
 
         if (projectIds.length > 0) {
             await prisma.project.updateMany({

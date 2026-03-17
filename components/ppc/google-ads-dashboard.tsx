@@ -210,7 +210,6 @@ function MetricBlock({
     compact?: boolean
 }) {
     const isNegative = delta?.startsWith("-")
-    const isPositive = delta && !delta.startsWith("-")
 
     return (
         <div className={cn("flex flex-col", compact ? "gap-0.5" : "gap-1")}>

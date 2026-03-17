@@ -194,7 +194,7 @@ export async function updateProject(projectId: string, data: {
     paymentStatus?: string
     paidAt?: Date | string | null
     createdAt?: Date | string
-    currentFee?: number
+    currentFee?: number | null
     serviceIds?: string[]
 }) {
     try {

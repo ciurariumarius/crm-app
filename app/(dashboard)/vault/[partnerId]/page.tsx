@@ -1,13 +1,12 @@
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { ExternalLink, Globe, Plus } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { SitesListView } from "@/components/vault/sites-list-view"
 import { requireTenantContext } from "@/lib/tenant"
+import type { PartnerWithSites } from "@/types"
+import type { Service } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 
@@ -50,8 +49,8 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
 
     // Serialize Decimal objects
     const partner = JSON.parse(JSON.stringify(partnerRaw))
-    const services = JSON.parse(JSON.stringify(servicesRaw))
-    const partners = JSON.parse(JSON.stringify(partnersRaw))
+    const services = JSON.parse(JSON.stringify(servicesRaw)) as unknown as Service[]
+    const partners = JSON.parse(JSON.stringify(partnersRaw)) as unknown as PartnerWithSites[]
 
     return (
         <div className="space-y-6">
@@ -63,8 +62,8 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
                 </div>
                 <div className="flex items-center gap-2">
                     <GlobalCreateProjectDialog
-                        partners={partners as any}
-                        services={services as any}
+                        partners={partners}
+                        services={services}
                         defaultPartnerId={partner.id}
                     />
                     <CreateSiteDialog partnerId={partner.id} />

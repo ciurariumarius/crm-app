@@ -2,30 +2,90 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { changePassword, generateTwoFactorSecret, enableTwoFactor, disableTwoFactor, updateProfile } from "@/lib/actions/auth"
+import {
+    changePassword,
+    generateTwoFactorSecret,
+    enableTwoFactor,
+    disableTwoFactor,
+    updateProfile,
+    revokeDeviceSession,
+    revokeOtherDeviceSessions,
+} from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, Key, QrCode, User as UserIcon, Link as LinkIcon, Save, Loader2 } from "lucide-react"
+import {
+    Shield,
+    Key,
+    QrCode,
+    User as UserIcon,
+    Link as LinkIcon,
+    Save,
+    Loader2,
+    Laptop,
+    Smartphone,
+    Monitor,
+    LogOut,
+} from "lucide-react"
 import QRCode from "qrcode"
 import { PageHeader } from "@/components/layout/page-header"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
-interface UserData {
+export interface UserData {
     name: string | null
     username: string
     profilePic: string | null
     twoFactorEnabled: boolean
-    hourlyRate?: any | null
+    hourlyRate?: number | { toString(): string } | null
 }
 
-export function SettingsContent({ user }: { user: UserData }) {
+export interface DeviceSessionData {
+    id: string
+    userAgent: string | null
+    ipAddress: string | null
+    rememberDevice: boolean
+    expiresAt: string
+    lastSeenAt: string | null
+    createdAt: string
+    isCurrent: boolean
+}
+
+function formatSessionDate(value: string | null) {
+    if (!value) return "Unknown"
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "Unknown"
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+    }).format(date)
+}
+
+function detectDeviceType(userAgent: string | null) {
+    const ua = (userAgent || "").toLowerCase()
+    if (/iphone|android|mobile/.test(ua)) return "mobile"
+    if (/ipad|tablet/.test(ua)) return "tablet"
+    return "desktop"
+}
+
+export function SettingsContent({
+    user,
+    sessionRegistryEnabled,
+    deviceSessions: initialDeviceSessions,
+}: {
+    user: UserData
+    sessionRegistryEnabled: boolean
+    deviceSessions: DeviceSessionData[]
+}) {
+    const router = useRouter()
     const [loading, setLoading] = useState(false)
+    const [deviceLoading, setDeviceLoading] = useState(false)
     const [qrCodeUrl, setQrCodeUrl] = useState("")
     const [twoFactorSecret, setTwoFactorSecret] = useState("")
     const [token, setToken] = useState("")
     const [disablePassword, setDisablePassword] = useState("")
     const [is2FAEnabled, setIs2FAEnabled] = useState(user.twoFactorEnabled)
+    const [deviceSessions, setDeviceSessions] = useState<DeviceSessionData[]>(initialDeviceSessions)
 
     const handleProfileUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -109,6 +169,36 @@ export function SettingsContent({ user }: { user: UserData }) {
             toast.error(result.error || "Failed to disable 2FA")
         }
         setLoading(false)
+    }
+
+    const handleRevokeOtherSessions = async () => {
+        setDeviceLoading(true)
+        const result = await revokeOtherDeviceSessions()
+        if (result.success) {
+            toast.success(`Signed out ${result.revokedCount} other device${result.revokedCount === 1 ? "" : "s"}.`)
+            setDeviceSessions((current) => current.filter((item) => item.isCurrent))
+            router.refresh()
+        } else {
+            toast.error(result.error || "Failed to revoke other sessions.")
+        }
+        setDeviceLoading(false)
+    }
+
+    const handleRevokeDeviceSession = async (sessionId: string) => {
+        setDeviceLoading(true)
+        const result = await revokeDeviceSession(sessionId)
+        if (result.success) {
+            if (result.revokedCurrent) {
+                window.location.assign("/login")
+                return
+            }
+            setDeviceSessions((current) => current.filter((item) => item.id !== sessionId))
+            toast.success("Device signed out.")
+            router.refresh()
+        } else {
+            toast.error(result.error || "Failed to revoke session.")
+        }
+        setDeviceLoading(false)
     }
 
     return (
@@ -250,6 +340,92 @@ export function SettingsContent({ user }: { user: UserData }) {
                         )}
                     </div>
                 </div>
+
+                {sessionRegistryEnabled && (
+                    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 bg-orange-500/10 rounded-xl flex items-center justify-center text-orange-500">
+                                    <Monitor className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold">Active Devices</h2>
+                                    <p className="text-xs text-muted-foreground">Manage where your account is signed in.</p>
+                                </div>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleRevokeOtherSessions}
+                                disabled={deviceLoading}
+                                className="gap-2"
+                            >
+                                {deviceLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                                Sign out other devices
+                            </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {deviceSessions.length === 0 && (
+                                <p className="text-sm text-muted-foreground">No active devices found.</p>
+                            )}
+
+                            {deviceSessions.map((device) => {
+                                const deviceType = detectDeviceType(device.userAgent)
+                                return (
+                                    <div
+                                        key={device.id}
+                                        className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                                    >
+                                        <div className="flex items-start gap-3 min-w-0">
+                                            <div className="h-9 w-9 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                                                {deviceType === "mobile" ? (
+                                                    <Smartphone className="h-4 w-4" />
+                                                ) : deviceType === "tablet" ? (
+                                                    <Monitor className="h-4 w-4" />
+                                                ) : (
+                                                    <Laptop className="h-4 w-4" />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold truncate">
+                                                    {device.userAgent || "Unknown device"}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground truncate">
+                                                    {device.ipAddress || "Unknown IP"} • Last seen {formatSessionDate(device.lastSeenAt)}
+                                                </p>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Expires {formatSessionDate(device.expiresAt)}
+                                                    {device.rememberDevice ? " • Remembered" : ""}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {device.isCurrent ? (
+                                                <span className="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                                    Current device
+                                                </span>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => void handleRevokeDeviceSession(device.id)}
+                                                    disabled={deviceLoading}
+                                                    className="gap-2"
+                                                >
+                                                    <LogOut className="h-3.5 w-3.5" />
+                                                    Sign out
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

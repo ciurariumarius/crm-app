@@ -1,16 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table"
 import {
     Sheet,
     SheetContent
@@ -18,44 +8,76 @@ import {
 import { formatProjectName, formatNumber, formatRelativeDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
-    CheckCircle2,
-    Clock,
-    Pencil,
     Trash2,
     Plus,
     Activity,
-    Sparkles,
-    MoreVertical,
-    ChevronDown,
     Zap,
     RefreshCcw
 } from "lucide-react"
-import { ProjectTasks } from "@/components/projects/project-tasks"
-import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { updateProject } from "@/lib/actions/projects"
 import { toast } from "sonner"
 import { BulkActionsBar } from "@/components/projects/bulk-actions-bar"
-import { Checkbox } from "@/components/ui/checkbox"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
 import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
+import { Service, Site } from "@prisma/client"
+import type { PartnerWithSites, ProjectWithDetails } from "@/types"
 
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+type SiteWithPartner = Site & { partner?: { id: string; name: string } }
+
+type ProjectTimeLog = {
+    durationSeconds?: number | null
+}
+
+type ProjectTaskSummary = {
+    timeLogs?: ProjectTimeLog[] | null
+}
+
+type ProjectTableProject = Omit<ProjectWithDetails, "currentFee"> & {
+    currentFee?: number | ProjectWithDetails["currentFee"] | null
+    completedTasks?: number
+    tasks?: ProjectTaskSummary[]
+}
+
+type ProjectUpdatePayload = {
+    status?: "Active" | "Paused" | "Completed" | "Closed"
+    paymentStatus?: "Paid" | "Unpaid"
+    currentFee?: number
+    serviceIds?: string[]
+    [key: string]: unknown
+}
+
+type InlineQuickAddService = {
+    id: string
+    serviceName: string
+    isRecurring: boolean
+    baseFee?: number | string | null
+}
+
+function toFeeNumber(value: ProjectTableProject["currentFee"]) {
+    if (value == null) return 0
+    if (typeof value === "number") return value
+    if (typeof value === "object" && "toNumber" in value && typeof value.toNumber === "function") {
+        return value.toNumber()
+    }
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
+}
+
 interface ProjectTableProps {
-    projects: any[]
-    allServices: any[]
-    partners?: any[]
+    projects: ProjectTableProject[]
+    allServices: Service[]
+    partners?: PartnerWithSites[]
     layout?: "grid" | "list"
     hourlyRate?: number
 }
@@ -63,9 +85,8 @@ interface ProjectTableProps {
 const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_52px_52px_85px_90px_60px_75px_110px_150px]"
 
 export function ProjectsTable({ projects, allServices, partners = [], layout = "grid", hourlyRate = 0 }: ProjectTableProps) {
-    const [selectedProject, setSelectedProject] = React.useState<any>(null)
-    const [selectedSite, setSelectedSite] = React.useState<any>(null)
-    const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+    const [selectedProject, setSelectedProject] = React.useState<ProjectTableProject | null>(null)
+    const [selectedSite, setSelectedSite] = React.useState<SiteWithPartner | null>(null)
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
     const [quickAddOpen, setQuickAddOpen] = React.useState(false)
     const [createProjectDialogOpen, setCreateProjectDialogOpen] = React.useState(false)
@@ -106,8 +127,31 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
         return Array.from(partnerMap.values()).sort((left, right) => left.name.localeCompare(right.name))
     }, [partners, projects])
 
-    const handleUpdate = async (projectId: string, data: any) => {
-        setUpdatingId(projectId)
+    const quickAddServices = React.useMemo<InlineQuickAddService[]>(
+        () =>
+            allServices.map((service) => {
+                const rawBaseFee = service.baseFee
+                let normalizedBaseFee: number | string | null = null
+
+                if (rawBaseFee == null) {
+                    normalizedBaseFee = null
+                } else if (typeof rawBaseFee === "number" || typeof rawBaseFee === "string") {
+                    normalizedBaseFee = rawBaseFee
+                } else if (typeof rawBaseFee === "object" && "toNumber" in rawBaseFee && typeof rawBaseFee.toNumber === "function") {
+                    normalizedBaseFee = rawBaseFee.toNumber()
+                }
+
+                return {
+                    id: service.id,
+                    serviceName: service.serviceName,
+                    isRecurring: service.isRecurring,
+                    baseFee: normalizedBaseFee,
+                }
+            }),
+        [allServices]
+    )
+
+    const handleUpdate = async (projectId: string, data: ProjectUpdatePayload) => {
         try {
             const result = await updateProject(projectId, data)
             if (result.success) {
@@ -115,39 +159,21 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
 
                 if (selectedProject?.id === projectId) {
                     if (data.serviceIds) {
-                        const newServices = allServices.filter(s => data.serviceIds.includes(s.id))
-                        setSelectedProject((prev: any) => ({ ...prev, services: newServices }))
+                        const newServices = allServices.filter((service) => data.serviceIds?.includes(service.id))
+                        setSelectedProject((prev) => (prev ? { ...prev, services: newServices } : prev))
                     } else {
-                        setSelectedProject((prev: any) => ({ ...prev, ...data }))
+                        setSelectedProject((prev) => (prev ? { ...prev, ...data } : prev))
                     }
                 }
             } else {
                 toast.error(result.error || "Update failed")
             }
-        } catch (error) {
+        } catch {
             toast.error("Update failed")
-        } finally {
-            setUpdatingId(null)
         }
     }
 
     // toggleService moved to ProjectSheetContent
-
-    const toggleSelectAll = () => {
-        if (selectedIds.length === projects.length) {
-            setSelectedIds([])
-        } else {
-            setSelectedIds(projects.map(p => p.id))
-        }
-    }
-
-    const toggleSelectProject = (projectId: string) => {
-        setSelectedIds(prev =>
-            prev.includes(projectId)
-                ? prev.filter(id => id !== projectId)
-                : [...prev, projectId]
-        )
-    }
 
     const renderHeader = () => (
         <div className={cn("glass hidden md:flex h-10 items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground w-full md:min-w-[1280px] gap-5 rounded-lg", layout === "grid" && "hidden")}>
@@ -164,7 +190,8 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
         </div>
     )
 
-    const renderGridCard = (project: any, isMonthly: boolean) => {
+    const renderGridCard = (project: ProjectTableProject, isMonthly: boolean) => {
+        const currentFeeValue = toFeeNumber(project.currentFee)
         const normalizedStatus = project.status
         const isClosed = normalizedStatus === "Closed"
         const isPaused = normalizedStatus === "Paused"
@@ -260,10 +287,10 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                     <div className="flex items-baseline gap-1" onClick={(e) => e.stopPropagation()}>
                         <Input
                             type="number"
-                            defaultValue={project.currentFee || 0}
+                            defaultValue={currentFeeValue}
                             onBlur={(e) => {
                                 const val = parseFloat(e.target.value)
-                                if (val !== project.currentFee) {
+                                if (val !== currentFeeValue) {
                                     handleUpdate(project.id, { currentFee: val })
                                 }
                             }}
@@ -278,7 +305,8 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
         )
     }
 
-    const renderProjectCard = (project: any, rowIndex: number) => {
+    const renderProjectCard = (project: ProjectTableProject, rowIndex: number) => {
+        const currentFeeValue = toFeeNumber(project.currentFee)
         const normalizedStatus = project.status
         const isClosed = normalizedStatus === "Closed"
         const isPaused = normalizedStatus === "Paused"
@@ -380,10 +408,10 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                     <div className="relative group/fee flex items-baseline">
                         <Input
                             type="number"
-                            defaultValue={project.currentFee || 0}
+                            defaultValue={currentFeeValue}
                             onBlur={(e) => {
                                 const val = parseFloat(e.target.value)
-                                if (val !== project.currentFee) {
+                                if (val !== currentFeeValue) {
                                     handleUpdate(project.id, { currentFee: val })
                                 }
                             }}
@@ -427,8 +455,8 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                 <div className="w-[75px] shrink-0 flex items-center justify-center">
                     <span className="px-2 py-1 rounded-lg text-[10px] font-bold font-mono text-slate-600 bg-slate-50 border border-slate-200 text-center uppercase tracking-tight tabular-nums">
                         {(() => {
-                            const totalSeconds = project.tasks?.reduce((acc: number, task: any) => {
-                                const taskLogs = task.timeLogs?.reduce((lAcc: number, log: any) => lAcc + (log.durationSeconds || 0), 0) || 0
+                            const totalSeconds = project.tasks?.reduce((acc: number, task: ProjectTaskSummary) => {
+                                const taskLogs = task.timeLogs?.reduce((lAcc: number, log: ProjectTimeLog) => lAcc + (log.durationSeconds || 0), 0) || 0
                                 return acc + taskLogs
                             }, 0) || 0
                             const h = Math.floor(totalSeconds / 3600)
@@ -557,7 +585,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                         {quickAddOpen ? (
                             <InlineQuickAddRow
                                 partners={quickAddPartners}
-                                services={allServices}
+                                services={quickAddServices}
                                 onCancel={() => setQuickAddOpen(false)}
                                 gridColumns={LIST_GRID_COLUMNS}
                                 autoFocus
@@ -598,10 +626,10 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                 <SheetContent side="right" className="w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-background overflow-hidden sm:w-full sm:max-w-[900px]">
                     {selectedProject && (
                         <ProjectSheetContent
-                            project={selectedProject}
+                            project={selectedProject as ProjectWithDetails}
                             allServices={allServices}
                             hourlyRate={hourlyRate}
-                            onUpdate={(updated) => setSelectedProject((prev: any) => ({ ...prev, ...updated }))}
+                            onUpdate={(updated) => setSelectedProject((prev) => (prev ? { ...prev, ...updated } : prev))}
                             onOpenSite={(site) => setSelectedSite(site)}
                         />
                     )}

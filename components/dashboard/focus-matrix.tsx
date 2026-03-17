@@ -20,9 +20,16 @@ interface FocusMatrixProps {
 interface FocusTask {
     id: string
     name?: string | null
+    status?: string | null
     urgency?: string | null
     deadline?: Date | string | null
-    [key: string]: unknown
+    projectId?: string | null
+    project?: {
+        name?: string | null
+        createdAt?: string | Date | null
+        site?: { domainName?: string | null } | null
+        services?: Array<{ serviceName?: string | null; isRecurring?: boolean | null }> | null
+    } | null
 }
 
 const COLS = 3   // lg grid columns — must match grid class below
@@ -33,7 +40,12 @@ const OVERDUE_VISIBLE_CAP = 3
 
 export function FocusMatrix({ tasks }: FocusMatrixProps) {
     const { openTask } = React.useContext(TaskSheetContext)
-    const [quickLogTask, setQuickLogTask] = React.useState<any>(null)
+    const [quickLogTask, setQuickLogTask] = React.useState<{
+        id: string
+        name: string
+        projectId: string
+        project?: FocusTask["project"]
+    } | null>(null)
     const [optimisticTasks, setOptimisticTasks] = React.useOptimistic(
         tasks,
         (state, updatedTaskId: string) => state.filter((task) => task.id !== updatedTaskId)
@@ -72,9 +84,24 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
         }
     }
 
-    const renderTaskActionMenu = (task: any) => (
+    const renderTaskActionMenu = (task: FocusTask) => (
         <>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task) }} className="gap-2 text-sm font-medium cursor-pointer">
+            <DropdownMenuItem
+                onClick={(e) => {
+                    e.stopPropagation()
+                    if (!task.projectId) {
+                        toast.error("Task has no project")
+                        return
+                    }
+                    setQuickLogTask({
+                        id: task.id,
+                        name: task.name || "Task",
+                        projectId: task.projectId,
+                        project: task.project ?? null,
+                    })
+                }}
+                className="gap-2 text-sm font-medium cursor-pointer"
+            >
                 <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
             </DropdownMenuItem>
             <DropdownMenuItem

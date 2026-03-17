@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/test-results
+audit_output*.txt
+lint_output.txt
 
 # next.js
 /.next/
@@ -46,3 +49,6 @@ next-env.d.ts
 *.db
 *.db-journal
 *.sqlite
+
+# protected uploads
+/storage/

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Search, User, Briefcase, X, ChevronDown, Check } from "lucide-react"
-import { cn, formatProjectName } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import {
     Popover,
     PopoverContent,
@@ -21,9 +21,19 @@ import Link from "next/link"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
 
+type TimeLogPartnerOption = {
+    id: string
+    name: string
+}
+
+type TimeLogProjectOption = {
+    id: string
+    displayName: string
+}
+
 interface TimeLogsFiltersProps {
-    partners: any[]
-    projects: any[]
+    partners: TimeLogPartnerOption[]
+    projects: TimeLogProjectOption[]
     totalLogs: number
 }
 
@@ -172,7 +182,7 @@ function PartnerCombobox({
     currentPartner,
     onSelect,
 }: {
-    partners: any[]
+    partners: TimeLogPartnerOption[]
     currentPartner: string
     onSelect: (value: string) => void
 }) {
@@ -241,7 +251,7 @@ function ProjectCombobox({
     currentProject,
     onSelect,
 }: {
-    projects: any[]
+    projects: TimeLogProjectOption[]
     currentProject: string
     onSelect: (value: string) => void
 }) {

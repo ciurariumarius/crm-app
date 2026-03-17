@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { Prisma } from "@prisma/client"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,14 +9,31 @@ import { ServiceSheetContent } from "@/components/services/service-sheet-content
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LayoutGrid, ListFilter } from "lucide-react"
 
+type ServiceProjectStatus = {
+    status: string
+}
+
+type ServiceListItem = {
+    id: string
+    serviceName: string
+    isRecurring: boolean
+    standardTasks: string
+    baseFee: string | number | Prisma.Decimal | null
+    createdAt: Date | string
+    updatedAt?: Date | string | null
+    sopLink?: string | null
+    projects: ServiceProjectStatus[]
+    [key: string]: unknown
+}
+
 interface ServicesListViewProps {
-    services: any[]
+    services: ServiceListItem[]
 }
 
 type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "fee-high" | "fee-low" | "active-projects"
 
 export function ServicesListView({ services }: ServicesListViewProps) {
-    const [selectedService, setSelectedService] = React.useState<any>(null)
+    const [selectedService, setSelectedService] = React.useState<ServiceListItem | null>(null)
     const [sortBy, setSortBy] = React.useState<SortOption>("newest")
 
     const sortedServices = React.useMemo(() => {
@@ -26,16 +44,16 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                 case "name-desc":
                     return b.serviceName.localeCompare(a.serviceName)
                 case "fee-high":
-                    return (b.baseFee || 0) - (a.baseFee || 0)
+                    return Number(b.baseFee || 0) - Number(a.baseFee || 0)
                 case "fee-low":
-                    return (a.baseFee || 0) - (b.baseFee || 0)
+                    return Number(a.baseFee || 0) - Number(b.baseFee || 0)
                 case "newest":
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                 case "oldest":
                     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                 case "active-projects":
-                    const aActive = a.projects.filter((p: any) => p.status === "Active").length
-                    const bActive = b.projects.filter((p: any) => p.status === "Active").length
+                    const aActive = a.projects.filter((project) => project.status === "Active").length
+                    const bActive = b.projects.filter((project) => project.status === "Active").length
                     return bActive - aActive
                 default:
                     return 0
@@ -77,10 +95,11 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                 {sortedServices.map((service) => {
                     let tasks: string[] = []
                     try {
-                        tasks = JSON.parse(service.standardTasks)
+                        const parsed = JSON.parse(service.standardTasks)
+                        tasks = Array.isArray(parsed) ? parsed.map((task) => String(task)) : []
                     } catch { tasks = [] }
-                    const activeCount = service.projects.filter((p: any) => p.status === "Active").length
-                    const completedCount = service.projects.filter((p: any) => p.status === "Completed").length
+                    const activeCount = service.projects.filter((project) => project.status === "Active").length
+                    const completedCount = service.projects.filter((project) => project.status === "Completed").length
 
                     return (
                         <div

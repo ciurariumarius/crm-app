@@ -2,30 +2,56 @@
 
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { format, isToday, isPast } from "date-fns"
+import { isToday, isPast } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Clock, CheckCircle2, Target, Plus, LayoutGrid, Sparkles, Trash2 } from "lucide-react"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import Link from "next/link"
 import { updateTask, deleteTasks } from "@/lib/actions/tasks"
 import { toast } from "sonner"
-import { useTimer } from "@/components/providers/timer-provider"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
 import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { normalizeTaskUrgency } from "@/lib/status"
+import type { TaskDialogProject } from "@/components/tasks/global-create-task-dialog"
+
+type UpcomingTask = {
+    id: string
+    name?: string | null
+    status?: string | null
+    urgency?: string | null
+    projectId?: string | null
+    deadline?: string | Date | null
+    project?: {
+        id?: string
+        name?: string | null
+        createdAt?: string | Date | null
+        site?: {
+            domainName?: string | null
+        } | null
+        services?: Array<{
+            serviceName: string
+            isRecurring?: boolean | null
+        }>
+    } | null
+}
+
+type QuickLogTask = {
+    id: string
+    name?: string | null
+    projectId?: string | null
+}
 
 interface UpcomingTasksProps {
-    tasks: any[]
-    projects?: any[]
+    tasks: UpcomingTask[]
+    projects?: TaskDialogProject[]
 }
 
 export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
-    const { timerState, startTimer, stopTimer, pauseTimer, resumeTimer } = useTimer()
     const { openTask } = React.useContext(TaskSheetContext)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
-    const [quickLogTask, setQuickLogTask] = React.useState<any>(null)
+    const [quickLogTask, setQuickLogTask] = React.useState<QuickLogTask | null>(null)
     const [cols, setCols] = React.useState<3 | 4>(3)
     const [filter, setFilter] = React.useState<"all" | "overdue" | "urgent">("all")
     const [optimisticTasks, setOptimisticTasks] = React.useOptimistic(
@@ -49,7 +75,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
             case "overdue":
                 return optimisticTasks.filter(t => t.deadline && isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)))
             case "urgent":
-                return optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "Urgent")
+                return optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency || "Normal") === "Urgent")
             default:
                 return optimisticTasks
         }
@@ -68,30 +94,12 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
             } else {
                 toast.error("Failed to complete task")
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred")
         }
     }
 
-
-
-    // Progress Calculation
-    const totalUrgent = tasks.filter(t => normalizeTaskUrgency(t.urgency) === "Urgent").length
-    const completedUrgentTasks = tasks.filter(t => normalizeTaskUrgency(t.urgency) === "Urgent" && t.status === "Completed").length
-    // Since we filter out completed tasks from the main list, we might need to rely on a prop or a separate fetch if we want to show *recently* completed urgent tasks in the count.
-    // However, for "Your Today Work", typically we show remaining. 
-    // If the requirement is "1 of 4 urgent tasks completed", we need the total count of urgent tasks for *today* regardless of completion.
-    // Assuming 'tasks' prop passed to this component includes ONLY active tasks (based on previous code), 
-    // we might not have the 'completed' count here without changing the parent fetch.
-    // For now, I will use a placeholder logic or assume 'tasks' might eventually include completed ones if we change the fetch.
-    // BUT, the prompt implies a design change, not necessarily a data fetch change yet. 
-    // Let's stick to what we have: distinct visual feedback. 
-    // Actually, looking at the image: "1 of 4 urgent tasks completed".
-    // I will mock the "completed" count for now as 0 or calculate from what I have if possible, 
-    // but the `upcomingTasks` query in `page.tsx` filters out completed.
-    // I'll stick to a visual representation of "Urgent" tasks available.
-
-    const urgentTasks = optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "Urgent")
+    const urgentTasks = optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency || "Normal") === "Urgent")
     const overdueTasks = optimisticTasks.filter(t => t.deadline && isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)))
     const dueTodayTasks = optimisticTasks.filter(t => t.deadline && isToday(new Date(t.deadline)))
 
@@ -222,7 +230,14 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                         renderMenu={(t) => (
                                             <>
                                                 <DropdownMenuItem
-                                                    onClick={(e) => { e.stopPropagation(); setQuickLogTask(t); }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setQuickLogTask({
+                                                            id: t.id,
+                                                            name: t.name,
+                                                            projectId: t.projectId,
+                                                        })
+                                                    }}
                                                     className="gap-2 text-sm font-medium cursor-pointer"
                                                 >
                                                     <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
@@ -274,13 +289,13 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                 onOpenChange={setCreateTaskOpen}
                 projects={projects || []}
             />
-            {quickLogTask && (
+            {quickLogTask && quickLogTask.projectId && (
                 <QuickTimeLogDialog
                     open={!!quickLogTask}
                     onOpenChange={(open) => { if (!open) setQuickLogTask(null) }}
-                    projectId={quickLogTask.projectId || quickLogTask.project?.id || ""}
+                    projectId={quickLogTask.projectId}
                     taskId={quickLogTask.id}
-                    taskName={quickLogTask.name}
+                    taskName={quickLogTask.name || "Task"}
                 />
             )}
         </>

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Users, Briefcase, CircleDollarSign, AlertCircle, CheckCircle2, ArrowRight, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { EditPartnerDialog } from "@/components/vault/edit-partner-dialog"
 import { cn, formatNumber } from "@/lib/utils"
 import { settlePartnerDebt } from "@/lib/actions/settlement"
@@ -109,7 +109,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                     </div>
 
                     <div onClick={(e) => e.stopPropagation()}>
-                        <EditPartnerDialog partner={partner as any} />
+                        <EditPartnerDialog partner={partner} />
                     </div>
                 </div>
 

@@ -18,6 +18,8 @@ import { MobileHomeView } from "@/components/dashboard/mobile-home-view"
 import type { MobileHomeViewProps } from "@/components/dashboard/mobile-home-view"
 import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
+import type { PartnerWithSites } from "@/types"
+import type { Service, Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 
@@ -33,13 +35,50 @@ export default async function Home() {
     }
   })
 
-  let activeProjects: unknown[] = []
-  let timeLogsThisMonth: { _sum: { durationSeconds: number | null } } = { _sum: { durationSeconds: null } }
-  let recentProjects: unknown[] = []
-  let upcomingTasks: unknown[] = []
-  let partners: unknown[] = []
-  let services: unknown[] = []
-  let settlementAuditLogs: unknown[] = []
+  type ActiveProject = Prisma.ProjectGetPayload<{
+    include: {
+      services: true
+      site: { include: { partner: true } }
+      timeLogs: true
+      _count: { select: { tasks: true } }
+      tasks: true
+    }
+  }>
+  type RecentProject = Prisma.ProjectGetPayload<{
+    include: {
+      services: true
+      site: { include: { partner: true } }
+      timeLogs: true
+      tasks: { include: { timeLogs: true } }
+      _count: { select: { tasks: true } }
+    }
+  }>
+  type SettlementAuditLogProject = Prisma.ProjectGetPayload<{
+    include: {
+      services: true
+      site: { include: { partner: true } }
+    }
+  }>
+  type DashboardTimeAggregate = { _sum: { durationSeconds: number | null } }
+  type UpcomingTask = Prisma.TaskGetPayload<{
+    include: {
+      project: {
+        include: {
+          site: { include: { partner: true } }
+          services: true
+        }
+      }
+      timeLogs: { select: { durationSeconds: true } }
+    }
+  }>
+
+  let activeProjects: ActiveProject[] = []
+  let timeLogsThisMonth: DashboardTimeAggregate = { _sum: { durationSeconds: null } }
+  let recentProjects: RecentProject[] = []
+  let upcomingTasks: UpcomingTask[] = []
+  let partners: PartnerWithSites[] = []
+  let services: Service[] = []
+  let settlementAuditLogs: SettlementAuditLogProject[] = []
   let dashboardQueryFailed = false
 
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -134,12 +173,12 @@ export default async function Home() {
     console.error("[dashboard] failed to load homepage data", error)
   }
 
-  const hourlyRate = Number((user as { hourlyRate?: number | string | null } | null)?.hourlyRate || 0)
-  const normalizedActiveProjects = (activeProjects as any[]).map((project: any) => ({
+  const hourlyRate = Number(user?.hourlyRate || 0)
+  const normalizedActiveProjects = activeProjects.map((project) => ({
     ...project,
     status: normalizeProjectStatus(project.status),
   }))
-  const normalizedUpcomingTasks = (upcomingTasks as any[]).map((task: any) => ({
+  const normalizedUpcomingTasks = upcomingTasks.map((task) => ({
     ...task,
     status: normalizeTaskStatus(task.status),
     urgency: normalizeTaskUrgency(task.urgency),
