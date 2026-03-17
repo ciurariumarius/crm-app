@@ -122,7 +122,7 @@ export default function LoginPage() {
                             </button>
                         </form>
                     ) : (
-                        <form onSubmit={handleLogin} className="space-y-6">
+                        <form onSubmit={handleLogin} method="post" className="space-y-6">
                             {error && (
                                 <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-xs font-bold text-center">
                                     {error}
