@@ -5,7 +5,7 @@ import { loginUser, verifyTwoFactor } from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Lock, User, ShieldCheck } from "lucide-react"
+import { Loader2, Lock, User, ShieldCheck, Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false)
@@ -15,6 +15,7 @@ export default function LoginPage() {
     const [requiresTwoFactor, setRequiresTwoFactor] = useState(false)
     const [challengeToken, setChallengeToken] = useState("")
     const [token, setToken] = useState("")
+    const [showLoginPassword, setShowLoginPassword] = useState(false)
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -149,11 +150,23 @@ export default function LoginPage() {
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                                     <Input
                                         name="password"
-                                        type="password"
+                                        type={showLoginPassword ? "text" : "password"}
                                         placeholder="••••••••"
-                                        className="pl-10 h-12 bg-background border-border"
+                                        className="pl-10 pr-10 h-12 bg-background border-border"
                                         required
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowLoginPassword((value) => !value)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
+                                        aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showLoginPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </button>
                                 </div>
                             </div>
 

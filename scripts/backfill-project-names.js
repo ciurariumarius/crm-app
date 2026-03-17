@@ -3,22 +3,11 @@ const { PrismaClient } = require("@prisma/client")
 
 const prisma = new PrismaClient()
 
-function addMonthlyQualifier(serviceName) {
-    if (/\bmonthly\b/i.test(serviceName)) return serviceName
-
-    const parts = serviceName.trim().split(/\s+/).filter(Boolean)
-    if (parts.length <= 1) return `${serviceName} Monthly`
-
-    const lastWord = parts.pop()
-    return `${parts.join(" ")} Monthly ${lastWord}`
-}
-
 function formatProjectServiceName(service) {
     const baseName = (service?.serviceName || "").trim()
     if (!baseName) return ""
 
-    if (!service?.isRecurring) return baseName
-    return addMonthlyQualifier(baseName)
+    return baseName
 }
 
 function formatProjectServiceList(services, fallback = "No Service") {

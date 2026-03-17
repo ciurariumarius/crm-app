@@ -26,6 +26,8 @@ import {
     Smartphone,
     Monitor,
     LogOut,
+    Eye,
+    EyeOff,
 } from "lucide-react"
 import QRCode from "qrcode"
 import { PageHeader } from "@/components/layout/page-header"
@@ -86,6 +88,10 @@ export function SettingsContent({
     const [disablePassword, setDisablePassword] = useState("")
     const [is2FAEnabled, setIs2FAEnabled] = useState(user.twoFactorEnabled)
     const [deviceSessions, setDeviceSessions] = useState<DeviceSessionData[]>(initialDeviceSessions)
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+    const [showNewPassword, setShowNewPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [showDisablePassword, setShowDisablePassword] = useState(false)
 
     const handleProfileUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -256,15 +262,72 @@ export function SettingsContent({
                         <form onSubmit={handlePasswordChange} className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Current Password</Label>
-                                <Input name="currentPassword" type="password" required />
+                                <div className="relative">
+                                    <Input
+                                        name="currentPassword"
+                                        type={showCurrentPassword ? "text" : "password"}
+                                        className="pr-10"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCurrentPassword((value) => !value)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
+                                        aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+                                    >
+                                        {showCurrentPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label>New Password</Label>
-                                <Input name="newPassword" type="password" required />
+                                <div className="relative">
+                                    <Input
+                                        name="newPassword"
+                                        type={showNewPassword ? "text" : "password"}
+                                        className="pr-10"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewPassword((value) => !value)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
+                                        aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                                    >
+                                        {showNewPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label>Confirm New Password</Label>
-                                <Input name="confirmPassword" type="password" required />
+                                <div className="relative">
+                                    <Input
+                                        name="confirmPassword"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        className="pr-10"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword((value) => !value)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
+                                        aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                             <Button type="submit" disabled={loading}>Update Password</Button>
                         </form>
@@ -288,13 +351,27 @@ export function SettingsContent({
                                 </div>
                                 <h3 className="text-lg font-bold text-emerald-500">2FA is Enabled</h3>
                                 <p className="text-sm text-muted-foreground">Your account is secured with a secondary authenticator app.</p>
-                                <Input
-                                    type="password"
-                                    value={disablePassword}
-                                    onChange={(e) => setDisablePassword(e.target.value)}
-                                    placeholder="Current password"
-                                    className="mt-2"
-                                />
+                                <div className="relative mt-2">
+                                    <Input
+                                        type={showDisablePassword ? "text" : "password"}
+                                        value={disablePassword}
+                                        onChange={(e) => setDisablePassword(e.target.value)}
+                                        placeholder="Current password"
+                                        className="pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDisablePassword((value) => !value)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
+                                        aria-label={showDisablePassword ? "Hide current password" : "Show current password"}
+                                    >
+                                        {showDisablePassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                </div>
                                 <Button variant="destructive" onClick={handleDisable2FA} disabled={loading || !disablePassword} className="mt-2">
                                     Disable 2FA
                                 </Button>
