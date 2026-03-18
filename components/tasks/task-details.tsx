@@ -845,6 +845,75 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                         </div>
                     </section>
 
+                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
+                            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Task Info</h2>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    onClick={openProjectDetails}
+                                    disabled={!task.projectId || !onOpenProject}
+                                    className={cn(
+                                        "group rounded-[22px] border border-slate-200 bg-white p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition",
+                                        task.projectId && onOpenProject
+                                            ? "hover:border-slate-300"
+                                            : "cursor-not-allowed opacity-60"
+                                    )}
+                                >
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Project</p>
+                                    <div className="mt-1 flex items-center justify-between gap-3">
+                                        <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
+                                            {projectLabel}
+                                        </p>
+                                        <FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+                                    </div>
+                                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                        <span className="truncate">{projectPartnerLabel}</span>
+                                    </div>
+                                </button>
+
+                                <div className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300">
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Domain</p>
+                                    <div className="mt-1 flex items-center justify-between gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={openSitePanel}
+                                            disabled={!projectSitePanelHref && !onOpenSite}
+                                            className={cn(
+                                                "truncate text-left text-base font-black leading-tight tracking-tight transition sm:text-lg",
+                                                projectSitePanelHref || onOpenSite
+                                                    ? "text-slate-800 hover:text-blue-600"
+                                                    : "cursor-not-allowed text-slate-400"
+                                            )}
+                                            title="Open site panel"
+                                        >
+                                            {projectDomainLabel}
+                                        </button>
+                                        <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
+                                            <Globe className="h-4 w-4" />
+                                            <ArrowUpRight className="h-4 w-4" />
+                                        </span>
+                                    </div>
+                                    <div className="mt-3 flex items-center gap-2">
+                                        {projectDomainUrl ? (
+                                            <a
+                                                href={projectDomainUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700 transition hover:bg-blue-100"
+                                            >
+                                                Open website
+                                                <ArrowUpRight className="h-3.5 w-3.5" />
+                                            </a>
+                                        ) : (
+                                            <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                                                Open website
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
                     <section className="space-y-2 border-t border-slate-200/80 pt-3">
                         <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                             <History className="h-3.5 w-3.5" />
@@ -926,75 +995,6 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                 {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                                 Delete Task
                             </Button>
-                        </section>
-
-                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Task Info</h2>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <button
-                                    type="button"
-                                    onClick={openProjectDetails}
-                                    disabled={!task.projectId || !onOpenProject}
-                                    className={cn(
-                                        "group rounded-[22px] border border-slate-200 bg-white p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition",
-                                        task.projectId && onOpenProject
-                                            ? "hover:border-slate-300"
-                                            : "cursor-not-allowed opacity-60"
-                                    )}
-                                >
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Project</p>
-                                    <div className="mt-1 flex items-center justify-between gap-3">
-                                        <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
-                                            {projectLabel}
-                                        </p>
-                                        <FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
-                                    </div>
-                                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                                        <span className="truncate">{projectPartnerLabel}</span>
-                                    </div>
-                                </button>
-
-                                <div className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300">
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Domain</p>
-                                    <div className="mt-1 flex items-center justify-between gap-3">
-                                        <button
-                                            type="button"
-                                            onClick={openSitePanel}
-                                            disabled={!projectSitePanelHref && !onOpenSite}
-                                            className={cn(
-                                                "truncate text-left text-base font-black leading-tight tracking-tight transition sm:text-lg",
-                                                projectSitePanelHref || onOpenSite
-                                                    ? "text-slate-800 hover:text-blue-600"
-                                                    : "cursor-not-allowed text-slate-400"
-                                            )}
-                                            title="Open site panel"
-                                        >
-                                            {projectDomainLabel}
-                                        </button>
-                                        <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
-                                            <Globe className="h-4 w-4" />
-                                            <ArrowUpRight className="h-4 w-4" />
-                                        </span>
-                                    </div>
-                                    <div className="mt-3 flex items-center gap-2">
-                                        {projectDomainUrl ? (
-                                            <a
-                                                href={projectDomainUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700 transition hover:bg-blue-100"
-                                            >
-                                                Open website
-                                                <ArrowUpRight className="h-3.5 w-3.5" />
-                                            </a>
-                                        ) : (
-                                            <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
-                                                Open website
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
                         </section>
 
                         <div className="mt-12 border-t border-slate-200 pt-8 text-[11px] font-semibold text-slate-400">
