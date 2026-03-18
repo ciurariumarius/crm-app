@@ -33,12 +33,18 @@ function buildProjectNoteSignaturePayload(relativePath: string, expiresAtUnix?: 
 
 function getSigningSecret() {
     const configured = process.env.PROJECT_NOTES_SIGNING_SECRET?.trim()
+    if (configured) return configured
+
+    // Production should keep signing key separate from auth/session key material.
+    if (process.env.NODE_ENV === "production") {
+        throw new Error("PROJECT_NOTES_SIGNING_SECRET must be set in production")
+    }
+
     const fallback = process.env.JWT_SECRET?.trim()
-    const secret = configured || fallback
-    if (!secret) {
+    if (!fallback) {
         throw new Error("PROJECT_NOTES_SIGNING_SECRET or JWT_SECRET must be set")
     }
-    return secret
+    return fallback
 }
 
 export function sanitizeProjectNoteSegment(input: string, fallback = "project") {

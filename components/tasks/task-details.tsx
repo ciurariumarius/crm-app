@@ -38,6 +38,7 @@ import { toast } from "sonner"
 import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
 import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
+import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { useRouter } from "next/navigation"
 
 type TaskTimeLog = {
@@ -133,13 +134,6 @@ function toDate(value: Date | string | null | undefined) {
 function formatBottomDate(value: Date | null) {
     if (!value) return "—"
     return format(value, "dd MMMM yyyy, HH:mm")
-}
-
-function resolveExternalSiteUrl(domainName: string | null | undefined) {
-    if (!domainName) return null
-    const trimmed = domainName.trim()
-    if (!trimmed) return null
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 }
 
 export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSite }: TaskDetailsProps) {
@@ -288,7 +282,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
     const projectLabel = task.project ? formatProjectName(task.project) : "Project"
     const projectPartnerLabel = task.project?.site?.partner?.name || "Partner"
     const projectDomainLabel = task.project?.site?.domainName || "Domain"
-    const projectDomainUrl = resolveExternalSiteUrl(task.project?.site?.domainName)
+    const projectDomainUrl = normalizeExternalHttpUrl(task.project?.site?.domainName)
     const projectSitePanelHref =
         task.project?.site?.partner?.id && task.project?.site?.id
             ? `/partners/${task.project.site.partner.id}/${task.project.site.id}`

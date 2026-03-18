@@ -5,7 +5,6 @@ import { format, isBefore, startOfDay } from "date-fns"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import {
-    AlertTriangle,
     Calendar as CalendarIcon,
     CheckCheck,
     Lightbulb,
@@ -15,7 +14,6 @@ import {
     RefreshCcw,
     Square,
     ArrowUpRight,
-    Clock,
     Circle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -67,7 +65,7 @@ function PriorityBadge({ urgency }: { urgency: string }) {
 
     if (normalizedUrgency === "Urgent") {
         return (
-            <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter bg-[#F84444] text-white shadow-sm">
+            <span className="inline-flex items-center px-2.5 py-1.5 rounded-md text-[11px] font-black uppercase tracking-tight bg-[#F84444] text-white shadow-sm">
                 URGENT
             </span>
         )
@@ -88,19 +86,18 @@ function DeadlineBadge({ deadline }: { deadline: string | Date | null | undefine
     const date = new Date(deadline)
     if (Number.isNaN(date.getTime())) return null
 
-    const label = format(date, "d MMM").toUpperCase()
+    const label = format(date, "d MMMM").toUpperCase()
     const overdue = isBefore(date, startOfDay(new Date()))
 
     return (
         <span
             className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-tight border",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-tight",
                 overdue
-                    ? "bg-rose-100 text-rose-700 border-rose-300 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.16)]"
-                    : "bg-rose-50 text-rose-500 border-rose-100/50"
+                    ? "bg-rose-100 text-rose-700"
+                    : "bg-rose-50 text-rose-500"
             )}
         >
-            {overdue ? <AlertTriangle className="h-3 w-3 stroke-[2.5]" /> : <Clock className="h-3 w-3 stroke-[3]" />}
             {label}
         </span>
     )
@@ -258,9 +255,6 @@ export function TaskGridCard({
                     {hasValidCreatedAt && createdAtDate && (
                         <div className="flex items-center gap-1.5 text-slate-400 shrink-0">
                             <CalendarIcon className="h-3.5 w-3.5" />
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500/90">
-                                Created
-                            </span>
                             <span
                                 className="text-[11px] font-medium"
                                 title={format(createdAtDate, "dd MMM yyyy, HH:mm")}

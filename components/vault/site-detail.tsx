@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateSiteDetails } from "@/lib/actions/sites"
+import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { DeleteSiteButton } from "@/components/vault/delete-site-button"
 
 export function SiteDetail({ site }: { site: Site }) {
@@ -24,6 +25,7 @@ export function SiteDetail({ site }: { site: Site }) {
         driveLink: site.driveLink || "",
         marketingVault: site.marketingVault || "",
     })
+    const safeDriveLink = normalizeExternalHttpUrl(formData.driveLink)
 
     // Parse marketing vault
     const [marketingData, setMarketingData] = useState<{
@@ -156,9 +158,9 @@ export function SiteDetail({ site }: { site: Site }) {
                                         value={formData.driveLink}
                                         onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
                                     />
-                                    {formData.driveLink && (
+                                    {safeDriveLink && (
                                         <Button variant="outline" size="icon" asChild>
-                                            <a href={formData.driveLink} target="_blank" rel="noopener noreferrer">
+                                            <a href={safeDriveLink} target="_blank" rel="noopener noreferrer">
                                                 <ExternalLink className="h-4 w-4" />
                                             </a>
                                         </Button>

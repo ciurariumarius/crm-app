@@ -91,8 +91,11 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, urls })
     } catch (error) {
-        const message = error instanceof Error ? error.message : "Upload failed."
-        const status = message === "Unauthorized" ? 401 : 500
-        return NextResponse.json({ success: false, error: message }, { status })
+        if (error instanceof Error && error.message === "Unauthorized") {
+            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+        }
+
+        console.error("[project-notes/upload] failed", error)
+        return NextResponse.json({ success: false, error: "Upload failed." }, { status: 500 })
     }
 }

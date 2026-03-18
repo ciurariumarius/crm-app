@@ -15,6 +15,7 @@
 /test-results
 audit_output*.txt
 lint_output.txt
+test-ssh.exp
 
 # next.js
 /.next/

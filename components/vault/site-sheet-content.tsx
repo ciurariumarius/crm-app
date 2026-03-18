@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { updateSiteDetails } from "@/lib/actions/sites"
+import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { DeleteSiteButton } from "@/components/vault/delete-site-button"
 
 interface SiteSheetContentProps {
@@ -28,6 +29,7 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
         driveLink: site.driveLink || "",
         marketingVault: site.marketingVault || "",
     })
+    const safeDriveLink = normalizeExternalHttpUrl(formData.driveLink)
 
     // Parse marketing vault
     const [marketingData, setMarketingData] = useState<{
@@ -175,8 +177,8 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
                                         placeholder="https://drive.google.com/..."
                                     />
                                 </div>
-                                {formData.driveLink && (
-                                    <Link href={formData.driveLink} target="_blank" className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-blue-600 transition-all shadow-sm">
+                                {safeDriveLink && (
+                                    <Link href={safeDriveLink} target="_blank" rel="noopener noreferrer" className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-blue-600 transition-all shadow-sm">
                                         <ExternalLink className="h-3.5 w-3.5" />
                                     </Link>
                                 )}

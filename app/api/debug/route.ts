@@ -10,6 +10,8 @@ const DEBUG_HEADERS = {
 }
 
 function isAuthorized(request: Request) {
+    const allowInProduction = process.env.DEBUG_API_ALLOW_PRODUCTION === "true"
+    if (process.env.NODE_ENV === "production" && !allowInProduction) return false
     if (process.env.DEBUG_API_ENABLED !== "true") return false
     const secret = process.env.DEBUG_API_SECRET?.trim()
     if (!secret) return false

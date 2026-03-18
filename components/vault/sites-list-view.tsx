@@ -6,6 +6,7 @@ import { Globe, ExternalLink } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
+import { normalizeExternalHttpUrl } from "@/lib/external-url"
 
 interface SitesListViewProps {
     sites: Array<Site & { _count?: { projects: number } }>
@@ -18,39 +19,42 @@ export function SitesListView({ sites }: SitesListViewProps) {
     return (
         <>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {sites.map((site) => (
-                    <div
-                        key={site.id}
-                        onClick={() => setSelectedSite(site)}
-                        className="cursor-pointer h-full transition-transform hover:scale-[1.02]"
-                    >
-                        <Card className="h-full hover:bg-muted/50 transition-colors">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Globe className="h-4 w-4" />
-                                    {site.domainName}
-                                </CardTitle>
-                                <CardDescription>
-                                    {site._count?.projects || 0} Active Projects
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {site.driveLink && (
-                                    <div
-                                        className="flex items-center text-xs text-blue-500 hover:underline"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            window.open(site.driveLink || undefined, "_blank")
-                                        }}
-                                    >
-                                        <ExternalLink className="h-3 w-3 mr-1" />
-                                        Drive Folder
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
-                ))}
+                {sites.map((site) => {
+                    const safeDriveLink = normalizeExternalHttpUrl(site.driveLink)
+                    return (
+                        <div
+                            key={site.id}
+                            onClick={() => setSelectedSite(site)}
+                            className="cursor-pointer h-full transition-transform hover:scale-[1.02]"
+                        >
+                            <Card className="h-full hover:bg-muted/50 transition-colors">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Globe className="h-4 w-4" />
+                                        {site.domainName}
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {site._count?.projects || 0} Active Projects
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {safeDriveLink && (
+                                        <div
+                                            className="flex items-center text-xs text-blue-500 hover:underline"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                window.open(safeDriveLink, "_blank", "noopener,noreferrer")
+                                            }}
+                                        >
+                                            <ExternalLink className="h-3 w-3 mr-1" />
+                                            Drive Folder
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )
+                })}
                 {sites.length === 0 && (
                     <div className="col-span-full text-center py-10 text-muted-foreground">
                         No sites found for this partner. Add their first website.

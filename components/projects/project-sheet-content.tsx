@@ -43,6 +43,7 @@ import { TimeLogSheet } from "@/components/time/time-log-sheet"
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ProjectWithDetails } from "@/types"
+import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { Service, Site } from "@prisma/client"
 
 type UpdateProjectPayload = {
@@ -85,13 +86,6 @@ function toDate(value: Date | string | null | undefined) {
     return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
-function resolveExternalSiteUrl(domainName: string | null | undefined) {
-    if (!domainName) return null
-    const trimmed = domainName.trim()
-    if (!trimmed) return null
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
-}
-
 const PROJECT_REQUIREMENTS_TEMPLATE = [
     "<h2>Requirements</h2>",
     "<ul>",
@@ -127,6 +121,45 @@ function formatDurationLabel(totalSeconds: number) {
 function formatBottomDate(value: Date | null) {
     if (!value) return "—"
     return format(value, "dd MMMM yyyy, HH:mm")
+}
+
+function sanitizeNotesHtmlForExport(rawHtml: string) {
+    if (!rawHtml) return ""
+    if (typeof document === "undefined") return rawHtml
+
+    const template = document.createElement("template")
+    template.innerHTML = rawHtml
+
+    const blockedTags = ["script", "iframe", "object", "embed", "link", "meta"]
+    blockedTags.forEach((tag) => {
+        template.content.querySelectorAll(tag).forEach((element) => element.remove())
+    })
+
+    const allowedSrcPrefixes = ["http://", "https://", "/", "data:image/", "blob:"]
+    template.content.querySelectorAll("*").forEach((element) => {
+        const attributes = Array.from(element.attributes)
+        attributes.forEach((attribute) => {
+            const attrName = attribute.name.toLowerCase()
+            const attrValue = attribute.value.trim()
+            const normalizedValue = attrValue.toLowerCase()
+
+            if (attrName.startsWith("on")) {
+                element.removeAttribute(attribute.name)
+                return
+            }
+
+            if (attrName === "href" || attrName === "src" || attrName === "xlink:href") {
+                const isAllowed = allowedSrcPrefixes.some((prefix) =>
+                    normalizedValue.startsWith(prefix)
+                )
+                if (!isAllowed) {
+                    element.removeAttribute(attribute.name)
+                }
+            }
+        })
+    })
+
+    return template.innerHTML
 }
 
 function toDateTimeLocalValue(value: Date | null) {
@@ -474,7 +507,7 @@ export function ProjectSheetContent({
             const safeTitle = title.replace(/[/\\?%*:|"<>]/g, "-")
             const createdLabel = formatBottomDate(toDate(project.createdAt) || null)
             const updatedLabel = formatBottomDate(toDate(project.updatedAt) || null)
-            const html = description || ""
+            const html = sanitizeNotesHtmlForExport(description || "")
 
             const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
                 import("html2canvas"),
@@ -670,7 +703,7 @@ export function ProjectSheetContent({
 
     const recurringServices = allServices.filter((service) => service.isRecurring)
     const oneTimeServices = allServices.filter((service) => !service.isRecurring)
-    const externalSiteUrl = resolveExternalSiteUrl(project.site?.domainName)
+    const externalSiteUrl = normalizeExternalHttpUrl(project.site?.domainName)
     const sitePanelHref = `/partners/${project.site.partner.id}/${project.site.id}`
     const createdAt = toDate(project.createdAt)
     const updatedAt = toDate(project.updatedAt)

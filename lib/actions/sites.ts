@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client"
 import { requireTenantContext } from "@/lib/tenant"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { z } from "zod"
 
 const SiteIdSchema = z.string().uuid()
@@ -21,7 +22,7 @@ const UpdateSiteSchema = z.object({
     domainName: z.string().trim().min(3).max(255).optional(),
     gtmId: z.string().max(128).optional(),
     googleAdsId: z.string().max(128).optional(),
-    driveLink: z.string().url().optional().or(z.literal("")),
+    driveLink: z.string().trim().max(2048).optional().or(z.literal("")),
     marketingVault: z.string().max(20000).optional(),
 })
 
@@ -71,6 +72,17 @@ export async function updateSiteDetails(siteId: string, data: {
         const updateData: Prisma.SiteUpdateInput = { ...validated }
         delete (updateData as Record<string, unknown>).siteId
         if (updateData.name === "") updateData.name = null
+        if (validated.driveLink !== undefined) {
+            if (validated.driveLink === "") {
+                updateData.driveLink = ""
+            } else {
+                const normalizedDriveLink = normalizeExternalHttpUrl(validated.driveLink)
+                if (!normalizedDriveLink) {
+                    return { success: false, error: "Drive link must use http or https." }
+                }
+                updateData.driveLink = normalizedDriveLink
+            }
+        }
 
         const site = await prisma.site.findFirst({
             where: { id: validated.siteId, tenantId: session.tenantId },

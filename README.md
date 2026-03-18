@@ -26,6 +26,7 @@ Debug routes are disabled by default and require explicit opt-in.
 
 - `DEBUG_API_ENABLED=true`
 - `DEBUG_API_SECRET=<strong-random-secret>`
+- `DEBUG_API_ALLOW_PRODUCTION=true` (required in production, otherwise debug routes remain disabled)
 
 Optional server log route controls:
 
@@ -38,7 +39,7 @@ Optional server log route controls:
 Project note image uploads are stored outside `public/` and served through a signed, tenant-scoped API route.
 
 - `PROJECT_NOTES_STORAGE_ROOT=/absolute/or/relative/path` (default `storage/project-notes`)
-- `PROJECT_NOTES_SIGNING_SECRET=<strong-random-secret>` (falls back to `JWT_SECRET` if omitted)
+- `PROJECT_NOTES_SIGNING_SECRET=<strong-random-secret>` (required in production)
 - `PROJECT_NOTES_SIGNED_URL_TTL_SECONDS=2592000` (default `30` days; min `60`, max `31536000`)
 
 ## CSP Controls
@@ -46,7 +47,8 @@ Project note image uploads are stored outside `public/` and served through a sig
 Script CSP is strict by default (`script-src 'self'`). Legacy unsafe allowances are opt-in only:
 
 - `CSP_ALLOW_UNSAFE_SCRIPT_INLINE=true`
-- `CSP_ALLOW_UNSAFE_EVAL=true` (applies only in development)
+
+In development only, `unsafe-inline` and `unsafe-eval` are enabled automatically for DX tooling.
 
 ## Session Controls
 
@@ -66,6 +68,13 @@ npx prisma db execute --file prisma/migrations/20260317190000_add_auth_sessions/
 npx prisma migrate resolve --applied 20260317190000_add_auth_sessions
 npx prisma generate
 ```
+
+## Seed Controls
+
+Seed credentials are no longer hardcoded.
+
+- `SEED_ADMIN_USERNAME=admin` (optional; default `admin`)
+- `SEED_ADMIN_PASSWORD=<strong-random-password>` (required for production seeding)
 
 ## Learn More
 

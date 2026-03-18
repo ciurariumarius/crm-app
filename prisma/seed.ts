@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
+import { randomBytes } from "node:crypto"
 
 const prisma = new PrismaClient()
 
@@ -13,18 +14,28 @@ async function main() {
         create: { id: defaultTenantId, name: "Default Tenant" },
     })
 
-    // 0. Create Auth User
-    const passwordHash = await bcrypt.hash("Marius123", 10)
+    // 0. Create Auth User (never rely on hardcoded credentials)
+    const seedUsername = process.env.SEED_ADMIN_USERNAME?.trim() || "admin"
+    const generatedPassword = randomBytes(18).toString("base64url")
+    const configuredSeedPassword = process.env.SEED_ADMIN_PASSWORD?.trim()
+    if (process.env.NODE_ENV === "production" && !configuredSeedPassword) {
+        throw new Error("SEED_ADMIN_PASSWORD must be set when running seed in production")
+    }
+    const seedPassword = configuredSeedPassword || generatedPassword
+    const passwordHash = await bcrypt.hash(seedPassword, 10)
     await prisma.user.upsert({
-        where: { username: "mxa95" },
+        where: { username: seedUsername },
         update: {},
         create: {
             tenantId: tenant.id,
-            username: "mxa95",
+            username: seedUsername,
             passwordHash,
             twoFactorEnabled: false
         }
     })
+    if (!configuredSeedPassword) {
+        console.log(`Generated seed password for "${seedUsername}": ${seedPassword}`)
+    }
 
     // 1. Create Partners
     const lms = await prisma.partner.upsert({
