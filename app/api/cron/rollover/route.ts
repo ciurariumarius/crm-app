@@ -21,57 +21,38 @@ function currentPeriod(date: Date) {
     }
 }
 
+function isBeforeMonthStart(date: Date, startOfCurrentMonth: Date) {
+    return date.getTime() < startOfCurrentMonth.getTime()
+}
+
 async function buildRolloverDebugSnapshot(startOfCurrentMonth: Date) {
-    const [
-        totalProjects,
-        activeProjects,
-        recurringProjects,
-        recurringActiveOlderThanCurrentMonth,
-        recurringNotActiveOlderThanCurrentMonth,
-        activeOlderThanCurrentMonthWithoutRecurring,
-        recurringOlderSamples,
-    ] = await Promise.all([
-        prisma.project.count(),
-        prisma.project.count({ where: { status: 'Active' } }),
-        prisma.project.count({ where: { services: { some: { isRecurring: true } } } }),
-        prisma.project.count({
-            where: {
-                status: 'Active',
-                createdAt: { lt: startOfCurrentMonth },
-                services: { some: { isRecurring: true } },
-            },
-        }),
-        prisma.project.count({
-            where: {
-                status: { not: 'Active' },
-                createdAt: { lt: startOfCurrentMonth },
-                services: { some: { isRecurring: true } },
-            },
-        }),
-        prisma.project.count({
-            where: {
-                status: 'Active',
-                createdAt: { lt: startOfCurrentMonth },
-                services: { none: { isRecurring: true } },
-            },
-        }),
-        prisma.project.findMany({
-            where: {
-                createdAt: { lt: startOfCurrentMonth },
-                services: { some: { isRecurring: true } },
-            },
-            select: {
-                id: true,
-                name: true,
-                status: true,
-                createdAt: true,
-                site: { select: { domainName: true } },
-                services: { select: { serviceName: true, isRecurring: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 20,
-        }),
-    ])
+    const projects = await prisma.project.findMany({
+        select: {
+            id: true,
+            name: true,
+            status: true,
+            createdAt: true,
+            site: { select: { domainName: true } },
+            services: { select: { serviceName: true, isRecurring: true } },
+        },
+    })
+
+    const recurringProjectsList = projects.filter((project) => project.services.some((service) => service.isRecurring))
+    const recurringOlderProjects = recurringProjectsList.filter((project) => isBeforeMonthStart(project.createdAt, startOfCurrentMonth))
+    const recurringOlderSamples = recurringOlderProjects
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, 20)
+
+    const totalProjects = projects.length
+    const activeProjects = projects.filter((project) => project.status === 'Active').length
+    const recurringProjects = recurringProjectsList.length
+    const recurringActiveOlderThanCurrentMonth = recurringOlderProjects.filter((project) => project.status === 'Active').length
+    const recurringNotActiveOlderThanCurrentMonth = recurringOlderProjects.filter((project) => project.status !== 'Active').length
+    const activeOlderThanCurrentMonthWithoutRecurring = projects.filter((project) => (
+        project.status === 'Active'
+        && isBeforeMonthStart(project.createdAt, startOfCurrentMonth)
+        && project.services.every((service) => !service.isRecurring)
+    )).length
 
     return {
         now: new Date().toISOString(),
@@ -232,10 +213,9 @@ export async function POST(request: Request) {
         const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1)
         const debugSnapshot = debug ? await buildRolloverDebugSnapshot(startOfCurrentMonth) : undefined
 
-        const projectsToRollover = await prisma.project.findMany({
+        const activeRecurringProjects = await prisma.project.findMany({
             where: {
                 status: 'Active',
-                createdAt: { lt: startOfCurrentMonth },
                 services: {
                     some: { isRecurring: true },
                 },
@@ -245,6 +225,7 @@ export async function POST(request: Request) {
                 tenantId: true,
                 siteId: true,
                 name: true,
+                createdAt: true,
                 currentFee: true,
                 site: { select: { domainName: true } },
                 services: {
@@ -257,6 +238,9 @@ export async function POST(request: Request) {
                 },
             },
         })
+        const projectsToRollover = activeRecurringProjects.filter((project) => (
+            isBeforeMonthStart(project.createdAt, startOfCurrentMonth)
+        ))
 
         if (dryRun) {
             return apiOk({
