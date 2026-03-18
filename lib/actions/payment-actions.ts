@@ -42,6 +42,55 @@ export async function getProjectPaymentHistory(projectId: string) {
     }
 }
 
+export async function getProjectStatusHistory(projectId: string) {
+    try {
+        const session = await requireTenantContext()
+
+        const logs = await prisma.auditLog.findMany({
+            where: {
+                tenantId: session.tenantId,
+                action: { in: ["PROJECT_STATUS_CHANGED", "PROJECT_CREATED"] },
+                details: { contains: `projectId=${projectId}` },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 30,
+        })
+
+        return {
+            success: true,
+            data: logs.map((log) => {
+                if (log.action === "PROJECT_CREATED") {
+                    return {
+                        id: log.id,
+                        action: log.action,
+                        date: log.createdAt,
+                        fromStatus: null,
+                        toStatus: "Created",
+                        source: "initial_create",
+                    }
+                }
+
+                const details = log.details || ""
+                const toMatch = details.match(/(?:^|;\s*)to=([^;]+)/)
+                const fromMatch = details.match(/(?:^|;\s*)from=([^;]+)/)
+                const sourceMatch = details.match(/(?:^|;\s*)source=([^;]+)/)
+
+                return {
+                    id: log.id,
+                    action: log.action,
+                    date: log.createdAt,
+                    fromStatus: fromMatch?.[1]?.trim() || null,
+                    toStatus: toMatch?.[1]?.trim() || "Unknown",
+                    source: sourceMatch?.[1]?.trim() || null,
+                }
+            }),
+        }
+    } catch (error) {
+        console.error("[payment-actions] failed to fetch status history", error)
+        return { success: false, error: "Failed to fetch status history" }
+    }
+}
+
 export async function getPaymentLogs(params: {
     projectId?: string;
     partnerId?: string;

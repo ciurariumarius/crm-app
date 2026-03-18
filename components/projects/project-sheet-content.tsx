@@ -34,7 +34,7 @@ import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
 import { updateProject, deleteProject } from "@/lib/actions/projects"
 import { logTime } from "@/lib/actions/time"
-import { getProjectPaymentHistory } from "@/lib/actions/payment-actions"
+import { getProjectPaymentHistory, getProjectStatusHistory } from "@/lib/actions/payment-actions"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useTimer } from "@/components/providers/timer-provider"
@@ -62,6 +62,15 @@ type ProjectPaymentHistoryEntry = {
     action: string
     date: Date | string
     status: string
+}
+
+type ProjectStatusHistoryEntry = {
+    id: string
+    action: string
+    date: Date | string
+    fromStatus: string | null
+    toStatus: string
+    source: string | null
 }
 
 type ProjectTimeLogWithTask = ProjectWithDetails["timeLogs"][number] & {
@@ -208,6 +217,8 @@ export function ProjectSheetContent({
     // Payment History State
     const [paymentHistory, setPaymentHistory] = React.useState<ProjectPaymentHistoryEntry[]>([])
     const [isLoadingHistory, setIsLoadingHistory] = React.useState(false)
+    const [statusHistory, setStatusHistory] = React.useState<ProjectStatusHistoryEntry[]>([])
+    const [isLoadingStatusHistory, setIsLoadingStatusHistory] = React.useState(false)
 
     const router = useRouter()
     const {
@@ -273,9 +284,27 @@ export function ProjectSheetContent({
         }
     }, [project.id])
 
+    const fetchStatusHistory = React.useCallback(async () => {
+        setIsLoadingStatusHistory(true)
+        try {
+            const result = await getProjectStatusHistory(project.id)
+            if (result.success) {
+                setStatusHistory(result.data || [])
+            }
+        } catch (error) {
+            console.error("Failed to load status history", error)
+        } finally {
+            setIsLoadingStatusHistory(false)
+        }
+    }, [project.id])
+
     React.useEffect(() => {
         fetchPaymentHistory()
     }, [fetchPaymentHistory])
+
+    React.useEffect(() => {
+        fetchStatusHistory()
+    }, [fetchStatusHistory])
 
     React.useEffect(() => {
         setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
@@ -329,6 +358,9 @@ export function ProjectSheetContent({
                 if (data.paymentStatus !== undefined) {
                     fetchPaymentHistory()
                 }
+                if (data.status !== undefined) {
+                    fetchStatusHistory()
+                }
 
                 const isDescriptionOnlyUpdate =
                     data.description !== undefined &&
@@ -345,7 +377,7 @@ export function ProjectSheetContent({
                 setUpdatingId(null)
             }
         },
-        [allServices, onUpdate, project, router, fetchPaymentHistory]
+        [allServices, onUpdate, project, router, fetchPaymentHistory, fetchStatusHistory]
     )
 
     const isInitialMount = React.useRef(true)
@@ -744,6 +776,28 @@ export function ProjectSheetContent({
             progressBarPercent: Math.max(0, Math.min(progressPercent, 100)),
         }
     }, [hourlyRate, project.currentFee, totalTrackedSeconds])
+
+    const statusHistoryEntries = React.useMemo(() => {
+        const hasCreatedEntry = statusHistory.some((entry) => entry.action === "PROJECT_CREATED")
+        const createdAtDate = toDate(project.createdAt)
+
+        if (hasCreatedEntry || !createdAtDate) return statusHistory
+
+        const fallbackCreatedEntry: ProjectStatusHistoryEntry = {
+            id: `project-created-${project.id}`,
+            action: "PROJECT_CREATED",
+            date: createdAtDate,
+            fromStatus: null,
+            toStatus: "Created",
+            source: "initial_create",
+        }
+
+        return [...statusHistory, fallbackCreatedEntry].sort((left, right) => {
+            const leftTime = toDate(left.date)?.getTime() || 0
+            const rightTime = toDate(right.date)?.getTime() || 0
+            return rightTime - leftTime
+        })
+    }, [statusHistory, project.id, project.createdAt])
 
     const openSitePanel = React.useCallback(() => {
         if (onOpenSite) {
@@ -1304,6 +1358,70 @@ export function ProjectSheetContent({
                                                 entry.status === "Paid" ? "bg-[#ECFDF5] text-[#10B981]" : "bg-[#FFF1F2] text-[#E11D48]"
                                             )}>
                                                 {entry.status}
+                                            </Badge>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </section>
+
+                        <section className="space-y-2 border-t border-slate-200/80 pt-3">
+                            <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                                <Clock3 className="h-3.5 w-3.5" />
+                                Status History (Log)
+                            </h2>
+                            <div className="space-y-1.5">
+                                {isLoadingStatusHistory && statusHistoryEntries.length === 0 ? (
+                                    <div className="flex items-center justify-center py-6 text-slate-400">
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
+                                    </div>
+                                ) : statusHistoryEntries.length === 0 ? (
+                                    <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        No status records found.
+                                    </div>
+                                ) : (
+                                    statusHistoryEntries.map((entry) => (
+                                        <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    className={cn(
+                                                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+                                                        entry.toStatus === "Active" && "bg-blue-50 text-blue-600",
+                                                        entry.toStatus === "Paused" && "bg-amber-50 text-amber-600",
+                                                        entry.toStatus === "Completed" && "bg-emerald-50 text-emerald-600",
+                                                        entry.toStatus === "Closed" && "bg-slate-100 text-slate-600",
+                                                        !["Active", "Paused", "Completed", "Closed"].includes(entry.toStatus) && "bg-slate-100 text-slate-600"
+                                                    )}
+                                                >
+                                                    <Clock3 className="h-4 w-4" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-700">
+                                                        {entry.action === "PROJECT_CREATED"
+                                                            ? "Project created"
+                                                            : entry.fromStatus
+                                                                ? `${entry.fromStatus} → ${entry.toStatus}`
+                                                                : `Marked as ${entry.toStatus}`}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                        {formatRelativeDate(entry.date)}
+                                                        {entry.source ? ` • ${entry.source.replaceAll("_", " ")}` : ""}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    "border-none text-[9px] font-black uppercase tracking-widest",
+                                                    entry.toStatus === "Active" && "bg-blue-50 text-blue-600",
+                                                    entry.toStatus === "Paused" && "bg-amber-50 text-amber-600",
+                                                    entry.toStatus === "Completed" && "bg-emerald-50 text-emerald-600",
+                                                    entry.toStatus === "Closed" && "bg-slate-100 text-slate-600",
+                                                    !["Active", "Paused", "Completed", "Closed"].includes(entry.toStatus) && "bg-slate-100 text-slate-600"
+                                                )}
+                                            >
+                                                {entry.toStatus}
                                             </Badge>
                                         </div>
                                     ))

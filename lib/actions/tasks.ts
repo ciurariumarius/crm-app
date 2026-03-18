@@ -27,6 +27,13 @@ const TaskIdSchema = z.string().uuid()
 const TaskIdsSchema = z.array(TaskIdSchema).max(500)
 const ProjectIdSchema = z.string().uuid()
 
+function formatAuditDateToken(value: Date | null | undefined) {
+    if (!value) return "none"
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return "invalid"
+    return parsed.toISOString()
+}
+
 const AddTaskSchema = z.object({
     projectId: z.string().uuid(),
     name: z.string().trim().min(1, "Task name is required").max(255),
@@ -79,7 +86,7 @@ export async function addTask(projectId: string, name: string, options?: { deadl
         })
         await logSessionAuditEvent(session, {
             action: "TASK_CREATED",
-            details: `taskId=${task.id}; projectId=${validated.projectId}`,
+            details: `taskId=${task.id}; projectId=${validated.projectId}; status=${task.status}; priority=${task.urgency}; deadline=${formatAuditDateToken(task.deadline)}`,
         })
         revalidateTaskPaths(validated.projectId, task.project?.site?.partnerId, task.project?.siteId)
         return { success: true }
@@ -123,6 +130,10 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
             action: "TASK_STATUS_TOGGLED",
             details: `taskId=${validatedTaskId}; from=${normalizedCurrentStatus}; to=${newStatus}`,
         })
+        await logSessionAuditEvent(session, {
+            action: "TASK_STATUS_CHANGED",
+            details: `taskId=${validatedTaskId}; projectId=${validatedProjectId}; from=${normalizedCurrentStatus}; to=${newStatus}; source=toggle_status`,
+        })
         revalidateTaskPaths(validatedProjectId, task.project.site.partnerId, task.project.siteId)
         return { success: true }
     } catch (error) {
@@ -157,7 +168,7 @@ export async function updateTask(taskId: string, data: {
 
         const existingTask = await prisma.task.findFirst({
             where: { id: validatedTaskId, tenantId: session.tenantId },
-            select: { id: true },
+            select: { id: true, projectId: true, status: true, urgency: true, deadline: true },
         })
         if (!existingTask) {
             await logSessionAuditEvent(session, {
@@ -173,6 +184,32 @@ export async function updateTask(taskId: string, data: {
             data: updateData,
             include: { project: { include: { site: true } } }
         })
+
+        const nextStatus = typeof updateData.status === "string" ? updateData.status : existingTask.status
+        const nextPriority = typeof updateData.urgency === "string" ? updateData.urgency : existingTask.urgency
+        const nextDeadline = updateData.deadline === undefined ? existingTask.deadline : ((updateData.deadline as Date | null) ?? null)
+
+        if (nextStatus !== existingTask.status) {
+            await logSessionAuditEvent(session, {
+                action: "TASK_STATUS_CHANGED",
+                details: `taskId=${task.id}; projectId=${task.projectId}; from=${existingTask.status}; to=${nextStatus}; source=update_task`,
+            })
+        }
+
+        if (nextPriority !== existingTask.urgency) {
+            await logSessionAuditEvent(session, {
+                action: "TASK_PRIORITY_CHANGED",
+                details: `taskId=${task.id}; projectId=${task.projectId}; from=${existingTask.urgency}; to=${nextPriority}; source=update_task`,
+            })
+        }
+
+        if (formatAuditDateToken(nextDeadline) !== formatAuditDateToken(existingTask.deadline)) {
+            await logSessionAuditEvent(session, {
+                action: "TASK_DEADLINE_CHANGED",
+                details: `taskId=${task.id}; projectId=${task.projectId}; from=${formatAuditDateToken(existingTask.deadline)}; to=${formatAuditDateToken(nextDeadline)}; source=update_task`,
+            })
+        }
+
         await logSessionAuditEvent(session, {
             action: "TASK_UPDATED",
             details: `taskId=${task.id}; projectId=${task.projectId}`,
@@ -256,5 +293,57 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
     } catch (error) {
         console.error("Bulk update tasks status failed:", error)
         return { success: false, error: getActionErrorMessage(error, "Failed to update tasks") }
+    }
+}
+
+export async function getTaskHistory(taskId: string) {
+    try {
+        const session = await requireTenantContext()
+        const validatedTaskId = TaskIdSchema.parse(taskId)
+
+        const logs = await prisma.auditLog.findMany({
+            where: {
+                tenantId: session.tenantId,
+                action: {
+                    in: [
+                        "TASK_CREATED",
+                        "TASK_STATUS_CHANGED",
+                        "TASK_PRIORITY_CHANGED",
+                        "TASK_DEADLINE_CHANGED",
+                    ],
+                },
+                details: { contains: `taskId=${validatedTaskId}` },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 40,
+        })
+
+        return {
+            success: true,
+            data: logs.map((log) => {
+                const details = log.details || ""
+                const fromMatch = details.match(/(?:^|;\s*)from=([^;]+)/)
+                const toMatch = details.match(/(?:^|;\s*)to=([^;]+)/)
+                const sourceMatch = details.match(/(?:^|;\s*)source=([^;]+)/)
+                const statusMatch = details.match(/(?:^|;\s*)status=([^;]+)/)
+                const priorityMatch = details.match(/(?:^|;\s*)priority=([^;]+)/)
+                const deadlineMatch = details.match(/(?:^|;\s*)deadline=([^;]+)/)
+
+                return {
+                    id: log.id,
+                    action: log.action,
+                    date: log.createdAt,
+                    from: fromMatch?.[1]?.trim() || null,
+                    to: toMatch?.[1]?.trim() || null,
+                    status: statusMatch?.[1]?.trim() || null,
+                    priority: priorityMatch?.[1]?.trim() || null,
+                    deadline: deadlineMatch?.[1]?.trim() || null,
+                    source: sourceMatch?.[1]?.trim() || null,
+                }
+            }),
+        }
+    } catch (error) {
+        console.error("Get task history failed:", error)
+        return { success: false, error: getActionErrorMessage(error, "Failed to fetch task history") }
     }
 }

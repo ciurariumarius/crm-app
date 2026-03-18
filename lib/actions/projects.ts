@@ -249,7 +249,7 @@ export async function updateProject(projectId: string, data: {
 
         const existingProject = await prisma.project.findFirst({
             where: { id: validatedProjectId, tenantId: session.tenantId },
-            select: { id: true },
+            select: { id: true, status: true, paymentStatus: true },
         })
         if (!existingProject) {
             await logSessionAuditEvent(session, {
@@ -266,10 +266,17 @@ export async function updateProject(projectId: string, data: {
             include: { site: true }
         })
 
-        if (validated.paymentStatus) {
+        if (validated.status && validated.status !== existingProject.status) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_STATUS_CHANGED",
+                details: `projectId=${validatedProjectId}; from=${existingProject.status}; to=${validated.status}; source=manual_update`,
+            })
+        }
+
+        if (validated.paymentStatus && validated.paymentStatus !== existingProject.paymentStatus) {
             await logSessionAuditEvent(session, {
                 action: "PROJECT_PAYMENT_TOGGLED",
-                details: `projectId=${validatedProjectId}; to=${validated.paymentStatus}`,
+                details: `projectId=${validatedProjectId}; from=${existingProject.paymentStatus}; to=${validated.paymentStatus}`,
             })
         }
 

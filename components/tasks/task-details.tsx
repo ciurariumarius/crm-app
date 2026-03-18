@@ -31,8 +31,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus, ArrowUpRight, FolderOpen, Globe } from "lucide-react"
-import { updateTask, deleteTask } from "@/lib/actions/tasks"
+import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, History } from "lucide-react"
+import { updateTask, deleteTask, getTaskHistory } from "@/lib/actions/tasks"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
@@ -89,6 +89,18 @@ export type TaskDetailsTask = {
     [key: string]: unknown
 }
 
+type TaskHistoryEntry = {
+    id: string
+    action: string
+    date: Date | string
+    from?: string | null
+    to?: string | null
+    status?: string | null
+    priority?: string | null
+    deadline?: string | null
+    source?: string | null
+}
+
 interface TaskDetailsProps {
     task: TaskDetailsTask | null
     open: boolean
@@ -136,6 +148,12 @@ function formatBottomDate(value: Date | null) {
     return format(value, "dd MMMM yyyy, HH:mm")
 }
 
+function decodeAuditDateToken(value: string | null | undefined) {
+    if (!value || value === "none" || value === "invalid") return null
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
 export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSite }: TaskDetailsProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const router = useRouter()
@@ -154,6 +172,8 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [isNotesModalOpen, setIsNotesModalOpen] = React.useState(false)
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
+    const [taskHistory, setTaskHistory] = React.useState<TaskHistoryEntry[]>([])
+    const [isLoadingTaskHistory, setIsLoadingTaskHistory] = React.useState(false)
 
     // Sync form state with task
     const skipNextAutoSave = React.useRef(true)
@@ -172,6 +192,26 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
         }
     }, [task])
 
+    const fetchTaskHistory = React.useCallback(async () => {
+        if (!task?.id) return
+        setIsLoadingTaskHistory(true)
+        try {
+            const result = await getTaskHistory(task.id)
+            if (result.success) {
+                setTaskHistory(result.data || [])
+            }
+        } catch (error) {
+            console.error("Failed to load task history", error)
+        } finally {
+            setIsLoadingTaskHistory(false)
+        }
+    }, [task?.id])
+
+    React.useEffect(() => {
+        if (!task?.id) return
+        void fetchTaskHistory()
+    }, [task?.id, fetchTaskHistory])
+
     const handleUpdate = React.useCallback(async () => {
         if (!task) return
         setLoading(true)
@@ -186,6 +226,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
 
             if (result.success) {
                 toast.success("Task updated")
+                void fetchTaskHistory()
             } else {
                 toast.error(result.error || "Failed to update task")
             }
@@ -194,7 +235,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
         } finally {
             setLoading(false)
         }
-    }, [deadline, description, name, status, task, urgency])
+    }, [deadline, description, fetchTaskHistory, name, status, task, urgency])
 
     // Auto-save logic
     React.useEffect(() => {
@@ -262,6 +303,26 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
         })
     }, [])
 
+    const createdTimestamp = toDate(task?.createdAt)
+    const taskHistoryEntries = React.useMemo(() => {
+        const hasCreated = taskHistory.some((entry) => entry.action === "TASK_CREATED")
+        if (hasCreated || !createdTimestamp) return taskHistory
+        return [
+            ...taskHistory,
+            {
+                id: `task-created-${task?.id || "unknown"}`,
+                action: "TASK_CREATED",
+                date: createdTimestamp,
+                source: "initial_create",
+                status,
+            },
+        ].sort((left, right) => {
+            const leftTime = toDate(left.date)?.getTime() || 0
+            const rightTime = toDate(right.date)?.getTime() || 0
+            return rightTime - leftTime
+        })
+    }, [taskHistory, createdTimestamp, task?.id, status])
+
     if (!task) return null
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isTaskRunning = isActiveTimerThisTask && timerState.isRunning
@@ -287,7 +348,6 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
         task.project?.site?.partner?.id && task.project?.site?.id
             ? `/partners/${task.project.site.partner.id}/${task.project.site.id}`
             : null
-    const createdTimestamp = toDate(task.createdAt)
     const lastUpdatedTimestamp = toDate(task.updatedAt)
 
     const handleTaskTimerPrimaryAction = () => {
@@ -782,6 +842,76 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                     )
                                 })}
                             </div>
+                        </div>
+                    </section>
+
+                    <section className="space-y-2 border-t border-slate-200/80 pt-3">
+                        <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                            <History className="h-3.5 w-3.5" />
+                            Task History (Log)
+                        </h2>
+                        <div className="space-y-1.5">
+                            {isLoadingTaskHistory && taskHistoryEntries.length === 0 ? (
+                                <div className="flex items-center justify-center py-6 text-slate-400">
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
+                                </div>
+                            ) : taskHistoryEntries.length === 0 ? (
+                                <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                    No task history records found.
+                                </div>
+                            ) : (
+                                taskHistoryEntries.map((entry) => {
+                                    const sourceLabel = entry.source ? entry.source.replaceAll("_", " ") : null
+                                    const fromDate = decodeAuditDateToken(entry.from)
+                                    const toDateValue = decodeAuditDateToken(entry.to)
+
+                                    let entryTitle = "Task updated"
+                                    let entryBadge = "Update"
+
+                                    if (entry.action === "TASK_CREATED") {
+                                        entryTitle = "Task created"
+                                        entryBadge = "Created"
+                                    } else if (entry.action === "TASK_STATUS_CHANGED") {
+                                        entryTitle = `${entry.from || "Unknown"} → ${entry.to || "Unknown"}`
+                                        entryBadge = "Status"
+                                    } else if (entry.action === "TASK_PRIORITY_CHANGED") {
+                                        entryTitle = `Priority: ${entry.from || "Unknown"} → ${entry.to || "Unknown"}`
+                                        entryBadge = "Priority"
+                                    } else if (entry.action === "TASK_DEADLINE_CHANGED") {
+                                        if (!fromDate && toDateValue) {
+                                            entryTitle = `Deadline set: ${format(toDateValue, "dd MMM yyyy")}`
+                                        } else if (fromDate && !toDateValue) {
+                                            entryTitle = "Deadline removed"
+                                        } else if (fromDate && toDateValue) {
+                                            entryTitle = `Deadline: ${format(fromDate, "dd MMM yyyy")} → ${format(toDateValue, "dd MMM yyyy")}`
+                                        } else {
+                                            entryTitle = "Deadline updated"
+                                        }
+                                        entryBadge = "Deadline"
+                                    }
+
+                                    return (
+                                        <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                                                    <History className="h-4 w-4" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-700">{entryTitle}</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                        {formatRelativeDate(entry.date)}
+                                                        {sourceLabel ? ` • ${sourceLabel}` : ""}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-slate-600">
+                                                {entryBadge}
+                                            </span>
+                                        </div>
+                                    )
+                                })
+                            )}
                         </div>
                     </section>
 

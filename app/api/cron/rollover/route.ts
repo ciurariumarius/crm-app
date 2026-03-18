@@ -140,6 +140,14 @@ async function rolloverProject(project: {
             }
         }
 
+        await tx.auditLog.create({
+            data: {
+                tenantId: project.tenantId,
+                action: 'PROJECT_STATUS_CHANGED',
+                details: `projectId=${project.id}; from=Active; to=Completed; source=rollover_cron`,
+            },
+        })
+
         const serviceIds = project.services.map((service) => service.id)
         const currentFee = project.currentFee ? Number(project.currentFee) : 0
         const newProjectName = formatProjectName({
