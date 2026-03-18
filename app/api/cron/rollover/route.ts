@@ -21,6 +21,83 @@ function currentPeriod(date: Date) {
     }
 }
 
+async function buildRolloverDebugSnapshot(startOfCurrentMonth: Date) {
+    const [
+        totalProjects,
+        activeProjects,
+        recurringProjects,
+        recurringActiveOlderThanCurrentMonth,
+        recurringNotActiveOlderThanCurrentMonth,
+        activeOlderThanCurrentMonthWithoutRecurring,
+        recurringOlderSamples,
+    ] = await Promise.all([
+        prisma.project.count(),
+        prisma.project.count({ where: { status: 'Active' } }),
+        prisma.project.count({ where: { services: { some: { isRecurring: true } } } }),
+        prisma.project.count({
+            where: {
+                status: 'Active',
+                createdAt: { lt: startOfCurrentMonth },
+                services: { some: { isRecurring: true } },
+            },
+        }),
+        prisma.project.count({
+            where: {
+                status: { not: 'Active' },
+                createdAt: { lt: startOfCurrentMonth },
+                services: { some: { isRecurring: true } },
+            },
+        }),
+        prisma.project.count({
+            where: {
+                status: 'Active',
+                createdAt: { lt: startOfCurrentMonth },
+                services: { none: { isRecurring: true } },
+            },
+        }),
+        prisma.project.findMany({
+            where: {
+                createdAt: { lt: startOfCurrentMonth },
+                services: { some: { isRecurring: true } },
+            },
+            select: {
+                id: true,
+                name: true,
+                status: true,
+                createdAt: true,
+                site: { select: { domainName: true } },
+                services: { select: { serviceName: true, isRecurring: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+        }),
+    ])
+
+    return {
+        now: new Date().toISOString(),
+        startOfCurrentMonth: startOfCurrentMonth.toISOString(),
+        counters: {
+            totalProjects,
+            activeProjects,
+            recurringProjects,
+            recurringActiveOlderThanCurrentMonth,
+            recurringNotActiveOlderThanCurrentMonth,
+            activeOlderThanCurrentMonthWithoutRecurring,
+        },
+        recurringOlderSamples: recurringOlderSamples.map((project) => ({
+            id: project.id,
+            name: project.name,
+            status: project.status,
+            createdAt: project.createdAt,
+            domain: project.site.domainName,
+            services: project.services.map((service) => ({
+                serviceName: service.serviceName,
+                isRecurring: service.isRecurring,
+            })),
+        })),
+    }
+}
+
 async function rolloverProject(project: {
     id: string
     tenantId: string
@@ -68,9 +145,7 @@ async function rolloverProject(project: {
             where: {
                 id: project.id,
                 tenantId: project.tenantId,
-                status: {
-                    in: ['Active', 'Completed'],
-                },
+                status: 'Active',
             },
             data: { status: 'Completed' },
         })
@@ -150,14 +225,16 @@ export async function POST(request: Request) {
     }
 
     try {
+        const { searchParams } = new URL(request.url)
+        const debug = searchParams.get('debug') === '1'
+        const dryRun = searchParams.get('dryRun') === '1'
         const today = new Date()
         const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+        const debugSnapshot = debug ? await buildRolloverDebugSnapshot(startOfCurrentMonth) : undefined
 
         const projectsToRollover = await prisma.project.findMany({
             where: {
-                status: {
-                    in: ['Active', 'Completed'],
-                },
+                status: 'Active',
                 createdAt: { lt: startOfCurrentMonth },
                 services: {
                     some: { isRecurring: true },
@@ -181,6 +258,24 @@ export async function POST(request: Request) {
             },
         })
 
+        if (dryRun) {
+            return apiOk({
+                success: true,
+                dryRun: true,
+                message: projectsToRollover.length === 0 ? 'No projects would rollover' : 'Dry run complete',
+                processed: projectsToRollover.length,
+                created: 0,
+                skipped: 0,
+                failed: 0,
+                details: projectsToRollover.map((project) => ({
+                    status: 'dry_run_would_rollover',
+                    oldProjectId: project.id,
+                    oldProjectName: project.name,
+                })),
+                ...(debugSnapshot ? { debug: debugSnapshot } : {}),
+            })
+        }
+
         if (projectsToRollover.length === 0) {
             return apiOk({
                 success: true,
@@ -190,6 +285,7 @@ export async function POST(request: Request) {
                 skipped: 0,
                 failed: 0,
                 details: [],
+                ...(debugSnapshot ? { debug: debugSnapshot } : {}),
             })
         }
 
@@ -233,6 +329,7 @@ export async function POST(request: Request) {
             skipped,
             failed,
             details,
+            ...(debugSnapshot ? { debug: debugSnapshot } : {}),
         })
     } catch (error) {
         return apiInternalError(error)
