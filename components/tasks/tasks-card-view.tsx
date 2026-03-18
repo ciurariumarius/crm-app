@@ -252,14 +252,15 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer: _initial
             ))}
 
             <div
-                className="border-2 border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/50 cursor-pointer transition-all h-full group"
+                className="border border-dashed border-slate-200 bg-slate-50/30 rounded-3xl flex flex-col items-center justify-center text-center py-6 px-4 self-start cursor-pointer transition-all duration-300 group hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-sm"
                 onClick={() => setCreateTaskOpen(true)}
             >
-                <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-0 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
-                    <Plus className="h-8 w-8 text-muted-foreground group-hover:text-current" strokeWidth={1.5} />
+                <div className="h-10 w-10 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:scale-105 group-hover:bg-emerald-500 group-hover:border-emerald-500 transition-all duration-300">
+                    <Plus className="h-5 w-5 text-slate-400 group-hover:text-white" strokeWidth={2} />
                 </div>
-                <p className="font-bold text-sm text-foreground mt-3">Quick add task...</p>
-                <p className="text-[11px] font-medium text-muted-foreground/50">Organize your workflow instantly</p>
+                <p className="font-semibold text-[13px] text-slate-500 mt-3 group-hover:text-emerald-700 transition-colors">
+                    Quick add task...
+                </p>
             </div>
         </div>
     )

@@ -5,8 +5,12 @@ import {
     SlidersHorizontal,
 } from "lucide-react"
 import {
+    endOfDay,
     endOfMonth,
     endOfYear,
+    isValid,
+    parseISO,
+    startOfDay,
     startOfMonth,
     startOfYear,
     subMonths,
@@ -65,6 +69,13 @@ const sortOptions = [
 const DEFAULT_SORT = "updated_desc"
 const SORT_VALUES = new Set(sortOptions.map((option) => option.value))
 
+function parseDateParam(value: string | undefined) {
+    if (!value) return null
+    const parsed = parseISO(value)
+    if (!isValid(parsed)) return null
+    return parsed
+}
+
 type ProjectBoardSortBy = "createdAt" | "updatedAt" | "amount" | "name" | "time"
 type ProjectBoardSortDirection = "asc" | "desc"
 
@@ -102,6 +113,8 @@ export default async function ProjectsPage({
         payment?: string
         recurring?: string
         period?: string
+        from?: string
+        to?: string
         sort?: string
         perPage?: string
         filters?: string
@@ -117,6 +130,8 @@ export default async function ProjectsPage({
     const payment = params.payment || "All"
     const recurring = params.recurring || "All"
     const period = params.period || "all_time"
+    const fromParam = params.from
+    const toParam = params.to
     const sortRaw = params.sort || DEFAULT_SORT
     const sort = SORT_VALUES.has(sortRaw as (typeof sortOptions)[number]["value"]) ? sortRaw : DEFAULT_SORT
     const perPageRaw = Number(params.perPage)
@@ -128,7 +143,21 @@ export default async function ProjectsPage({
     const now = new Date()
     let dateFilter: Prisma.ProjectWhereInput = {}
 
-    if (period === "this_month") {
+    const parsedFrom = parseDateParam(fromParam)
+    const parsedTo = parseDateParam(toParam)
+
+    if (parsedFrom || parsedTo) {
+        const fromDate = parsedFrom ? startOfDay(parsedFrom) : undefined
+        const toDate = parsedTo ? endOfDay(parsedTo) : undefined
+        const rangeStart = fromDate && toDate ? (fromDate <= toDate ? fromDate : startOfDay(parsedTo as Date)) : (fromDate || toDate)
+        const rangeEnd = fromDate && toDate ? (fromDate <= toDate ? toDate : endOfDay(parsedFrom as Date)) : (fromDate ? endOfDay(fromDate) : toDate)
+        dateFilter = {
+            createdAt: {
+                ...(rangeStart ? { gte: rangeStart } : {}),
+                ...(rangeEnd ? { lte: rangeEnd } : {}),
+            },
+        }
+    } else if (period === "this_month") {
         dateFilter = {
             createdAt: {
                 gte: startOfMonth(now),
@@ -265,6 +294,8 @@ export default async function ProjectsPage({
         if (payment) next.set("payment", payment)
         if (recurring) next.set("recurring", recurring)
         if (period) next.set("period", period)
+        if (fromParam) next.set("from", fromParam)
+        if (toParam) next.set("to", toParam)
         if (sort && sort !== DEFAULT_SORT) next.set("sort", sort)
         if (perPage !== DEFAULT_PAGE_SIZE) next.set("perPage", String(perPage))
         if (mobileFiltersOpen) next.set("filters", "1")
@@ -432,11 +463,13 @@ export default async function ProjectsPage({
                             partners={partnersList}
                             currentStatus={queryStatus}
                             currentPayment={payment}
-                            currentRecurring={recurring}
-                            currentPeriod={period}
-                            currentSort={sort}
-                            currentPartnerId={partnerId || "all"}
-                            totalProjects={totalProjects}
+            currentRecurring={recurring}
+            currentPeriod={period}
+            currentFrom={fromParam || ""}
+            currentTo={toParam || ""}
+            currentSort={sort}
+            currentPartnerId={partnerId || "all"}
+            totalProjects={totalProjects}
                         />
                     </div>
                 </div>

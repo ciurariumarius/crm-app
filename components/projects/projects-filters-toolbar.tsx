@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { format, isValid, parseISO } from "date-fns"
 import {
     Circle,
     Play,
@@ -23,6 +24,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import {
     Command,
     CommandEmpty,
@@ -31,6 +33,7 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
+import type { DateRange } from "react-day-picker"
 
 const STATUS_OPTIONS = [
     {
@@ -97,12 +100,24 @@ const SORT_OPTIONS = [
     { label: "Name (Z-A)", value: "name_desc" },
 ]
 
+function toYmd(value: Date) {
+    return format(value, "yyyy-MM-dd")
+}
+
+function parseMaybeDate(value: string | null | undefined) {
+    if (!value) return null
+    const parsed = parseISO(value)
+    return isValid(parsed) ? parsed : null
+}
+
 export function ProjectsFiltersToolbar({
     partners,
     currentStatus,
     currentPayment,
     currentRecurring,
     currentPeriod,
+    currentFrom,
+    currentTo,
     currentSort,
     currentPartnerId,
     totalProjects,
@@ -112,6 +127,8 @@ export function ProjectsFiltersToolbar({
     currentPayment: string
     currentRecurring: string
     currentPeriod: string
+    currentFrom: string
+    currentTo: string
     currentSort: string
     currentPartnerId: string
     totalProjects: number
@@ -129,6 +146,8 @@ export function ProjectsFiltersToolbar({
             const isDefaultPeriod = key === "period" && value === "all_time"
             const isDefaultSort = key === "sort" && value === "updated_desc"
             const isDefaultPartner = key === "partnerId" && value === "all"
+            const isDefaultFrom = key === "from" && !value
+            const isDefaultTo = key === "to" && !value
 
             if (
                 value === null ||
@@ -137,7 +156,9 @@ export function ProjectsFiltersToolbar({
                 isDefaultRecurring ||
                 isDefaultPeriod ||
                 isDefaultSort ||
-                isDefaultPartner
+                isDefaultPartner ||
+                isDefaultFrom ||
+                isDefaultTo
             ) {
                 params.delete(key)
             } else {
@@ -156,13 +177,20 @@ export function ProjectsFiltersToolbar({
     const selectedPartner = partners.find((partner) => partner.id === currentPartnerId)
     const selectedPeriod = PERIOD_OPTIONS.find((option) => option.value === currentPeriod) ?? PERIOD_OPTIONS[0]
     const selectedSort = SORT_OPTIONS.find((option) => option.value === currentSort) ?? SORT_OPTIONS[0]
+    const fromDate = parseMaybeDate(currentFrom)
+    const toDate = parseMaybeDate(currentTo)
+    const hasCustomRange = Boolean(fromDate || toDate)
+    const customRangeLabel = hasCustomRange
+        ? `${fromDate ? format(fromDate, "dd MMM yyyy") : "…"} - ${toDate ? format(toDate, "dd MMM yyyy") : "…"}`
+        : null
 
     const activeFilters: { key: string; label: string; href: string }[] = []
     if (currentStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${currentStatus}`, href: buildHref({ status: "Active" }) })
     if (currentPayment !== "All") activeFilters.push({ key: "payment", label: `Payment: ${currentPayment}`, href: buildHref({ payment: "All" }) })
     if (currentRecurring !== "All") activeFilters.push({ key: "recurring", label: `Type: ${RECURRING_OPTIONS.find((option) => option.value === currentRecurring)?.label || currentRecurring}`, href: buildHref({ recurring: "All" }) })
     if (currentPartnerId !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: "all" }) })
-    if (currentPeriod !== "all_time") activeFilters.push({ key: "period", label: `Period: ${selectedPeriod.label}`, href: buildHref({ period: "all_time" }) })
+    if (hasCustomRange) activeFilters.push({ key: "period_custom", label: `Period: ${customRangeLabel}`, href: buildHref({ period: "all_time", from: null, to: null }) })
+    if (!hasCustomRange && currentPeriod !== "all_time") activeFilters.push({ key: "period", label: `Period: ${selectedPeriod.label}`, href: buildHref({ period: "all_time", from: null, to: null }) })
     if (currentSort !== "updated_desc") activeFilters.push({ key: "sort", label: `Sort: ${selectedSort.label}`, href: buildHref({ sort: "updated_desc" }) })
 
     const clearAllHref = buildHref({
@@ -171,6 +199,8 @@ export function ProjectsFiltersToolbar({
         recurring: "All",
         partnerId: null,
         period: "all_time",
+        from: null,
+        to: null,
         sort: "updated_desc",
     })
 
@@ -240,8 +270,15 @@ export function ProjectsFiltersToolbar({
 
                         <PeriodCombobox
                             currentPeriod={currentPeriod}
-                            onSelect={(value) => {
-                                pushWithOverrides({ period: value })
+                            currentFrom={currentFrom}
+                            currentTo={currentTo}
+                            onSelectPreset={(value) => {
+                                pushWithOverrides({ period: value, from: null, to: null })
+                            }}
+                            onSelectRange={(range) => {
+                                const from = range.from ? toYmd(range.from) : null
+                                const to = range.to ? toYmd(range.to) : null
+                                pushWithOverrides({ period: "custom", from, to })
                             }}
                         />
 
@@ -338,13 +375,47 @@ function SortCombobox({
 
 function PeriodCombobox({
     currentPeriod,
-    onSelect,
+    currentFrom,
+    currentTo,
+    onSelectPreset,
+    onSelectRange,
 }: {
     currentPeriod: string
-    onSelect: (value: string) => void
+    currentFrom: string
+    currentTo: string
+    onSelectPreset: (value: string) => void
+    onSelectRange: (range: DateRange) => void
 }) {
     const [open, setOpen] = React.useState(false)
-    const isActive = currentPeriod !== "all_time"
+    const isActive = currentPeriod !== "all_time" || Boolean(currentFrom || currentTo)
+    const fromDate = parseMaybeDate(currentFrom)
+    const toDate = parseMaybeDate(currentTo)
+    const [range, setRange] = React.useState<DateRange | undefined>(
+        fromDate || toDate
+            ? {
+                from: fromDate || undefined,
+                to: toDate || undefined,
+            }
+            : undefined
+    )
+
+    React.useEffect(() => {
+        const nextFrom = parseMaybeDate(currentFrom)
+        const nextTo = parseMaybeDate(currentTo)
+        setRange(
+            nextFrom || nextTo
+                ? {
+                    from: nextFrom || undefined,
+                    to: nextTo || undefined,
+                }
+                : undefined
+        )
+    }, [currentFrom, currentTo])
+
+    const label = fromDate || toDate
+        ? `${fromDate ? format(fromDate, "dd MMM") : "…"} - ${toDate ? format(toDate, "dd MMM") : "…"}`
+        : (PERIOD_OPTIONS.find((option) => option.value === currentPeriod)?.label || "Period")
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -358,31 +429,63 @@ function PeriodCombobox({
                     )}
                 >
                     <CalendarDays className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
-                    <span>Period</span>
+                    <span className="max-w-[140px] truncate">{label}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[220px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
-                <Command className="rounded-xl">
-                    <CommandList>
-                        <CommandGroup>
-                            {PERIOD_OPTIONS.map((option) => (
-                                <CommandItem
-                                    key={option.value}
-                                    value={option.label}
-                                    onSelect={() => {
-                                        onSelect(option.value)
-                                        setOpen(false)
-                                    }}
-                                    className="cursor-pointer rounded-lg"
-                                >
-                                    <Check className={cn("mr-2 h-4 w-4", currentPeriod === option.value ? "opacity-100" : "opacity-0")} />
-                                    {option.label}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
+            <PopoverContent align="start" className="w-[320px] rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+                <div className="grid grid-cols-2 gap-2">
+                    {PERIOD_OPTIONS.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                                onSelectPreset(option.value)
+                                setOpen(false)
+                            }}
+                            className={cn(
+                                "inline-flex h-8 items-center justify-center rounded-md border px-2 text-xs font-medium transition-colors",
+                                currentPeriod === option.value && !currentFrom && !currentTo
+                                    ? "border-blue-200 bg-blue-50 text-blue-700"
+                                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                            )}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="my-3 h-px bg-slate-200" />
+
+                <Calendar
+                    mode="range"
+                    selected={range}
+                    onSelect={(nextRange) => {
+                        setRange(nextRange)
+                        if (nextRange?.from && nextRange?.to) {
+                            onSelectRange(nextRange)
+                            setOpen(false)
+                        }
+                    }}
+                    numberOfMonths={1}
+                    className="rounded-xl border border-slate-100 bg-slate-50/50"
+                />
+
+                <div className="mt-3 flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onSelectPreset("all_time")
+                            setOpen(false)
+                        }}
+                        className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                    >
+                        Clear range
+                    </button>
+                    <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-400">
+                        Pick start and end date
+                    </span>
+                </div>
             </PopoverContent>
         </Popover>
     )

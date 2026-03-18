@@ -1105,14 +1105,18 @@ export function ProjectsBoardRows({
                             <button
                                 type="button"
                                 onClick={() => setCreateProjectOpen(true)}
-                                className={cn("w-full text-left grid gap-x-2 items-center rounded-xl border border-dashed border-primary/30 bg-primary/5 px-6 py-4 transition-all hover:bg-primary/10 group/shadow", LIST_GRID_COLUMNS)}
+                                className={cn(
+                                    "w-full text-left grid gap-x-2 items-center rounded-xl border border-dashed border-slate-200 bg-slate-50/30 px-6 py-4 transition-all hover:bg-blue-50/40 hover:border-blue-300 group/shadow",
+                                    LIST_GRID_COLUMNS
+                                )}
                             >
-                                <div className="min-w-0 flex items-center gap-4">
-                                    <div className="h-6 w-16 bg-primary/10 rounded-full animate-pulse flex-shrink-0" />
-                                    <div className="flex items-center gap-2">
-                                        <Plus className="h-4 w-4 text-primary group-hover/shadow:scale-110 transition-transform" />
-                                        <span className="text-sm font-semibold text-primary">Add new project...</span>
+                                <div className="min-w-0 flex items-center gap-3">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-100 shadow-sm group-hover/shadow:border-blue-200 transition-all">
+                                        <Plus className="h-4 w-4 text-slate-400 group-hover/shadow:text-blue-600 group-hover/shadow:scale-110 transition-all" />
                                     </div>
+                                    <span className="text-sm font-semibold text-slate-500 group-hover/shadow:text-blue-600 transition-colors">
+                                        Add new project...
+                                    </span>
                                 </div>
                             </button>
                         </div>

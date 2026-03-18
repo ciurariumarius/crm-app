@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ServiceSheetContent } from "@/components/services/service-sheet-content"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { LayoutGrid, ListFilter } from "lucide-react"
+import { LayoutGrid, ListFilter, RefreshCcw, Zap, Check } from "lucide-react"
 
 type ServiceProjectStatus = {
     status: string
@@ -63,31 +63,33 @@ export function ServicesListView({ services }: ServicesListViewProps) {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/60 shadow-sm">
-                <div className="flex items-center gap-2 text-slate-500">
-                    <LayoutGrid className="h-4 w-4" />
-                    <span className="text-xs font-bold uppercase tracking-widest">{services.length} Templates</span>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 shadow-sm backdrop-blur-md w-max">
+                    <LayoutGrid className="h-4 w-4 text-slate-500" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-600">{services.length} Templates</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 text-slate-400">
-                        <ListFilter className="h-4 w-4" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Sort by</span>
+                    <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-slate-400">
+                            <ListFilter className="h-4 w-4" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Sort by</span>
+                        </div>
+                        <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+                            <SelectTrigger className="h-7 w-[160px] border-none bg-transparent text-xs font-bold shadow-none focus:ring-0 p-0 text-slate-700">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                                <SelectItem value="newest" className="text-xs font-semibold">Newest First</SelectItem>
+                                <SelectItem value="oldest" className="text-xs font-semibold">Oldest First</SelectItem>
+                                <SelectItem value="name-asc" className="text-xs font-semibold">Name (A-Z)</SelectItem>
+                                <SelectItem value="name-desc" className="text-xs font-semibold">Name (Z-A)</SelectItem>
+                                <SelectItem value="fee-high" className="text-xs font-semibold">Fee (High to Low)</SelectItem>
+                                <SelectItem value="fee-low" className="text-xs font-semibold">Fee (Low to High)</SelectItem>
+                                <SelectItem value="active-projects" className="text-xs font-semibold">Most Active</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
-                        <SelectTrigger className="h-9 w-[180px] rounded-xl border-slate-200 bg-white text-xs font-bold shadow-none focus:ring-blue-500/10 transition-all">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                            <SelectItem value="newest" className="text-xs font-semibold">Newest First</SelectItem>
-                            <SelectItem value="oldest" className="text-xs font-semibold">Oldest First</SelectItem>
-                            <SelectItem value="name-asc" className="text-xs font-semibold">Name (A-Z)</SelectItem>
-                            <SelectItem value="name-desc" className="text-xs font-semibold">Name (Z-A)</SelectItem>
-                            <SelectItem value="fee-high" className="text-xs font-semibold">Fee (High to Low)</SelectItem>
-                            <SelectItem value="fee-low" className="text-xs font-semibold">Fee (Low to High)</SelectItem>
-                            <SelectItem value="active-projects" className="text-xs font-semibold">Most Active</SelectItem>
-                        </SelectContent>
-                    </Select>
                 </div>
             </div>
 
@@ -111,21 +113,29 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                 <CardHeader className="pb-3 bg-slate-50/50">
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-2">
-                                            <Badge variant={service.isRecurring ? "default" : "secondary"} className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">
-                                                {service.isRecurring ? "Recurring" : "One-time"}
-                                            </Badge>
-                                            <CardTitle className="text-xl font-black italic tracking-tighter text-slate-800">{service.serviceName}</CardTitle>
+                                            {service.isRecurring ? (
+                                                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-violet-50 text-violet-700 border border-violet-200 w-max">
+                                                    <RefreshCcw className="h-3 w-3" />
+                                                    Recurring
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 w-max">
+                                                    <Zap className="h-3 w-3" />
+                                                    One-Time
+                                                </span>
+                                            )}
+                                            <CardTitle className="text-[18px] font-bold tracking-tight text-slate-900">{service.serviceName}</CardTitle>
                                         </div>
                                     </div>
                                     <CardDescription className="pt-2 flex flex-col gap-0.5">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                                            <span className="font-black text-blue-600">{activeCount}</span> Active
+                                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                            <span className="font-bold text-slate-700">{activeCount}</span> Active
                                             <span className="text-slate-300">•</span>
-                                            <span className="font-black text-emerald-600">{completedCount}</span> Done
+                                            <span className="font-bold text-slate-700">{completedCount}</span> Done
                                             {service.baseFee && (
                                                 <>
                                                     <span className="text-slate-300 ml-auto">•</span>
-                                                    <span className="font-black text-slate-900">{service.baseFee.toString()} RON</span>
+                                                    <span className="font-bold text-slate-900">{service.baseFee.toString()} RON</span>
                                                 </>
                                             )}
                                         </div>
@@ -136,11 +146,11 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                             <ListFilter className="h-3 w-3" /> Standard Checklist
                                         </div>
-                                        <ul className="text-xs space-y-2 list-none font-medium text-slate-600">
+                                        <ul className="text-[13px] space-y-2 list-none font-medium text-slate-600">
                                             {tasks.slice(0, 4).map((task, i) => (
-                                                <li key={i} className="flex items-center gap-2 truncate">
-                                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500/30 shrink-0" />
-                                                    {task}
+                                                <li key={i} className="flex items-start gap-2 line-clamp-2">
+                                                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                                    <span>{task}</span>
                                                 </li>
                                             ))}
                                             {tasks.length > 4 && <li className="text-blue-600/60 font-bold text-[10px] uppercase tracking-widest pl-3.5">+{tasks.length - 4} more steps</li>}
