@@ -700,8 +700,8 @@ export function ProjectSheetContent({
 
     const isTimerForProject = timerState.projectId === project.id && !timerState.taskId
     const logsSeconds = (project.timeLogs || []).reduce((sum, log) => sum + (log.durationSeconds || 0), 0)
-    const runningSeconds = isTimerForProject ? timerState.elapsedSeconds : 0
-    const totalTrackedSeconds = logsSeconds + runningSeconds
+    const currentSessionSeconds = isTimerForProject ? timerState.elapsedSeconds : 0
+    const totalTrackedSeconds = logsSeconds + currentSessionSeconds
     const isProjectTimerRunning = isTimerForProject && timerState.isRunning
     const isProjectTimerPaused = isTimerForProject && !timerState.isRunning
     const timerStatusLabel = isProjectTimerRunning ? "Running" : isProjectTimerPaused ? "Paused" : "Ready"
@@ -1197,11 +1197,18 @@ export function ProjectSheetContent({
 
                             <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
-                                    <div>
+                                    <div className="grid gap-2">
                                         <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Project Time Tracker</p>
-                                        <div className="mt-1 flex items-center gap-2">
-                                            <span className="font-mono text-2xl font-bold leading-none text-slate-900 tabular-nums">
-                                                {formatClock(totalTrackedSeconds)}
+                                        <div className="inline-flex items-baseline gap-2">
+                                            <span className="text-sm font-semibold text-slate-500">Total tracked (all time):</span>
+                                            <span className="font-mono text-3xl font-black leading-none tabular-nums text-slate-900">
+                                                {loggedHours}h {loggedMinutes}m
+                                            </span>
+                                        </div>
+                                        <div className="inline-flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-slate-400">Current session</span>
+                                            <span className="font-mono text-lg font-bold leading-none tabular-nums text-slate-700">
+                                                {formatClock(currentSessionSeconds)}
                                             </span>
                                             <span className={cn(
                                                 "text-[10px] font-bold uppercase tracking-[0.04em]",
@@ -1209,9 +1216,6 @@ export function ProjectSheetContent({
                                             )}>
                                                 {timerStatusLabel}
                                             </span>
-                                        </div>
-                                        <div className="mt-1 text-[11px] font-medium text-slate-500">
-                                            {loggedHours}h {loggedMinutes}m logged
                                         </div>
                                     </div>
 

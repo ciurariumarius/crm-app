@@ -5,16 +5,8 @@ import {
     SlidersHorizontal,
 } from "lucide-react"
 import {
-    endOfDay,
-    endOfMonth,
-    endOfYear,
     isValid,
     parseISO,
-    startOfDay,
-    startOfMonth,
-    startOfYear,
-    subMonths,
-    subYears,
 } from "date-fns"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
@@ -74,6 +66,16 @@ function parseDateParam(value: string | undefined) {
     const parsed = parseISO(value)
     if (!isValid(parsed)) return null
     return parsed
+}
+
+function utcDate(year: number, monthIndex: number, day = 1) {
+    return new Date(Date.UTC(year, monthIndex, day, 0, 0, 0, 0))
+}
+
+function addUtcDays(date: Date, days: number) {
+    const next = new Date(date)
+    next.setUTCDate(next.getUTCDate() + days)
+    return next
 }
 
 type ProjectBoardSortBy = "createdAt" | "updatedAt" | "amount" | "name" | "time"
@@ -147,44 +149,57 @@ export default async function ProjectsPage({
     const parsedTo = parseDateParam(toParam)
 
     if (parsedFrom || parsedTo) {
-        const fromDate = parsedFrom ? startOfDay(parsedFrom) : undefined
-        const toDate = parsedTo ? endOfDay(parsedTo) : undefined
-        const rangeStart = fromDate && toDate ? (fromDate <= toDate ? fromDate : startOfDay(parsedTo as Date)) : (fromDate || toDate)
-        const rangeEnd = fromDate && toDate ? (fromDate <= toDate ? toDate : endOfDay(parsedFrom as Date)) : (fromDate ? endOfDay(fromDate) : toDate)
+        const fromDate = parsedFrom
+            ? utcDate(parsedFrom.getUTCFullYear(), parsedFrom.getUTCMonth(), parsedFrom.getUTCDate())
+            : undefined
+        const toDateStart = parsedTo
+            ? utcDate(parsedTo.getUTCFullYear(), parsedTo.getUTCMonth(), parsedTo.getUTCDate())
+            : undefined
+        const toDateExclusive = toDateStart ? addUtcDays(toDateStart, 1) : undefined
+        const rangeStart = fromDate && toDateStart
+            ? (fromDate <= toDateStart ? fromDate : toDateStart)
+            : (fromDate || toDateStart)
+        const rangeEndExclusive = fromDate && toDateExclusive
+            ? (fromDate <= (toDateStart as Date) ? toDateExclusive : addUtcDays(fromDate, 1))
+            : (fromDate ? addUtcDays(fromDate, 1) : toDateExclusive)
         dateFilter = {
             createdAt: {
                 ...(rangeStart ? { gte: rangeStart } : {}),
-                ...(rangeEnd ? { lte: rangeEnd } : {}),
+                ...(rangeEndExclusive ? { lt: rangeEndExclusive } : {}),
             },
         }
     } else if (period === "this_month") {
+        const year = now.getUTCFullYear()
+        const month = now.getUTCMonth()
         dateFilter = {
             createdAt: {
-                gte: startOfMonth(now),
-                lte: endOfMonth(now),
+                gte: utcDate(year, month, 1),
+                lt: utcDate(year, month + 1, 1),
             },
         }
     } else if (period === "last_month") {
-        const lastMonth = subMonths(now, 1)
+        const currentStart = utcDate(now.getUTCFullYear(), now.getUTCMonth(), 1)
+        const lastMonthStart = utcDate(currentStart.getUTCFullYear(), currentStart.getUTCMonth() - 1, 1)
         dateFilter = {
             createdAt: {
-                gte: startOfMonth(lastMonth),
-                lte: endOfMonth(lastMonth),
+                gte: lastMonthStart,
+                lt: currentStart,
             },
         }
     } else if (period === "this_year") {
+        const year = now.getUTCFullYear()
         dateFilter = {
             createdAt: {
-                gte: startOfYear(now),
-                lte: endOfYear(now),
+                gte: utcDate(year, 0, 1),
+                lt: utcDate(year + 1, 0, 1),
             },
         }
     } else if (period === "last_year") {
-        const lastYear = subYears(now, 1)
+        const year = now.getUTCFullYear() - 1
         dateFilter = {
             createdAt: {
-                gte: startOfYear(lastYear),
-                lte: endOfYear(lastYear),
+                gte: utcDate(year, 0, 1),
+                lt: utcDate(year + 1, 0, 1),
             },
         }
     }
