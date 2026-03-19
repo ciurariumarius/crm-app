@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { requireTenantContext } from "@/lib/tenant"
+import { apiRouteError } from "@/lib/api-response"
 import {
     getProjectNoteMimeTypeFromRelativePath,
     getTenantIdFromProjectNotePath,
@@ -62,10 +63,6 @@ export async function GET(request: Request) {
         })
     } catch (error) {
         if (error instanceof Error) {
-            if (error.message === "Unauthorized") {
-                return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
-            }
-
             if (error.message.includes("Invalid project note path")) {
                 return NextResponse.json({ success: false, error: "Invalid file path." }, { status: 400 })
             }
@@ -76,6 +73,12 @@ export async function GET(request: Request) {
             return NextResponse.json({ success: false, error: "File not found." }, { status: 404 })
         }
 
-        return NextResponse.json({ success: false, error: "Failed to load file." }, { status: 500 })
+        return apiRouteError(error, {
+            unauthorizedMessage: "Unauthorized",
+            unauthorizedCode: "AUTH_REQUIRED",
+            fallbackMessage: "Failed to load file.",
+            fallbackCode: "PROJECT_NOTE_FILE_LOAD_FAILED",
+            logLabel: "[project-notes/file] failed",
+        })
     }
 }

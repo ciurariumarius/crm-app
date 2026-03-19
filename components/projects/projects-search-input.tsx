@@ -25,10 +25,31 @@ export function ProjectsSearchInput() {
     }, [searchContext, searchParams])
 
     React.useEffect(() => {
-        if (searchContext) return
+        if (searchContext) {
+            if (typeof window === "undefined") return
+            const params = new URLSearchParams(window.location.search)
+            const currentQ = params.get("q") || ""
+            if (debouncedSearch === currentQ) return
+
+            if (debouncedSearch) {
+                params.set("q", debouncedSearch)
+            } else {
+                params.delete("q")
+            }
+            params.delete("page")
+
+            const queryString = params.toString()
+            const nextUrl = queryString ? `${pathname}?${queryString}` : pathname
+            const currentUrl = `${pathname}${window.location.search}`
+
+            if (nextUrl !== currentUrl) {
+                window.history.replaceState(window.history.state, "", nextUrl)
+            }
+            return
+        }
+
         const params = new URLSearchParams(searchParams.toString())
         const currentQ = params.get("q") || ""
-
         if (debouncedSearch !== currentQ) {
             if (debouncedSearch) {
                 params.set("q", debouncedSearch)
@@ -37,7 +58,7 @@ export function ProjectsSearchInput() {
             }
             params.delete("page")
             const queryString = params.toString()
-            router.replace(queryString ? `${pathname}?${queryString}` : pathname)
+            router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
         }
     }, [debouncedSearch, pathname, router, searchContext, searchParams])
 

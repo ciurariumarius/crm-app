@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { readFile } from "node:fs/promises"
-import { apiError } from "@/lib/api-response"
+import { apiError, apiRouteError } from "@/lib/api-response"
 import { matchesBearerOrHeaderSecret } from "@/lib/http-auth"
 
 const DEBUG_HEADERS = {
@@ -57,10 +57,13 @@ export async function GET(request: Request) {
             { headers: DEBUG_HEADERS }
         )
     } catch (error) {
-        return apiError(
-            error instanceof Error ? error.message : "Unknown error",
-            500,
-            { code: "DEBUG_LOG_READ_FAILED", headers: DEBUG_HEADERS }
-        );
+        return apiRouteError(error, {
+            unauthorizedMessage: "Not found",
+            unauthorizedCode: "DEBUG_UNAUTHORIZED",
+            fallbackMessage: "Failed to read debug logs",
+            fallbackCode: "DEBUG_LOG_READ_FAILED",
+            headers: DEBUG_HEADERS,
+            logLabel: "API debug-server-logs error:",
+        })
     }
 }

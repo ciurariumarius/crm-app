@@ -24,7 +24,6 @@ import {
     Trash2,
     X,
 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -45,6 +44,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ProjectWithDetails } from "@/types"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { Service, Site } from "@prisma/client"
+import { SidePanelChip, SidePanelEmptyState, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
+import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
 
 type UpdateProjectPayload = {
     name?: string
@@ -85,6 +86,7 @@ interface ProjectSheetContentProps {
     hourlyRate?: number
     onUpdate?: (updatedProject: ProjectWithDetails) => void
     onOpenSite?: (site: Site) => void
+    onOpenPartner?: (partnerId: string) => void
     standalone?: boolean
     onClose?: () => void
 }
@@ -182,6 +184,7 @@ export function ProjectSheetContent({
     hourlyRate = 0,
     onUpdate,
     onOpenSite,
+    onOpenPartner,
     standalone = false,
     onClose,
 }: ProjectSheetContentProps) {
@@ -976,43 +979,40 @@ export function ProjectSheetContent({
                         </div>
 
                         <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Tasks</h2>
+                            <SidePanelSectionTitle title="Project tasks" />
                             <ProjectTasks projectId={project.id} initialTasks={project.tasks || []} />
                         </section>
 
                         <section className="space-y-3 border-t border-slate-200/80 pt-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Notes</h2>
-                                <span
-                                    className={cn(
-                                        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
-                                        notesSaveState === "error" &&
-                                        "border-rose-200 bg-rose-50 text-rose-600",
-                                        notesSaveState === "saving" &&
-                                        "border-blue-200 bg-blue-50 text-blue-600",
-                                        notesSaveState === "typing" &&
-                                        "border-slate-200 bg-slate-100 text-slate-500",
-                                        notesSaveState === "saved" &&
-                                        "border-emerald-200 bg-emerald-50 text-emerald-600",
-                                        notesSaveState === "idle" &&
-                                        "border-slate-200 bg-slate-100 text-slate-500"
+                                <SidePanelSectionTitle title="Project notes" />
+                                <SidePanelChip
+                                    tone={sidePanelChipToneByLabel(
+                                        notesSaveState === "idle"
+                                            ? "ready"
+                                            : notesSaveState
                                     )}
-                                >
-                                    {notesSaveState === "saving" && (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    )}
-                                    {notesSaveState === "saved" && (
-                                        <CheckCircle className="h-3.5 w-3.5" />
-                                    )}
-                                    {notesSaveState === "error" && (
-                                        <AlertCircle className="h-3.5 w-3.5" />
-                                    )}
-                                    {notesSaveState === "idle" && "Ready"}
-                                    {notesSaveState === "typing" && "Typing"}
-                                    {notesSaveState === "saving" && "Saving"}
-                                    {notesSaveState === "saved" && "Saved"}
-                                    {notesSaveState === "error" && "Error"}
-                                </span>
+                                    icon={
+                                        notesSaveState === "saving"
+                                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            : notesSaveState === "saved"
+                                                ? <CheckCircle className="h-3.5 w-3.5" />
+                                                : notesSaveState === "error"
+                                                    ? <AlertCircle className="h-3.5 w-3.5" />
+                                                    : undefined
+                                    }
+                                    label={
+                                        notesSaveState === "idle"
+                                            ? "Ready"
+                                            : notesSaveState === "typing"
+                                                ? "Typing"
+                                                : notesSaveState === "saving"
+                                                    ? "Saving"
+                                                    : notesSaveState === "saved"
+                                                        ? "Saved"
+                                                        : "Error"
+                                    }
+                                />
                             </div>
 
                             <RichTextEditor
@@ -1280,9 +1280,7 @@ export function ProjectSheetContent({
 
                             <div className="space-y-1.5">
                                 {recentLogs.length === 0 && (
-                                    <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500">
-                                        No time logged for this project yet.
-                                    </div>
+                                    <SidePanelEmptyState message="No time logged for this project yet." className="py-8 text-sm" />
                                 )}
 
                                 {recentLogs.map((log) => {
@@ -1305,12 +1303,14 @@ export function ProjectSheetContent({
                                                     </p>
                                                     <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                                                         <span>
-                                                            {start ? format(start, "HH:mm") : "--:--"} - {end ? format(end, "HH:mm") : "Ongoing"}
+                                                        {start ? format(start, "HH:mm") : "--:--"} - {end ? format(end, "HH:mm") : "Ongoing"}
                                                         </span>
                                                         {log.task?.name && (
-                                                            <Badge className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em] text-emerald-700">
-                                                                {log.task.name}
-                                                            </Badge>
+                                                            <SidePanelChip
+                                                                tone="emerald"
+                                                                label={log.task.name}
+                                                                className="rounded-md px-2 py-0.5 text-xs"
+                                                            />
                                                         )}
                                                     </div>
                                                 </div>
@@ -1326,10 +1326,7 @@ export function ProjectSheetContent({
                         </section>
 
                         <section className="space-y-2 border-t border-slate-200/80 pt-3">
-                            <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-                                <History className="h-3.5 w-3.5" />
-                                Payment History (Log)
-                            </h2>
+                            <SidePanelSectionTitle title="Payment history (log)" icon={<History className="h-3.5 w-3.5" />} />
                             <div className="space-y-1.5">
                                 {isLoadingHistory && paymentHistory.length === 0 ? (
                                     <div className="flex items-center justify-center py-6 text-slate-400">
@@ -1337,9 +1334,7 @@ export function ProjectSheetContent({
                                         <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
                                     </div>
                                 ) : paymentHistory.length === 0 ? (
-                                    <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                        No payment records found.
-                                    </div>
+                                    <SidePanelEmptyState message="No payment records found." />
                                 ) : (
                                     paymentHistory.map((entry) => (
                                         <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
@@ -1357,12 +1352,11 @@ export function ProjectSheetContent({
                                                     </span>
                                                 </div>
                                             </div>
-                                            <Badge variant="outline" className={cn(
-                                                "text-[9px] font-black uppercase tracking-widest border-none",
-                                                entry.status === "Paid" ? "bg-[#ECFDF5] text-[#10B981]" : "bg-[#FFF1F2] text-[#E11D48]"
-                                            )}>
-                                                {entry.status}
-                                            </Badge>
+                                            <SidePanelChip
+                                                tone={sidePanelChipToneByLabel(entry.status)}
+                                                label={entry.status}
+                                                className="text-[10px]"
+                                            />
                                         </div>
                                     ))
                                 )}
@@ -1370,10 +1364,7 @@ export function ProjectSheetContent({
                         </section>
 
                         <section className="space-y-2 border-t border-slate-200/80 pt-3">
-                            <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-                                <Clock3 className="h-3.5 w-3.5" />
-                                Status History (Log)
-                            </h2>
+                            <SidePanelSectionTitle title="Status history (log)" icon={<Clock3 className="h-3.5 w-3.5" />} />
                             <div className="space-y-1.5">
                                 {isLoadingStatusHistory && statusHistoryEntries.length === 0 ? (
                                     <div className="flex items-center justify-center py-6 text-slate-400">
@@ -1381,9 +1372,7 @@ export function ProjectSheetContent({
                                         <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
                                     </div>
                                 ) : statusHistoryEntries.length === 0 ? (
-                                    <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                        No status records found.
-                                    </div>
+                                    <SidePanelEmptyState message="No status records found." />
                                 ) : (
                                     statusHistoryEntries.map((entry) => (
                                         <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
@@ -1414,19 +1403,11 @@ export function ProjectSheetContent({
                                                     </span>
                                                 </div>
                                             </div>
-                                            <Badge
-                                                variant="outline"
-                                                className={cn(
-                                                    "border-none text-[9px] font-black uppercase tracking-widest",
-                                                    entry.toStatus === "Active" && "bg-blue-50 text-blue-600",
-                                                    entry.toStatus === "Paused" && "bg-amber-50 text-amber-600",
-                                                    entry.toStatus === "Completed" && "bg-emerald-50 text-emerald-600",
-                                                    entry.toStatus === "Closed" && "bg-slate-100 text-slate-600",
-                                                    !["Active", "Paused", "Completed", "Closed"].includes(entry.toStatus) && "bg-slate-100 text-slate-600"
-                                                )}
-                                            >
-                                                {entry.toStatus}
-                                            </Badge>
+                                            <SidePanelChip
+                                                tone={sidePanelChipToneByLabel(entry.toStatus)}
+                                                label={entry.toStatus}
+                                                className="text-[10px]"
+                                            />
                                         </div>
                                     ))
                                 )}
@@ -1434,25 +1415,31 @@ export function ProjectSheetContent({
                         </section>
 
                         <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Info</h2>
+                            <SidePanelSectionTitle title="Project info" />
 
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <Link
-                                    href={`/partners/${project.site.partner.id}`}
-                                    className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300"
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (onOpenPartner) onOpenPartner(project.site.partner.id)
+                                        else router.push(`/partners/${project.site.partner.id}`)
+                                    }}
+                                    className="text-left"
                                 >
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Partner</p>
-                                    <div className="mt-1 flex items-center justify-between gap-3">
-                                        <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
-                                            {project.site.partner.name}
-                                        </p>
-                                        <FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
-                                    </div>
-                                </Link>
+                                    <SidePanelInfoCard
+                                        title="Partner"
+                                        subtitle={(
+                                            <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
+                                                {project.site.partner.name}
+                                            </p>
+                                        )}
+                                        action={<FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />}
+                                    />
+                                </button>
 
-                                <div className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300">
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Domain</p>
-                                    <div className="mt-1 flex items-center justify-between gap-3">
+                                <SidePanelInfoCard
+                                    title="Domain"
+                                    subtitle={(
                                         <button
                                             type="button"
                                             onClick={openSitePanel}
@@ -1461,38 +1448,46 @@ export function ProjectSheetContent({
                                         >
                                             {project.site.domainName}
                                         </button>
+                                    )}
+                                    action={
                                         <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
                                             <Globe className="h-4 w-4" />
                                             <ArrowUpRight className="h-4 w-4" />
                                         </span>
-                                    </div>
-                                    <div className="mt-3 flex items-center gap-2">
+                                    }
+                                >
+                                    <div className="flex items-center gap-2">
                                         {externalSiteUrl ? (
                                             <a
                                                 href={externalSiteUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700 transition hover:bg-blue-100"
                                             >
-                                                Open website
-                                                <ArrowUpRight className="h-3.5 w-3.5" />
+                                                <SidePanelChip
+                                                    tone="blue"
+                                                    label={(
+                                                        <>
+                                                            Open website
+                                                            <ArrowUpRight className="h-3.5 w-3.5" />
+                                                        </>
+                                                    )}
+                                                    className="rounded-lg px-2.5 py-1.5 text-[10px]"
+                                                />
                                             </a>
                                         ) : (
-                                            <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
-                                                Open website
-                                            </span>
+                                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-[10px] opacity-70" />
                                         )}
                                     </div>
-                                </div>
+                                </SidePanelInfoCard>
                             </div>
 
                             <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                 <div className="flex items-center justify-between gap-3">
-                                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Project Services</p>
+                                    <SidePanelSectionTitle title="Project services" className="text-xs" />
                                     <button
                                         type="button"
                                         onClick={() => setIsEditingServices((current) => !current)}
-                                        className="rounded-full border border-slate-300 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-600 transition hover:border-slate-400 hover:bg-slate-50"
+                                        className="rounded-full border border-slate-300 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.03em] text-slate-600 transition hover:border-slate-400 hover:bg-slate-50"
                                     >
                                         + Add
                                     </button>
@@ -1504,7 +1499,7 @@ export function ProjectSheetContent({
                                             key={service.id}
                                             type="button"
                                             onClick={() => toggleService(service.id)}
-                                            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-blue-700 transition hover:bg-blue-100/70"
+                                            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-semibold tracking-[0.03em] text-blue-700 transition hover:bg-blue-100/70"
                                         >
                                             {service.serviceName}
                                             <X className="h-3.5 w-3.5" />
@@ -1583,61 +1578,53 @@ export function ProjectSheetContent({
                             </Button>
                         </section>
 
-                        <div className="mt-12 border-t border-slate-200 pt-8 text-[11px] font-semibold text-slate-400">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                <span># Project ID: {project.id.split("-")[0]}</span>
-                                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                                    <span className="inline-flex items-center gap-1.5">
-                                        Created:
-                                        {isEditingCreatedAt ? (
-                                            <>
-                                                <Input
-                                                    type="datetime-local"
-                                                    value={createdAtInput}
-                                                    onChange={(e) => setCreatedAtInput(e.target.value)}
-                                                    className="h-7 w-[210px] border-slate-200 bg-white px-2 py-1 text-[11px]"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={handleCreatedAtSave}
-                                                    className="text-blue-600 hover:text-blue-500"
-                                                >
-                                                    Save
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setCreatedAtInput(toDateTimeLocalValue(toDate(project.createdAt)))
-                                                        setIsEditingCreatedAt(false)
-                                                    }}
-                                                    className="text-slate-500 hover:text-slate-700"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span>{formatBottomDate(toDate(project.createdAt))}</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsEditingCreatedAt(true)}
-                                                    className="text-slate-400 transition hover:text-slate-700"
-                                                    aria-label="Edit created date"
-                                                    title="Edit created date"
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                </button>
-                                            </>
-                                        )}
+                        <SidePanelMetaBar
+                            entityLabel="Project ID"
+                            entityId={project.id.split("-")[0]}
+                            createdAt={
+                                isEditingCreatedAt ? (
+                                    <span className="inline-flex items-center gap-2">
+                                        <Input
+                                            type="datetime-local"
+                                            value={createdAtInput}
+                                            onChange={(e) => setCreatedAtInput(e.target.value)}
+                                            className="h-7 w-[210px] border-slate-200 bg-white px-2 py-1 text-[11px]"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleCreatedAtSave}
+                                            className="text-blue-600 hover:text-blue-500"
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setCreatedAtInput(toDateTimeLocalValue(toDate(project.createdAt)))
+                                                setIsEditingCreatedAt(false)
+                                            }}
+                                            className="text-slate-500 hover:text-slate-700"
+                                        >
+                                            Cancel
+                                        </button>
                                     </span>
-                                    {lastUpdatedTimestamp && (
-                                        <span className="inline-flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                                            Last Updated: {formatBottomDate(lastUpdatedTimestamp)}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <span>{formatBottomDate(toDate(project.createdAt))}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditingCreatedAt(true)}
+                                            className="text-slate-400 transition hover:text-slate-700"
+                                            aria-label="Edit created date"
+                                            title="Edit created date"
+                                        >
+                                            <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                    </span>
+                                )
+                            }
+                            updatedAt={lastUpdatedTimestamp ? formatBottomDate(lastUpdatedTimestamp) : undefined}
+                        />
                     </div>
                 </div>
 
@@ -1659,9 +1646,9 @@ export function ProjectSheetContent({
                     <DialogContent
                         showCloseButton={false}
                         overlayClassName="bg-slate-900/18 backdrop-blur-[6px]"
-                        className="h-[92vh] w-[94vw] max-w-[94vw] overflow-hidden rounded-2xl border border-slate-200/80 bg-[#FCFCFB] p-0 shadow-[0_40px_100px_-45px_rgba(15,23,42,0.7)] sm:w-[65vw] sm:min-w-[65vw] sm:max-w-[65vw]"
+                        className={sidePanelDialogContentClass("default")}
                     >
-                        <DialogHeader className="border-b border-slate-200/70 px-8 py-5">
+                        <DialogHeader className={SIDE_PANEL_DIALOG_HEADER_CLASS}>
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
                                     <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-slate-900">

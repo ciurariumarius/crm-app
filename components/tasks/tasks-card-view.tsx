@@ -4,6 +4,7 @@ import * as React from "react"
 import { format, isToday, isPast } from "date-fns"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
+import { useDebounce } from "@/hooks/use-debounce"
 import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
@@ -26,6 +27,8 @@ import { useTasksSearchContext } from "./tasks-search-context"
 import type { ProjectWithDetails } from "@/types"
 import type { Service, Site } from "@prisma/client"
 import type { TaskDialogProject } from "./global-create-task-dialog"
+import type { SearchPaginationState } from "@/types/search-pagination"
+import { sidePanelClass } from "@/lib/ui/side-panels"
 
 type TimeLogSummary = {
     id?: string
@@ -82,9 +85,29 @@ interface TasksCardViewProps {
     view?: "grid" | "list"
     cols?: number
     hourlyRate?: number
+    searchApiFilters?: {
+        status: string
+        partnerId?: string
+        projectId?: string
+        urgency: string
+        overdue: boolean
+        dueToday: boolean
+        sort: string
+        page: number
+        perPage: number
+    }
 }
 
-export function TasksCardView({ tasks, allServices, initialActiveTimer: _initialActiveTimer, projects = [], view = "grid", cols = 3, hourlyRate = 0 }: TasksCardViewProps) {
+export function TasksCardView({
+    tasks,
+    allServices,
+    initialActiveTimer: _initialActiveTimer,
+    projects = [],
+    view = "grid",
+    cols = 3,
+    hourlyRate = 0,
+    searchApiFilters,
+}: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const searchContext = useTasksSearchContext()
     void _initialActiveTimer
@@ -95,6 +118,10 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer: _initial
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
     const [isBulkOperating, setIsBulkOperating] = React.useState(false)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
+    const [remoteTasks, setRemoteTasks] = React.useState<TaskCardViewTask[] | null>(null)
+    const searchCacheRef = React.useRef<
+        Map<string, { tasks: TaskCardViewTask[]; total: number; pagination: SearchPaginationState }>
+    >(new Map())
 
     const handleStartTimer = async (task: TaskCardViewTask) => {
         if (!task.projectId) {
@@ -212,9 +239,118 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer: _initial
     }[cols] ?? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
 
     const normalizedSearch = (searchContext?.searchTerm || "").trim().toLowerCase()
+    const debouncedSearch = useDebounce(normalizedSearch, 250)
+
+    React.useEffect(() => {
+        if (!searchContext) return
+        if (!debouncedSearch) {
+            setRemoteTasks(null)
+            searchContext.setSearchResultCount(null)
+            searchContext.setSearchPagination(null)
+            searchContext.setIsSearching(false)
+            return
+        }
+
+        const params = new URLSearchParams()
+        const locationParams = typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search)
+            : null
+        const locationPage = Number(locationParams?.get("page"))
+        const effectivePage = Number.isFinite(locationPage) && locationPage > 0
+            ? Math.floor(locationPage)
+            : (searchApiFilters?.page || 1)
+        const locationPerPage = Number(locationParams?.get("perPage"))
+        const effectivePerPage = Number.isFinite(locationPerPage) && locationPerPage > 0
+            ? Math.floor(locationPerPage)
+            : (searchApiFilters?.perPage || 100)
+        params.set("q", debouncedSearch)
+        params.set("limit", "1000")
+        params.set("page", String(effectivePage))
+        params.set("perPage", String(effectivePerPage))
+        params.set("status", searchApiFilters?.status || "Active")
+        params.set("urgency", searchApiFilters?.urgency || "all")
+        params.set("sort", searchApiFilters?.sort || "newest")
+        if (searchApiFilters?.overdue) params.set("overdue", "1")
+        if (searchApiFilters?.dueToday) params.set("dueToday", "1")
+        if (searchApiFilters?.partnerId) params.set("partnerId", searchApiFilters.partnerId)
+        if (searchApiFilters?.projectId) params.set("projectId", searchApiFilters.projectId)
+
+        const cacheKey = params.toString()
+        const cached = searchCacheRef.current.get(cacheKey)
+        if (cached) {
+            setRemoteTasks(cached.tasks)
+            searchContext.setSearchResultCount(cached.total)
+            searchContext.setSearchPagination(cached.pagination)
+            searchContext.setIsSearching(false)
+            return
+        }
+
+        const controller = new AbortController()
+        let cancelled = false
+        searchContext.setIsSearching(true)
+
+        void fetch(`/api/search/tasks?${cacheKey}`, {
+            method: "GET",
+            signal: controller.signal,
+            cache: "no-store",
+        })
+            .then(async (response) => {
+                if (!response.ok) return null
+                return response.json()
+            })
+            .then((payload) => {
+                if (cancelled || !payload?.success) return
+                const nextTasks = Array.isArray(payload.tasks) ? (payload.tasks as TaskCardViewTask[]) : []
+                const total = Number(payload.total || 0)
+                const pagination = payload?.pagination as SearchPaginationState | undefined
+                const safePagination: SearchPaginationState = pagination ?? {
+                    total,
+                    page: 1,
+                    perPage: effectivePerPage,
+                    totalPages: 1,
+                    pageStart: total > 0 ? 1 : 0,
+                    pageEnd: total,
+                    shouldPaginate: false,
+                    prevPage: null,
+                    nextPage: null,
+                }
+                searchCacheRef.current.set(cacheKey, { tasks: nextTasks, total, pagination: safePagination })
+                setRemoteTasks(nextTasks)
+                searchContext.setSearchResultCount(total || nextTasks.length)
+                searchContext.setSearchPagination(safePagination)
+            })
+            .catch((error) => {
+                if (controller.signal.aborted) return
+                console.error("Task search failed", error)
+            })
+            .finally(() => {
+                if (cancelled) return
+                searchContext.setIsSearching(false)
+            })
+
+        return () => {
+            cancelled = true
+            controller.abort()
+        }
+    }, [
+        debouncedSearch,
+        searchApiFilters?.dueToday,
+        searchApiFilters?.overdue,
+        searchApiFilters?.page,
+        searchApiFilters?.partnerId,
+        searchApiFilters?.perPage,
+        searchApiFilters?.projectId,
+        searchApiFilters?.sort,
+        searchApiFilters?.status,
+        searchApiFilters?.urgency,
+        searchContext,
+    ])
+
+    const searchSourceTasks = remoteTasks ?? tasks
     const visibleTasks = React.useMemo(() => {
-        if (!normalizedSearch) return tasks
-        return tasks.filter((task) => {
+        if (!normalizedSearch) return searchSourceTasks
+        if (remoteTasks) return remoteTasks
+        return searchSourceTasks.filter((task) => {
             const fields = [
                 task.name,
                 task.description,
@@ -232,7 +368,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer: _initial
 
             return fields.includes(normalizedSearch)
         })
-    }, [normalizedSearch, tasks])
+    }, [normalizedSearch, remoteTasks, searchSourceTasks])
 
     const renderGridView = () => (
         <div className={cn("grid gap-6", colsClass)}>
@@ -455,7 +591,11 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer: _initial
                 <div className="col-span-full h-64 flex flex-col items-center justify-center border border-dashed border-border rounded-3xl bg-muted/30">
                     <Clock className="h-8 w-8 text-muted-foreground/20 mb-4" strokeWidth={1} />
                     <p className="text-sm text-muted-foreground/60 font-medium">
-                        {normalizedSearch ? "No tasks match your search." : "No active tasks found in this view."}
+                        {tasks.length === 0
+                            ? "No tasks yet. Add your first task to get started."
+                            : normalizedSearch
+                              ? "No tasks match this search."
+                              : "No tasks match the current filters."}
                     </p>
                 </div>
             ) : (
@@ -476,7 +616,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer: _initial
 
             {/* Project Details Sheet */}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <SheetContent side="right" className="z-[80] w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-background overflow-hidden sm:w-full sm:max-w-[760px]">
+                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("compact"))}>
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}
@@ -484,6 +624,7 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer: _initial
                             hourlyRate={hourlyRate}
                             onUpdate={(updated) => setSelectedProject((prev) => (prev ? { ...prev, ...updated } : prev))}
                             onOpenSite={(site) => setSelectedSite(site)}
+                            onClose={() => setSelectedProject(null)}
                         />
                     )}
                 </SheetContent>
@@ -491,11 +632,12 @@ export function TasksCardView({ tasks, allServices, initialActiveTimer: _initial
 
             {/* Site detail view if needed */}
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent className="w-screen max-w-none p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl sm:w-full sm:max-w-xl">
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow")}>
                     {selectedSite && (
                         <SiteSheetContent
                             site={selectedSite as Site & { partner?: { id: string; name: string } }}
                             onUpdate={(updated) => setSelectedSite((prev) => (prev ? { ...prev, ...updated } : prev))}
+                            onClose={() => setSelectedSite(null)}
                         />
                     )}
                 </SheetContent>

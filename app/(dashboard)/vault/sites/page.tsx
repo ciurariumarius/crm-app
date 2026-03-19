@@ -17,10 +17,10 @@ const PAGE_SIZE = 50
 export default async function SitesPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; partnerId?: string; page?: string }>
+    searchParams: Promise<{ q?: string; partnerId?: string; page?: string; sort?: string; order?: "asc" | "desc" }>
 }) {
     const session = await requireTenantContext()
-    const { q, partnerId, page: pageStr } = await searchParams
+    const { q, partnerId, page: pageStr, sort = "domainName", order = "asc" } = await searchParams
     const page = parseInt(pageStr || "1")
     const skip = (page - 1) * PAGE_SIZE
 
@@ -48,7 +48,7 @@ export default async function SitesPage({
                 select: { projects: true }
             }
         },
-        orderBy: { domainName: "asc" }
+        orderBy: { [sort]: order }
     })
 
     const totalSitesPromise = prisma.site.count({ where })
@@ -72,6 +72,8 @@ export default async function SitesPage({
         const next = new URLSearchParams()
         if (q) next.set("q", q)
         if (partnerId && partnerId !== "all") next.set("partnerId", partnerId)
+        if (sort !== "domainName") next.set("sort", sort)
+        if (order !== "asc") next.set("order", order)
         next.set("page", String(targetPage))
         return `/domains?${next.toString()}`
     }
@@ -85,13 +87,17 @@ export default async function SitesPage({
                 totalLogs={totalSites} 
             />
 
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur-md transition-all">
-                <SitesTable sites={sitesRaw} />
+            <div className="space-y-6">
+                <SitesTable 
+                    sites={sitesRaw} 
+                    currentSort={sort}
+                    currentOrder={order}
+                />
                 
                 {/* Pagination Footer */}
-                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-4">
+                <div className="flex items-center justify-between px-6 py-4">
                     <p className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
-                        Page {page} of {totalPages || 1}
+                        Page {page} of {totalPages || 1} · {totalSites} Total Domains
                     </p>
                     
                     <div className="flex items-center gap-2">
@@ -101,16 +107,20 @@ export default async function SitesPage({
                             asChild={page > 1}
                             disabled={page <= 1}
                             className={cn(
-                                "h-8 w-8 p-0 rounded-lg border border-slate-200 bg-white shadow-sm transition-all active:scale-95",
+                                "h-9 px-4 rounded-xl border border-slate-200 bg-white shadow-sm transition-all active:scale-95 text-xs font-bold uppercase tracking-wider",
                                 page <= 1 ? "opacity-40" : "hover:bg-slate-50 hover:text-blue-600"
                             )}
                         >
                             {page > 1 ? (
-                                <Link href={buildPageHref(page - 1)}>
+                                <Link href={buildPageHref(page - 1)} className="flex items-center gap-2">
                                     <ChevronLeft className="h-4 w-4" />
+                                    Previous
                                 </Link>
                             ) : (
-                                <ChevronLeft className="h-4 w-4" />
+                                <span className="flex items-center gap-2">
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Previous
+                                </span>
                             )}
                         </Button>
                         
@@ -120,16 +130,20 @@ export default async function SitesPage({
                             asChild={page < totalPages}
                             disabled={page >= totalPages}
                             className={cn(
-                                "h-8 w-8 p-0 rounded-lg border border-slate-200 bg-white shadow-sm transition-all active:scale-95",
+                                "h-9 px-4 rounded-xl border border-slate-200 bg-white shadow-sm transition-all active:scale-95 text-xs font-bold uppercase tracking-wider",
                                 page >= totalPages ? "opacity-40" : "hover:bg-slate-50 hover:text-blue-600"
                             )}
                         >
                             {page < totalPages ? (
-                                <Link href={buildPageHref(page + 1)}>
+                                <Link href={buildPageHref(page + 1)} className="flex items-center gap-2">
+                                    Next
                                     <ChevronRight className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <ChevronRight className="h-4 w-4" />
+                                <span className="flex items-center gap-2">
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </span>
                             )}
                         </Button>
                     </div>

@@ -65,14 +65,14 @@ function PriorityBadge({ urgency }: { urgency: string }) {
 
     if (normalizedUrgency === "Urgent") {
         return (
-            <span className="inline-flex items-center px-2.5 py-1.5 rounded-md text-[11px] font-black uppercase tracking-tight bg-[#F84444] text-white shadow-sm">
-                URGENT
+            <span className="inline-flex items-center rounded-md bg-[#F84444] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] text-white shadow-sm">
+                Urgent
             </span>
         )
     }
     if (normalizedUrgency === "Idea") {
         return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-sky-50 text-sky-600 border border-sky-200">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[12px] font-semibold tracking-[0.01em] text-sky-600">
                 <Lightbulb className="h-3.5 w-3.5" />
                 Idea
             </span>
@@ -86,13 +86,13 @@ function DeadlineBadge({ deadline }: { deadline: string | Date | null | undefine
     const date = new Date(deadline)
     if (Number.isNaN(date.getTime())) return null
 
-    const label = format(date, "d MMMM").toUpperCase()
+    const label = format(date, "d MMMM")
     const overdue = isBefore(date, startOfDay(new Date()))
 
     return (
         <span
             className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-tight",
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold tracking-[0.01em]",
                 overdue
                     ? "bg-rose-100 text-rose-700"
                     : "bg-rose-50 text-rose-500"
@@ -255,10 +255,7 @@ export function TaskGridCard({
                     {hasValidCreatedAt && createdAtDate && (
                         <div className="flex items-center gap-1.5 text-slate-400 shrink-0">
                             <CalendarIcon className="h-3.5 w-3.5" />
-                            <span
-                                className="text-[11px] font-medium"
-                                title={format(createdAtDate, "dd MMM yyyy, HH:mm")}
-                            >
+                            <span className="text-[12px] font-medium" title={format(createdAtDate, "dd MMM yyyy, HH:mm")}>
                                 {format(createdAtDate, "d MMM")}
                             </span>
                         </div>

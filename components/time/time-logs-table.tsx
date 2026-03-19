@@ -106,10 +106,10 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                 <Table className="table-cockpit">
                     <TableHeader>
                         <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                            <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Project</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Time</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Description</TableHead>
-                            <TableHead className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Duration</TableHead>
+                            <TableHead className="text-[11px] font-semibold tracking-[0.03em] text-slate-500">Project</TableHead>
+                            <TableHead className="text-[11px] font-semibold tracking-[0.03em] text-slate-500">Time</TableHead>
+                            <TableHead className="text-[11px] font-semibold tracking-[0.03em] text-slate-500">Description</TableHead>
+                            <TableHead className="text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Duration</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -134,7 +134,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                     {/* Date Header */}
                                     <TableRow key={dateKey} className="hover:bg-transparent sticky top-0 z-20">
                                         <TableCell colSpan={5} className="py-2.5 px-0 border-b border-slate-50 bg-white/80 backdrop-blur-sm">
-                                            <span className="font-bold text-[10px] uppercase tracking-[0.15em] text-slate-400">
+                                            <span className="text-[11px] font-semibold tracking-[0.03em] text-slate-500">
                                                 {isToday(new Date(dateKey)) ? "Today" : isYesterday(new Date(dateKey)) ? "Yesterday" : format(new Date(dateKey), "MMM d, yyyy")}
                                             </span>
                                         </TableCell>
@@ -159,18 +159,18 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                             {formatProjectName(log.project)}
                                                         </span>
                                                         {log.task ? (
-                                                            <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                                                            <div className="flex items-center gap-1 text-[12px] font-medium text-slate-500">
                                                                 <CheckSquare className="h-3 w-3 opacity-70" />
                                                                 <span className="truncate max-w-[250px]">{log.task.name}</span>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-[11px] text-slate-400 italic font-medium">No task</span>
+                                                            <span className="text-[12px] italic font-medium text-slate-400">No task</span>
                                                         )}
                                                     </div>
                                                 </TableCell>
 
                                                 {/* Time Range */}
-                                                <TableCell className="text-[11px] font-medium text-slate-500 font-mono whitespace-nowrap">
+                                                <TableCell className="whitespace-nowrap font-mono text-[12px] font-medium text-slate-500">
                                                     {format(new Date(log.startTime), "HH:mm")} — {log.endTime ? format(new Date(log.endTime), "HH:mm") : "..."}
                                                 </TableCell>
 
@@ -203,7 +203,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                                                     </span>
-                                                                    <span className="text-[10px] uppercase font-bold tracking-widest">Running</span>
+                                                                    <span className="text-[11px] font-semibold tracking-[0.03em]">Running</span>
                                                                 </div>
                                                             ) : (
                                                                 <InlineDurationEdit

@@ -1,17 +1,30 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto"
+import { readFileSync } from "fs"
 
 const ENCRYPTION_PREFIX = "enc"
 const LEGACY_VERSION = "v1"
 const KEYED_VERSION = "v2"
 const DEFAULT_KEY_ID = "default"
+const PRODUCTION_ENCRYPTION_STRICT_DEFAULT = true
+
+type KeyedConfigSource = "none" | "env" | "file"
 
 type CryptoKeyState = {
     activeKeyId: string
     keys: Map<string, Buffer>
     legacyKey: Buffer | null
+    keyedConfigSource: KeyedConfigSource
+    keyedConfigEnabled: boolean
+    strictProductionPolicyEnabled: boolean
 }
 
 let cachedState: CryptoKeyState | null = null
+
+function normalizeBase64(raw: string): string {
+    const normalized = raw.replace(/-/g, "+").replace(/_/g, "/")
+    const remainder = normalized.length % 4
+    return remainder === 0 ? normalized : `${normalized}${"=".repeat(4 - remainder)}`
+}
 
 function parseKey(rawKey: string): Buffer {
     const trimmed = rawKey.trim()
@@ -20,7 +33,7 @@ function parseKey(rawKey: string): Buffer {
         return Buffer.from(trimmed, "hex")
     }
 
-    return Buffer.from(trimmed, "base64")
+    return Buffer.from(normalizeBase64(trimmed), "base64")
 }
 
 function parseAndValidateKey(rawKey: string, source: string): Buffer {
@@ -33,7 +46,7 @@ function parseAndValidateKey(rawKey: string, source: string): Buffer {
 
 function parseKeyEntries(raw: string): Map<string, Buffer> {
     const entries = raw
-        .split(",")
+        .split(/[\n,]+/)
         .map((entry) => entry.trim())
         .filter(Boolean)
     const keyMap = new Map<string, Buffer>()
@@ -51,19 +64,108 @@ function parseKeyEntries(raw: string): Map<string, Buffer> {
             throw new Error("DATA_ENCRYPTION_KEYS contains an invalid empty keyId or key")
         }
 
+        if (keyMap.has(keyId)) {
+            throw new Error(`Duplicate DATA_ENCRYPTION_KEYS key id "${keyId}"`)
+        }
+
         keyMap.set(keyId, parseAndValidateKey(rawKey, `DATA_ENCRYPTION_KEYS(${keyId})`))
     }
 
     return keyMap
 }
 
+function readOptionalSecretFile(
+    filePath: string | undefined,
+    envName: string
+): string | null {
+    const normalizedPath = filePath?.trim()
+    if (!normalizedPath) return null
+    try {
+        const contents = readFileSync(normalizedPath, "utf8").trim()
+        if (!contents) {
+            throw new Error(`${envName} points to an empty file`)
+        }
+        return contents
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown file read error"
+        throw new Error(`Failed to read ${envName} file "${normalizedPath}": ${message}`)
+    }
+}
+
+function resolveKeyedConfigValue() {
+    const fromFile = readOptionalSecretFile(
+        process.env.DATA_ENCRYPTION_KEYS_FILE,
+        "DATA_ENCRYPTION_KEYS_FILE"
+    )
+    const fromEnv = process.env.DATA_ENCRYPTION_KEYS?.trim() || null
+
+    if (fromFile && fromEnv) {
+        throw new Error(
+            "Both DATA_ENCRYPTION_KEYS and DATA_ENCRYPTION_KEYS_FILE are set. Use only one source."
+        )
+    }
+
+    if (fromFile) return { value: fromFile, source: "file" as const }
+    if (fromEnv) return { value: fromEnv, source: "env" as const }
+    return { value: null, source: "none" as const }
+}
+
+function resolveLegacyKeyValue() {
+    const fromFile = readOptionalSecretFile(
+        process.env.DATA_ENCRYPTION_KEY_FILE,
+        "DATA_ENCRYPTION_KEY_FILE"
+    )
+    const fromEnv = process.env.DATA_ENCRYPTION_KEY?.trim() || null
+
+    if (fromFile && fromEnv) {
+        throw new Error(
+            "Both DATA_ENCRYPTION_KEY and DATA_ENCRYPTION_KEY_FILE are set. Use only one source."
+        )
+    }
+
+    return fromFile ?? fromEnv
+}
+
+function isStrictProductionEncryptionPolicyEnabled() {
+    const strictValue = process.env.DATA_ENCRYPTION_STRICT_PRODUCTION
+    if (strictValue == null) return PRODUCTION_ENCRYPTION_STRICT_DEFAULT
+    return strictValue.trim().toLowerCase() !== "false"
+}
+
+function enforceProductionEncryptionPolicy(args: {
+    keyedConfigEnabled: boolean
+    activeKeyIdConfigured: boolean
+}) {
+    if (process.env.NODE_ENV !== "production") return
+    if (!isStrictProductionEncryptionPolicyEnabled()) return
+
+    if (!args.keyedConfigEnabled) {
+        throw new Error(
+            "Production encryption policy requires DATA_ENCRYPTION_KEYS (or DATA_ENCRYPTION_KEYS_FILE). DATA_ENCRYPTION_KEY alone is not allowed."
+        )
+    }
+
+    if (!args.activeKeyIdConfigured) {
+        throw new Error(
+            "Production encryption policy requires DATA_ENCRYPTION_KEY_ID for explicit active key selection."
+        )
+    }
+}
+
 function getEncryptionState(): CryptoKeyState {
     if (cachedState) return cachedState
 
     const keys = new Map<string, Buffer>()
-    const keyedRaw = process.env.DATA_ENCRYPTION_KEYS?.trim()
-    const rawKey = process.env.DATA_ENCRYPTION_KEY
+    const keyedConfig = resolveKeyedConfigValue()
+    const keyedRaw = keyedConfig.value
+    const rawKey = resolveLegacyKeyValue()
     const legacyKey = rawKey ? parseAndValidateKey(rawKey, "DATA_ENCRYPTION_KEY") : null
+    const configuredActiveKeyId = process.env.DATA_ENCRYPTION_KEY_ID?.trim()
+
+    enforceProductionEncryptionPolicy({
+        keyedConfigEnabled: Boolean(keyedRaw),
+        activeKeyIdConfigured: Boolean(configuredActiveKeyId),
+    })
 
     if (keyedRaw) {
         for (const [keyId, key] of parseKeyEntries(keyedRaw).entries()) {
@@ -79,15 +181,33 @@ function getEncryptionState(): CryptoKeyState {
         throw new Error("Missing DATA_ENCRYPTION_KEY or DATA_ENCRYPTION_KEYS environment variable")
     }
 
-    const configuredActiveKeyId = process.env.DATA_ENCRYPTION_KEY_ID?.trim()
     const activeKeyId = configuredActiveKeyId || keys.keys().next().value
 
     if (!activeKeyId || !keys.has(activeKeyId)) {
         throw new Error("DATA_ENCRYPTION_KEY_ID is not present in DATA_ENCRYPTION_KEYS")
     }
 
-    cachedState = { activeKeyId, keys, legacyKey }
+    cachedState = {
+        activeKeyId,
+        keys,
+        legacyKey,
+        keyedConfigSource: keyedConfig.source,
+        keyedConfigEnabled: Boolean(keyedRaw),
+        strictProductionPolicyEnabled: isStrictProductionEncryptionPolicyEnabled(),
+    }
     return cachedState
+}
+
+export function getEncryptionConfigSummary() {
+    const state = getEncryptionState()
+    return {
+        activeKeyId: state.activeKeyId,
+        keyIds: Array.from(state.keys.keys()),
+        keyedConfigEnabled: state.keyedConfigEnabled,
+        keyedConfigSource: state.keyedConfigSource,
+        legacyKeyConfigured: Boolean(state.legacyKey),
+        strictProductionPolicyEnabled: state.strictProductionPolicyEnabled,
+    }
 }
 
 export function isEncryptedValue(value: string): boolean {

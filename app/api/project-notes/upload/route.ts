@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
 import { requireTenantContext } from "@/lib/tenant"
+import { apiRouteError } from "@/lib/api-response"
 import {
     buildProjectNoteRelativePath,
     createSignedProjectNoteUrl,
@@ -91,11 +92,12 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, urls })
     } catch (error) {
-        if (error instanceof Error && error.message === "Unauthorized") {
-            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
-        }
-
-        console.error("[project-notes/upload] failed", error)
-        return NextResponse.json({ success: false, error: "Upload failed." }, { status: 500 })
+        return apiRouteError(error, {
+            unauthorizedMessage: "Unauthorized",
+            unauthorizedCode: "AUTH_REQUIRED",
+            fallbackMessage: "Upload failed.",
+            fallbackCode: "PROJECT_NOTE_UPLOAD_FAILED",
+            logLabel: "[project-notes/upload] failed",
+        })
     }
 }

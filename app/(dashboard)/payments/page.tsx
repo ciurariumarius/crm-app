@@ -4,6 +4,7 @@ import { requireTenantContext } from "@/lib/tenant"
 import { PageHeader } from "@/components/layout/page-header"
 import { PaymentsTable } from "@/components/payments/payments-table"
 import { PaymentsFilters } from "@/components/payments/payments-filters"
+import { AddPartnerPaymentDialog } from "@/components/payments/add-partner-payment-dialog"
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
@@ -53,10 +54,13 @@ export default async function PaymentsPage({
 
     return (
         <div className="flex flex-col gap-8 pb-8">
-            <PageHeader
-                title="Payment Log"
-                description="Comprehensive history of all project payment status changes and settlements."
-            />
+            <div className="flex items-center justify-between">
+                <PageHeader
+                    title="Payment Log"
+                    description="Comprehensive history of all project payment status changes and settlements."
+                />
+                <AddPartnerPaymentDialog partners={partners} />
+            </div>
 
             <div className="flex flex-col gap-6">
                 <PaymentsFilters

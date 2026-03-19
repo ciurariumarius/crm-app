@@ -118,7 +118,7 @@ export function TimeLogsFilters({ partners, projects, totalLogs }: TimeLogsFilte
                             placeholder="Search logs..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="h-10 border-slate-200 bg-white/50 pl-10 text-xs font-bold uppercase tracking-widest text-slate-700 shadow-none transition-all hover:bg-white hover:border-slate-300 focus-visible:ring-0 focus-visible:border-blue-500"
+                            className="h-10 border-slate-200 bg-white/50 pl-10 text-sm font-medium tracking-[0.02em] text-slate-700 shadow-none transition-all hover:bg-white hover:border-slate-300 focus-visible:ring-0 focus-visible:border-blue-500"
                         />
                         {searchTerm && (
                             <button
@@ -150,7 +150,7 @@ export function TimeLogsFilters({ partners, projects, totalLogs }: TimeLogsFilte
                         <div className="ml-auto hidden md:block">
                             <Link
                                 href={clearAllHref}
-                                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-500 transition-all hover:bg-slate-50 hover:text-rose-600 active:scale-95"
+                                className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[12px] font-semibold tracking-[0.03em] text-slate-500 transition-all hover:bg-slate-50 hover:text-rose-600 active:scale-95"
                             >
                                 Clear All
                             </Link>
@@ -166,7 +166,7 @@ export function TimeLogsFilters({ partners, projects, totalLogs }: TimeLogsFilte
                     <Link
                         key={filter.key}
                         href={filter.href}
-                        className="inline-flex h-7 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
                     >
                         <span>{filter.label}</span>
                         <X className="h-3 w-3 text-slate-400" />
@@ -196,7 +196,7 @@ function PartnerCombobox({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold uppercase tracking-widest transition-all",
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all",
                         isActive
                             ? "border-blue-200 bg-blue-50 text-blue-700"
                             : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
@@ -219,7 +219,7 @@ function PartnerCombobox({
                                     onSelect("all")
                                     setOpen(false)
                                 }}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                                className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
                             >
                                 <Check className={cn("mr-2 h-4 w-4", !isActive ? "opacity-100" : "opacity-0")} />
                                 All partners
@@ -232,7 +232,7 @@ function PartnerCombobox({
                                         onSelect(partner.id)
                                         setOpen(false)
                                     }}
-                                    className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", currentPartner === partner.id ? "opacity-100" : "opacity-0")} />
                                     {partner.name}
@@ -265,7 +265,7 @@ function ProjectCombobox({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold uppercase tracking-widest transition-all",
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all",
                         isActive
                             ? "border-blue-200 bg-blue-50 text-blue-700"
                             : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
@@ -288,7 +288,7 @@ function ProjectCombobox({
                                     onSelect("all")
                                     setOpen(false)
                                 }}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                                className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
                             >
                                 <Check className={cn("mr-2 h-4 w-4", !isActive ? "opacity-100" : "opacity-0")} />
                                 All projects
@@ -301,7 +301,7 @@ function ProjectCombobox({
                                         onSelect(project.id)
                                         setOpen(false)
                                     }}
-                                    className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest"
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", currentProject === project.id ? "opacity-100" : "opacity-0")} />
                                     {project.displayName}

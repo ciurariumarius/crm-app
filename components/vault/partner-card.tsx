@@ -4,12 +4,14 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Users, Briefcase, CircleDollarSign, AlertCircle, CheckCircle2, ArrowRight, Loader2 } from "lucide-react"
+import { Globe, Briefcase, CheckSquare, AlertCircle, CheckCircle2, ArrowRight, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { EditPartnerDialog } from "@/components/vault/edit-partner-dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { PartnerSheetContent } from "@/components/vault/partner-sheet-content"
 import { cn, formatNumber } from "@/lib/utils"
 import { settlePartnerDebt } from "@/lib/actions/settlement"
+import { sidePanelClass } from "@/lib/ui/side-panels"
 
 interface Partner {
     id: string
@@ -39,19 +41,20 @@ interface Partner {
         name: string
         amount: number
     }[]
+    totalTasks?: number
 }
 
 export function PartnerCard({ partner }: { partner: Partner }) {
     const router = useRouter()
     const [isSettling, setIsSettling] = useState(false)
     const [optimisticUnpaidProjects, setOptimisticUnpaidProjects] = useState(partner.unpaidProjects || [])
+    const [isSheetOpen, setIsSheetOpen] = useState(false)
 
     // Calculate metrics
     const allProjects = partner.sites?.flatMap(s => s.projects) || []
     const totalProjects = allProjects.length
     const totalRevenue = allProjects.reduce((sum, p) => sum + (Number(p.currentFee) || 0), 0)
     const unpaidRevenue = optimisticUnpaidProjects.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
-    const unpaidCount = optimisticUnpaidProjects.length
 
     const handleMarkAllPaid = async () => {
         if (optimisticUnpaidProjects.length === 0) return
@@ -73,127 +76,169 @@ export function PartnerCard({ partner }: { partner: Partner }) {
     }
 
     return (
-        <Card className="group relative overflow-hidden transition-all duration-300 hover:translate-y-[-4px] hover:shadow-lg hover:shadow-black/5 border-border bg-card hover:border-primary/20">
-            <CardContent className="p-5 flex flex-col h-full gap-4">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-4 z-10 relative">
-                    <div className="space-y-1.5 min-w-0 flex-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <Link
-                                href={`/partners/${partner.id}`}
-                                className="font-semibold text-[15px] leading-snug tracking-tight text-foreground group-hover:text-primary transition-colors truncate hover:underline"
-                            >
-                                {partner.name}
-                            </Link>
-                            {partner.businessName && (
-                                <Badge variant="secondary" className="text-[9px] font-bold uppercase tracking-wider px-1.5 h-5 flex items-center bg-muted/50 text-muted-foreground border-border/50 truncate max-w-[120px]">
-                                    {partner.businessName}
-                                </Badge>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground/60 flex-wrap">
-                            <div className="flex items-center gap-1.5">
-                                <Users className="h-3 w-3 opacity-60" />
-                                <span>{partner._count.sites} Sites</span>
+        <Card className="group relative border-slate-200/60 bg-white transition-all duration-300 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.07)] hover:border-slate-300">
+            <div 
+                onClick={() => setIsSheetOpen(true)}
+                className="h-full cursor-pointer"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && setIsSheetOpen(true)}
+            >
+                <CardContent className="flex flex-col h-full p-0">
+                    {/* Top Section: Branding & Vital Labels */}
+                    <div className="p-6 pb-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <h3 className="text-lg font-black tracking-tight text-slate-900 group-hover:text-primary transition-colors truncate">
+                                        {partner.name}
+                                    </h3>
+                                    {partner.isMainJob && (
+                                        <Badge className="h-5 border-none bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-wider px-2">
+                                            Main Job
+                                        </Badge>
+                                    )}
+                                </div>
+                                {partner.businessName && (
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{partner.businessName}</p>
+                                )}
                             </div>
                             <Link
                                 href={`/projects?partnerId=${partner.id}&status=All`}
-                                className="inline-flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/50 px-2.5 py-1.5 text-blue-700 hover:bg-blue-100/60 transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm"
                             >
-                                <Briefcase className="h-3.5 w-3.5 opacity-70" />
-                                <span className="text-[20px] font-black leading-none tabular-nums">{totalProjects}</span>
-                                <span className="text-[10px] font-bold uppercase tracking-[0.08em]">Projects</span>
-                                <ArrowRight className="h-3.5 w-3.5" />
+                                <ArrowRight className="h-4 w-4" />
                             </Link>
                         </div>
-                    </div>
 
-                    <div onClick={(e) => e.stopPropagation()}>
-                        <EditPartnerDialog partner={partner} />
-                    </div>
-                </div>
-
-                {/* Divider */}
-                <div className="h-px bg-border/50 w-full" />
-
-                {/* Financials & Status */}
-                <div className="grid grid-cols-2 gap-2 z-10 relative mt-auto">
-                    <div className="space-y-1 p-2 rounded-lg bg-muted/20 border border-border/50 group-hover:border-border transition-colors">
-                        <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 flex items-center gap-1">
-                            <CircleDollarSign className="h-2.5 w-2.5" />
-                            Lifetime
-                        </div>
-                        <div className="text-xs font-bold text-foreground tabular-nums">
-                            {formatNumber(totalRevenue)} <span className="text-[9px] text-muted-foreground font-normal">RON</span>
-                        </div>
-                    </div>
-
-                    <div className={cn(
-                        "space-y-1 p-2 rounded-lg border transition-colors",
-                        unpaidRevenue > 0
-                            ? "bg-rose-500/5 border-rose-500/10 text-rose-600"
-                            : "bg-emerald-500/5 border-emerald-500/10 text-emerald-600"
-                    )}>
-                        <div className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 opacity-80">
-                            {unpaidRevenue > 0 ? <AlertCircle className="h-2.5 w-2.5" /> : <CheckCircle2 className="h-2.5 w-2.5" />}
-                            {unpaidRevenue > 0 ? "Outstanding" : "Status"}
-                        </div>
-                        <div className="text-xs font-bold tabular-nums">
-                            {unpaidRevenue > 0
-                                ? `${formatNumber(unpaidRevenue)} RON`
-                                : "All Paid"
-                            }
+                        <div className="mt-8 -mx-6 bg-slate-50/50 border-y border-slate-100/60 p-3 grid grid-cols-3 divide-x divide-slate-200/60">
+                            <div className="flex items-center justify-center gap-2.5">
+                                <Globe className="h-3.5 w-3.5 text-blue-500/70 shrink-0" />
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{partner._count.sites}</span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-none">Domains</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-center gap-2.5">
+                                <Briefcase className="h-3.5 w-3.5 text-indigo-500/70 shrink-0" />
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{totalProjects}</span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-none">Projects</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-center gap-2.5">
+                                <CheckSquare className="h-3.5 w-3.5 text-emerald-500/70 shrink-0" />
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{partner.totalTasks || 0}</span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-none">Tasks</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Unpaid projects breakdown */}
-                <div className="z-10 relative rounded-lg border border-border/60 bg-background/60 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                            Outstanding projects
-                        </p>
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
-                            {unpaidCount} unpaid
-                        </span>
-                        <button
-                            type="button"
-                            onClick={handleMarkAllPaid}
-                            disabled={isSettling || optimisticUnpaidProjects.length === 0}
-                            className={cn(
-                                "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] transition-colors",
-                                optimisticUnpaidProjects.length === 0
-                                    ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
-                                    : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    {/* Mid Section: Highlights */}
+                    <div className="px-6 py-4 flex items-center justify-between border-y border-slate-50 bg-slate-50/30">
+                        <div className="space-y-1">
+                            <span className="block text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">Lifetime Revenue</span>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-base font-black text-slate-900 tabular-nums">{formatNumber(totalRevenue)}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">RON</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                            <span className={cn(
+                                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest",
+                                unpaidRevenue > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
+                            )}>
+                                {unpaidRevenue > 0 ? <AlertCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                                {unpaidRevenue > 0 ? "Outstanding" : "Settled"}
+                            </span>
+                            {unpaidRevenue > 0 && (
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-base font-black text-rose-600 tabular-nums">{formatNumber(unpaidRevenue)}</span>
+                                    <span className="text-[10px] font-bold text-rose-400 uppercase">RON</span>
+                                </div>
                             )}
-                        >
-                            {isSettling ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                            Mark all paid
-                        </button>
+                        </div>
                     </div>
 
-                    {optimisticUnpaidProjects.length === 0 ? (
-                        <p className="mt-2 text-xs font-medium text-emerald-700">No unpaid projects.</p>
-                    ) : (
-                        <div className="mt-2 space-y-1.5">
-                            {optimisticUnpaidProjects.map((project) => (
-                                <Link
-                                    key={project.id}
-                                    href={`/projects/${project.id}`}
-                                    className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 hover:border-blue-200 hover:bg-blue-50/40 transition-colors"
+                    {/* Bottom Section: Mini Ledger */}
+                    <div className="p-6 pt-5 bg-white space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Unpaid Projects</h4>
+                            {optimisticUnpaidProjects.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleMarkAllPaid(); }}
+                                    disabled={isSettling}
+                                    className="inline-flex items-center gap-1.5 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
                                 >
-                                    <span className="min-w-0 truncate text-[11px] font-medium text-slate-700">
-                                        {project.name}
-                                    </span>
-                                    <span className="shrink-0 text-[11px] font-bold tabular-nums text-rose-600">
-                                        {formatNumber(project.amount)} RON
-                                    </span>
-                                </Link>
-                            ))}
+                                    {isSettling ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        <CheckCircle2 className="h-3 w-3" />
+                                    )}
+                                    Mark All Paid
+                                </button>
+                            )}
                         </div>
+
+                        {optimisticUnpaidProjects.length > 0 ? (
+                            <div className="space-y-1">
+                                {optimisticUnpaidProjects.slice(0, 3).map((project) => (
+                                    <Link
+                                        key={project.id}
+                                        href={`/projects/${project.id}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="group/item flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-3 hover:border-blue-200 hover:bg-blue-50/50 transition-all shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
+                                    >
+                                        <span className="min-w-0 truncate text-xs font-bold text-slate-700 group-hover/item:text-blue-700 transition-colors">
+                                            {project.name}
+                                        </span>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-xs font-black tabular-nums text-rose-600">
+                                                {formatNumber(project.amount)}
+                                            </span>
+                                            <span className="text-[9px] font-bold text-slate-300 uppercase">RON</span>
+                                        </div>
+                                    </Link>
+                                ))}
+                                {optimisticUnpaidProjects.length > 3 && (
+                                    <div className="text-center pt-2">
+                                        <span className="text-[10px] font-bold text-slate-400 italic">
+                                            + {optimisticUnpaidProjects.length - 3} more outstanding
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-3 rounded-2xl border border-dashed border-emerald-100 bg-emerald-50/30 p-4 justify-center">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Account crystal clear</span>
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </div>
+            
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetContent 
+                    side="right"
+                    showCloseButton={false}
+                    className={sidePanelClass("wide")}
+                >
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Partner Details</SheetTitle>
+                    </SheetHeader>
+                    {isSheetOpen && (
+                        <PartnerSheetContent
+                            partnerId={partner.id}
+                            onClose={() => setIsSheetOpen(false)}
+                        />
                     )}
-                </div>
-            </CardContent>
+                </SheetContent>
+            </Sheet>
         </Card>
     )
 }

@@ -33,6 +33,7 @@ export default async function VaultPage({
                             status: true
                             paymentStatus: true
                             currentFee: true
+                            _count: { select: { tasks: true } }
                             services: {
                                 select: {
                                     serviceName: true
@@ -63,6 +64,9 @@ export default async function VaultPage({
                             status: true,
                             paymentStatus: true,
                             currentFee: true,
+                            _count: {
+                                select: { tasks: true }
+                            },
                             services: {
                                 select: {
                                     serviceName: true,
@@ -93,6 +97,11 @@ export default async function VaultPage({
             }))
         )
 
+        const totalTasks = normalizedSites.reduce(
+            (siteSum, site) => siteSum + site.projects.reduce((projectSum, project) => projectSum + (project._count?.tasks || 0), 0),
+            0
+        )
+
         const unpaidProjects = allProjects
             .filter((project) => project.paymentStatus === "Unpaid")
             .map((project) => ({
@@ -110,6 +119,7 @@ export default async function VaultPage({
             ...partner,
             sites: normalizedSites,
             unpaidProjects,
+            totalTasks,
         }
     })
 

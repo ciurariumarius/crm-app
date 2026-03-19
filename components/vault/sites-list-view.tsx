@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
+import { sidePanelClass } from "@/lib/ui/side-panels"
 
 interface SitesListViewProps {
     sites: Array<Site & { _count?: { projects: number } }>
@@ -63,7 +64,7 @@ export function SitesListView({ sites }: SitesListViewProps) {
             </div>
 
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent className="sm:max-w-2xl p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl">
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow")}>
                     <SheetHeader className="sr-only">
                         <SheetTitle>Site Details</SheetTitle>
                     </SheetHeader>
@@ -75,6 +76,7 @@ export function SitesListView({ sites }: SitesListViewProps) {
                                 setSelectedSite({ ...selectedSite, ...updated })
                                 // You might want to update the list here too via a callback or router refresh
                             }}
+                            onClose={() => setSelectedSite(null)}
                         />
                     )}
                 </SheetContent>

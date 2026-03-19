@@ -44,7 +44,7 @@ export function BusinessHealthPulse({
             {/* Combined Card: Financial Health (Revenue + Debt) */}
             <Card className="premium-card p-6 flex flex-col gap-1 relative overflow-hidden group border-l-4 border-l-primary/20">
                 <div className="flex items-center justify-between z-10">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Financial Overview</span>
+                    <span className="text-[12px] font-medium tracking-[0.03em] text-muted-foreground">Financial overview</span>
                     <div className="flex gap-2">
                         <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                             <TrendingUp className="h-4 w-4" />
@@ -85,7 +85,7 @@ export function BusinessHealthPulse({
             {/* Card B: Capacity & Workload (Original Card C) */}
             <Card className="premium-card p-6 flex flex-col gap-1 relative overflow-hidden group">
                 <div className="flex items-center justify-between z-10">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Projects Overview</span>
+                    <span className="text-[12px] font-medium tracking-[0.03em] text-muted-foreground">Projects overview</span>
                     <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
                         <Clock className="h-4 w-4" />
                     </div>
@@ -96,7 +96,7 @@ export function BusinessHealthPulse({
                         <h3 className="text-3xl font-bold tracking-tight text-blue-600">
                             {activeMonthlyProjects + activeOneTimeProjects}
                         </h3>
-                        <p className="text-xs font-bold text-muted-foreground mt-1 uppercase tracking-wider">Live Projects</p>
+                        <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-muted-foreground">Live projects</p>
 
                         <div className="flex items-center gap-3 mt-4">
                             <div className="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50/50 rounded-xl border border-blue-100" title="Recurring Projects">
@@ -115,14 +115,14 @@ export function BusinessHealthPulse({
                         <div>
                             <div className="flex items-baseline gap-2">
                                 <h4 className="text-2xl font-bold tracking-tight text-slate-800">{activeTasks}</h4>
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Tasks</span>
+                                <span className="text-[11px] font-semibold tracking-[0.03em] text-muted-foreground">Active tasks</span>
                             </div>
                         </div>
 
                         <div className="pt-3 border-t border-dashed border-border/80 mt-4">
                             <div className="flex items-baseline gap-1.5">
                                 <span className="text-lg font-bold text-slate-700">{billableHours.toFixed(1)}h</span>
-                                <span className="text-[10px] font-medium text-muted-foreground italic">worked in {currentMonthName}</span>
+                                <span className="text-[11px] font-medium italic text-muted-foreground">worked in {currentMonthName}</span>
                             </div>
                         </div>
                     </div>

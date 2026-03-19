@@ -278,6 +278,37 @@ Implemented in this batch:
 3. Ledger query-budget reduction
 - `app/ledger/page.tsx`
 - Added pagination for active-project payment cards.
+
+## Batch 6 implementation update (2026-03-19)
+
+Implemented in this batch:
+
+1. Production-grade encryption key policy + key source hardening
+- `lib/crypto.ts`
+- Added strict production policy enforcement:
+  - keyed encryption config required in production (`DATA_ENCRYPTION_KEYS` or `DATA_ENCRYPTION_KEYS_FILE`)
+  - explicit active key ID required in production (`DATA_ENCRYPTION_KEY_ID`)
+- Added secure file-based secret loading support (`*_FILE` env variants).
+- Added non-sensitive runtime summary helper (`getEncryptionConfigSummary`).
+
+2. 2FA secret rotation script hardening
+- `scripts/rotate-two-factor-secrets.ts`
+- Replaced legacy script with CLI options for safe operations:
+  - `--dry-run`
+  - `--strict`
+  - `--tenant <tenantId>`
+  - `--user <userId>`
+  - `--limit <n>`
+  - `--batch <n>`
+- Added structured output summary for automation/ops.
+
+3. Encryption config preflight script
+- `scripts/check-encryption-config.ts`
+- Added a deployment-safe preflight that validates encryption config without exposing key material.
+
+4. Ops runbook updates
+- `README.md`
+- Added key config matrix and rotation commands.
 - Replaced monthly full time-log scan with `timeLog.groupBy(projectId)` + lightweight project partner lookup.
 
 ## Batch 6 implementation update (2026-03-04)
@@ -399,6 +430,54 @@ Implemented in this batch:
 - `lib/auth.ts`
 - `README.md`
 - Added `ENABLE_SESSION_REGISTRY` and session policy env documentation to support staged rollout.
+
+## Batch 10 implementation update (2026-03-19)
+
+Implemented in this batch:
+
+1. Desktop sidebar keyboard parity (contextual rail)
+- `components/layout/sidebar.tsx`
+- Added focus-triggered temporary expansion for collapsed desktop sidebar:
+  - keyboard focus entering the rail expands it for discoverability
+  - focus leaving the rail collapses back when user preference is still collapsed
+- Added explicit, accessible submenu toggles for both Data and PPC sections in collapsed and expanded states.
+- Added `aria-controls`/`aria-expanded` wiring for desktop section groups and sidebar nav container.
+
+## Batch 11 implementation update (2026-03-19)
+
+Implemented in this batch:
+
+1. Dense table/card typography readability normalization
+- `components/payments/payments-table.tsx`
+- `components/time/time-logs-table.tsx`
+- `components/dashboard/financial-status-bar.tsx`
+- `components/dashboard/profitability-alerts.tsx`
+- Reduced use of tiny all-caps labels (`10px` uppercase) in key operational surfaces.
+- Increased minimum label size and normalized casing for better scanability on desktop/mobile.
+- Kept behavior unchanged (presentation-only adjustments).
+
+## Batch 12 implementation update (2026-03-19)
+
+Implemented in this batch:
+
+1. Filter and domains-table readability normalization
+- `components/payments/payments-filters.tsx`
+- `components/time/time-logs-filters.tsx`
+- `components/vault/domains-filters.tsx`
+- `components/vault/sites-table.tsx`
+- Updated search inputs, combobox triggers/items, clear/active chips, and table labels away from tiny uppercase-heavy typography.
+- Standardized to readable mixed-case labels with slightly larger font sizing.
+
+## Batch 13 implementation update (2026-03-19)
+
+Implemented in this batch:
+
+1. Dashboard mobile/tasks readability normalization
+- `components/dashboard/mobile-home-view.tsx`
+- `components/dashboard/upcoming-tasks.tsx`
+- Reduced remaining tiny all-caps labels in dashboard mobile sections and task header/tabs/buttons.
+- Increased label font sizing and tracking consistency across overview/task/project/payment sections.
+- Kept behavior unchanged (presentation-only adjustments).
 
 ## Migration and rollout notes
 

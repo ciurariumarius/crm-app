@@ -69,6 +69,38 @@ npx prisma migrate resolve --applied 20260317190000_add_auth_sessions
 npx prisma generate
 ```
 
+## Data Encryption Controls (2FA Secrets)
+
+2FA secrets are encrypted with AES-256-GCM and support key IDs for rotation.
+
+- `DATA_ENCRYPTION_KEYS=<keyId1>=<key>,<keyId2>=<key>` (preferred)
+- `DATA_ENCRYPTION_KEY_ID=<activeKeyId>` (required in production strict mode)
+- `DATA_ENCRYPTION_KEYS_FILE=/path/to/data_encryption_keys` (alternative to env var)
+- `DATA_ENCRYPTION_KEY=<legacy-single-key>` (legacy fallback; avoid in production)
+- `DATA_ENCRYPTION_KEY_FILE=/path/to/legacy_key` (alternative legacy source)
+- `DATA_ENCRYPTION_STRICT_PRODUCTION=true` (default; requires keyed config + explicit key id in production)
+
+Notes:
+
+- Use one source per setting (`*_FILE` or direct env), not both.
+- `DATA_ENCRYPTION_KEYS_FILE` supports comma-separated or newline-separated `keyId=key` entries.
+- Keys must decode to exactly 32 bytes (hex-64 or base64/base64url).
+
+Validation and rotation runbook:
+
+```bash
+npm run security:check-encryption-config
+npm run security:rotate-2fa-secrets:dry
+npm run security:rotate-2fa-secrets -- --strict
+```
+
+Optional scoped rotation:
+
+```bash
+npm run security:rotate-2fa-secrets -- --tenant <tenantId> --dry-run
+npm run security:rotate-2fa-secrets -- --user <userId>
+```
+
 ## Seed Controls
 
 Seed credentials are no longer hardcoded.

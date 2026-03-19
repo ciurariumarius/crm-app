@@ -25,6 +25,7 @@ import { GlobalCreateProjectDialog } from "@/components/projects/global-create-p
 import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
 import { Service, Site } from "@prisma/client"
 import type { PartnerWithSites, ProjectWithDetails } from "@/types"
+import { sidePanelClass } from "@/lib/ui/side-panels"
 
 import {
     DropdownMenu,
@@ -370,7 +371,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
 
                 {/* 3. Type Pill */}
                 <div className="w-[70px] shrink-0 flex items-center justify-center">
-                    <div className="flex items-center gap-1.5 px-1.5 py-1 bg-slate-50 rounded-lg text-[9px] font-bold uppercase tracking-tight text-slate-600 truncate w-full justify-center border border-slate-200">
+                    <div className="flex w-full items-center justify-center gap-1.5 truncate rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold tracking-[0.01em] text-slate-600">
                         {isMonthly ? <RefreshCcw className="h-3 w-3 mr-0.5" /> : <Zap className="h-3 w-3 mr-0.5" />}
                         {isMonthly ? "Monthly" : "One-Time"}
                     </div>
@@ -390,7 +391,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                         ? "status-pill-success"
                                         : "status-pill-debt"
                                 )}>
-                                    <span className="text-[10px] font-bold uppercase tracking-tight">
+                                    <span className="text-[11px] font-semibold tracking-[0.01em]">
                                         {project.paymentStatus}
                                     </span>
                                 </div>
@@ -444,7 +445,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                     />
                                 </svg>
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300">{completedTasks}/{totalTasks}</span>
+                                    <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300">{completedTasks}/{totalTasks}</span>
                                 </div>
                             </div>
                         )
@@ -453,7 +454,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
 
                 {/* 7. Time Tracking */}
                 <div className="w-[75px] shrink-0 flex items-center justify-center">
-                    <span className="px-2 py-1 rounded-lg text-[10px] font-bold font-mono text-slate-600 bg-slate-50 border border-slate-200 text-center uppercase tracking-tight tabular-nums">
+                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-center font-mono text-[11px] font-semibold tracking-[0.01em] text-slate-600 tabular-nums">
                         {(() => {
                             const totalSeconds = project.tasks?.reduce((acc: number, task: ProjectTaskSummary) => {
                                 const taskLogs = task.timeLogs?.reduce((lAcc: number, log: ProjectTimeLog) => lAcc + (log.durationSeconds || 0), 0) || 0
@@ -623,7 +624,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                     setSelectedProject(null)
                 }
             }}>
-                <SheetContent side="right" className="w-screen max-w-none p-0 flex flex-col border-none shadow-xl bg-background overflow-hidden sm:w-full sm:max-w-[900px]">
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("default")}>
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject as ProjectWithDetails}
@@ -631,6 +632,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                             hourlyRate={hourlyRate}
                             onUpdate={(updated) => setSelectedProject((prev) => (prev ? { ...prev, ...updated } : prev))}
                             onOpenSite={(site) => setSelectedSite(site)}
+                            onClose={() => setSelectedProject(null)}
                         />
                     )}
                 </SheetContent>
@@ -638,13 +640,14 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
 
             {/* Site Detail Sheet */}
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent className="w-screen max-w-none p-0 overflow-hidden flex flex-col gap-0 border-l border-border bg-background shadow-xl sm:w-full sm:max-w-xl">
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow")}>
                     {selectedSite && (
                         <SiteSheetContent
                             site={selectedSite}
                             onUpdate={(updated) => {
                                 setSelectedSite({ ...selectedSite, ...updated })
                             }}
+                            onClose={() => setSelectedSite(null)}
                         />
                     )}
                 </SheetContent>

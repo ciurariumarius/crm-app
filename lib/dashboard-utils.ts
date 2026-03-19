@@ -158,6 +158,7 @@ export function calculateDashboardMetrics(
             lastSettlementDate: null,
             unpaidProjects: p.projects
         }))
+        .filter(p => p.totalUnpaid > 0)
         .sort((a, b) => b.totalUnpaid - a.totalUnpaid)
 
     // Time Sink Alerts

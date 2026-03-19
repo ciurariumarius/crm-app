@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ComponentType } from "react"
+import { useRef, useState, type ComponentType, type FocusEvent } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useHeader } from "./header-context"
@@ -79,8 +79,14 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         isSidebarCollapsed,
         setIsSidebarCollapsed,
     } = useHeader()
+    const asideRef = useRef<HTMLElement | null>(null)
     const [isDataOpen, setIsDataOpen] = useState(true)
     const [isPPCOpen, setIsPPCOpen] = useState(true)
+    const [isSidebarFocusExpanded, setIsSidebarFocusExpanded] = useState(false)
+    const isDesktopCollapsed = isSidebarCollapsed && !isSidebarFocusExpanded
+    const collapseButtonLabel = isSidebarCollapsed
+        ? (isDesktopCollapsed ? "Expand sidebar" : "Keep sidebar expanded")
+        : "Collapse sidebar"
 
     const displayName = user?.name || user?.username || "Admin"
     const displayRole = "Owner"
@@ -91,6 +97,18 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         window.location.href = "/login"
     }
 
+    const handleDesktopFocusCapture = () => {
+        if (!isSidebarCollapsed) return
+        setIsSidebarFocusExpanded(true)
+    }
+
+    const handleDesktopBlurCapture = (event: FocusEvent<HTMLElement>) => {
+        if (!isSidebarCollapsed) return
+        const nextFocused = event.relatedTarget as Node | null
+        if (nextFocused && asideRef.current?.contains(nextFocused)) return
+        setIsSidebarFocusExpanded(false)
+    }
+
     const renderDesktopItem = (item: NavItem, options?: { nested?: boolean }) => {
         const isActive = isActivePath(pathname, item.href)
         const nested = options?.nested ?? false
@@ -98,17 +116,17 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
             <Link
                 key={item.href}
                 href={item.href}
-                title={isSidebarCollapsed ? item.name : undefined}
+                title={isDesktopCollapsed ? item.name : undefined}
                 className={cn(
                     "group relative flex items-center gap-3 rounded-xl transition-all duration-200 px-3 py-2.5",
-                    isSidebarCollapsed && "justify-center px-0",
+                    isDesktopCollapsed && "justify-center px-0",
                     isActive
                         ? "bg-blue-50/70 text-blue-600 shadow-none border border-blue-100/50"
                         : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent"
                 )}
             >
                 <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-blue-600" : "text-slate-500 group-hover:text-slate-700")} strokeWidth={isActive ? 2 : 1.5} />
-                {!isSidebarCollapsed && (
+                {!isDesktopCollapsed && (
                     <span className={cn(
                         "text-[14px]",
                         nested ? "font-medium" : "font-medium tracking-tight",
@@ -222,65 +240,101 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
             </Sheet>
 
             <aside
+                ref={asideRef}
+                onFocusCapture={handleDesktopFocusCapture}
+                onBlurCapture={handleDesktopBlurCapture}
                 className={cn(
                     "hidden md:flex fixed left-0 top-0 z-50 h-screen border-r border-sidebar-border glass transition-[width] duration-300",
-                    isSidebarCollapsed ? "w-[88px]" : "w-[220px]"
+                    isDesktopCollapsed ? "w-[88px]" : "w-[220px]"
                 )}
             >
                 <button
                     type="button"
-                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    onClick={() => {
+                        if (isSidebarCollapsed) {
+                            setIsSidebarCollapsed(false)
+                            setIsSidebarFocusExpanded(false)
+                            return
+                        }
+                        setIsSidebarCollapsed(true)
+                    }}
                     className="absolute -right-3 top-10 h-6 w-6 rounded-full border border-sidebar-border bg-white text-slate-500 hover:text-slate-900 shadow-sm flex items-center justify-center"
-                    aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    aria-label={collapseButtonLabel}
+                    aria-expanded={!isDesktopCollapsed}
+                    aria-controls="desktop-sidebar-nav"
                 >
                     {isSidebarCollapsed ? <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} /> : <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />}
                 </button>
 
                 <div className="flex h-full w-full flex-col px-3 py-5">
-                    <div className={cn("flex items-center", isSidebarCollapsed ? "justify-center" : "justify-start px-2")}>
-                        <Link href="/" className={cn("inline-flex items-center gap-3", isSidebarCollapsed && "justify-center")}>
+                    <div className={cn("flex items-center", isDesktopCollapsed ? "justify-center" : "justify-start px-2")}>
+                        <Link href="/" className={cn("inline-flex items-center gap-3", isDesktopCollapsed && "justify-center")}>
                             <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-[0_4px_12px_rgba(37,99,235,0.25)]">
                                 <Zap className="h-[22px] w-[22px] fill-current" />
                             </div>
-                            {!isSidebarCollapsed && <span className="text-[27px] font-bold tracking-tight text-slate-900 leading-none">Pixelist</span>}
+                            {!isDesktopCollapsed && <span className="text-[27px] font-bold tracking-tight text-slate-900 leading-none">Pixelist</span>}
                         </Link>
                     </div>
 
-                    <nav className="mt-8 flex-1 space-y-1">
-                        {!isSidebarCollapsed && <p className="px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Management</p>}
+                    <nav id="desktop-sidebar-nav" className="mt-8 flex-1 space-y-1">
+                        {!isDesktopCollapsed && <p className="px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Management</p>}
                         {primaryNav.map((item) => renderDesktopItem(item))}
 
-                        {!isSidebarCollapsed && (
-                            <button
-                                type="button"
-                                onClick={() => setIsDataOpen((prev) => !prev)}
-                                aria-expanded={isDataOpen}
-                                className="w-full flex items-center justify-between px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400"
-                            >
-                                <span>Data</span>
-                                {isDataOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                            </button>
-                        )}
-                        {(isSidebarCollapsed || isDataOpen) && (
-                            <div className="space-y-1">
-                                {dataNav.map((item) => renderDesktopItem(item, { nested: !isSidebarCollapsed }))}
+                        <button
+                            type="button"
+                            onClick={() => setIsDataOpen((prev) => !prev)}
+                            aria-expanded={isDataOpen}
+                            aria-controls="desktop-data-nav"
+                            aria-label="Toggle Data section"
+                            className={cn(
+                                "w-full flex items-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400",
+                                isDesktopCollapsed ? "justify-center px-0 py-2" : "justify-between px-3 py-1"
+                            )}
+                        >
+                            {isDesktopCollapsed ? (
+                                <span className="inline-flex items-center gap-1">
+                                    <Users className="h-3.5 w-3.5" />
+                                    {isDataOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                </span>
+                            ) : (
+                                <>
+                                    <span>Data</span>
+                                    {isDataOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                </>
+                            )}
+                        </button>
+                        {isDataOpen && (
+                            <div id="desktop-data-nav" className="space-y-1">
+                                {dataNav.map((item) => renderDesktopItem(item, { nested: !isDesktopCollapsed }))}
                             </div>
                         )}
 
-                        {!isSidebarCollapsed && (
-                            <button
-                                type="button"
-                                onClick={() => setIsPPCOpen((prev) => !prev)}
-                                aria-expanded={isPPCOpen}
-                                className="w-full flex items-center justify-between px-3 py-1 mt-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400"
-                            >
-                                <span>PPC</span>
-                                {isPPCOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                            </button>
-                        )}
-                        {(isSidebarCollapsed || isPPCOpen) && (
-                            <div className="space-y-1">
-                                {ppcNav.map((item) => renderDesktopItem(item, { nested: !isSidebarCollapsed }))}
+                        <button
+                            type="button"
+                            onClick={() => setIsPPCOpen((prev) => !prev)}
+                            aria-expanded={isPPCOpen}
+                            aria-controls="desktop-ppc-nav"
+                            aria-label="Toggle PPC section"
+                            className={cn(
+                                "mt-2 w-full flex items-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400",
+                                isDesktopCollapsed ? "justify-center px-0 py-2" : "justify-between px-3 py-1"
+                            )}
+                        >
+                            {isDesktopCollapsed ? (
+                                <span className="inline-flex items-center gap-1">
+                                    <Search className="h-3.5 w-3.5" />
+                                    {isPPCOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                </span>
+                            ) : (
+                                <>
+                                    <span>PPC</span>
+                                    {isPPCOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                </>
+                            )}
+                        </button>
+                        {isPPCOpen && (
+                            <div id="desktop-ppc-nav" className="space-y-1">
+                                {ppcNav.map((item) => renderDesktopItem(item, { nested: !isDesktopCollapsed }))}
                             </div>
                         )}
 
@@ -288,7 +342,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                     </nav>
 
                     <div className="mt-auto">
-                        {!isSidebarCollapsed ? (
+                        {!isDesktopCollapsed ? (
                             <div className="rounded-xl border border-sidebar-border bg-white p-3 flex items-center gap-3">
                                 <Link href="/settings" className="flex items-center gap-3 min-w-0 flex-1">
                                     <Avatar className="h-10 w-10">

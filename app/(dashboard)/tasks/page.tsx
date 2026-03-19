@@ -7,16 +7,12 @@ import { formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
 import { TasksSearchProvider } from "@/components/tasks/tasks-search-context"
+import { TasksPaginationBar } from "@/components/tasks/tasks-pagination-bar"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
-import { SlidersHorizontal, X, ListChecks, Play, AlertTriangle, CalendarClock, CalendarDays, ChevronDown } from "lucide-react"
+import { SlidersHorizontal, X, ListChecks, Play, AlertTriangle, CalendarClock, CalendarDays } from "lucide-react"
 import { requireTenantContext } from "@/lib/tenant"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { buildTaskWhereInput, getLocalDayBounds, normalizeTaskFilters } from "@/lib/filters/task-filters"
 
 export const dynamic = "force-dynamic"
 
@@ -70,15 +66,22 @@ export default async function TasksPage({
 }) {
     const session = await requireTenantContext()
     const params = await searchParams
-    const q = params.q?.trim()
-    const statusFilterRaw = params.status === "Paused" ? "Active" : (params.status || "Active")
-    const statusFilter = ["All", "Active", "Completed"].includes(statusFilterRaw) ? statusFilterRaw : "Active"
-    const partnerId = params.partnerId
-    const projectId = params.projectId
-    const urgencyFilterRaw = params.urgency || "all"
-    const urgencyFilter = urgencyFilterRaw === "all" ? "all" : normalizeTaskUrgency(urgencyFilterRaw)
-    const dueTodayOnly = params.dueToday === "1" || params.dueToday === "true"
-    const overdueOnly = (params.overdue === "1" || params.overdue === "true") && !dueTodayOnly
+    const normalizedFilters = normalizeTaskFilters({
+        q: params.q,
+        status: params.status,
+        partnerId: params.partnerId,
+        projectId: params.projectId,
+        urgency: params.urgency,
+        overdue: params.overdue,
+        dueToday: params.dueToday,
+    })
+    const q = normalizedFilters.q
+    const statusFilter = normalizedFilters.status
+    const partnerId = normalizedFilters.partnerId
+    const projectId = normalizedFilters.projectId
+    const urgencyFilter = normalizedFilters.urgency
+    const dueTodayOnly = normalizedFilters.dueTodayOnly
+    const overdueOnly = normalizedFilters.overdueOnly
     const sortRaw = params.sort || "newest"
     const sort = SORT_VALUES.has(sortRaw as (typeof SORT_OPTIONS)[number]["value"]) ? sortRaw : "newest"
     const colsRaw = params.cols || "3"
@@ -88,62 +91,13 @@ export default async function TasksPage({
     const view = "grid" as const
     const mobileFiltersOpen = params.filters === "1"
     const requestedPage = Math.max(1, Number(params.page) || 1)
-    const now = new Date()
-    const todayStart = new Date(now)
-    todayStart.setHours(0, 0, 0, 0)
-    const todayEnd = new Date(now)
-    todayEnd.setHours(23, 59, 59, 999)
-
-    const where: Prisma.TaskWhereInput = { tenantId: session.tenantId }
-
-    if (statusFilter !== "All") {
-        if (statusFilter === "Active") {
-            where.status = { in: ["Active", "Paused"] }
-        } else {
-            where.status = statusFilter
-        }
-    }
-
-    if (projectId && projectId !== "all") {
-        where.projectId = projectId
-    } else if (partnerId && partnerId !== "all") {
-        where.project = { site: { partnerId } }
-    }
-
-    if (urgencyFilter !== "all") {
-        where.urgency =
-            urgencyFilter === "Urgent"
-                ? { in: ["Urgent", "High"] }
-                : urgencyFilter === "Idea"
-                    ? { in: ["Idea", "Low"] }
-                    : { in: ["Normal"] }
-    }
-
-    if (q) {
-        where.OR = [
-            { name: { contains: q } },
-            { description: { contains: q } },
-            { project: { name: { contains: q } } },
-            { project: { site: { domainName: { contains: q } } } },
-            { project: { site: { partner: { name: { contains: q } } } } },
-        ]
-    }
-
-    if (overdueOnly) {
-        where.AND = [
-            ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
-            { status: { in: ["Active", "Paused"] } },
-            { deadline: { not: null, lt: todayStart } },
-        ]
-    }
-
-    if (dueTodayOnly) {
-        where.AND = [
-            ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
-            { status: { in: ["Active", "Paused"] } },
-            { deadline: { not: null, gte: todayStart, lte: todayEnd } },
-        ]
-    }
+    const { todayStart, todayEnd } = getLocalDayBounds(new Date())
+    const where = buildTaskWhereInput({
+        tenantId: session.tenantId,
+        filters: normalizedFilters,
+        todayStart,
+        todayEnd,
+    })
 
     const totalTasks = await prisma.task.count({ where })
     const shouldPaginate = totalTasks > PAGINATION_THRESHOLD
@@ -300,7 +254,6 @@ export default async function TasksPage({
 
         return `/tasks?${next.toString()}`
     }
-    const buildPageHref = (targetPage: number) => buildTasksHref({ page: String(targetPage) })
     const selectedProject = projectsList.find((project) => project.id === projectId)
     const selectedPartner = partnersList.find((partner) => partner.id === partnerId)
     const activeFilters: { key: string; label: string; href: string }[] = []
@@ -404,47 +357,21 @@ export default async function TasksPage({
     )
 
     const renderPaginationBar = () => (
-        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
-            <span className="text-muted-foreground">Page {page} of {totalPages} · Showing {pageStart}-{pageEnd} of {totalTasks} tasks</span>
-            <div className="flex items-center gap-2">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button
-                            type="button"
-                            className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-foreground hover:bg-muted transition-colors"
-                            title="Tasks per page"
-                        >
-                            {perPage}
-                            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                        {PAGE_SIZE_OPTIONS.map((size) => (
-                            <DropdownMenuItem key={size} asChild className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700">
-                                <Link href={buildTasksHref({ perPage: String(size), page: "1" })}>
-                                    {size}
-                                </Link>
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                {prevPage ? (
-                    <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(prevPage)}>
-                        Previous
-                    </Link>
-                ) : (
-                    <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
-                )}
-                {nextPage ? (
-                    <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildPageHref(nextPage)}>
-                        Next
-                    </Link>
-                ) : (
-                    <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
-                )}
-            </div>
-        </div>
+        <TasksPaginationBar
+            fallback={{
+                total: totalTasks,
+                page,
+                perPage,
+                totalPages,
+                pageStart,
+                pageEnd,
+                shouldPaginate,
+                prevPage,
+                nextPage,
+            }}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            defaultPageSize={DEFAULT_PAGE_SIZE}
+        />
     )
 
     return (
@@ -641,6 +568,17 @@ export default async function TasksPage({
                     hourlyRate={hourlyRate}
                     view="grid"
                     cols={1}
+                    searchApiFilters={{
+                        status: statusFilter,
+                        partnerId,
+                        projectId,
+                        urgency: urgencyFilter,
+                        overdue: overdueOnly,
+                        dueToday: dueTodayOnly,
+                        sort,
+                        page,
+                        perPage,
+                    }}
                 />
                 <div className="mt-10 border-t border-slate-200/70 pt-7">
                     {renderTasksSummaryRow()}
@@ -673,6 +611,17 @@ export default async function TasksPage({
                     hourlyRate={hourlyRate}
                     view={view}
                     cols={cols}
+                    searchApiFilters={{
+                        status: statusFilter,
+                        partnerId,
+                        projectId,
+                        urgency: urgencyFilter,
+                        overdue: overdueOnly,
+                        dueToday: dueTodayOnly,
+                        sort,
+                        page,
+                        perPage,
+                    }}
                 />
                 <div className="mt-10 border-t border-slate-200/70 pt-7">
                     {renderTasksSummaryRow()}

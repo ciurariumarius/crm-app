@@ -5,13 +5,12 @@ import type { Prisma } from "@prisma/client"
 import { updateService, deleteService } from "@/lib/actions/services"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { X, CheckCircle2, Trash2, AlertTriangle, Loader2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { formatRelativeDate } from "@/lib/utils"
+import { SidePanelChip, SidePanelDangerZone, SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 
 import {
     SheetHeader,
@@ -125,9 +124,11 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                 </div>
 
                 <div className="space-y-4 pr-16 text-left">
-                    <Badge variant={formData.isRecurring === "true" ? "default" : "secondary"} className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1">
-                        {formData.isRecurring === "true" ? "Recurring" : "One-Time"}
-                    </Badge>
+                    <SidePanelChip
+                        tone={formData.isRecurring === "true" ? "blue" : "slate"}
+                        label={formData.isRecurring === "true" ? "Recurring" : "One-time"}
+                        className="px-2.5 py-1 text-[10px]"
+                    />
                     <SheetTitle className="group relative">
                         <Input
                             value={formData.serviceName}
@@ -146,7 +147,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                 <div className="space-y-8 pb-20">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 rounded-2xl border border-slate-200 bg-white p-5 premium-card shadow-sm">
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Type</Label>
+                            <SidePanelSectionTitle title="Type" className="text-xs" />
                             <Select
                                 value={formData.isRecurring}
                                 onValueChange={(val) => setFormData({ ...formData, isRecurring: val })}
@@ -162,7 +163,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Base Fee</Label>
+                            <SidePanelSectionTitle title="Base fee" className="text-xs" />
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold uppercase tracking-widest">RON</span>
                                 <Input
@@ -179,9 +180,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                     </div>
 
                     <div className="space-y-4">
-                        <Label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400 flex items-center gap-2">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Standard Tasks (Template)
-                        </Label>
+                        <SidePanelSectionTitle title="Standard tasks (template)" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
                         <div className="relative group">
                             <Textarea
                                 className="min-h-[300px] font-mono text-sm leading-relaxed bg-white border-slate-200 rounded-2xl focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all p-5 shadow-sm"
@@ -196,41 +195,45 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                         </p>
                     </div>
 
-                    <div className="pt-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 rounded-lg px-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                            onClick={handleDelete}
-                            disabled={loading}
-                        >
-                            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isDeleting ? <AlertTriangle className="h-3.5 w-3.5 mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
-                            {isDeleting ? "Confirm Delete Service Template" : "Delete Service Template"}
-                        </Button>
-                        {isDeleting && (
+                    <SidePanelDangerZone
+                        title="Danger zone"
+                        description="Delete this service template. Existing projects keep their stored data."
+                        className="border-slate-200"
+                    >
+                        <div className="flex items-center gap-2">
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setIsDeleting(false)}
-                                className="ml-2 h-8 rounded-lg px-2.5 text-xs font-semibold text-slate-400 hover:text-slate-600"
+                                className="h-8 rounded-lg px-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                onClick={handleDelete}
+                                disabled={loading}
                             >
-                                Cancel
+                                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isDeleting ? <AlertTriangle className="h-3.5 w-3.5 mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+                                {isDeleting ? "Confirm delete" : "Delete template"}
                             </Button>
-                        )}
-                    </div>
+                            {isDeleting && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsDeleting(false)}
+                                    className="h-8 rounded-lg px-2.5 text-xs font-semibold text-slate-400 hover:text-slate-600"
+                                >
+                                    Cancel
+                                </Button>
+                            )}
+                        </div>
+                    </SidePanelDangerZone>
                 </div>
             </div>
 
-            <div className="flex flex-col gap-1 border-t border-slate-200 bg-white px-6 py-3 text-[11px] font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                <span># Service ID: {service.id.slice(0, 8)}</span>
-                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                    <span className="inline-flex items-center gap-1.5">
-                        Created: {formatRelativeDate(service.createdAt)}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                        Last updated: {formatRelativeDate(service.updatedAt || service.createdAt)}
-                    </span>
-                </div>
+            <div className="bg-white px-8 pb-4">
+                <SidePanelMetaBar
+                    className="mt-0 pt-4"
+                    entityLabel="Service ID"
+                    entityId={service.id.slice(0, 8)}
+                    createdAt={formatRelativeDate(service.createdAt)}
+                    updatedAt={formatRelativeDate(service.updatedAt || service.createdAt)}
+                />
             </div>
         </div>
     )

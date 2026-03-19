@@ -27,15 +27,15 @@ export function ProfitabilityAlerts({ alerts }: ProfitabilityAlertsProps) {
                     <Card key={alert.projectId} className="p-4 border-amber-200 bg-amber-50/50 flex flex-col gap-3 relative overflow-hidden group">
                         <div className="flex justify-between items-start z-10">
                             <div className="space-y-1">
-                                <h5 className="font-bold text-sm text-amber-900 uppercase tracking-tight">{alert.projectName}</h5>
+                                <h5 className="text-sm font-bold tracking-tight text-amber-900">{alert.projectName}</h5>
                                 <div className="flex items-center gap-1 text-amber-700/70">
                                     <TrendingDown className="h-3 w-3" />
-                                    <span className="text-[10px] uppercase font-bold tracking-widest">Low Margin Warning</span>
+                                    <span className="text-[11px] font-semibold tracking-[0.03em]">Low margin warning</span>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <span className="text-lg font-black text-amber-700">{(alert.ratio * 100).toFixed(0)}%</span>
-                                <p className="text-[10px] text-amber-600/70 font-bold uppercase tracking-tighter">Budget Burned</p>
+                                <p className="text-[11px] font-semibold tracking-[0.03em] text-amber-600/70">Budget burned</p>
                             </div>
                         </div>
 
@@ -47,10 +47,10 @@ export function ProfitabilityAlerts({ alerts }: ProfitabilityAlertsProps) {
                         </div>
 
                         <div className="flex justify-between items-center z-10">
-                            <p className="text-[10px] text-amber-800 font-medium">
+                            <p className="text-[11px] font-medium text-amber-800">
                                 Labor ({alert.loggedValue.toFixed(0)} RON) vs Fee ({alert.fee.toFixed(0)} RON)
                             </p>
-                            <button className="text-[10px] font-bold text-amber-700 flex items-center gap-0.5 hover:text-amber-900 transition-colors uppercase tracking-widest">
+                            <button className="flex items-center gap-0.5 text-[11px] font-semibold tracking-[0.03em] text-amber-700 transition-colors hover:text-amber-900">
                                 Optimize <ArrowUpRight className="h-2.5 w-2.5" />
                             </button>
                         </div>

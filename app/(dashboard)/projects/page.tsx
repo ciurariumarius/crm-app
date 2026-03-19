@@ -1,30 +1,20 @@
 import prisma from "@/lib/prisma"
 import Link from "next/link"
 import {
-    ChevronDown,
     SlidersHorizontal,
 } from "lucide-react"
-import {
-    isValid,
-    parseISO,
-} from "date-fns"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { cn, formatProjectServiceList } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
-import { Prisma } from "@prisma/client"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
 import { ProjectsFiltersToolbar } from "@/components/projects/projects-filters-toolbar"
 import { ProjectsSearchInput } from "@/components/projects/projects-search-input"
 import { ProjectsSearchProvider } from "@/components/projects/projects-search-context"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { ProjectsPaginationBar } from "@/components/projects/projects-pagination-bar"
+import { buildProjectWhereInput, normalizeProjectFilters } from "@/lib/filters/project-filters"
 
 export const dynamic = "force-dynamic"
 
@@ -60,23 +50,6 @@ const sortOptions = [
 ] as const
 const DEFAULT_SORT = "updated_desc"
 const SORT_VALUES = new Set(sortOptions.map((option) => option.value))
-
-function parseDateParam(value: string | undefined) {
-    if (!value) return null
-    const parsed = parseISO(value)
-    if (!isValid(parsed)) return null
-    return parsed
-}
-
-function utcDate(year: number, monthIndex: number, day = 1) {
-    return new Date(Date.UTC(year, monthIndex, day, 0, 0, 0, 0))
-}
-
-function addUtcDays(date: Date, days: number) {
-    const next = new Date(date)
-    next.setUTCDate(next.getUTCDate() + days)
-    return next
-}
 
 type ProjectBoardSortBy = "createdAt" | "updatedAt" | "amount" | "name" | "time"
 type ProjectBoardSortDirection = "asc" | "desc"
@@ -125,15 +98,24 @@ export default async function ProjectsPage({
 }) {
     const session = await requireTenantContext()
     const params = await searchParams
-    const queryStatusRaw = params.status || "Active"
-    const queryStatus = ["All", "Active", "Paused", "Completed", "Closed"].includes(queryStatusRaw) ? queryStatusRaw : "Active"
-    const q = params.q?.trim()
-    const partnerId = params.partnerId
-    const payment = params.payment || "All"
-    const recurring = params.recurring || "All"
-    const period = params.period || "all_time"
-    const fromParam = params.from
-    const toParam = params.to
+    const normalizedFilters = normalizeProjectFilters({
+        q: params.q,
+        status: params.status,
+        payment: params.payment,
+        recurring: params.recurring,
+        partnerId: params.partnerId,
+        period: params.period,
+        from: params.from,
+        to: params.to,
+    })
+    const q = normalizedFilters.q
+    const queryStatus = normalizedFilters.status
+    const partnerId = normalizedFilters.partnerId
+    const payment = normalizedFilters.payment
+    const recurring = normalizedFilters.recurring
+    const period = normalizedFilters.period
+    const fromParam = normalizedFilters.from
+    const toParam = normalizedFilters.to
     const sortRaw = params.sort || DEFAULT_SORT
     const sort = SORT_VALUES.has(sortRaw as (typeof sortOptions)[number]["value"]) ? sortRaw : DEFAULT_SORT
     const perPageRaw = Number(params.perPage)
@@ -142,89 +124,11 @@ export default async function ProjectsPage({
     const mobileFiltersOpen = params.filters === "1"
     const requestedPage = Math.max(1, Number(params.page) || 1)
 
-    const now = new Date()
-    let dateFilter: Prisma.ProjectWhereInput = {}
-
-    const parsedFrom = parseDateParam(fromParam)
-    const parsedTo = parseDateParam(toParam)
-
-    if (parsedFrom || parsedTo) {
-        const fromDate = parsedFrom
-            ? utcDate(parsedFrom.getUTCFullYear(), parsedFrom.getUTCMonth(), parsedFrom.getUTCDate())
-            : undefined
-        const toDateStart = parsedTo
-            ? utcDate(parsedTo.getUTCFullYear(), parsedTo.getUTCMonth(), parsedTo.getUTCDate())
-            : undefined
-        const toDateExclusive = toDateStart ? addUtcDays(toDateStart, 1) : undefined
-        const rangeStart = fromDate && toDateStart
-            ? (fromDate <= toDateStart ? fromDate : toDateStart)
-            : (fromDate || toDateStart)
-        const rangeEndExclusive = fromDate && toDateExclusive
-            ? (fromDate <= (toDateStart as Date) ? toDateExclusive : addUtcDays(fromDate, 1))
-            : (fromDate ? addUtcDays(fromDate, 1) : toDateExclusive)
-        dateFilter = {
-            createdAt: {
-                ...(rangeStart ? { gte: rangeStart } : {}),
-                ...(rangeEndExclusive ? { lt: rangeEndExclusive } : {}),
-            },
-        }
-    } else if (period === "this_month") {
-        const year = now.getUTCFullYear()
-        const month = now.getUTCMonth()
-        dateFilter = {
-            createdAt: {
-                gte: utcDate(year, month, 1),
-                lt: utcDate(year, month + 1, 1),
-            },
-        }
-    } else if (period === "last_month") {
-        const currentStart = utcDate(now.getUTCFullYear(), now.getUTCMonth(), 1)
-        const lastMonthStart = utcDate(currentStart.getUTCFullYear(), currentStart.getUTCMonth() - 1, 1)
-        dateFilter = {
-            createdAt: {
-                gte: lastMonthStart,
-                lt: currentStart,
-            },
-        }
-    } else if (period === "this_year") {
-        const year = now.getUTCFullYear()
-        dateFilter = {
-            createdAt: {
-                gte: utcDate(year, 0, 1),
-                lt: utcDate(year + 1, 0, 1),
-            },
-        }
-    } else if (period === "last_year") {
-        const year = now.getUTCFullYear() - 1
-        dateFilter = {
-            createdAt: {
-                gte: utcDate(year, 0, 1),
-                lt: utcDate(year + 1, 0, 1),
-            },
-        }
-    }
-
-    const projectWhere: Prisma.ProjectWhereInput = {
-        AND: [
-            { tenantId: session.tenantId },
-            queryStatus === "All"
-                ? {}
-                : { status: queryStatus },
-            payment === "All" ? {} : { paymentStatus: payment },
-            partnerId ? { site: { partnerId } } : {},
-            recurring === "Recurring" ? { services: { some: { isRecurring: true } } } :
-                recurring === "OneTime" ? { services: { some: { isRecurring: false } } } : {},
-            dateFilter,
-            q ? {
-                OR: [
-                    { name: { contains: q } },
-                    { site: { domainName: { contains: q } } },
-                    { services: { some: { serviceName: { contains: q } } } },
-                    { site: { partner: { name: { contains: q } } } },
-                ],
-            } : {},
-        ],
-    }
+    const projectWhere = buildProjectWhereInput({
+        tenantId: session.tenantId,
+        filters: normalizedFilters,
+        now: new Date(),
+    })
 
     const totalProjects = await prisma.project.count({ where: projectWhere })
     const shouldPaginate = totalProjects > PAGINATION_THRESHOLD
@@ -497,49 +401,35 @@ export default async function ProjectsPage({
                     hourlyRate={user?.hourlyRate ? Number(user.hourlyRate) : 0}
                     initialSortBy={boardSort.by}
                     initialSortDirection={boardSort.direction}
+                    searchApiFilters={{
+                        status: queryStatus,
+                        payment,
+                        recurring,
+                        partnerId,
+                        period,
+                        from: fromParam,
+                        to: toParam,
+                        sort,
+                        page,
+                        perPage,
+                    }}
                 />
 
-                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
-                    <span className="text-muted-foreground">Page {page} of {totalPages} · Showing {pageStart}-{pageEnd} of {totalProjects} projects</span>
-                    <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-foreground hover:bg-muted transition-colors"
-                                    title="Projects per page"
-                                >
-                                    {perPage}
-                                    <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                                {PAGE_SIZE_OPTIONS.map((size) => (
-                                    <DropdownMenuItem key={size} asChild className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700">
-                                        <Link href={buildHref({ perPage: String(size), page: "1" })}>
-                                            {size}
-                                        </Link>
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        {prevPage ? (
-                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(prevPage) })}>
-                                Previous
-                            </Link>
-                        ) : (
-                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
-                        )}
-                        {nextPage ? (
-                            <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(nextPage) })}>
-                                Next
-                            </Link>
-                        ) : (
-                            <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
-                        )}
-                    </div>
-                </div>
+                <ProjectsPaginationBar
+                    fallback={{
+                        total: totalProjects,
+                        page,
+                        perPage,
+                        totalPages,
+                        pageStart,
+                        pageEnd,
+                        shouldPaginate,
+                        prevPage,
+                        nextPage,
+                    }}
+                    pageSizeOptions={PAGE_SIZE_OPTIONS}
+                    defaultPageSize={DEFAULT_PAGE_SIZE}
+                />
                 </div>
             </ProjectsSearchProvider>
         </ProjectSheetWrapper>

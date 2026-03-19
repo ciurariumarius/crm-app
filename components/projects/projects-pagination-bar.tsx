@@ -1,0 +1,99 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname, useSearchParams } from "next/navigation"
+import { ChevronDown } from "lucide-react"
+import { useProjectsSearchContext } from "./projects-search-context"
+import type { SearchPaginationState } from "@/types/search-pagination"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+type ProjectsPaginationBarProps = {
+    fallback: SearchPaginationState
+    pageSizeOptions: readonly number[]
+    defaultPageSize: number
+}
+
+export function ProjectsPaginationBar({
+    fallback,
+    pageSizeOptions,
+    defaultPageSize,
+}: ProjectsPaginationBarProps) {
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
+    const searchContext = useProjectsSearchContext()
+    const hasSearchTerm = Boolean(searchContext?.searchTerm.trim())
+    const livePagination = hasSearchTerm ? searchContext?.searchPagination : null
+    const display = livePagination ?? fallback
+
+    const buildHref = (overrides: Record<string, string | null>) => {
+        const params = typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search)
+            : new URLSearchParams(searchParams.toString())
+        for (const [key, value] of Object.entries(overrides)) {
+            if (
+                value === null ||
+                value === "" ||
+                (key === "perPage" && Number(value) === defaultPageSize)
+            ) {
+                params.delete(key)
+            } else {
+                params.set(key, value)
+            }
+        }
+        const query = params.toString()
+        return query ? `${pathname}?${query}` : pathname
+    }
+
+    return (
+        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
+            <span className="text-muted-foreground">
+                {searchContext?.isSearching && hasSearchTerm
+                    ? "Searching..."
+                    : `Page ${display.page} of ${display.totalPages} · Showing ${display.pageStart}-${display.pageEnd} of ${display.total} projects`}
+            </span>
+            <div className="flex items-center gap-2">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-foreground hover:bg-muted transition-colors"
+                            title="Projects per page"
+                        >
+                            {display.perPage}
+                            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                        {pageSizeOptions.map((size) => (
+                            <DropdownMenuItem key={size} asChild className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700">
+                                <Link href={buildHref({ perPage: String(size), page: "1" })}>
+                                    {size}
+                                </Link>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {display.prevPage ? (
+                    <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(display.prevPage) })}>
+                        Previous
+                    </Link>
+                ) : (
+                    <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                )}
+                {display.nextPage ? (
+                    <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={buildHref({ page: String(display.nextPage) })}>
+                        Next
+                    </Link>
+                ) : (
+                    <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                )}
+            </div>
+        </div>
+    )
+}

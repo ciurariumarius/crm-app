@@ -220,38 +220,38 @@ export function MobileHomeView({
             </section>
 
             <section className="space-y-3">
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Financial Overview</h2>
+                <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Financial overview</h2>
                 <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">{monthName} Revenue</p>
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">{monthName} revenue</p>
                         <p className="mt-2 flex items-baseline gap-1.5">
                             <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[#2563EB] leading-none">{revenueLabel.amount}</span>
-                            <span className="font-mono text-[12px] font-bold uppercase text-[#2563EB]">{revenueLabel.code}</span>
+                            <span className="font-mono text-[12px] font-semibold text-[#2563EB]">{revenueLabel.code}</span>
                         </p>
                     </div>
                     <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">Unpaid Projects</p>
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">Unpaid projects</p>
                         <p className="mt-2 flex items-baseline gap-1.5">
                             <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[#E11D48] leading-none">{unpaidLabel.amount}</span>
-                            <span className="font-mono text-[12px] font-bold uppercase text-[#E11D48]">{unpaidLabel.code}</span>
+                            <span className="font-mono text-[12px] font-semibold text-[#E11D48]">{unpaidLabel.code}</span>
                         </p>
                     </div>
                 </div>
             </section>
 
             <section className="space-y-3">
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Projects Overview</h2>
+                <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Projects overview</h2>
                 <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="border-r border-slate-100 pr-3">
                             <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-[#2563EB] leading-none">{liveProjects}</p>
-                            <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">Live Projects</p>
+                            <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-slate-500">Live projects</p>
                             <div className="mt-3 flex flex-wrap gap-1.5">
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2 py-1 text-[10px] font-semibold text-[#2563EB]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2 py-1 text-[11px] font-semibold text-[#2563EB]">
                                     <RotateCw className="h-2.5 w-2.5" />
                                     {activeMonthlyProjects}
                                 </span>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[#EEF2FF] px-2 py-1 text-[10px] font-semibold text-[#4F46E5]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#EEF2FF] px-2 py-1 text-[11px] font-semibold text-[#4F46E5]">
                                     <Zap className="h-2.5 w-2.5" />
                                     {activeOneTimeProjects}
                                 </span>
@@ -259,7 +259,7 @@ export function MobileHomeView({
                         </div>
                         <div className="pl-1">
                             <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-slate-900 leading-none">{activeTasks}</p>
-                            <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">Active Tasks</p>
+                            <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-slate-500">Active tasks</p>
                             <p className="mt-3 font-mono text-[30px] font-bold leading-none text-slate-900">{formatHours(totalHoursMonth)}h</p>
                             <p className="mt-1 text-[11px] text-slate-500">worked in {monthName}</p>
                         </div>
@@ -270,7 +270,7 @@ export function MobileHomeView({
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Your Tasks</h2>
+                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Your tasks</h2>
                 </div>
 
                 {visibleTasks.length === 0 ? (
@@ -302,11 +302,11 @@ export function MobileHomeView({
                                     </p>
                                     <div className="mt-3 flex items-center gap-2">
                                         {isOverdue ? (
-                                            <Badge className="rounded-full border border-[#FECACA] bg-[#FFF1F2] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#E11D48]">
+                                            <Badge className="rounded-full border border-[#FECACA] bg-[#FFF1F2] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[#E11D48]">
                                                 Overdue
                                             </Badge>
                                         ) : (
-                                            <Badge className="rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#2563EB]">
+                                            <Badge className="rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[#2563EB]">
                                                 {task?.status || "Active"}
                                             </Badge>
                                         )}
@@ -318,7 +318,7 @@ export function MobileHomeView({
                         {upcomingTasks.length > 6 ? (
                             <Link
                                 href="/tasks"
-                                className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 transition-colors hover:bg-white"
+                                className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 px-4 py-2 text-[12px] font-semibold tracking-[0.03em] text-slate-600 transition-colors hover:bg-white"
                             >
                                 View All Tasks
                             </Link>
@@ -330,12 +330,12 @@ export function MobileHomeView({
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
                     <FolderOpen className="h-5 w-5 text-[#2563EB]" />
-                    <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Projects</h2>
+                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Projects</h2>
                 </div>
 
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#2563EB]">Monthly Subscriptions</p>
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[#2563EB]">Monthly subscriptions</p>
                         <div className="space-y-2">
                             {visibleMonthlyProjects.map((project) => {
                                 return (
@@ -356,7 +356,7 @@ export function MobileHomeView({
                                                 </p>
                                             </div>
                                             <Badge className={cn(
-                                                "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em]",
+                                                "rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em]",
                                                 project.paymentStatus === "Paid"
                                                     ? "border border-emerald-200 bg-emerald-50 text-emerald-600"
                                                     : "border border-rose-200 bg-rose-50 text-rose-600"
@@ -376,7 +376,7 @@ export function MobileHomeView({
                     </div>
 
                     <div className="space-y-2">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#2563EB]">Fixed-Fee Projects</p>
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[#2563EB]">Fixed-fee projects</p>
                         <div className="space-y-2">
                             {visibleOneTimeProjects.map((project) => {
                                 const parsed = splitProjectLabel(project.siteName || "Untitled project")
@@ -399,7 +399,7 @@ export function MobileHomeView({
                                                 <span>{project.completedTasks}/{project.totalTasks}</span>
                                             </div>
                                             <Badge className={cn(
-                                                "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em]",
+                                                "rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em]",
                                                 project.paymentStatus === "Paid"
                                                     ? "border border-emerald-200 bg-emerald-50 text-emerald-600"
                                                     : "border border-rose-200 bg-rose-50 text-rose-600"
@@ -420,7 +420,7 @@ export function MobileHomeView({
 
                     <Link
                         href="/projects"
-                        className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 transition-colors hover:bg-white"
+                        className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 px-4 py-2 text-[12px] font-semibold tracking-[0.03em] text-slate-600 transition-colors hover:bg-white"
                     >
                         View All Active Projects
                     </Link>
@@ -430,12 +430,12 @@ export function MobileHomeView({
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-[#D97706]" />
-                    <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Payments</h2>
+                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Payments</h2>
                 </div>
 
                 <div className="rounded-3xl border border-slate-200 bg-white shadow-[var(--shadow-apple)]">
                     <div className="border-b border-slate-100 px-4 py-3">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Due Payment</p>
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">Due payment</p>
                     </div>
                     {visibleUnpaidPartners.length === 0 ? (
                         <div className="px-4 py-5 text-sm text-slate-500">No unpaid balances.</div>
@@ -460,7 +460,7 @@ export function MobileHomeView({
                                                     <ChevronDown className="h-4 w-4 text-slate-300" />
                                                 )}
                                                 <div>
-                                                    <p className="text-[13px] font-semibold uppercase text-slate-900">{partner.name}</p>
+                                                    <p className="text-[13px] font-semibold text-slate-900">{partner.name}</p>
                                                     <p className="mt-0.5 text-[11px] text-slate-500">
                                                         Owed sum:
                                                         <span className="ml-1 font-mono font-bold text-[#E11D48]">
@@ -478,7 +478,7 @@ export function MobileHomeView({
                                                     e.stopPropagation()
                                                     handleSettlePartner(partner.id)
                                                 }}
-                                                className="h-8 rounded-full px-3 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                                                className="h-8 rounded-full px-3 text-[11px] font-semibold tracking-[0.03em] text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
                                             >
                                                 {currentSettling ? "Saving..." : "Mark Paid"}
                                             </Button>
@@ -509,9 +509,9 @@ export function MobileHomeView({
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                         <div className="inline-flex items-center gap-2">
                             <History className="h-4 w-4 text-slate-500" />
-                            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Payment History</p>
+                            <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">Payment history</p>
                         </div>
-                        <Link href="/payments" className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#2563EB]">
+                        <Link href="/payments" className="text-[12px] font-semibold tracking-[0.03em] text-[#2563EB]">
                             View all
                         </Link>
                     </div>

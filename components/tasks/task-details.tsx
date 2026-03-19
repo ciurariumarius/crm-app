@@ -40,6 +40,8 @@ import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { useRouter } from "next/navigation"
+import { SIDE_PANEL_DIALOG_HEADER_CLASS, SIDE_PANEL_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
+import { SidePanelChip, SidePanelEmptyState, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
 
 type TaskTimeLog = {
     id?: string
@@ -442,11 +444,11 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-screen max-w-none p-0 flex flex-col overflow-y-auto md:overflow-hidden border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none sm:w-full sm:max-w-[900px]"
+                className={cn(sidePanelClass("default"), "overflow-y-auto md:overflow-hidden")}
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 showCloseButton={false}
             >
-                <SheetHeader className="px-8 pt-9 pb-6 relative bg-transparent">
+                <SheetHeader className={SIDE_PANEL_HEADER_CLASS}>
                     <div className="absolute right-6 top-6 z-10">
                         <Button
                             variant="ghost"
@@ -632,25 +634,18 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
 
                         <section className="space-y-3 border-t border-slate-200/80 pt-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Task Notes</h2>
-                                <span
-                                    className={cn(
-                                        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold uppercase tracking-[0.08em]",
-                                        notesSaveState === "saving" && "border-blue-200 bg-blue-50 text-blue-600",
-                                        notesSaveState === "typing" && "border-slate-200 bg-slate-100 text-slate-500",
-                                        notesSaveState === "ready" && "border-emerald-200 bg-emerald-50 text-emerald-600"
-                                    )}
-                                >
-                                    {notesSaveState === "saving" && (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    )}
-                                    {notesSaveState === "ready" && (
-                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                    )}
-                                    {notesSaveState === "typing" && "Typing"}
-                                    {notesSaveState === "saving" && "Saving"}
-                                    {notesSaveState === "ready" && "Ready"}
-                                </span>
+                                <SidePanelSectionTitle title="Task notes" />
+                                <SidePanelChip
+                                    tone={sidePanelChipToneByLabel(notesSaveState)}
+                                    icon={
+                                        notesSaveState === "saving"
+                                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            : notesSaveState === "ready"
+                                                ? <CheckCircle2 className="h-3.5 w-3.5" />
+                                                : undefined
+                                    }
+                                    label={notesSaveState === "typing" ? "Typing" : notesSaveState === "saving" ? "Saving" : "Ready"}
+                                />
                             </div>
                             <RichTextEditor
                                 value={description}
@@ -694,10 +689,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                     <section className="space-y-4">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    Task Time Tracker
-                                </h2>
+                                <SidePanelSectionTitle title="Task time tracker" icon={<Clock className="h-3.5 w-3.5" />} />
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -798,10 +790,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
 
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    Time Logs History
-                                </h2>
+                                <SidePanelSectionTitle title="Time logs history" icon={<Clock className="h-3.5 w-3.5" />} />
                                 <div className="text-[11px] font-semibold text-slate-400">
                                     {sortedTimeLogs.length} Sessions
                                 </div>
@@ -809,9 +798,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
 
                             <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
                                 {sortedTimeLogs.length === 0 && (
-                                    <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 py-6 text-center text-sm text-slate-500">
-                                        No time logs recorded for this task yet.
-                                    </div>
+                                    <SidePanelEmptyState message="No time logs recorded for this task yet." className="rounded-xl bg-white/70 text-sm" />
                                 )}
 
                                 {sortedTimeLogs.map((log: TaskTimeLog) => {
@@ -846,34 +833,35 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                     </section>
 
                         <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Task Info</h2>
+                            <SidePanelSectionTitle title="Task info" />
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <button
                                     type="button"
                                     onClick={openProjectDetails}
                                     disabled={!task.projectId || !onOpenProject}
                                     className={cn(
-                                        "group rounded-[22px] border border-slate-200 bg-white p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition",
+                                        "text-left",
                                         task.projectId && onOpenProject
                                             ? "hover:border-slate-300"
                                             : "cursor-not-allowed opacity-60"
                                     )}
                                 >
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Project</p>
-                                    <div className="mt-1 flex items-center justify-between gap-3">
-                                        <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
-                                            {projectLabel}
-                                        </p>
-                                        <FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
-                                    </div>
-                                    <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
-                                        <span className="truncate">{projectPartnerLabel}</span>
-                                    </div>
+                                    <SidePanelInfoCard
+                                        title="Project"
+                                        subtitle={(
+                                            <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
+                                                {projectLabel}
+                                            </p>
+                                        )}
+                                        action={<FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />}
+                                    >
+                                        <p className="truncate text-[11px] font-medium text-slate-500">{projectPartnerLabel}</p>
+                                    </SidePanelInfoCard>
                                 </button>
 
-                                <div className="group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300">
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Domain</p>
-                                    <div className="mt-1 flex items-center justify-between gap-3">
+                                <SidePanelInfoCard
+                                    title="Domain"
+                                    subtitle={(
                                         <button
                                             type="button"
                                             onClick={openSitePanel}
@@ -888,37 +876,38 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                         >
                                             {projectDomainLabel}
                                         </button>
+                                    )}
+                                    action={
                                         <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
                                             <Globe className="h-4 w-4" />
                                             <ArrowUpRight className="h-4 w-4" />
                                         </span>
-                                    </div>
-                                    <div className="mt-3 flex items-center gap-2">
+                                    }
+                                >
+                                    <div className="flex items-center gap-2">
                                         {projectDomainUrl ? (
-                                            <a
-                                                href={projectDomainUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-blue-700 transition hover:bg-blue-100"
-                                            >
-                                                Open website
-                                                <ArrowUpRight className="h-3.5 w-3.5" />
+                                            <a href={projectDomainUrl} target="_blank" rel="noopener noreferrer">
+                                                <SidePanelChip
+                                                    tone="blue"
+                                                    label={(
+                                                        <>
+                                                            Open website
+                                                            <ArrowUpRight className="h-3.5 w-3.5" />
+                                                        </>
+                                                    )}
+                                                    className="rounded-lg px-2.5 py-1.5 text-[10px]"
+                                                />
                                             </a>
                                         ) : (
-                                            <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
-                                                Open website
-                                            </span>
+                                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-[10px] opacity-70" />
                                         )}
                                     </div>
-                                </div>
+                                </SidePanelInfoCard>
                             </div>
                         </section>
 
                     <section className="space-y-2 border-t border-slate-200/80 pt-3">
-                        <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-                            <History className="h-3.5 w-3.5" />
-                            Task History (Log)
-                        </h2>
+                        <SidePanelSectionTitle title="Task history (log)" icon={<History className="h-3.5 w-3.5" />} />
                         <div className="space-y-1.5">
                             {isLoadingTaskHistory && taskHistoryEntries.length === 0 ? (
                                 <div className="flex items-center justify-center py-6 text-slate-400">
@@ -926,9 +915,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                     <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
                                 </div>
                             ) : taskHistoryEntries.length === 0 ? (
-                                <div className="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                    No task history records found.
-                                </div>
+                                <SidePanelEmptyState message="No task history records found." />
                             ) : (
                                 taskHistoryEntries.map((entry) => {
                                     const sourceLabel = entry.source ? entry.source.replaceAll("_", " ") : null
@@ -974,9 +961,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                                     </span>
                                                 </div>
                                             </div>
-                                            <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-slate-600">
-                                                {entryBadge}
-                                            </span>
+                                            <SidePanelChip tone={sidePanelChipToneByLabel(entryBadge)} label={entryBadge} className="px-2 py-1 text-[10px]" />
                                         </div>
                                     )
                                 })
@@ -997,21 +982,12 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                             </Button>
                         </section>
 
-                        <div className="mt-12 border-t border-slate-200 pt-8 text-[11px] font-semibold text-slate-400">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                <span># Task ID: {task.id.split("-")[0]}</span>
-                                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                                    <span className="inline-flex items-center gap-1.5">
-                                        Created: {formatBottomDate(createdTimestamp)}
-                                    </span>
-                                    {lastUpdatedTimestamp && (
-                                        <span className="inline-flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                                            Last Updated: {formatBottomDate(lastUpdatedTimestamp)}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        <SidePanelMetaBar
+                            entityLabel="Task ID"
+                            entityId={task.id.split("-")[0]}
+                            createdAt={formatBottomDate(createdTimestamp)}
+                            updatedAt={lastUpdatedTimestamp ? formatBottomDate(lastUpdatedTimestamp) : undefined}
+                        />
                 </div>
             </div>
 
@@ -1019,9 +995,9 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                     <DialogContent
                         showCloseButton={false}
                         overlayClassName="bg-slate-900/18 backdrop-blur-[6px]"
-                        className="h-[92vh] w-[94vw] max-w-[94vw] overflow-hidden rounded-2xl border border-slate-200/80 bg-[#FCFCFB] p-0 shadow-[0_40px_100px_-45px_rgba(15,23,42,0.7)] sm:w-[65vw] sm:min-w-[65vw] sm:max-w-[65vw]"
+                        className={sidePanelDialogContentClass("default")}
                     >
-                        <DialogHeader className="border-b border-slate-200/70 px-8 py-5">
+                        <DialogHeader className={SIDE_PANEL_DIALOG_HEADER_CLASS}>
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
                                     <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-slate-900">

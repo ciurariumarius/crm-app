@@ -30,6 +30,7 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
+import { useTasksSearchContext } from "./tasks-search-context"
 
 const SORT_OPTIONS = [
     { label: "Newest", value: "newest" },
@@ -69,6 +70,7 @@ export function TasksToolbar({
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const searchContext = useTasksSearchContext()
 
     const buildHref = (overrides: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -110,6 +112,11 @@ export function TasksToolbar({
         projectId: null,
         partnerId: null,
     })
+    const hasSearchTerm = Boolean(searchContext?.searchTerm.trim())
+    const searchResultCount = searchContext?.searchResultCount
+    const displayTotal = hasSearchTerm && searchResultCount !== null && searchResultCount !== undefined
+        ? searchResultCount
+        : totalTasks
 
     const selectedProject = projects.find((project) => project.id === currentProject)
     const selectedPartner = partners.find((partner) => partner.id === currentPartner)
@@ -254,13 +261,15 @@ export function TasksToolbar({
             </div>
 
             <div className="px-1 flex flex-wrap items-center gap-2">
-                <p className="text-[15px] font-medium text-slate-600">{totalTasks} Results found</p>
+                <p className="text-[15px] font-medium text-slate-600">
+                    {searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`}
+                </p>
                 {activeFilters.length > 0 && <span className="text-slate-300">|</span>}
                 {activeFilters.map((filter) => (
                     <Link
                         key={filter.key}
                         href={filter.href}
-                        className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                        className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
                     >
                         <span>{filter.label}</span>
                     </Link>
@@ -268,7 +277,7 @@ export function TasksToolbar({
                 {activeFilters.length > 0 && (
                     <Link
                         href={clearAllHref}
-                        className="inline-flex h-7 items-center rounded-md border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                        className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
                     >
                         Clear all
                     </Link>

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Site } from "@prisma/client"
-import { Copy, ExternalLink, Globe, Trash2, Pencil } from "lucide-react"
+import { Copy, ExternalLink, Globe, Pencil, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,13 +13,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { updateSiteDetails } from "@/lib/actions/sites"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { DeleteSiteButton } from "@/components/vault/delete-site-button"
+import { SidePanelDangerZone } from "@/components/ui/side-panel-primitives"
 
 interface SiteSheetContentProps {
     site: Site & { partner?: { id: string; name: string } }
     onUpdate?: (updatedSite: Site & { partner?: { id: string; name: string } }) => void
+    onClose?: () => void
 }
 
-export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
+export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentProps) {
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
         name: site.name || "",
@@ -84,9 +86,23 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
 
     return (
         <div className="relative flex h-full flex-col overflow-hidden bg-[#f8fafc]">
+            <div className="absolute right-8 top-8 z-30 flex items-center gap-2">
+                {onClose && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={onClose}
+                        className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                        aria-label="Close site"
+                    >
+                        <X className="h-5 w-5" />
+                    </Button>
+                )}
+            </div>
             {/* Header / Title Area */}
             <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
-                <div className="mx-auto max-w-[980px] space-y-4 pb-12">
+                <div className="mx-auto max-w-[980px] space-y-4 pb-12 pr-12">
                     <div className="space-y-3 pr-4 pt-1 pb-1">
                         {isEditingDomain ? (
                             <Input
@@ -234,16 +250,13 @@ export function SiteSheetContent({ site, onUpdate }: SiteSheetContentProps) {
                         </TabsContent>
                     </Tabs>
 
-                    {/* Footer / Danger Zone */}
-                    <div className="pt-8 border-t border-slate-200 border-dashed">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Trash2 className="h-3.5 w-3.5 text-rose-500" />
-                                <span className="text-xs text-rose-500 font-bold uppercase tracking-widest">Danger Zone</span>
-                            </div>
-                            <DeleteSiteButton siteId={site.id} partnerId={site.partnerId} />
-                        </div>
-                    </div>
+                    <SidePanelDangerZone
+                        title="Danger zone"
+                        description="Delete this domain and all related references."
+                        className="border-slate-200"
+                    >
+                        <DeleteSiteButton siteId={site.id} partnerId={site.partnerId} />
+                    </SidePanelDangerZone>
                 </div>
             </div>
             

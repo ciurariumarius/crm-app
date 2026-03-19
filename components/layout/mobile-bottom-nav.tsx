@@ -45,7 +45,7 @@ function NavLink({
             <Icon className={cn("h-5 w-5", active && "scale-105")} strokeWidth={1.7} />
             <span
                 className={cn(
-                    "text-[10px] font-semibold uppercase tracking-[0.08em]",
+                    "text-[11px] font-medium tracking-[0.03em]",
                     active ? "text-[#2563EB]" : "text-slate-500"
                 )}
             >
@@ -94,7 +94,7 @@ export function MobileBottomNav({
                             aria-label="Open menu"
                         >
                             <Menu className="h-5 w-5" strokeWidth={1.7} />
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Menu</span>
+                            <span className="text-[11px] font-medium tracking-[0.03em] text-slate-500">Menu</span>
                         </button>
                     </div>
                 </div>
@@ -109,7 +109,7 @@ export function MobileBottomNav({
                     <SheetTitle className="sr-only">Quick actions</SheetTitle>
                     <div className="p-5 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-3">
                         <div className="mx-auto h-1.5 w-10 rounded-full bg-slate-200" />
-                        <p className="text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                        <p className="text-center text-[12px] font-medium tracking-[0.04em] text-slate-500">
                             Quick Actions
                         </p>
 

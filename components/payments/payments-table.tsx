@@ -154,11 +154,11 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
             <Table className="table-cockpit">
                 <TableHeader>
                     <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                        <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Project</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Action</TableHead>
-                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Total</TableHead>
-                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Status</TableHead>
-                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Date</TableHead>
+                        <TableHead className="text-[11px] font-semibold tracking-[0.03em] text-slate-500">Project</TableHead>
+                        <TableHead className="text-[11px] font-semibold tracking-[0.03em] text-slate-500">Action</TableHead>
+                        <TableHead className="text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Total</TableHead>
+                        <TableHead className="text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Status</TableHead>
+                        <TableHead className="text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Date</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -198,7 +198,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                             ) : (
                                                 <CreditCard className="h-3.5 w-3.5 text-blue-500" />
                                             )}
-                                            <span className="text-xs font-medium text-muted-foreground">
+                                            <span className="text-[12px] font-medium text-muted-foreground">
                                                 {getActionLabel(log.action)}
                                             </span>
                                         </div>
@@ -210,16 +210,16 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                         <Badge
                                             variant="outline"
                                             className={cn(
-                                                "h-6 px-3 text-[10px] font-bold uppercase tracking-widest transition-all",
+                                                "h-6 px-3 text-[11px] font-semibold tracking-[0.03em] transition-all",
                                                 log.status === "Paid"
                                                     ? "bg-emerald-100/50 text-emerald-700 border-emerald-200"
                                                     : "bg-rose-100/50 text-rose-700 border-rose-200"
                                             )}
                                         >
-                                            {log.status === "Paid" ? "PAID" : "UNPAID"}
+                                            {log.status === "Paid" ? "Paid" : "Unpaid"}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right whitespace-nowrap text-[11px] font-medium text-slate-500">
+                                    <TableCell className="text-right whitespace-nowrap text-[12px] font-medium text-slate-500">
                                         {formatRelativeDate(log.date)}
                                     </TableCell>
                                 </TableRow>
@@ -230,17 +230,17 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                                 <Table className="table-cockpit">
                                                     <TableHeader className="bg-muted/50">
                                                         <TableRow>
-                                                            <TableHead className="h-8 text-[10px] uppercase font-bold tracking-widest px-4">Project Name</TableHead>
-                                                            <TableHead className="h-8 text-[10px] uppercase font-bold tracking-widest text-right px-4">Fee</TableHead>
+                                                            <TableHead className="h-8 px-4 text-[11px] font-semibold tracking-[0.03em] text-slate-500">Project name</TableHead>
+                                                            <TableHead className="h-8 px-4 text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Fee</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
                                                         {extraProjects.map((projectEntry) => (
                                                             <TableRow key={projectEntry.id} className="hover:bg-slate-50/80 border-slate-100 last:border-0">
-                                                                <TableCell className="py-2.5 text-xs font-bold text-slate-600 px-4">
+                                                                <TableCell className="py-2.5 px-4 text-[12px] font-semibold text-slate-600">
                                                                     {projectEntry.name}
                                                                 </TableCell>
-                                                                <TableCell className="py-2.5 text-xs text-right font-mono font-bold px-4 text-slate-500">
+                                                                <TableCell className="py-2.5 px-4 text-right font-mono text-[12px] font-semibold text-slate-500">
                                                                     {formatCurrency(projectEntry.fee)}
                                                                 </TableCell>
                                                             </TableRow>

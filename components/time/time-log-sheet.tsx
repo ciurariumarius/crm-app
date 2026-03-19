@@ -9,12 +9,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
 import { formatRelativeDate } from "@/lib/utils"
-import { Calendar as CalendarIcon, Trash2 } from "lucide-react"
+import { Calendar as CalendarIcon, Trash2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { updateTimeLog, deleteTimeLog } from "@/lib/actions/time"
 import { toast } from "sonner"
+import { SIDE_PANEL_HEADER_CLASS, sidePanelClass } from "@/lib/ui/side-panels"
+import { SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 
 type TimeLogSheetLog = {
     id: string
@@ -139,30 +141,40 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-[500px] w-full p-0 flex flex-col border-l border-border bg-background shadow-2xl">
-                <SheetHeader className="p-6 border-b border-border bg-muted/10">
+            <SheetContent
+                side="right"
+                showCloseButton={false}
+                className={sidePanelClass("narrow")}
+            >
+                <SheetHeader className={SIDE_PANEL_HEADER_CLASS}>
+                    <div className="absolute right-6 top-6 z-10">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                            onClick={() => onOpenChange(false)}
+                        >
+                            <X className="h-5 w-5" />
+                        </Button>
+                    </div>
                     <SheetTitle>Edit Time Entry</SheetTitle>
                     <SheetDescription>
                         Modify the details of your time log.
                     </SheetDescription>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {/* Read-only Meta */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 p-3 rounded-xl border border-border">
-                        <div className="flex flex-col">
-                            <span className="text-xs font-semibold text-muted-foreground/80">Created</span>
-                            <span>{formatRelativeDate(log.createdAt)}</span>
-                        </div>
-                        <div className="h-8 w-[1px] bg-border mx-2" />
-                        <div className="flex flex-col items-end">
-                            <span className="text-xs font-semibold text-muted-foreground/80">ID</span>
-                            <span className="font-mono">{log.id.slice(0, 8)}...</span>
-                        </div>
-                    </div>
+                <div className="flex-1 overflow-y-auto px-8 pb-6 pt-0 space-y-6">
+                    <SidePanelMetaBar
+                        className="mt-0 pt-0 border-0"
+                        entityLabel="Time log ID"
+                        entityId={<span className="font-mono">{log.id.slice(0, 8)}...</span>}
+                        createdAt={formatRelativeDate(log.createdAt)}
+                    />
 
                     {/* Project & Task */}
                     <div className="space-y-4">
+                        <SidePanelSectionTitle title="Assignment" />
                         <div className="space-y-2">
                             <Label htmlFor="project">Project</Label>
                             <Select value={projectId} onValueChange={(val) => {
@@ -198,6 +210,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
 
                     {/* Time Details */}
                     <div className="space-y-4">
+                        <SidePanelSectionTitle title="Time details" />
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Date</Label>
@@ -275,7 +288,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                     </div>
                 </div>
 
-                <SheetFooter className="p-6 border-t border-border bg-muted/10 flex-row justify-between items-center sm:justify-between">
+                <SheetFooter className="px-8 py-4 border-t border-slate-200 bg-white flex-row justify-between items-center sm:justify-between">
                     <Button
                         variant="ghost"
                         size="icon"

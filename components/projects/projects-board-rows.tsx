@@ -4,6 +4,7 @@ import * as React from "react"
 import { format } from "date-fns"
 import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Square, RefreshCcw, Zap, Wallet, Timer, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useDebounce } from "@/hooks/use-debounce"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { useProjectsSearchContext } from "./projects-search-context"
 import { GlobalCreateProjectDialog } from "@/components/projects/global-create-project-dialog"
@@ -23,6 +24,8 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import type { ProjectWithDetails } from "@/types"
+import type { SearchPaginationState } from "@/types/search-pagination"
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
     minimumFractionDigits: 0,
@@ -137,6 +140,18 @@ type TotalsSummary = {
 
 type BoardSortBy = "createdAt" | "updatedAt" | "amount" | "name" | "time"
 type BoardSortDirection = "asc" | "desc"
+type SearchApiFilters = {
+    status: string
+    payment: string
+    recurring: string
+    sort: string
+    partnerId?: string
+    period?: string
+    from?: string
+    to?: string
+    page: number
+    perPage: number
+}
 
 export function ProjectsBoardRows({
     projects,
@@ -146,6 +161,7 @@ export function ProjectsBoardRows({
     hourlyRate = 0,
     initialSortBy = "updatedAt",
     initialSortDirection = "desc",
+    searchApiFilters,
 }: {
     projects: BoardProject[]
     layout: "grid" | "list"
@@ -154,6 +170,7 @@ export function ProjectsBoardRows({
     hourlyRate?: number
     initialSortBy?: BoardSortBy
     initialSortDirection?: BoardSortDirection
+    searchApiFilters?: SearchApiFilters
 }) {
     const { openProject } = React.useContext(ProjectSheetContext)
     const searchContext = useProjectsSearchContext()
@@ -163,6 +180,10 @@ export function ProjectsBoardRows({
     const [inlineEdits, setInlineEdits] = React.useState<Record<string, { status?: string; paymentStatus?: string; amount?: number }>>({})
     const [amountEditorProjectId, setAmountEditorProjectId] = React.useState<string | null>(null)
     const [amountDraft, setAmountDraft] = React.useState("")
+    const [remoteProjects, setRemoteProjects] = React.useState<BoardProject[] | null>(null)
+    const searchCacheRef = React.useRef<
+        Map<string, { projects: BoardProject[]; total: number; pagination: SearchPaginationState }>
+    >(new Map())
 
     React.useEffect(() => {
         setSortBy(initialSortBy)
@@ -214,9 +235,120 @@ export function ProjectsBoardRows({
     )
 
     const normalizedSearch = (searchContext?.searchTerm || "").trim().toLowerCase()
+    const debouncedSearch = useDebounce(normalizedSearch, 250)
+
+    React.useEffect(() => {
+        if (!searchContext) return
+        if (!debouncedSearch) {
+            setRemoteProjects(null)
+            searchContext.setSearchResultCount(null)
+            searchContext.setSearchPagination(null)
+            searchContext.setIsSearching(false)
+            return
+        }
+
+        const params = new URLSearchParams()
+        const locationParams = typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search)
+            : null
+        const locationPage = Number(locationParams?.get("page"))
+        const effectivePage = Number.isFinite(locationPage) && locationPage > 0
+            ? Math.floor(locationPage)
+            : (searchApiFilters?.page || 1)
+        const locationPerPage = Number(locationParams?.get("perPage"))
+        const effectivePerPage = Number.isFinite(locationPerPage) && locationPerPage > 0
+            ? Math.floor(locationPerPage)
+            : (searchApiFilters?.perPage || 100)
+        params.set("q", debouncedSearch)
+        params.set("limit", "1000")
+        params.set("page", String(effectivePage))
+        params.set("perPage", String(effectivePerPage))
+        if (searchApiFilters?.status) params.set("status", searchApiFilters.status)
+        if (searchApiFilters?.payment) params.set("payment", searchApiFilters.payment)
+        if (searchApiFilters?.recurring) params.set("recurring", searchApiFilters.recurring)
+        if (searchApiFilters?.sort) params.set("sort", searchApiFilters.sort)
+        if (searchApiFilters?.partnerId) params.set("partnerId", searchApiFilters.partnerId)
+        if (searchApiFilters?.period) params.set("period", searchApiFilters.period)
+        if (searchApiFilters?.from) params.set("from", searchApiFilters.from)
+        if (searchApiFilters?.to) params.set("to", searchApiFilters.to)
+
+        const cacheKey = params.toString()
+        const cached = searchCacheRef.current.get(cacheKey)
+        if (cached) {
+            setRemoteProjects(cached.projects)
+            searchContext.setSearchResultCount(cached.total)
+            searchContext.setSearchPagination(cached.pagination)
+            searchContext.setIsSearching(false)
+            return
+        }
+
+        const controller = new AbortController()
+        let cancelled = false
+        searchContext.setIsSearching(true)
+
+        void fetch(`/api/search/projects?${cacheKey}`, {
+            method: "GET",
+            signal: controller.signal,
+            cache: "no-store",
+        })
+            .then(async (response) => {
+                if (!response.ok) return null
+                return response.json()
+            })
+            .then((payload) => {
+                if (cancelled || !payload?.success) return
+                const nextProjects = Array.isArray(payload.projects) ? (payload.projects as BoardProject[]) : []
+                const total = Number(payload.total || 0)
+                const pagination = payload?.pagination as SearchPaginationState | undefined
+                const safePagination: SearchPaginationState = pagination ?? {
+                    total,
+                    page: 1,
+                    perPage: effectivePerPage,
+                    totalPages: 1,
+                    pageStart: total > 0 ? 1 : 0,
+                    pageEnd: total,
+                    shouldPaginate: false,
+                    prevPage: null,
+                    nextPage: null,
+                }
+                searchCacheRef.current.set(cacheKey, { projects: nextProjects, total, pagination: safePagination })
+                setRemoteProjects(nextProjects)
+                searchContext.setSearchResultCount(total || nextProjects.length)
+                searchContext.setSearchPagination(safePagination)
+            })
+            .catch((error) => {
+                if (controller.signal.aborted) return
+                console.error("Project search failed", error)
+            })
+            .finally(() => {
+                if (cancelled) return
+                searchContext.setIsSearching(false)
+            })
+
+        return () => {
+            cancelled = true
+            controller.abort()
+        }
+    }, [
+        debouncedSearch,
+        searchApiFilters?.from,
+        searchApiFilters?.page,
+        searchApiFilters?.partnerId,
+        searchApiFilters?.perPage,
+        searchApiFilters?.payment,
+        searchApiFilters?.period,
+        searchApiFilters?.recurring,
+        searchApiFilters?.sort,
+        searchApiFilters?.status,
+        searchApiFilters?.to,
+        searchContext,
+    ])
+
+    const searchSourceProjects = remoteProjects ?? projects
     const filteredProjects = React.useMemo(() => {
-        if (!normalizedSearch) return projects
-        return projects.filter((project) => {
+        if (!normalizedSearch) return searchSourceProjects
+        if (remoteProjects) return remoteProjects
+        return searchSourceProjects.filter((project) => {
             const searchableText = [
                 project.name,
                 project.site?.domainName,
@@ -230,7 +362,7 @@ export function ProjectsBoardRows({
                 .toLowerCase()
             return searchableText.includes(normalizedSearch)
         })
-    }, [normalizedSearch, projects])
+    }, [normalizedSearch, remoteProjects, searchSourceProjects])
 
     const monthlyProjects = sortProjects(filteredProjects.filter((project) => project.isRecurring))
     const oneTimeProjects = sortProjects(filteredProjects.filter((project) => !project.isRecurring))
@@ -251,8 +383,8 @@ export function ProjectsBoardRows({
     const oneTimeCount = oneTimeProjects.length
     const monthlyCount = monthlyProjects.length
 
-    const openDetails = (projectId: string) => {
-        openProject(projectId)
+    const openDetails = (project: BoardProject) => {
+        openProject(project.id, project as unknown as ProjectWithDetails)
     }
 
     const getDisplayStatus = (project: BoardProject) =>
@@ -372,7 +504,7 @@ export function ProjectsBoardRows({
                         <button
                             key={project.id}
                             type="button"
-                            onClick={() => openDetails(project.id)}
+                            onClick={() => openDetails(project)}
                             className={cn("text-left rounded-xl border border-border/60 bg-card p-5 premium-card", getProjectToneClass(projectStatus))}
                         >
                             <div className="flex items-start justify-between gap-3">
@@ -523,7 +655,9 @@ export function ProjectsBoardRows({
                     <div className="space-y-2">
                         {oneTimeProjects.length === 0 && (
                             <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
-                                No one-time projects match current filters.
+                                {normalizedSearch
+                                    ? "No one-time projects match this search."
+                                    : "No one-time projects match current filters."}
                             </div>
                         )}
                         {oneTimeProjects.map((project) => {
@@ -537,7 +671,7 @@ export function ProjectsBoardRows({
                                 <React.Fragment key={project.id}>
                                     <button
                                         type="button"
-                                        onClick={() => openDetails(project.id)}
+                                        onClick={() => openDetails(project)}
                                         className={cn("w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-left premium-card md:hidden", getProjectToneClass(projectStatus))}
                                     >
                                         <div className="flex items-start justify-between gap-3">
@@ -588,11 +722,11 @@ export function ProjectsBoardRows({
                                     <div
                                         role="button"
                                         tabIndex={0}
-                                        onClick={() => openDetails(project.id)}
+                                        onClick={() => openDetails(project)}
                                         onKeyDown={(event) => {
                                             if (event.key === "Enter" || event.key === " ") {
                                                 event.preventDefault()
-                                                openDetails(project.id)
+                                                openDetails(project)
                                             }
                                         }}
                                         className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
@@ -812,7 +946,9 @@ export function ProjectsBoardRows({
                     <div className="space-y-2">
                         {monthlyProjects.length === 0 && (
                             <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
-                                No monthly projects match current filters.
+                                {normalizedSearch
+                                    ? "No monthly projects match this search."
+                                    : "No monthly projects match current filters."}
                             </div>
                         )}
                         {monthlyProjects.map((project) => {
@@ -826,7 +962,7 @@ export function ProjectsBoardRows({
                                 <React.Fragment key={project.id}>
                                     <button
                                         type="button"
-                                        onClick={() => openDetails(project.id)}
+                                        onClick={() => openDetails(project)}
                                         className={cn("w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-left premium-card md:hidden", getProjectToneClass(projectStatus))}
                                     >
                                         <div className="flex items-start justify-between gap-3">
@@ -880,11 +1016,11 @@ export function ProjectsBoardRows({
                                     <div
                                         role="button"
                                         tabIndex={0}
-                                        onClick={() => openDetails(project.id)}
+                                        onClick={() => openDetails(project)}
                                         onKeyDown={(event) => {
                                             if (event.key === "Enter" || event.key === " ") {
                                                 event.preventDefault()
-                                                openDetails(project.id)
+                                                openDetails(project)
                                             }
                                         }}
                                         className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}

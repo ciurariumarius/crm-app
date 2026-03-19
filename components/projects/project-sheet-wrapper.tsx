@@ -3,8 +3,11 @@
 import * as React from "react"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
+import { SiteSheetContent } from "@/components/vault/site-sheet-content"
+import { PartnerSheetContent } from "@/components/vault/partner-sheet-content"
 import type { ProjectWithDetails } from "@/types"
-import type { Service } from "@prisma/client"
+import type { Service, Site } from "@prisma/client"
+import { sidePanelClass } from "@/lib/ui/side-panels"
 
 interface ProjectSheetWrapperProps {
     projects: ProjectWithDetails[]
@@ -28,6 +31,8 @@ export const ProjectSheetContext = React.createContext<{
 
 export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, children }: ProjectSheetWrapperProps) {
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
+    const [selectedSite, setSelectedSite] = React.useState<Site & { partner?: { id: string; name: string } } | null>(null)
+    const [selectedPartnerId, setSelectedPartnerId] = React.useState<string | null>(null)
     const pendingSyncRef = React.useRef<Record<string, { status?: string; paymentStatus?: string }>>({})
 
     const openProject = (projectId: string, projectData?: ProjectWithDetails) => {
@@ -73,7 +78,7 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
                 <SheetContent
                     side="right"
                     showCloseButton={false}
-                    className="w-screen max-w-none p-0 border-l border-border bg-white shadow-[var(--shadow-drawer)] flex flex-col overflow-hidden sm:w-full sm:max-w-[1020px] sm:rounded-l-[12px]"
+                    className={sidePanelClass("wide")}
                 >
                     <SheetTitle className="sr-only">Project details</SheetTitle>
                     {selectedProject && (
@@ -91,6 +96,39 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
                                     }
                                 }
                             }}
+                            onOpenSite={(site) => setSelectedSite(site)}
+                            onOpenPartner={(partnerId) => setSelectedPartnerId(partnerId)}
+                        />
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Site detail view if needed */}
+            <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow")}>
+                    <SheetTitle className="sr-only">Site Details</SheetTitle>
+                    {selectedSite && (
+                        <SiteSheetContent
+                            site={selectedSite}
+                            onUpdate={(updated) => setSelectedSite((prev) => (prev ? { ...prev, ...updated } : prev))}
+                            onClose={() => setSelectedSite(null)}
+                        />
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Partner detail view if needed */}
+            <Sheet open={!!selectedPartnerId} onOpenChange={(open) => !open && setSelectedPartnerId(null)}>
+                <SheetContent 
+                    side="right"
+                    showCloseButton={false}
+                    className={sidePanelClass("wide")}
+                >
+                    <SheetTitle className="sr-only">Partner Details</SheetTitle>
+                    {selectedPartnerId && (
+                        <PartnerSheetContent 
+                            partnerId={selectedPartnerId} 
+                            onClose={() => setSelectedPartnerId(null)}
                         />
                     )}
                 </SheetContent>

@@ -4,10 +4,10 @@ import * as React from "react"
 import type { Prisma } from "@prisma/client"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ServiceSheetContent } from "@/components/services/service-sheet-content"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LayoutGrid, ListFilter, RefreshCcw, Zap, Check } from "lucide-react"
+import { sidePanelClass } from "@/lib/ui/side-panels"
 
 type ServiceProjectStatus = {
     status: string
@@ -170,7 +170,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
             </div>
 
             <Sheet open={!!selectedService} onOpenChange={(open) => !open && setSelectedService(null)}>
-                <SheetContent className="w-screen max-w-none p-0 overflow-hidden flex flex-col border-none shadow-xl bg-[#f8fafc] focus-visible:outline-none sm:w-full sm:max-w-[900px]">
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("default")}>
                     <SheetHeader className="sr-only">
                         <SheetTitle>Service Template Details</SheetTitle>
                     </SheetHeader>

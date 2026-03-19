@@ -115,7 +115,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                 <Target className="h-6 w-6" />
                             </div>
                             <div>
-                                <h2 className="text-sm font-black uppercase tracking-widest text-foreground">
+                                <h2 className="text-base font-semibold tracking-[0.02em] text-foreground">
                                     Your Tasks
                                 </h2>
                                 <div className="flex items-center gap-2 mt-0.5 text-xs font-medium text-muted-foreground">
@@ -155,7 +155,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                             </div>
 
                             <Link href="/tasks" className="hidden md:block">
-                                <Button variant="ghost" className="text-xs font-bold text-muted-foreground hover:text-foreground uppercase tracking-wider">
+                                <Button variant="ghost" className="text-sm font-semibold text-muted-foreground hover:text-foreground">
                                     View All
                                 </Button>
                             </Link>
@@ -174,7 +174,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                         <button
                             onClick={() => setFilter("all")}
                             className={cn(
-                                "flex items-center gap-2 px-1 py-2 text-xs font-bold uppercase tracking-wider transition-all relative",
+                                "flex items-center gap-2 px-1 py-2 text-[12px] font-semibold tracking-[0.02em] transition-all relative",
                                 filter === "all" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
@@ -185,7 +185,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                         <button
                             onClick={() => setFilter("overdue")}
                             className={cn(
-                                "flex items-center gap-2 px-1 py-2 text-xs font-bold uppercase tracking-wider transition-all relative",
+                                "flex items-center gap-2 px-1 py-2 text-[12px] font-semibold tracking-[0.02em] transition-all relative",
                                 filter === "overdue" ? "text-rose-600" : "text-muted-foreground hover:text-rose-600"
                             )}
                         >
@@ -196,7 +196,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                         <button
                             onClick={() => setFilter("urgent")}
                             className={cn(
-                                "flex items-center gap-2 px-1 py-2 text-xs font-bold uppercase tracking-wider transition-all relative",
+                                "flex items-center gap-2 px-1 py-2 text-[12px] font-semibold tracking-[0.02em] transition-all relative",
                                 filter === "urgent" ? "text-orange-600" : "text-muted-foreground hover:text-orange-600"
                             )}
                         >
