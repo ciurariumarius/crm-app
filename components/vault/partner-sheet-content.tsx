@@ -21,9 +21,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { getPartnerById, addPartnerAdHocPayment, updatePartner, deletePartner } from "@/lib/actions/partners"
+import { formatRelativeDate } from "@/lib/utils"
 import { toast } from "sonner"
 import { SitesListView } from "@/components/vault/sites-list-view"
-import { SidePanelDangerZone, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
+import { SidePanelDangerZone, SidePanelLoadingState, SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
 import type { Site } from "@prisma/client"
 
@@ -35,6 +36,8 @@ type PartnerSheetData = {
     id: string
     name: string
     businessName?: string | null
+    createdAt?: string | Date | null
+    updatedAt?: string | Date | null
     isMainJob: boolean
     emailPrimary?: string | null
     emailSecondary?: string | null
@@ -179,15 +182,15 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
 
     if (loading) {
         return (
-            <div className="flex h-full items-center justify-center bg-[#f8fafc]">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            <div className="px-8 py-10">
+                <SidePanelLoadingState message="Loading partner details..." />
             </div>
         )
     }
 
     if (error || !partner) {
         return (
-            <div className="flex h-full flex-col items-center justify-center p-6 text-center bg-[#f8fafc]">
+            <div className="flex h-full flex-col items-center justify-center bg-background p-6 text-center">
                 <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
                 <p className="text-sm font-semibold text-destructive">{error || "Partner not found"}</p>
             </div>
@@ -195,18 +198,20 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
     }
 
     return (
-        <div className="relative flex h-full flex-col overflow-hidden bg-[#f8fafc] text-slate-800">
+        <div className="relative flex h-full flex-col overflow-hidden bg-background text-foreground">
             {/* Close Button - following Project side panel pattern */}
             <div className="absolute right-8 top-8 z-30 flex items-center gap-2">
                 {onClose && (
-                    <button
+                    <Button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onClose(); }}
-                        className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
                         aria-label="Close partner"
                     >
                         <X className="h-4 w-4" />
-                    </button>
+                    </Button>
                 )}
             </div>
 
@@ -238,12 +243,12 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                 />
                             ) : (
                                 <div className="group flex items-center gap-2 cursor-pointer" onClick={() => setIsEditingName(true)}>
-                                    <h2 className="text-[28px] font-black leading-none tracking-tight text-slate-900 group-hover:text-primary transition-colors md:text-3xl">{partner.name}</h2>
+                                    <h2 className="ui-text-title text-slate-900 group-hover:text-primary transition-colors md:text-[30px]">{partner.name}</h2>
                                     <Pencil className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                             )}
                             {partner.businessName && !isEditingName && (
-                                <p className="mt-2 text-[13px] font-bold uppercase tracking-[0.1em] text-slate-400">{partner.businessName}</p>
+                                <p className="mt-2 ui-overline text-slate-400">{partner.businessName}</p>
                             )}
                         </div>
 
@@ -329,7 +334,7 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                         </div>
                                         <div className="flex items-center justify-between border p-3 rounded-xl shadow-sm bg-slate-50/50 h-[64px]">
                                             <Label htmlFor="edit-type" className="flex flex-col gap-1 cursor-pointer">
-                                                <span className="font-semibold text-slate-800 text-[11px] uppercase tracking-wider">Partner Type</span>
+                                                <span className="ui-text-caption font-semibold text-slate-700">Partner type</span>
                                             </Label>
                                             <div className="flex items-center gap-2">
                                                 <span className={`text-xs ${!editForm.isMainJob ? "font-bold text-slate-900" : "text-slate-400 font-medium"}`}>Freelance</span>
@@ -375,7 +380,7 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                     </div>
 
                                     <div className="space-y-2 pt-2 border-t border-slate-100">
-                                        <Label htmlFor="edit-notes" className="text-slate-600 text-[11px] uppercase tracking-wider font-bold">Internal Notes</Label>
+                                        <Label htmlFor="edit-notes" className="ui-overline text-slate-500">Internal notes</Label>
                                         <Textarea
                                             id="edit-notes"
                                             value={editForm.internalNotes}
@@ -429,6 +434,14 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                     </AlertDialogContent>
                                 </AlertDialog>
                         </SidePanelDangerZone>
+
+                        <SidePanelMetaBar
+                            className="mt-2 pt-6"
+                            entityLabel="Partner ID"
+                            entityId={partner.id.slice(0, 8)}
+                            createdAt={formatRelativeDate(partner.createdAt)}
+                            updatedAt={formatRelativeDate(partner.updatedAt || partner.createdAt)}
+                        />
                     </div>
                 </div>
             </div>

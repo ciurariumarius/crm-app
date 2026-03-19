@@ -5,9 +5,11 @@ import {
 } from "lucide-react"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { cn, formatProjectServiceList } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
+import { buttonLinkClassName } from "@/components/ui/button-link"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
 import { ProjectsFiltersToolbar } from "@/components/projects/projects-filters-toolbar"
@@ -283,9 +285,11 @@ export default async function ProjectsPage({
 
                             <Link
                                 href={buildHref({ filters: mobileFiltersOpen ? null : "1", page: "1" })}
-                                className={mobileFiltersOpen
-                                    ? "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB] shadow-sm"
-                                    : "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm"}
+                                className={buttonLinkClassName({
+                                    size: "lg",
+                                    variant: mobileFiltersOpen ? "activeBlue" : "subtle",
+                                    className: "w-11 rounded-2xl px-0",
+                                })}
                             >
                                 <SlidersHorizontal className="h-4 w-4" />
                             </Link>
@@ -299,13 +303,13 @@ export default async function ProjectsPage({
                                             key={option.value}
                                             href={buildHref({ status: option.value, page: "1" })}
                                             className={cn(
-                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
                                                 queryStatus === option.value
                                                     ? "bg-white text-[#2563EB] shadow-sm"
                                                     : "text-slate-600"
                                             )}
                                         >
-                                            {option.label.toUpperCase()}
+                                            {option.label}
                                         </Link>
                                     ))}
                                 </div>
@@ -318,13 +322,13 @@ export default async function ProjectsPage({
                                             key={option.value}
                                             href={buildHref({ payment: option.value, page: "1" })}
                                             className={cn(
-                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
                                                 payment === option.value
                                                     ? "bg-white text-[#2563EB] shadow-sm"
                                                     : "text-slate-600"
                                             )}
                                         >
-                                            {option.label.toUpperCase()}
+                                            {option.label}
                                         </Link>
                                     ))}
                                 </div>
@@ -333,17 +337,17 @@ export default async function ProjectsPage({
 
                                 <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
                                     {[
-                                        { label: "UPDATED", value: "updated_desc" },
-                                        { label: "NEWEST", value: "created_desc" },
-                                        { label: "OLDEST", value: "created_asc" },
-                                        { label: "AMOUNT", value: "amount_desc" },
-                                        { label: "TIME", value: "time_desc" },
+                                        { label: "Updated", value: "updated_desc" },
+                                        { label: "Newest", value: "created_desc" },
+                                        { label: "Oldest", value: "created_asc" },
+                                        { label: "Amount", value: "amount_desc" },
+                                        { label: "Time", value: "time_desc" },
                                     ].map((option) => (
                                         <Link
                                             key={option.value}
                                             href={buildHref({ sort: option.value, page: "1" })}
                                             className={cn(
-                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
                                                 sort === option.value
                                                     ? "bg-white text-[#2563EB] shadow-sm"
                                                     : "text-slate-600"
@@ -357,25 +361,18 @@ export default async function ProjectsPage({
                         </div>
                     </div>
 
-                    <div className="hidden md:flex flex-col lg:flex-row lg:items-center gap-4">
-                        <div className="flex items-center gap-3 min-w-[180px]">
-                            <MobileMenuTrigger />
-                            <h1 className="page-title text-slate-900">Projects</h1>
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <ProjectsSearchInput />
-                        </div>
-
-                        <div className="flex items-center gap-3">
+                    <DashboardPageHeader
+                        title="Projects"
+                        search={<ProjectsSearchInput />}
+                        actions={(
                             <CreateProjectButton
                                 variant="full"
                                 label="Add Project"
                                 partners={partnersForClient}
                                 services={servicesForClient}
                             />
-                        </div>
-                    </div>
+                        )}
+                    />
 
                     <div className={cn(mobileFiltersOpen ? "block" : "hidden", "md:block")}>
                         <ProjectsFiltersToolbar

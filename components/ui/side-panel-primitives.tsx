@@ -1,5 +1,5 @@
 import * as React from "react"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type SidePanelSectionTitleProps = {
@@ -10,7 +10,7 @@ type SidePanelSectionTitleProps = {
 
 export function SidePanelSectionTitle({ title, icon, className }: SidePanelSectionTitleProps) {
     return (
-        <h2 className={cn("inline-flex items-center gap-2 text-[12px] font-semibold tracking-[0.03em] text-slate-500", className)}>
+        <h2 className={cn("ui-text-section inline-flex items-center gap-2 text-slate-500", className)}>
             {icon}
             {title}
         </h2>
@@ -27,18 +27,18 @@ type SidePanelMetaBarProps = {
 
 export function SidePanelMetaBar({ entityLabel, entityId, createdAt, updatedAt, className }: SidePanelMetaBarProps) {
     return (
-        <div className={cn("mt-12 border-t border-slate-200 pt-8 text-[11px] font-medium text-slate-500", className)}>
+        <div className={cn("mt-12 border-t border-slate-200 pt-8 text-slate-500", className)}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <span className="font-semibold text-slate-500">
+                <span className="ui-text-caption font-semibold text-slate-500">
                     # {entityLabel}: {entityId}
                 </span>
                 <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="ui-text-caption inline-flex items-center gap-1.5">
                         <span className="font-semibold text-slate-500">Created:</span>
                         {createdAt}
                     </span>
                     {updatedAt ? (
-                        <span className="inline-flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                        <span className="ui-text-caption inline-flex items-center gap-1.5 border-l border-slate-200 pl-3">
                             <span className="font-semibold text-slate-500">Last Updated:</span>
                             {updatedAt}
                         </span>
@@ -108,7 +108,7 @@ export function SidePanelChip({ label, icon, tone = "slate", className }: SidePa
     return (
         <span
             className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold tracking-[0.03em]",
+                "ui-text-caption inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold",
                 CHIP_TONE_CLASS[tone],
                 className
             )}
@@ -132,7 +132,7 @@ export function SidePanelInfoCard({ title, subtitle, action, className, children
         <div className={cn("group rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300", className)}>
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">{title}</p>
+                    <p className="ui-text-section text-slate-500">{title}</p>
                     {subtitle ? <div className="mt-1">{subtitle}</div> : null}
                 </div>
                 {action}
@@ -156,6 +156,25 @@ export function SidePanelEmptyState({ message, className }: SidePanelEmptyStateP
             )}
         >
             {message}
+        </div>
+    )
+}
+
+type SidePanelLoadingStateProps = {
+    message?: string
+    className?: string
+}
+
+export function SidePanelLoadingState({ message = "Loading...", className }: SidePanelLoadingStateProps) {
+    return (
+        <div
+            className={cn(
+                "flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-5 text-[12px] font-medium text-slate-500",
+                className
+            )}
+        >
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{message}</span>
         </div>
     )
 }

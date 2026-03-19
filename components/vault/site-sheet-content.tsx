@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { updateSiteDetails } from "@/lib/actions/sites"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
+import { formatRelativeDate } from "@/lib/utils"
 import { DeleteSiteButton } from "@/components/vault/delete-site-button"
-import { SidePanelDangerZone } from "@/components/ui/side-panel-primitives"
+import { SidePanelDangerZone, SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 
 interface SiteSheetContentProps {
     site: Site & { partner?: { id: string; name: string } }
@@ -85,7 +86,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
     const [isEditingDomain, setIsEditingDomain] = useState(false)
 
     return (
-        <div className="relative flex h-full flex-col overflow-hidden bg-[#f8fafc]">
+        <div className="relative flex h-full flex-col overflow-hidden bg-background">
             <div className="absolute right-8 top-8 z-30 flex items-center gap-2">
                 {onClose && (
                     <Button
@@ -147,9 +148,11 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
 
                     <div className="h-px w-full bg-slate-200" />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                        <SidePanelSectionTitle title="Tracking IDs" />
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="space-y-1">
-                            <Label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">GTM ID</Label>
+                            <Label className="ui-overline text-slate-400">GTM ID</Label>
                             <div className="flex items-center gap-2">
                                 <Input
                                     value={formData.gtmId}
@@ -164,7 +167,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <Label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Ads ID</Label>
+                            <Label className="ui-overline text-slate-400">Ads ID</Label>
                             <div className="flex items-center gap-2">
                                 <Input
                                     value={formData.googleAdsId}
@@ -179,7 +182,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             </div>
                         </div>
                         <div className="space-y-1 col-span-full">
-                            <Label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Drive Folder</Label>
+                            <Label className="ui-overline text-slate-400">Drive folder</Label>
                             <div className="flex items-center gap-2">
                                 <div className="relative flex-1">
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -201,6 +204,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             </div>
                         </div>
                     </div>
+                    </div>
 
                     <Tabs defaultValue="marketing" className="w-full pt-4">
                         <TabsList className="bg-slate-100 p-1 rounded-xl w-full grid grid-cols-2">
@@ -209,8 +213,9 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                         </TabsList>
 
                         <TabsContent value="marketing" className="space-y-5 pt-6 animate-in slide-in-from-bottom-2 duration-300">
+                            <SidePanelSectionTitle title="Marketing hub" />
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Headlines / Ad Copy</Label>
+                                <Label className="ui-overline text-slate-500">Headlines / ad copy</Label>
                                 <Textarea
                                     className="min-h-[120px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
                                     value={marketingData.headlines}
@@ -221,7 +226,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Brand Voice & Notes</Label>
+                                <Label className="ui-overline text-slate-500">Brand voice & notes</Label>
                                 <Textarea
                                     className="min-h-[100px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
                                     value={marketingData.brandNotes}
@@ -232,7 +237,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Competitor Intelligence</Label>
+                                <Label className="ui-overline text-slate-500">Competitor intelligence</Label>
                                 <Textarea
                                     className="min-h-[100px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
                                     value={marketingData.competitors}
@@ -244,7 +249,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                         </TabsContent>
 
                         <TabsContent value="technical" className="pt-6">
-                            <div className="p-8 bg-slate-50 rounded-2xl border border-slate-200 border-dashed text-xs text-slate-400 font-bold uppercase tracking-widest text-center">
+                            <div className="p-8 bg-slate-50 rounded-2xl border border-slate-200 border-dashed ui-text-caption text-slate-400 text-center">
                                 Raw JSON data view coming soon.
                             </div>
                         </TabsContent>
@@ -257,6 +262,14 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                     >
                         <DeleteSiteButton siteId={site.id} partnerId={site.partnerId} />
                     </SidePanelDangerZone>
+
+                    <SidePanelMetaBar
+                        className="mt-2 pt-6"
+                        entityLabel="Domain ID"
+                        entityId={site.id.slice(0, 8)}
+                        createdAt={formatRelativeDate(site.createdAt)}
+                        updatedAt={site.updatedAt ? formatRelativeDate(site.updatedAt) : undefined}
+                    />
                 </div>
             </div>
             

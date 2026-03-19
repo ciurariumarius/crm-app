@@ -5,13 +5,14 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Globe, Briefcase, CheckSquare, AlertCircle, CheckCircle2, ArrowRight, Loader2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { PartnerSheetContent } from "@/components/vault/partner-sheet-content"
-import { cn, formatNumber } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { settlePartnerDebt } from "@/lib/actions/settlement"
 import { sidePanelClass } from "@/lib/ui/side-panels"
+import { StatusChip } from "@/components/ui/status-chip"
+import { Button } from "@/components/ui/button"
 
 interface Partner {
     id: string
@@ -79,10 +80,15 @@ export function PartnerCard({ partner }: { partner: Partner }) {
         <Card className="group relative border-slate-200/60 bg-white transition-all duration-300 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.07)] hover:border-slate-300">
             <div 
                 onClick={() => setIsSheetOpen(true)}
-                className="h-full cursor-pointer"
+                className="h-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 rounded-xl"
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && setIsSheetOpen(true)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        setIsSheetOpen(true)
+                    }
+                }}
             >
                 <CardContent className="flex flex-col h-full p-0">
                     {/* Top Section: Branding & Vital Labels */}
@@ -94,13 +100,13 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                         {partner.name}
                                     </h3>
                                     {partner.isMainJob && (
-                                        <Badge className="h-5 border-none bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-wider px-2">
+                                        <StatusChip tone="active" size="xs">
                                             Main Job
-                                        </Badge>
+                                        </StatusChip>
                                     )}
                                 </div>
                                 {partner.businessName && (
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{partner.businessName}</p>
+                                    <p className="text-xs font-medium text-slate-400">{partner.businessName}</p>
                                 )}
                             </div>
                             <Link
@@ -117,21 +123,21 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                 <Globe className="h-3.5 w-3.5 text-blue-500/70 shrink-0" />
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{partner._count.sites}</span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-none">Domains</span>
+                                    <span className="text-[11px] font-medium text-slate-500 leading-none">Domains</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-center gap-2.5">
                                 <Briefcase className="h-3.5 w-3.5 text-indigo-500/70 shrink-0" />
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{totalProjects}</span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-none">Projects</span>
+                                    <span className="text-[11px] font-medium text-slate-500 leading-none">Projects</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-center gap-2.5">
                                 <CheckSquare className="h-3.5 w-3.5 text-emerald-500/70 shrink-0" />
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{partner.totalTasks || 0}</span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter leading-none">Tasks</span>
+                                    <span className="text-[11px] font-medium text-slate-500 leading-none">Tasks</span>
                                 </div>
                             </div>
                         </div>
@@ -140,24 +146,24 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                     {/* Mid Section: Highlights */}
                     <div className="px-6 py-4 flex items-center justify-between border-y border-slate-50 bg-slate-50/30">
                         <div className="space-y-1">
-                            <span className="block text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">Lifetime Revenue</span>
+                            <span className="block text-[11px] font-medium text-slate-500">Lifetime revenue</span>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-base font-black text-slate-900 tabular-nums">{formatNumber(totalRevenue)}</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">RON</span>
+                                <span className="text-[11px] font-medium text-slate-400">RON</span>
                             </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                            <span className={cn(
-                                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest",
-                                unpaidRevenue > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
-                            )}>
-                                {unpaidRevenue > 0 ? <AlertCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                            <StatusChip
+                                tone={unpaidRevenue > 0 ? "outstanding" : "settled"}
+                                size="xs"
+                                icon={unpaidRevenue > 0 ? <AlertCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                            >
                                 {unpaidRevenue > 0 ? "Outstanding" : "Settled"}
-                            </span>
+                            </StatusChip>
                             {unpaidRevenue > 0 && (
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-base font-black text-rose-600 tabular-nums">{formatNumber(unpaidRevenue)}</span>
-                                    <span className="text-[10px] font-bold text-rose-400 uppercase">RON</span>
+                                    <span className="text-[11px] font-medium text-rose-400">RON</span>
                                 </div>
                             )}
                         </div>
@@ -166,13 +172,15 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                     {/* Bottom Section: Mini Ledger */}
                     <div className="p-6 pt-5 bg-white space-y-4">
                         <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Unpaid Projects</h4>
+                            <h4 className="text-[11px] font-semibold tracking-[0.04em] text-slate-500">Unpaid projects</h4>
                             {optimisticUnpaidProjects.length > 0 && (
-                                <button
+                                <Button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); handleMarkAllPaid(); }}
                                     disabled={isSettling}
-                                    className="inline-flex items-center gap-1.5 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-[11px] font-semibold text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
                                 >
                                     {isSettling ? (
                                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -180,7 +188,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                         <CheckCircle2 className="h-3 w-3" />
                                     )}
                                     Mark All Paid
-                                </button>
+                                </Button>
                             )}
                         </div>
 
@@ -200,13 +208,13 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                             <span className="text-xs font-black tabular-nums text-rose-600">
                                                 {formatNumber(project.amount)}
                                             </span>
-                                            <span className="text-[9px] font-bold text-slate-300 uppercase">RON</span>
+                                            <span className="text-[11px] font-medium text-slate-300">RON</span>
                                         </div>
                                     </Link>
                                 ))}
                                 {optimisticUnpaidProjects.length > 3 && (
                                     <div className="text-center pt-2">
-                                        <span className="text-[10px] font-bold text-slate-400 italic">
+                                        <span className="text-[11px] font-medium text-slate-400 italic">
                                             + {optimisticUnpaidProjects.length - 3} more outstanding
                                         </span>
                                     </div>
@@ -215,7 +223,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                         ) : (
                             <div className="flex items-center gap-3 rounded-2xl border border-dashed border-emerald-100 bg-emerald-50/30 p-4 justify-center">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Account crystal clear</span>
+                                <span className="text-[11px] font-semibold tracking-[0.03em] text-emerald-700">Account crystal clear</span>
                             </div>
                         )}
                     </div>

@@ -274,8 +274,8 @@ export default async function Home() {
                     <Target className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-black uppercase tracking-[0.15em] text-emerald-700">Your Tasks</h2>
-                    <p className="text-[11px] text-emerald-600/70 font-medium">Active work items across all projects</p>
+                    <h2 className="ui-overline text-emerald-700">Your Tasks</h2>
+                    <p className="ui-text-caption text-emerald-600/70">Active work items across all projects</p>
                   </div>
                 </div>
                 <div className="space-y-6">
@@ -291,15 +291,15 @@ export default async function Home() {
                     <FolderDot className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-black uppercase tracking-[0.15em] text-blue-700">Projects</h2>
-                    <p className="text-[11px] text-blue-600/70 font-medium">Monthly subscriptions &amp; fixed-fee work</p>
+                    <h2 className="ui-overline text-blue-700">Projects</h2>
+                    <p className="ui-text-caption text-blue-600/70">Monthly subscriptions &amp; fixed-fee work</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-stretch">
                   <div className="flex flex-col gap-4 h-full">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                      <span className="text-xs font-bold uppercase tracking-widest text-blue-600/80">Monthly Subscriptions</span>
+                      <span className="ui-overline text-blue-600/80">Monthly subscriptions</span>
                     </div>
                     <RecurringProjectsList
                       projects={serializedRecurringProjects}
@@ -310,7 +310,7 @@ export default async function Home() {
                   <div className="flex flex-col gap-4 h-full">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                      <span className="text-xs font-bold uppercase tracking-widest text-indigo-600/80">Fixed-Fee Projects</span>
+                      <span className="ui-overline text-indigo-600/80">Fixed-fee projects</span>
                     </div>
                     <OneTimeProjectsList
                       projects={serializedOneTimeProjects}
@@ -330,7 +330,7 @@ export default async function Home() {
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-amber-700">Payments</h2>
-                    <p className="text-[11px] text-amber-600/70 font-medium">Due balances &amp; settlement history</p>
+                    <p className="ui-text-caption text-amber-600/70">Due balances &amp; settlement history</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">

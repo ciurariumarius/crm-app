@@ -8,6 +8,9 @@ import { ServiceSheetContent } from "@/components/services/service-sheet-content
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LayoutGrid, ListFilter, RefreshCcw, Zap, Check } from "lucide-react"
 import { sidePanelClass } from "@/lib/ui/side-panels"
+import { StatusChip } from "@/components/ui/status-chip"
+import { ListEmptyState } from "@/components/ui/list-state"
+import { FilterBarRow, FilterBarShell } from "@/components/ui/filter-bar"
 
 type ServiceProjectStatus = {
     status: string
@@ -63,17 +66,18 @@ export function ServicesListView({ services }: ServicesListViewProps) {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 shadow-sm backdrop-blur-md w-max">
-                    <LayoutGrid className="h-4 w-4 text-slate-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-600">{services.length} Templates</span>
-                </div>
+            <FilterBarShell>
+                <FilterBarRow className="w-full min-w-0 justify-between">
+                    <div className="flex items-center gap-2">
+                        <LayoutGrid className="h-4 w-4 text-slate-500" />
+                        <span className="ui-text-label">{services.length} Templates</span>
+                    </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
                         <div className="flex items-center gap-2 text-slate-400">
                             <ListFilter className="h-4 w-4" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest">Sort by</span>
+                            <span className="text-[11px] font-medium">Sort by</span>
                         </div>
                         <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
                             <SelectTrigger className="h-7 w-[160px] border-none bg-transparent text-xs font-bold shadow-none focus:ring-0 p-0 text-slate-700">
@@ -90,8 +94,9 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                             </SelectContent>
                         </Select>
                     </div>
-                </div>
-            </div>
+                    </div>
+                </FilterBarRow>
+            </FilterBarShell>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {sortedServices.map((service) => {
@@ -107,22 +112,28 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                         <div
                             key={service.id}
                             onClick={() => setSelectedService(service)}
-                            className="cursor-pointer h-full transition-all hover:scale-[1.01] active:scale-[0.99]"
+                            className="cursor-pointer h-full transition-all hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 rounded-2xl"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault()
+                                    setSelectedService(service)
+                                }
+                            }}
                         >
                             <Card className="hover:bg-white transition-all relative group h-full border-slate-200 shadow-sm hover:shadow-md rounded-2xl overflow-hidden premium-card">
                                 <CardHeader className="pb-3 bg-slate-50/50">
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-2">
                                             {service.isRecurring ? (
-                                                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-violet-50 text-violet-700 border border-violet-200 w-max">
-                                                    <RefreshCcw className="h-3 w-3" />
+                                                <StatusChip tone="recurring" size="xs" icon={<RefreshCcw className="h-3 w-3" />}>
                                                     Recurring
-                                                </span>
+                                                </StatusChip>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 w-max">
-                                                    <Zap className="h-3 w-3" />
-                                                    One-Time
-                                                </span>
+                                                <StatusChip tone="oneTime" size="xs" icon={<Zap className="h-3 w-3" />}>
+                                                    One-time
+                                                </StatusChip>
                                             )}
                                             <CardTitle className="text-[18px] font-bold tracking-tight text-slate-900">{service.serviceName}</CardTitle>
                                         </div>
@@ -143,7 +154,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                 </CardHeader>
                                 <CardContent className="pt-5">
                                     <div className="space-y-3">
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                        <div className="text-[11px] font-semibold tracking-[0.03em] text-slate-500 flex items-center gap-2">
                                             <ListFilter className="h-3 w-3" /> Standard Checklist
                                         </div>
                                         <ul className="text-[13px] space-y-2 list-none font-medium text-slate-600">
@@ -153,7 +164,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                                     <span>{task}</span>
                                                 </li>
                                             ))}
-                                            {tasks.length > 4 && <li className="text-blue-600/60 font-bold text-[10px] uppercase tracking-widest pl-3.5">+{tasks.length - 4} more steps</li>}
+                                            {tasks.length > 4 && <li className="text-blue-600/70 text-[11px] font-medium pl-3.5">+{tasks.length - 4} more steps</li>}
                                             {tasks.length === 0 && <li className="italic text-slate-400 pl-3.5 font-normal">No standard tasks defined</li>}
                                         </ul>
                                     </div>
@@ -163,9 +174,12 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                     )
                 })}
                 {services.length === 0 && (
-                    <div className="col-span-full text-center py-24 text-slate-400 bg-white/50 border-2 border-dashed border-slate-200 rounded-2xl font-bold uppercase tracking-widest text-xs">
-                        No services found. Create your first service template.
-                    </div>
+                    <ListEmptyState
+                        title="No services found"
+                        description="Create your first service template."
+                        icon={<LayoutGrid className="h-5 w-5" />}
+                        className="col-span-full py-16"
+                    />
                 )}
             </div>
 

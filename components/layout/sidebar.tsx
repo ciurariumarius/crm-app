@@ -182,14 +182,14 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                         </div>
 
                         <nav className="flex-1 px-4 py-6 space-y-1">
-                            <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Management</p>
+                            <p className="px-2 py-1 ui-overline text-slate-400">Management</p>
                             {primaryNav.map((item) => renderMobileItem(item))}
                             <div className="my-4 h-px w-4/5 mx-auto bg-slate-300" />
                             <div className="pt-1">
                                 <button
                                     onClick={() => setIsDataOpen((prev) => !prev)}
                                     aria-expanded={isDataOpen}
-                                    className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400"
+                                    className="w-full flex items-center justify-between px-2 py-1 ui-overline text-slate-400"
                                 >
                                     <span>Data</span>
                                     {isDataOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -204,7 +204,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                                 <button
                                     onClick={() => setIsPPCOpen((prev) => !prev)}
                                     aria-expanded={isPPCOpen}
-                                    className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400"
+                                    className="w-full flex items-center justify-between px-2 py-1 ui-overline text-slate-400"
                                 >
                                     <span>PPC</span>
                                     {isPPCOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -277,7 +277,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                     </div>
 
                     <nav id="desktop-sidebar-nav" className="mt-8 flex-1 space-y-1">
-                        {!isDesktopCollapsed && <p className="px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Management</p>}
+                        {!isDesktopCollapsed && <p className="px-3 py-1 ui-overline text-slate-400">Management</p>}
                         {primaryNav.map((item) => renderDesktopItem(item))}
 
                         <button
@@ -287,7 +287,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             aria-controls="desktop-data-nav"
                             aria-label="Toggle Data section"
                             className={cn(
-                                "w-full flex items-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400",
+                                "w-full flex items-center ui-overline text-slate-400",
                                 isDesktopCollapsed ? "justify-center px-0 py-2" : "justify-between px-3 py-1"
                             )}
                         >
@@ -316,7 +316,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                             aria-controls="desktop-ppc-nav"
                             aria-label="Toggle PPC section"
                             className={cn(
-                                "mt-2 w-full flex items-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400",
+                                "mt-2 w-full flex items-center ui-overline text-slate-400",
                                 isDesktopCollapsed ? "justify-center px-0 py-2" : "justify-between px-3 py-1"
                             )}
                         >

@@ -166,7 +166,7 @@ export function GlobalSearch() {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="font-semibold text-slate-700">{formatProjectName(project)}</span>
-                                        <span className="text-[10px] text-slate-400 uppercase font-black">{project.site?.partner?.name}</span>
+                                        <span className="ui-text-caption text-slate-400">{project.site?.partner?.name}</span>
                                     </div>
                                 </CommandItem>
                             ))}
@@ -186,7 +186,7 @@ export function GlobalSearch() {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="font-semibold text-slate-700">{task.name}</span>
-                                        <span className="text-[10px] text-slate-400 uppercase font-black">{task.project ? formatProjectName(task.project) : "No Project"}</span>
+                                        <span className="ui-text-caption text-slate-400">{task.project ? formatProjectName(task.project) : "No project"}</span>
                                     </div>
                                 </CommandItem>
                             ))}
@@ -206,7 +206,7 @@ export function GlobalSearch() {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="font-semibold text-slate-700">{partner.name}</span>
-                                        <span className="text-[10px] text-slate-400 font-bold">@{partner.username || partner.businessName}</span>
+                                        <span className="ui-text-caption text-slate-400">@{partner.username || partner.businessName}</span>
                                     </div>
                                 </CommandItem>
                             ))}

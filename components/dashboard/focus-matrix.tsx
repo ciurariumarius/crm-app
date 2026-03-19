@@ -163,7 +163,7 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground/30 border-2 border-dashed rounded-2xl bg-muted/5">
                 <ListChecks className="h-8 w-8 mb-2 opacity-20" />
-                <p className="text-xs font-bold uppercase tracking-widest">No tasks found</p>
+                <p className="ui-overline">No tasks found</p>
             </div>
         )
     }

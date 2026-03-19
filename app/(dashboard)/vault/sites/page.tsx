@@ -4,11 +4,12 @@ import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { SitesTable } from "@/components/vault/sites-table"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { PageHeader } from "@/components/layout/page-header"
+import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { requireTenantContext } from "@/lib/tenant"
 import { DomainsFilters } from "@/components/vault/domains-filters"
 import { cn } from "@/lib/utils"
 import type { Prisma } from "@prisma/client"
+import { buttonLinkClassName } from "@/components/ui/button-link"
 
 export const dynamic = "force-dynamic"
 
@@ -80,7 +81,11 @@ export default async function SitesPage({
 
     return (
         <div className="flex flex-col gap-8 pb-8">
-            <PageHeader title="Domains" actions={<CreateSiteDialog partners={partners} />} />
+            <DashboardPageHeader
+                title="Domains"
+                actions={<CreateSiteDialog partners={partners} />}
+                showMobile
+            />
 
             <DomainsFilters 
                 partners={partners} 
@@ -96,7 +101,7 @@ export default async function SitesPage({
                 
                 {/* Pagination Footer */}
                 <div className="flex items-center justify-between px-6 py-4">
-                    <p className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
+                    <p className="ui-overline">
                         Page {page} of {totalPages || 1} · {totalSites} Total Domains
                     </p>
                     
@@ -107,7 +112,7 @@ export default async function SitesPage({
                             asChild={page > 1}
                             disabled={page <= 1}
                             className={cn(
-                                "h-9 px-4 rounded-xl border border-slate-200 bg-white shadow-sm transition-all active:scale-95 text-xs font-bold uppercase tracking-wider",
+                                buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" }),
                                 page <= 1 ? "opacity-40" : "hover:bg-slate-50 hover:text-blue-600"
                             )}
                         >
@@ -130,7 +135,7 @@ export default async function SitesPage({
                             asChild={page < totalPages}
                             disabled={page >= totalPages}
                             className={cn(
-                                "h-9 px-4 rounded-xl border border-slate-200 bg-white shadow-sm transition-all active:scale-95 text-xs font-bold uppercase tracking-wider",
+                                buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" }),
                                 page >= totalPages ? "opacity-40" : "hover:bg-slate-50 hover:text-blue-600"
                             )}
                         >

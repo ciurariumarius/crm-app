@@ -135,19 +135,19 @@ export default async function VaultPage({
     return (
         <div className="flex flex-col gap-6 pb-20">
             <div className="flex flex-col gap-4">
-                <div className="flex h-10 items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <MobileMenuTrigger />
-                        <h1 className="page-title flex items-center h-full">
-                            Partners
-                        </h1>
-                    </div>
+                    <div className="flex h-10 items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <MobileMenuTrigger />
+                            <h1 className="ui-text-title text-slate-900 flex items-center h-full">
+                                Partners
+                            </h1>
+                        </div>
                     <div className="flex items-center gap-2">
                         <div className="hidden md:flex items-center gap-2 mr-2">
                             <Link
                                 href={`/partners?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
                                 className={cn(
-                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-semibold uppercase tracking-wide",
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-medium tracking-[0.02em]",
                                     sortBy === "name"
                                         ? "bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
                                         : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
@@ -160,7 +160,7 @@ export default async function VaultPage({
                             <Link
                                 href={`/partners?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
                                 className={cn(
-                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-semibold uppercase tracking-wide"
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-medium tracking-[0.02em]"
                                 )}
                             >
                                 {order === "asc" ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
@@ -175,7 +175,7 @@ export default async function VaultPage({
                     <Link
                         href={`/partners?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
                         className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-semibold uppercase tracking-wide",
+                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-medium tracking-[0.02em]",
                             sortBy === "name"
                                 ? "bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
                                 : "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
@@ -188,7 +188,7 @@ export default async function VaultPage({
                     <Link
                         href={`/partners?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
                         className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-semibold uppercase tracking-wide"
+                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-medium tracking-[0.02em]"
                         )}
                     >
                         {order === "asc" ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}

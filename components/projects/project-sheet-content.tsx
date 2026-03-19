@@ -10,7 +10,6 @@ import {
     Clock3,
     FolderOpen,
     Globe,
-    History,
     FileDown,
     Loader2,
     Pause,
@@ -46,6 +45,7 @@ import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { Service, Site } from "@prisma/client"
 import { SidePanelChip, SidePanelEmptyState, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
+import { ProjectHistoryLogSections, type ProjectPaymentHistoryEntry, type ProjectStatusHistoryEntry } from "@/components/projects/project-history-log-sections"
 
 type UpdateProjectPayload = {
     name?: string
@@ -56,22 +56,6 @@ type UpdateProjectPayload = {
     createdAt?: Date | string
     currentFee?: number | null
     serviceIds?: string[]
-}
-
-type ProjectPaymentHistoryEntry = {
-    id: string
-    action: string
-    date: Date | string
-    status: string
-}
-
-type ProjectStatusHistoryEntry = {
-    id: string
-    action: string
-    date: Date | string
-    fromStatus: string | null
-    toStatus: string
-    source: string | null
 }
 
 type ProjectTimeLogWithTask = ProjectWithDetails["timeLogs"][number] & {
@@ -1180,7 +1164,7 @@ export function ProjectSheetContent({
 
                         <section className="space-y-2 border-t border-slate-200/80 pt-3">
                             <div className="flex items-center justify-between">
-                                <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                                <h2 className="ui-overline inline-flex items-center gap-2 text-slate-500">
                                     <Clock3 className="h-3.5 w-3.5" />
                                     Recent Time Logs
                                 </h2>
@@ -1188,7 +1172,7 @@ export function ProjectSheetContent({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setIsManualTimeOpen((current) => !current)}
-                                    className="h-8 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-600 hover:bg-slate-50"
+                                    className="h-8 rounded-full border border-slate-200 bg-white px-3 ui-text-caption text-slate-600 hover:bg-slate-50"
                                 >
                                     <Plus className="mr-1 h-3.5 w-3.5" />
                                     Add Time
@@ -1198,7 +1182,7 @@ export function ProjectSheetContent({
                             <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <div className="grid gap-2">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Project Time Tracker</p>
+                                        <p className="ui-overline text-slate-400">Project Time Tracker</p>
                                         <div className="inline-flex items-baseline gap-2">
                                             <span className="text-sm font-semibold text-slate-500">Total tracked (all time):</span>
                                             <span className="font-mono text-3xl font-black leading-none tabular-nums text-slate-900">
@@ -1211,7 +1195,7 @@ export function ProjectSheetContent({
                                                 {formatClock(currentSessionSeconds)}
                                             </span>
                                             <span className={cn(
-                                                "text-[10px] font-bold uppercase tracking-[0.04em]",
+                                                "ui-text-caption font-semibold",
                                                 isProjectTimerRunning ? "text-[#10B981]" : isProjectTimerPaused ? "text-[#D97706]" : "text-slate-400"
                                             )}>
                                                 {timerStatusLabel}
@@ -1325,94 +1309,12 @@ export function ProjectSheetContent({
                             </div>
                         </section>
 
-                        <section className="space-y-2 border-t border-slate-200/80 pt-3">
-                            <SidePanelSectionTitle title="Payment history (log)" icon={<History className="h-3.5 w-3.5" />} />
-                            <div className="space-y-1.5">
-                                {isLoadingHistory && paymentHistory.length === 0 ? (
-                                    <div className="flex items-center justify-center py-6 text-slate-400">
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
-                                    </div>
-                                ) : paymentHistory.length === 0 ? (
-                                    <SidePanelEmptyState message="No payment records found." />
-                                ) : (
-                                    paymentHistory.map((entry) => (
-                                        <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn(
-                                                    "h-7 w-7 rounded-full flex items-center justify-center shrink-0",
-                                                    entry.status === "Paid" ? "bg-[#ECFDF5] text-[#10B981]" : "bg-[#FFF1F2] text-[#E11D48]"
-                                                )}>
-                                                    <CheckCircle className="h-4 w-4" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-700">Marked as {entry.status}</span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                                        {formatRelativeDate(entry.date)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <SidePanelChip
-                                                tone={sidePanelChipToneByLabel(entry.status)}
-                                                label={entry.status}
-                                                className="text-[10px]"
-                                            />
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </section>
-
-                        <section className="space-y-2 border-t border-slate-200/80 pt-3">
-                            <SidePanelSectionTitle title="Status history (log)" icon={<Clock3 className="h-3.5 w-3.5" />} />
-                            <div className="space-y-1.5">
-                                {isLoadingStatusHistory && statusHistoryEntries.length === 0 ? (
-                                    <div className="flex items-center justify-center py-6 text-slate-400">
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
-                                    </div>
-                                ) : statusHistoryEntries.length === 0 ? (
-                                    <SidePanelEmptyState message="No status records found." />
-                                ) : (
-                                    statusHistoryEntries.map((entry) => (
-                                        <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
-                                            <div className="flex items-center gap-3">
-                                                <div
-                                                    className={cn(
-                                                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-                                                        entry.toStatus === "Active" && "bg-blue-50 text-blue-600",
-                                                        entry.toStatus === "Paused" && "bg-amber-50 text-amber-600",
-                                                        entry.toStatus === "Completed" && "bg-emerald-50 text-emerald-600",
-                                                        entry.toStatus === "Closed" && "bg-slate-100 text-slate-600",
-                                                        !["Active", "Paused", "Completed", "Closed"].includes(entry.toStatus) && "bg-slate-100 text-slate-600"
-                                                    )}
-                                                >
-                                                    <Clock3 className="h-4 w-4" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-700">
-                                                        {entry.action === "PROJECT_CREATED"
-                                                            ? "Project created"
-                                                            : entry.fromStatus
-                                                                ? `${entry.fromStatus} → ${entry.toStatus}`
-                                                                : `Marked as ${entry.toStatus}`}
-                                                    </span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                                        {formatRelativeDate(entry.date)}
-                                                        {entry.source ? ` • ${entry.source.replaceAll("_", " ")}` : ""}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <SidePanelChip
-                                                tone={sidePanelChipToneByLabel(entry.toStatus)}
-                                                label={entry.toStatus}
-                                                className="text-[10px]"
-                                            />
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </section>
+                        <ProjectHistoryLogSections
+                            paymentHistory={paymentHistory}
+                            isLoadingHistory={isLoadingHistory}
+                            statusHistoryEntries={statusHistoryEntries}
+                            isLoadingStatusHistory={isLoadingStatusHistory}
+                        />
 
                         <section className="space-y-3 border-t border-slate-200/80 pt-3">
                             <SidePanelSectionTitle title="Project info" />

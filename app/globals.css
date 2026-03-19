@@ -224,6 +224,32 @@
     letter-spacing: 0.05em;
   }
 
+  .ui-text-title {
+    @apply text-[24px] font-semibold tracking-tight text-foreground leading-none;
+    letter-spacing: -0.02em;
+  }
+
+  .ui-text-section {
+    @apply text-[14px] font-semibold tracking-[0.02em] text-slate-700;
+  }
+
+  .ui-text-label {
+    @apply text-[13px] font-medium text-slate-600;
+  }
+
+  .ui-text-metric {
+    @apply font-mono text-[22px] font-bold tracking-tight tabular-nums text-slate-900;
+  }
+
+  .ui-text-caption {
+    @apply text-[12px] font-medium text-slate-500;
+  }
+
+  .ui-overline {
+    @apply text-[11px] font-semibold uppercase text-slate-500;
+    letter-spacing: 0.08em;
+  }
+
   .cockpit-page-enter {
     animation: cockpit-page-enter 0.4s ease-out both;
   }

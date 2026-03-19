@@ -1,17 +1,10 @@
 "use client"
 
 import { useState, Fragment } from "react"
-import { Badge } from "@/components/ui/badge"
 import { cn, formatCurrency, formatProjectName, formatRelativeDate } from "@/lib/utils"
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table"
-import { CreditCard, History, Undo2, ChevronDown, ChevronRight } from "lucide-react"
+import { CreditCard, History, Undo2, ChevronRight } from "lucide-react"
+import { StatusChip } from "@/components/ui/status-chip"
+import { ListEmptyState } from "@/components/ui/list-state"
 
 type SettlementProjectEntry = {
     id: string
@@ -137,125 +130,146 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
 
     if (logs.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <History className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold">No payment events found</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mt-2">
-                    Payment status changes and settlements will appear here.
-                </p>
-            </div>
+            <ListEmptyState
+                title="No payment events found"
+                description="Payment status changes and settlements will appear here."
+                icon={<History className="h-5 w-5" />}
+                className="mx-4 my-8"
+            />
         )
     }
 
     return (
-        <div className="overflow-x-auto px-6">
-            <Table className="table-cockpit">
-                <TableHeader>
-                    <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                        <TableHead className="text-[11px] font-semibold tracking-[0.03em] text-slate-500">Project</TableHead>
-                        <TableHead className="text-[11px] font-semibold tracking-[0.03em] text-slate-500">Action</TableHead>
-                        <TableHead className="text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Total</TableHead>
-                        <TableHead className="text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Status</TableHead>
-                        <TableHead className="text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Date</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {logs.map((log) => {
-                        const { projectName, extraProjects, totalAmount } = parseDetails(log.details)
-                        const isExpandable = extraProjects.length > 0
-                        const isExpanded = expandedRows.has(log.id)
+        <div className="overflow-x-auto pb-4 hidescrollbar">
+            {/* Header */}
+            <div className="md:min-w-[1240px] px-6 py-3 border-b border-slate-100/50 flex items-center">
+                <div className="grid w-full items-center gap-x-6 md:grid-cols-[380px_320px_150px_160px_130px]">
+                    <div className="ui-overline text-slate-500">Project / partner</div>
+                    <div className="ui-overline text-slate-500">Transaction action</div>
+                    <div className="ui-overline text-right text-slate-500">Total amount</div>
+                    <div className="ui-overline text-right text-slate-500">Payment status</div>
+                    <div className="ui-overline text-right text-slate-500">Event date</div>
+                </div>
+            </div>
 
-                        return (
-                            <Fragment key={log.id}>
-                                <TableRow className={cn(
-                                    "border-b border-slate-50 transition-colors hover:bg-slate-50/50",
-                                    isExpanded && "bg-slate-50/50 border-b-0"
-                                )}>
-                                    <TableCell
-                                        className={cn("cursor-default", isExpandable && "cursor-pointer group")}
-                                        onClick={() => toggleRow(log.id, isExpandable)}
-                                    >
-                                        <div className="flex items-center gap-2">
+            {/* Body */}
+            <div className="md:min-w-[1240px] flex flex-col gap-2 p-4">
+                {logs.map((log, index) => {
+                    const { projectName, extraProjects, totalAmount } = parseDetails(log.details)
+                    const isExpandable = extraProjects.length > 0
+                    const isExpanded = expandedRows.has(log.id)
+
+                    return (
+                        <Fragment key={log.id}>
+                            <div
+                                className={cn(
+                                    "group stagger-row-enter premium-card relative flex items-center bg-white rounded-xl p-4 border border-border/60 transition-all cursor-pointer hover:bg-slate-50/50",
+                                    isExpanded && "bg-slate-50/30 ring-1 ring-blue-500/10 shadow-md",
+                                    log.status === "Unpaid" && "cockpit-debt-row"
+                                )}
+                                style={{ animationDelay: `${index * 0.05}s` }}
+                                onClick={() => toggleRow(log.id, isExpandable)}
+                                role={isExpandable ? "button" : undefined}
+                                tabIndex={isExpandable ? 0 : undefined}
+                                onKeyDown={(event) => {
+                                    if (!isExpandable) return
+                                    if (event.key === "Enter" || event.key === " ") {
+                                        event.preventDefault()
+                                        toggleRow(log.id, isExpandable)
+                                    }
+                                }}
+                            >
+                                <div className="grid w-full items-center gap-x-6 md:grid-cols-[380px_320px_150px_160px_130px]">
+                                    {/* 1. Project */}
+                                    <div className="min-w-0 pr-4">
+                                        <div className="flex items-center gap-2.5">
                                             {isExpandable && (
-                                                <div className="text-muted-foreground/60 group-hover:text-blue-600 transition-colors">
-                                                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                                <div className={cn(
+                                                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition-all",
+                                                    isExpanded ? "bg-blue-50 border-blue-200 text-blue-600 rotate-90" : "bg-slate-50 border-slate-200 text-slate-400 group-hover:text-blue-500 group-hover:border-blue-100"
+                                                )}>
+                                                    <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
                                                 </div>
                                             )}
                                             <span className={cn(
-                                                "text-sm font-bold tracking-tight text-slate-800",
+                                                "text-sm font-bold tracking-tight text-slate-900 line-clamp-1",
                                                 isExpandable && "group-hover:text-blue-600 transition-colors"
                                             )}>
                                                 {projectName}
                                             </span>
                                         </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
+                                    </div>
+
+                                    {/* 2. Action */}
+                                    <div className="flex items-center gap-2.5">
+                                        <div className={cn(
+                                            "flex h-8 w-8 items-center justify-center rounded-xl transition-all",
+                                            log.action === "SETTLE_PARTNER_VOIDED" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
+                                        )}>
                                             {log.action === "SETTLE_PARTNER_VOIDED" ? (
-                                                <Undo2 className="h-3.5 w-3.5 text-amber-500" />
+                                                <Undo2 className="h-4 w-4" />
                                             ) : (
-                                                <CreditCard className="h-3.5 w-3.5 text-blue-500" />
+                                                <CreditCard className="h-4 w-4" />
                                             )}
-                                            <span className="text-[12px] font-medium text-muted-foreground">
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[13px] font-bold text-slate-700 leading-none mb-0.5">
                                                 {getActionLabel(log.action)}
                                             </span>
+                                            <span className="ui-text-caption text-slate-400">
+                                                Transaction type
+                                            </span>
                                         </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono font-bold text-sm text-slate-900">
-                                        {formatCurrency(totalAmount)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge
-                                            variant="outline"
-                                            className={cn(
-                                                "h-6 px-3 text-[11px] font-semibold tracking-[0.03em] transition-all",
-                                                log.status === "Paid"
-                                                    ? "bg-emerald-100/50 text-emerald-700 border-emerald-200"
-                                                    : "bg-rose-100/50 text-rose-700 border-rose-200"
-                                            )}
-                                        >
-                                            {log.status === "Paid" ? "Paid" : "Unpaid"}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right whitespace-nowrap text-[12px] font-medium text-slate-500">
-                                        {formatRelativeDate(log.date)}
-                                    </TableCell>
-                                </TableRow>
-                                {isExpanded && (
-                                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-none">
-                                        <TableCell colSpan={5} className="pb-4 pt-0 px-8">
-                                            <div className="rounded-xl border border-slate-200 bg-white/50 overflow-hidden shadow-inner">
-                                                <Table className="table-cockpit">
-                                                    <TableHeader className="bg-muted/50">
-                                                        <TableRow>
-                                                            <TableHead className="h-8 px-4 text-[11px] font-semibold tracking-[0.03em] text-slate-500">Project name</TableHead>
-                                                            <TableHead className="h-8 px-4 text-right text-[11px] font-semibold tracking-[0.03em] text-slate-500">Fee</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {extraProjects.map((projectEntry) => (
-                                                            <TableRow key={projectEntry.id} className="hover:bg-slate-50/80 border-slate-100 last:border-0">
-                                                                <TableCell className="py-2.5 px-4 text-[12px] font-semibold text-slate-600">
-                                                                    {projectEntry.name}
-                                                                </TableCell>
-                                                                <TableCell className="py-2.5 px-4 text-right font-mono text-[12px] font-semibold text-slate-500">
-                                                                    {formatCurrency(projectEntry.fee)}
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
+                                    </div>
+
+                                    {/* 3. Total */}
+                                    <div className="text-right">
+                                        <span className="font-mono text-sm font-black tracking-tight text-slate-900 pr-1">
+                                            {formatCurrency(totalAmount)}
+                                        </span>
+                                    </div>
+
+                                    {/* 4. Status */}
+                                    <div className="flex justify-end pr-4">
+                                        <StatusChip tone={log.status === "Paid" ? "paid" : "unpaid"} size="sm" className="min-w-[86px] justify-center">
+                                            {log.status}
+                                        </StatusChip>
+                                    </div>
+
+                                    {/* 5. Date */}
+                                    <div className="text-right">
+                                        <span className="text-[12px] font-bold text-slate-500 tabular-nums">
+                                            {formatRelativeDate(log.date)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Expanded Content (Settlements) */}
+                            {isExpanded && (
+                                <div className="mt-1 mb-4 flex animate-in slide-in-from-top-2 fade-in duration-300">
+                                    <div className="ml-12 mr-4 flex-1 rounded-2xl border border-blue-100 bg-blue-50/20 p-1 shadow-inner">
+                                        <div className="rounded-[14px] bg-white/60 p-4 border border-blue-50/50">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <History className="h-3.5 w-3.5 text-blue-500" />
+                                                <span className="ui-overline text-blue-700">Settlement breakdown</span>
                                             </div>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </Fragment>
-                        )
-                    })}
-                </TableBody>
-            </Table>
+                                            <div className="space-y-2">
+                                                {extraProjects.map((projectEntry) => (
+                                                    <div key={projectEntry.id} className="flex items-center justify-between py-2 px-4 rounded-xl bg-white/80 border border-slate-100/50 hover:border-blue-100 transition-colors">
+                                                        <span className="text-sm font-bold text-slate-700">{projectEntry.name}</span>
+                                                        <span className="font-mono text-xs font-bold text-slate-500">{formatCurrency(projectEntry.fee)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </Fragment>
+                    )
+                })}
+            </div>
         </div>
     )
 }

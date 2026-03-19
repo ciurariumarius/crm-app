@@ -1,11 +1,13 @@
 import { getPaymentLogs } from "@/lib/actions/payment-actions"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
-import { PageHeader } from "@/components/layout/page-header"
+import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { PaymentsTable } from "@/components/payments/payments-table"
 import { PaymentsFilters } from "@/components/payments/payments-filters"
 import { AddPartnerPaymentDialog } from "@/components/payments/add-partner-payment-dialog"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
+import { buttonLinkClassName } from "@/components/ui/button-link"
 
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
@@ -54,13 +56,11 @@ export default async function PaymentsPage({
 
     return (
         <div className="flex flex-col gap-8 pb-8">
-            <div className="flex items-center justify-between">
-                <PageHeader
-                    title="Payment Log"
-                    description="Comprehensive history of all project payment status changes and settlements."
-                />
-                <AddPartnerPaymentDialog partners={partners} />
-            </div>
+            <DashboardPageHeader
+                title="Payment Log"
+                actions={<AddPartnerPaymentDialog partners={partners} />}
+                showMobile
+            />
 
             <div className="flex flex-col gap-6">
                 <PaymentsFilters
@@ -69,41 +69,45 @@ export default async function PaymentsPage({
                     totalLogs={totalLogs}
                 />
 
-                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur-md transition-all">
+            <div className="flex flex-col">
                     <PaymentsTable
                         logs={logs}
                         projects={projects}
                     />
 
-                    <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-4">
-                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
+                    <div className="flex items-center justify-between px-6 py-8">
+                        <div className="ui-overline flex items-center gap-2">
                             <span>Page {page} of {totalPages}</span>
-                            <span className="h-1 w-1 rounded-full bg-slate-200" />
+                            <span className="h-1 w-1 rounded-full bg-slate-300" />
                             <span>{totalLogs} events</span>
                         </div>
                         <div className="flex items-center gap-2">
                             {prevPage ? (
                                 <Link
                                     href={buildPageHref(prevPage)}
-                                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" })}
                                 >
+                                    <ChevronLeft className="mr-1.5 h-4 w-4" />
                                     Previous
                                 </Link>
                             ) : (
-                                <span className="inline-flex h-9 items-center rounded-xl border border-slate-100 bg-slate-50/50 px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+                                <span className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption opacity-40" })}>
+                                    <ChevronLeft className="mr-1.5 h-4 w-4" />
                                     Previous
                                 </span>
                             )}
                             {nextPage ? (
                                 <Link
                                     href={buildPageHref(nextPage)}
-                                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" })}
                                 >
                                     Next
+                                    <ChevronRight className="ml-1.5 h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className="inline-flex h-9 items-center rounded-xl border border-slate-100 bg-slate-50/50 px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+                                <span className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption opacity-40" })}>
                                     Next
+                                    <ChevronRight className="ml-1.5 h-4 w-4" />
                                 </span>
                             )}
                         </div>

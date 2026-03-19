@@ -12,7 +12,8 @@
     "security:check-encryption-config": "tsx scripts/check-encryption-config.ts",
     "security:rotate-2fa-secrets": "tsx scripts/rotate-two-factor-secrets.ts",
     "security:rotate-2fa-secrets:dry": "tsx scripts/rotate-two-factor-secrets.ts --dry-run",
-    "data:backfill-project-names": "node scripts/backfill-project-names.js"
+    "data:backfill-project-names": "node scripts/backfill-project-names.js",
+    "test:visual": "playwright test tests/visual --config=playwright.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -54,6 +55,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.1",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",

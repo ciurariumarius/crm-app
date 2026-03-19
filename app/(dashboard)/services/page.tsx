@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma"
 import { CreateServiceDialog } from "@/components/services/create-service-dialog"
-import { PageHeader } from "@/components/layout/page-header"
+import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { ServicesListView } from "@/components/services/services-list-view"
 import { requireTenantContext } from "@/lib/tenant"
 
@@ -22,7 +22,7 @@ export default async function ServicesPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            <PageHeader title="Services" actions={<CreateServiceDialog />} />
+            <DashboardPageHeader title="Services" actions={<CreateServiceDialog />} showMobile />
 
             <ServicesListView services={services} />
         </div>

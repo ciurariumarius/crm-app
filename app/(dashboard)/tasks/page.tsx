@@ -3,6 +3,7 @@ import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
+import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
@@ -13,6 +14,7 @@ import { Prisma } from "@prisma/client"
 import { SlidersHorizontal, X, ListChecks, Play, AlertTriangle, CalendarClock, CalendarDays } from "lucide-react"
 import { requireTenantContext } from "@/lib/tenant"
 import { buildTaskWhereInput, getLocalDayBounds, normalizeTaskFilters } from "@/lib/filters/task-filters"
+import { buttonLinkClassName } from "@/components/ui/button-link"
 
 export const dynamic = "force-dynamic"
 
@@ -397,9 +399,11 @@ export default async function TasksPage({
                     </div>
                     <Link
                         href={buildTasksHref({ filters: mobileFiltersOpen ? null : "1", page: "1" })}
-                        className={mobileFiltersOpen
-                            ? "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] text-[#2563EB] shadow-sm"
-                            : "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm"}
+                        className={buttonLinkClassName({
+                            size: "lg",
+                            variant: mobileFiltersOpen ? "activeBlue" : "subtle",
+                            className: "w-11 rounded-2xl px-0",
+                        })}
                     >
                         <SlidersHorizontal className="h-4 w-4" />
                     </Link>
@@ -409,15 +413,15 @@ export default async function TasksPage({
                     <div className="inline-flex min-w-max items-center gap-3">
                         <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
                             {[
-                                { label: "ALL", value: "All" },
-                                { label: "ACTIVE", value: "Active" },
-                                { label: "COMPLETED", value: "Completed" },
+                                { label: "All", value: "All" },
+                                { label: "Active", value: "Active" },
+                                { label: "Completed", value: "Completed" },
                             ].map((option) => (
                                 <Link
                                     key={option.value}
                                     href={buildTasksHref({ status: option.value, page: "1" })}
                                     className={
-                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
                                         (statusFilter === option.value
                                             ? "bg-white text-[#2563EB] shadow-sm"
                                             : "text-slate-600")
@@ -432,16 +436,16 @@ export default async function TasksPage({
 
                         <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
                             {[
-                                { label: "ALL", value: "all" },
-                                { label: "URGENT", value: "Urgent" },
-                                { label: "NORMAL", value: "Normal" },
-                                { label: "IDEA", value: "Idea" },
+                                { label: "All", value: "all" },
+                                { label: "Urgent", value: "Urgent" },
+                                { label: "Normal", value: "Normal" },
+                                { label: "Idea", value: "Idea" },
                             ].map((option) => (
                                 <Link
                                     key={option.value}
                                     href={buildTasksHref({ urgency: option.value, page: "1" })}
                                     className={
-                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
                                         (urgencyFilter === option.value
                                             ? "bg-white text-[#2563EB] shadow-sm"
                                             : "text-slate-600")
@@ -456,9 +460,9 @@ export default async function TasksPage({
 
                         <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
                             {[
-                                { label: "NEWEST", value: "newest" },
-                                { label: "OLDEST", value: "oldest" },
-                                { label: "UPDATED", value: "updated" },
+                                { label: "Newest", value: "newest" },
+                                { label: "Oldest", value: "oldest" },
+                                { label: "Updated", value: "updated" },
                                 { label: "A-Z", value: "name_asc" },
                                 { label: "Z-A", value: "name_desc" },
                             ].map((option) => (
@@ -466,7 +470,7 @@ export default async function TasksPage({
                                     key={option.value}
                                     href={buildTasksHref({ sort: option.value, page: "1" })}
                                     className={
-                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
                                         (sort === option.value
                                             ? "bg-white text-[#2563EB] shadow-sm"
                                             : "text-slate-600")
@@ -483,11 +487,11 @@ export default async function TasksPage({
                             <Link
                                 href={buildTasksHref({ overdue: overdueOnly ? null : "1", page: "1" })}
                                 className={
-                                    "inline-flex h-10 items-center justify-center rounded-full px-5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors " +
+                                    "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
                                     (overdueOnly ? "bg-white text-[#2563EB] shadow-sm" : "text-slate-600")
                                 }
                             >
-                                OVERDUE
+                                Overdue
                             </Link>
                         </div>
                     </div>
@@ -525,22 +529,11 @@ export default async function TasksPage({
             </div>
 
             {/* Header Row (Desktop) */}
-            <div className="hidden md:flex flex-col lg:flex-row lg:items-center gap-4">
-                <div className="flex items-center gap-3 min-w-[180px]">
-                    <MobileMenuTrigger />
-                    <h1 className="page-title">
-                        Tasks
-                    </h1>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                    <TasksSearchInput />
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <CreateTaskButton projects={activeProjects} />
-                </div>
-            </div>
+            <DashboardPageHeader
+                title="Tasks"
+                search={<TasksSearchInput />}
+                actions={<CreateTaskButton projects={activeProjects} />}
+            />
 
             <div className="md:hidden space-y-4">
                 {mobileFiltersOpen ? (

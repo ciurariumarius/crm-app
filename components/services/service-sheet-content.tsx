@@ -109,7 +109,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#f8fafc] w-full">
+        <div className="flex h-full w-full flex-col bg-background">
             {/* Header */}
             <SheetHeader className="px-8 pt-9 pb-6 relative bg-transparent">
                 <div className="absolute right-6 top-6 z-10">
@@ -118,6 +118,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                         size="icon"
                         className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
                         onClick={onClose}
+                        aria-label="Close service"
                     >
                         <X className="h-5 w-5" />
                     </Button>
@@ -127,7 +128,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                     <SidePanelChip
                         tone={formData.isRecurring === "true" ? "blue" : "slate"}
                         label={formData.isRecurring === "true" ? "Recurring" : "One-time"}
-                        className="px-2.5 py-1 text-[10px]"
+                        className="px-2.5 py-1 ui-text-caption"
                     />
                     <SheetTitle className="group relative">
                         <Input
@@ -190,7 +191,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                                 onBlur={handleSave}
                             />
                         </div>
-                        <p className="text-[11px] font-medium text-slate-400 italic px-1">
+                        <p className="ui-text-caption px-1 text-slate-500">
                             These tasks will be automatically added when you create a new project with this service.
                         </p>
                     </div>

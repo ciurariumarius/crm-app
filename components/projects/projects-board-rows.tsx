@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { ArrowDownUp, CalendarDays, Check, Circle, Pause, Play, Plus, Square, RefreshCcw, Zap, Wallet, Timer, Layers } from "lucide-react"
+import { CalendarDays, Check, Circle, Pause, Play, Plus, Square, RefreshCcw, Zap, Wallet, Timer, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
@@ -24,6 +24,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { ProjectBoardHeaderRow } from "@/components/projects/project-board-header-row"
 import type { ProjectWithDetails } from "@/types"
 import type { SearchPaginationState } from "@/types/search-pagination"
 
@@ -584,73 +585,12 @@ export function ProjectsBoardRows({
                         <h2 className="text-lg font-semibold tracking-tight text-slate-900">One-time Projects</h2>
                     </div>
 
-                    <div className={cn("hidden md:grid items-center px-6 text-[11px] text-slate-500 font-bold uppercase tracking-wider gap-x-2", LIST_GRID_COLUMNS)}>
-                        <button
-                            type="button"
-                            onClick={() => setSort("name")}
-                            className={cn(
-                                "inline-flex items-center gap-1 text-left text-[11px] font-bold uppercase tracking-wider",
-                                sortBy === "name" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
-                            )}
-                            title={`Sort by name (${sortBy === "name" ? (sortDirection === "desc" ? "Z-A" : "A-Z") : "A-Z"})`}
-                        >
-                            Project name
-                            <ArrowDownUp className="h-3 w-3" />
-                        </button>
-                        <span className="text-center">Status</span>
-                        <span className="text-center">Payment</span>
-                        <span className="text-center">Type</span>
-                        <button
-                            type="button"
-                            onClick={() => setSort("amount")}
-                            className={cn(
-                                "inline-flex items-center justify-end gap-1 text-right text-[11px] font-bold uppercase tracking-wider",
-                                sortBy === "amount" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
-                            )}
-                            title={`Sort by amount (${sortBy === "amount" && sortDirection === "desc" ? "high to low" : "low to high"})`}
-                        >
-                            Amount
-                            <ArrowDownUp className="h-3 w-3" />
-                        </button>
-                        <span className="text-center">Tasks</span>
-                        <button
-                            type="button"
-                            onClick={() => setSort("time")}
-                            className={cn(
-                                "inline-flex items-center justify-center gap-1 text-center text-[11px] font-bold uppercase tracking-wider",
-                                sortBy === "time" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
-                            )}
-                            title={`Sort by time (${sortBy === "time" && sortDirection === "desc" ? "most to least" : "least to most"})`}
-                        >
-                            Time
-                            <ArrowDownUp className="h-3 w-3" />
-                        </button>
-                        <span>Partner</span>
-                        <button
-                            type="button"
-                            onClick={() => setSort("updatedAt")}
-                            className={cn(
-                                "inline-flex items-center justify-end gap-1 text-right text-[11px] font-bold uppercase tracking-wider",
-                                sortBy === "updatedAt" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
-                            )}
-                            title={`Sort by last edit (${sortBy === "updatedAt" && sortDirection === "desc" ? "newest first" : "oldest first"})`}
-                        >
-                            Last Edit
-                            <ArrowDownUp className="h-3 w-3" />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSort("createdAt")}
-                            className={cn(
-                                "inline-flex items-center justify-end gap-1 text-right text-[11px] font-bold uppercase tracking-wider",
-                                sortBy === "createdAt" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
-                            )}
-                            title={`Sort by created date (${sortBy === "createdAt" && sortDirection === "desc" ? "newest first" : "oldest first"})`}
-                        >
-                            Created
-                            <ArrowDownUp className="h-3 w-3" />
-                        </button>
-                    </div>
+                    <ProjectBoardHeaderRow
+                        gridColumnsClassName={LIST_GRID_COLUMNS}
+                        sortBy={sortBy}
+                        sortDirection={sortDirection}
+                        onSort={setSort}
+                    />
 
                     <div className="space-y-2">
                         {oneTimeProjects.length === 0 && (

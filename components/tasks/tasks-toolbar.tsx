@@ -18,6 +18,15 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
+    FilterBarDivider,
+    FilterBarGroup,
+    FilterBarRow,
+    FilterBarScroll,
+    FilterBarShell,
+    FilterResultsRow,
+} from "@/components/ui/filter-bar"
+import { buttonLinkClassName } from "@/components/ui/button-link"
+import {
     Popover,
     PopoverContent,
     PopoverTrigger,
@@ -132,10 +141,10 @@ export function TasksToolbar({
 
     return (
         <div className="space-y-3">
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <div className="overflow-x-auto hidescrollbar">
-                    <div className="inline-flex min-w-max items-center gap-4 md:flex md:w-full md:min-w-0 md:items-center md:gap-6">
-                        <div className={cn("inline-flex items-center gap-4 md:gap-5", mobileSecondaryOnly && "hidden")}>
+            <FilterBarShell>
+                <FilterBarScroll>
+                    <FilterBarRow>
+                        <FilterBarGroup className={cn(mobileSecondaryOnly && "hidden")}>
                             <div className="inline-flex h-10 items-center gap-1">
                                 {[
                                     {
@@ -173,7 +182,7 @@ export function TasksToolbar({
                                 ))}
                             </div>
 
-                            <div className="h-6 w-px bg-slate-200 md:mx-1" />
+                            <FilterBarDivider className="md:mx-1" />
 
                             <div className="inline-flex h-10 items-center gap-1">
                                     {[
@@ -197,9 +206,9 @@ export function TasksToolbar({
                                         </Link>
                                     ))}
                             </div>
-                        </div>
+                        </FilterBarGroup>
 
-                        <div className={cn("h-6 w-px bg-slate-200 md:mx-1", mobileSecondaryOnly && "hidden")} />
+                        <FilterBarDivider className={cn("md:mx-1", mobileSecondaryOnly && "hidden")} />
 
                         <Link
                             href={buildHref({ overdue: currentOverdue ? null : "1" })}
@@ -219,7 +228,7 @@ export function TasksToolbar({
                             ) : null}
                         </Link>
 
-                        <div className="h-6 w-px bg-slate-200 md:mx-1" />
+                        <FilterBarDivider className="md:mx-1" />
 
                         <ProjectCombobox
                             projects={projects}
@@ -241,7 +250,7 @@ export function TasksToolbar({
                             }}
                         />
 
-                        <div className="h-6 w-px bg-slate-200 md:ml-auto md:mr-1" />
+                        <FilterBarDivider className="md:ml-auto md:mr-1" />
 
                         <SortCombobox
                             currentSort={currentSort}
@@ -256,12 +265,12 @@ export function TasksToolbar({
                                 pushWithOverrides({ cols: String(value) })
                             }}
                         />
-                    </div>
-                </div>
-            </div>
+                    </FilterBarRow>
+                </FilterBarScroll>
+            </FilterBarShell>
 
-            <div className="px-1 flex flex-wrap items-center gap-2">
-                <p className="text-[15px] font-medium text-slate-600">
+            <FilterResultsRow>
+                <p className="ui-text-label">
                     {searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`}
                 </p>
                 {activeFilters.length > 0 && <span className="text-slate-300">|</span>}
@@ -269,7 +278,7 @@ export function TasksToolbar({
                     <Link
                         key={filter.key}
                         href={filter.href}
-                        className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "gap-1 text-[12px]" })}
                     >
                         <span>{filter.label}</span>
                     </Link>
@@ -277,12 +286,12 @@ export function TasksToolbar({
                 {activeFilters.length > 0 && (
                     <Link
                         href={clearAllHref}
-                        className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+                        className={buttonLinkClassName({ size: "sm", variant: "subtle", emphasis: "strong", className: "text-[12px]" })}
                     >
                         Clear all
                     </Link>
                 )}
-            </div>
+            </FilterResultsRow>
         </div>
     )
 }

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
+import { StatusChip } from "@/components/ui/status-chip"
 
 interface TaskGridCardProps {
     task: TaskCardItem
@@ -65,17 +66,16 @@ function PriorityBadge({ urgency }: { urgency: string }) {
 
     if (normalizedUrgency === "Urgent") {
         return (
-            <span className="inline-flex items-center rounded-md bg-[#F84444] px-2.5 py-1.5 text-[12px] font-semibold tracking-[0.01em] text-white shadow-sm">
+            <StatusChip tone="urgent" size="sm">
                 Urgent
-            </span>
+            </StatusChip>
         )
     }
     if (normalizedUrgency === "Idea") {
         return (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[12px] font-semibold tracking-[0.01em] text-sky-600">
-                <Lightbulb className="h-3.5 w-3.5" />
+            <StatusChip tone="idea" size="sm" icon={<Lightbulb className="h-3.5 w-3.5" />}>
                 Idea
-            </span>
+            </StatusChip>
         )
     }
     return null
@@ -90,16 +90,9 @@ function DeadlineBadge({ deadline }: { deadline: string | Date | null | undefine
     const overdue = isBefore(date, startOfDay(new Date()))
 
     return (
-        <span
-            className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold tracking-[0.01em]",
-                overdue
-                    ? "bg-rose-100 text-rose-700"
-                    : "bg-rose-50 text-rose-500"
-            )}
-        >
+        <StatusChip tone={overdue ? "urgent" : "unpaid"} size="sm">
             {label}
-        </span>
+        </StatusChip>
     )
 }
 

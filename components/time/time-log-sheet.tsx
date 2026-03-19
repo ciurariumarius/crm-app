@@ -158,8 +158,8 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                             <X className="h-5 w-5" />
                         </Button>
                     </div>
-                    <SheetTitle>Edit Time Entry</SheetTitle>
-                    <SheetDescription>
+                    <SheetTitle className="ui-text-title text-slate-900">Edit Time Entry</SheetTitle>
+                    <SheetDescription className="ui-text-label text-slate-500">
                         Modify the details of your time log.
                     </SheetDescription>
                 </SheetHeader>
@@ -176,7 +176,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                     <div className="space-y-4">
                         <SidePanelSectionTitle title="Assignment" />
                         <div className="space-y-2">
-                            <Label htmlFor="project">Project</Label>
+                            <Label htmlFor="project" className="ui-overline text-slate-500">Project</Label>
                             <Select value={projectId} onValueChange={(val) => {
                                 setProjectId(val)
                                 setTaskId("no-task") // Reset task when project changes
@@ -193,7 +193,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="task">Task (Optional)</Label>
+                            <Label htmlFor="task" className="ui-overline text-slate-500">Task (optional)</Label>
                             <Select value={taskId} onValueChange={setTaskId} disabled={!projectId}>
                                 <SelectTrigger id="task" className={cn(!projectId && "opacity-50")}>
                                     <SelectValue placeholder={projectId ? "Select task or leave empty" : "Select project first"} />
@@ -213,7 +213,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                         <SidePanelSectionTitle title="Time details" />
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Date</Label>
+                                <Label className="ui-overline text-slate-500">Date</Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
@@ -238,7 +238,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                                 </Popover>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="startTime">Start Time</Label>
+                                <Label htmlFor="startTime" className="ui-overline text-slate-500">Start time</Label>
                                 <Input
                                     id="startTime"
                                     type="time"
@@ -249,7 +249,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Duration</Label>
+                            <Label className="ui-overline text-slate-500">Duration</Label>
                             <div className="flex items-center gap-2">
                                 <div className="relative flex-1">
                                     <Input
@@ -276,7 +276,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="description">Description (Optional)</Label>
+                            <Label htmlFor="description" className="ui-overline text-slate-500">Description (optional)</Label>
                             <Textarea
                                 id="description"
                                 value={description}
@@ -288,11 +288,11 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
                     </div>
                 </div>
 
-                <SheetFooter className="px-8 py-4 border-t border-slate-200 bg-white flex-row justify-between items-center sm:justify-between">
+                <SheetFooter className="border-t border-slate-200 bg-white px-8 py-4 flex-row items-center justify-between sm:justify-between">
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                        className="text-slate-500 hover:bg-rose-50 hover:text-rose-600"
                         onClick={handleDelete}
                         disabled={isSaving}
                     >

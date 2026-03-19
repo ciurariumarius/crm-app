@@ -31,7 +31,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, History } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus, ArrowUpRight, FolderOpen, Globe } from "lucide-react"
 import { updateTask, deleteTask, getTaskHistory } from "@/lib/actions/tasks"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
@@ -42,6 +42,7 @@ import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { useRouter } from "next/navigation"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, SIDE_PANEL_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
 import { SidePanelChip, SidePanelEmptyState, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
+import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
 
 type TaskTimeLog = {
     id?: string
@@ -91,18 +92,6 @@ export type TaskDetailsTask = {
     [key: string]: unknown
 }
 
-type TaskHistoryEntry = {
-    id: string
-    action: string
-    date: Date | string
-    from?: string | null
-    to?: string | null
-    status?: string | null
-    priority?: string | null
-    deadline?: string | null
-    source?: string | null
-}
-
 interface TaskDetailsProps {
     task: TaskDetailsTask | null
     open: boolean
@@ -148,12 +137,6 @@ function toDate(value: Date | string | null | undefined) {
 function formatBottomDate(value: Date | null) {
     if (!value) return "—"
     return format(value, "dd MMMM yyyy, HH:mm")
-}
-
-function decodeAuditDateToken(value: string | null | undefined) {
-    if (!value || value === "none" || value === "invalid") return null
-    const parsed = new Date(value)
-    return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSite }: TaskDetailsProps) {
@@ -694,7 +677,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setIsManualTimeOpen((current) => !current)}
-                                    className="h-8 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-600 hover:bg-slate-50"
+                                    className="h-8 rounded-full border border-slate-200 bg-white px-3 ui-text-caption text-slate-600 hover:bg-slate-50"
                                 >
                                     <Plus className="mr-1 h-3.5 w-3.5" />
                                     Add Time
@@ -708,7 +691,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                                 {formatClock(timerDisplaySeconds)}
                                             </span>
                                             <span className={cn(
-                                                "text-[10px] font-bold uppercase tracking-[0.04em]",
+                                                "ui-text-caption font-semibold",
                                                 isTaskRunning ? "text-[#10B981]" : isTaskPaused ? "text-[#D97706]" : "text-slate-400"
                                             )}>
                                                 {timerStatusLabel}
@@ -906,68 +889,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                             </div>
                         </section>
 
-                    <section className="space-y-2 border-t border-slate-200/80 pt-3">
-                        <SidePanelSectionTitle title="Task history (log)" icon={<History className="h-3.5 w-3.5" />} />
-                        <div className="space-y-1.5">
-                            {isLoadingTaskHistory && taskHistoryEntries.length === 0 ? (
-                                <div className="flex items-center justify-center py-6 text-slate-400">
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
-                                </div>
-                            ) : taskHistoryEntries.length === 0 ? (
-                                <SidePanelEmptyState message="No task history records found." />
-                            ) : (
-                                taskHistoryEntries.map((entry) => {
-                                    const sourceLabel = entry.source ? entry.source.replaceAll("_", " ") : null
-                                    const fromDate = decodeAuditDateToken(entry.from)
-                                    const toDateValue = decodeAuditDateToken(entry.to)
-
-                                    let entryTitle = "Task updated"
-                                    let entryBadge = "Update"
-
-                                    if (entry.action === "TASK_CREATED") {
-                                        entryTitle = "Task created"
-                                        entryBadge = "Created"
-                                    } else if (entry.action === "TASK_STATUS_CHANGED") {
-                                        entryTitle = `${entry.from || "Unknown"} → ${entry.to || "Unknown"}`
-                                        entryBadge = "Status"
-                                    } else if (entry.action === "TASK_PRIORITY_CHANGED") {
-                                        entryTitle = `Priority: ${entry.from || "Unknown"} → ${entry.to || "Unknown"}`
-                                        entryBadge = "Priority"
-                                    } else if (entry.action === "TASK_DEADLINE_CHANGED") {
-                                        if (!fromDate && toDateValue) {
-                                            entryTitle = `Deadline set: ${format(toDateValue, "dd MMM yyyy")}`
-                                        } else if (fromDate && !toDateValue) {
-                                            entryTitle = "Deadline removed"
-                                        } else if (fromDate && toDateValue) {
-                                            entryTitle = `Deadline: ${format(fromDate, "dd MMM yyyy")} → ${format(toDateValue, "dd MMM yyyy")}`
-                                        } else {
-                                            entryTitle = "Deadline updated"
-                                        }
-                                        entryBadge = "Deadline"
-                                    }
-
-                                    return (
-                                        <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                                                    <History className="h-4 w-4" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-700">{entryTitle}</span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                                        {formatRelativeDate(entry.date)}
-                                                        {sourceLabel ? ` • ${sourceLabel}` : ""}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <SidePanelChip tone={sidePanelChipToneByLabel(entryBadge)} label={entryBadge} className="px-2 py-1 text-[10px]" />
-                                        </div>
-                                    )
-                                })
-                            )}
-                        </div>
-                    </section>
+                    <TaskHistorySection entries={taskHistoryEntries} isLoading={isLoadingTaskHistory} />
 
                         <section className="pt-1">
                             <Button

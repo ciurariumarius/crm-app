@@ -26,6 +26,14 @@ export function SitesListView({ sites }: SitesListViewProps) {
                         <div
                             key={site.id}
                             onClick={() => setSelectedSite(site)}
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault()
+                                    setSelectedSite(site)
+                                }
+                            }}
+                            role="button"
+                            tabIndex={0}
                             className="cursor-pointer h-full transition-transform hover:scale-[1.02]"
                         >
                             <Card className="h-full hover:bg-muted/50 transition-colors">

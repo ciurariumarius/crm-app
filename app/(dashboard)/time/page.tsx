@@ -4,9 +4,14 @@ import { TimeLogsTable } from "@/components/time/time-logs-table"
 import { getTimeLogs } from "@/lib/actions/time"
 import prisma from "@/lib/prisma"
 import { CreateTimeLogDialog } from "@/components/time/create-time-log-dialog"
-import { PageHeader } from "@/components/layout/page-header"
+import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { requireTenantContext } from "@/lib/tenant"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { buttonLinkClassName } from "@/components/ui/button-link"
+import { FilterBarDivider } from "@/components/ui/filter-bar"
 
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
@@ -78,8 +83,9 @@ export default async function TimePage({
 
     return (
         <div className="flex flex-col gap-6">
-            <PageHeader
+            <DashboardPageHeader
                 title="Time Logs"
+                showMobile
                 actions={(
                     <CreateTimeLogDialog
                         projects={formattedProjects}
@@ -88,59 +94,79 @@ export default async function TimePage({
                 )}
             />
 
-            <div className="flex flex-col gap-6">
+            <div className="space-y-6">
                 <TimeLogsFilters
                     partners={partners}
                     projects={formattedProjects}
                     totalLogs={totalLogs}
                 />
 
-                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur-md transition-all">
-                    <TimeLogsTable
-                        logs={serializedLogs}
-                        projects={formattedProjects}
-                        tasks={tasks}
-                    />
+                <TimeLogsTable
+                    logs={serializedLogs}
+                    projects={formattedProjects}
+                    tasks={tasks}
+                />
 
-                    <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-4">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
-                                <span>Page {page} of {totalPages}</span>
-                                <span className="h-1 w-1 rounded-full bg-slate-200" />
-                                <span>{totalLogs} logs</span>
-                            </div>
-                            <div className="h-4 w-px bg-slate-200" />
-                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
-                                <span className="text-slate-500">Total Hours:</span>
-                                <span className="font-mono text-primary text-sm">{totalHours}h</span>
-                            </div>
+                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100/50 mt-4">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 ui-overline">
+                            <span>Page {page} of {totalPages}</span>
+                            <span className="h-1 w-1 rounded-full bg-slate-200" />
+                            <span>{totalLogs} logs</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <FilterBarDivider className="h-4" />
+                        <div className="flex items-center gap-2 ui-overline">
+                            <span>Total Hours:</span>
+                            <span className="font-mono text-primary text-sm font-bold tracking-tight">{totalHours}h</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            asChild={!!prevPage}
+                            disabled={!prevPage}
+                            className={cn(
+                                buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-10 px-4 rounded-xl ui-text-caption" }),
+                                !prevPage ? "opacity-30 cursor-not-allowed" : "hover:bg-slate-50 hover:text-blue-600"
+                            )}
+                        >
                             {prevPage ? (
-                                <Link
-                                    href={buildPageHref(prevPage)}
-                                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
-                                >
+                                <Link href={buildPageHref(prevPage)} className="flex items-center gap-2">
+                                    <ChevronLeft className="h-4 w-4" />
                                     Previous
                                 </Link>
                             ) : (
-                                <span className="inline-flex h-9 items-center rounded-xl border border-slate-100 bg-slate-50/50 px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+                                <span className="flex items-center gap-2">
+                                    <ChevronLeft className="h-4 w-4" />
                                     Previous
                                 </span>
                             )}
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            asChild={!!nextPage}
+                            disabled={!nextPage}
+                            className={cn(
+                                buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-10 px-4 rounded-xl ui-text-caption" }),
+                                !nextPage ? "opacity-30 cursor-not-allowed" : "hover:bg-slate-50 hover:text-blue-600"
+                            )}
+                        >
                             {nextPage ? (
-                                <Link
-                                    href={buildPageHref(nextPage)}
-                                    className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
-                                >
+                                <Link href={buildPageHref(nextPage)} className="flex items-center gap-2">
                                     Next
+                                    <ChevronRight className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className="inline-flex h-9 items-center rounded-xl border border-slate-100 bg-slate-50/50 px-4 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+                                <span className="flex items-center gap-2">
                                     Next
+                                    <ChevronRight className="h-4 w-4" />
                                 </span>
                             )}
-                        </div>
+                        </Button>
                     </div>
                 </div>
             </div>
