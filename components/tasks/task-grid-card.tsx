@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format, isBefore, startOfDay } from "date-fns"
-import { cn, formatProjectName } from "@/lib/utils"
+import { cn, formatProjectName, formatProjectServiceList } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import {
     Calendar as CalendarIcon,
@@ -36,6 +36,7 @@ interface TaskGridCardProps {
     isSelected?: boolean
     onSelect?: (taskId: string) => void
     className?: string
+    compact?: boolean
 }
 
 type TaskCardService = {
@@ -61,19 +62,20 @@ type TaskCardItem = {
     project?: TaskCardProject | null
 }
 
-function PriorityBadge({ urgency }: { urgency: string }) {
+function PriorityBadge({ urgency, compact = false }: { urgency: string; compact?: boolean }) {
     const normalizedUrgency = normalizeTaskUrgency(urgency)
+    const size = compact ? "xs" : "sm"
 
     if (normalizedUrgency === "Urgent") {
         return (
-            <StatusChip tone="urgent" size="sm">
+            <StatusChip tone="urgent" size={size}>
                 Urgent
             </StatusChip>
         )
     }
     if (normalizedUrgency === "Idea") {
         return (
-            <StatusChip tone="idea" size="sm" icon={<Lightbulb className="h-3.5 w-3.5" />}>
+            <StatusChip tone="idea" size={size} icon={<Lightbulb className={cn(compact ? "h-3 w-3" : "h-3.5 w-3.5")} />}>
                 Idea
             </StatusChip>
         )
@@ -81,7 +83,7 @@ function PriorityBadge({ urgency }: { urgency: string }) {
     return null
 }
 
-function DeadlineBadge({ deadline }: { deadline: string | Date | null | undefined }) {
+function DeadlineBadge({ deadline, compact = false }: { deadline: string | Date | null | undefined; compact?: boolean }) {
     if (!deadline) return null
     const date = new Date(deadline)
     if (Number.isNaN(date.getTime())) return null
@@ -90,7 +92,7 @@ function DeadlineBadge({ deadline }: { deadline: string | Date | null | undefine
     const overdue = isBefore(date, startOfDay(new Date()))
 
     return (
-        <StatusChip tone={overdue ? "urgent" : "unpaid"} size="sm">
+        <StatusChip tone={overdue ? "urgent" : "unpaid"} size={compact ? "xs" : "sm"}>
             {label}
         </StatusChip>
     )
@@ -103,6 +105,7 @@ export function TaskGridCard({
     renderMenu,
     isSelected,
     className,
+    compact = false,
 }: TaskGridCardProps) {
     const { timerState, startTimer, stopTimer, pauseTimer, resumeTimer } = useTimer()
 
@@ -113,6 +116,8 @@ export function TaskGridCard({
     const services = task.project?.services || []
     const isRecurring = services.some((s: TaskCardService) => s.isRecurring)
     const projectFullName = task.project ? formatProjectName(task.project) : "No Project"
+    const projectDomain = task.project?.site?.domainName || "No domain"
+    const projectServices = services.length ? formatProjectServiceList(services, "No services") : "No services"
     const createdAtDate = task.createdAt ? new Date(task.createdAt) : null
     const hasValidCreatedAt = createdAtDate !== null && !Number.isNaN(createdAtDate.getTime())
     const isOverdue = task.deadline ? isBefore(new Date(task.deadline), startOfDay(new Date())) : false
@@ -120,7 +125,8 @@ export function TaskGridCard({
     return (
         <div
             className={cn(
-                "group relative self-start rounded-3xl border bg-white cursor-pointer transition-all duration-200",
+                "group relative self-start border bg-white cursor-pointer transition-all duration-200",
+                compact ? "rounded-2xl border-slate-200 shadow-sm" : "rounded-3xl",
                 "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 border-slate-100",
                 isOverdue && "border-rose-200/80 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]",
                 isRunning && "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]",
@@ -134,11 +140,12 @@ export function TaskGridCard({
                 <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-3xl bg-blue-500 animate-pulse" />
             )}
 
-            <div className="p-4 flex flex-col gap-3">
+            <div className={cn("flex flex-col", compact ? "gap-2.5 p-3" : "gap-3 p-4")}>
                 {/* Header row: title + options menu */}
                 <div className="flex items-start justify-between gap-3">
                     <h4 className={cn(
-                        "text-[16px] font-bold leading-tight text-slate-900 line-clamp-2 flex-1 pt-0.5 min-h-[2.5rem]",
+                        "line-clamp-2 flex-1 font-bold leading-tight text-slate-900",
+                        compact ? "min-h-[2.15rem] pt-0 text-[15px]" : "min-h-[2.5rem] pt-0.5 text-[16px]",
                         task.status === "Completed" && "line-through opacity-40"
                     )}>
                         {task.name || "Untitled task"}
@@ -151,7 +158,10 @@ export function TaskGridCard({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 rounded-xl text-slate-300 hover:bg-slate-50 hover:text-slate-500 transition-colors"
+                                    className={cn(
+                                        "rounded-xl text-slate-300 hover:bg-slate-50 hover:text-slate-500 transition-colors",
+                                        compact ? "h-7 w-7" : "h-8 w-8"
+                                    )}
                                 >
                                     <MoreVertical className="h-4 w-4" />
                                 </Button>
@@ -228,27 +238,42 @@ export function TaskGridCard({
                 </div>
 
                 {/* Project subtitle */}
-                <div className="flex items-start gap-1.5 min-w-0">
-                    {isRecurring
-                        ? <RefreshCcw className="mt-0.5 h-3 w-3 text-slate-400 shrink-0" />
-                        : <Circle className="mt-0.5 h-3 w-3 text-slate-400 shrink-0" />
-                    }
-                    <p className="min-w-0 text-[12px] font-medium text-slate-400 line-clamp-2 leading-snug tracking-tight min-h-[2rem]">
-                        {projectFullName}
-                    </p>
-                </div>
+                {compact ? (
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            {isRecurring
+                                ? <RefreshCcw className="h-3 w-3 text-slate-400 shrink-0" />
+                                : <Circle className="h-3 w-3 text-slate-400 shrink-0" />
+                            }
+                            <p className="min-w-0 truncate text-[11px] font-medium text-slate-400">{projectDomain}</p>
+                        </div>
+                        <p className="mt-1 truncate text-[10px] font-medium text-slate-300">
+                            {projectServices}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex items-start gap-1.5 min-w-0">
+                        {isRecurring
+                            ? <RefreshCcw className="mt-0.5 h-3 w-3 text-slate-400 shrink-0" />
+                            : <Circle className="mt-0.5 h-3 w-3 text-slate-400 shrink-0" />
+                        }
+                        <p className="min-w-0 text-[12px] font-medium text-slate-400 line-clamp-2 leading-snug tracking-tight min-h-[2rem]">
+                            {projectFullName}
+                        </p>
+                    </div>
+                )}
 
                 {/* Badges: priority + deadline + absolute date */}
-                <div className="flex items-end justify-between mt-auto pt-2">
+                <div className={cn("flex items-end justify-between mt-auto", compact ? "pt-1.5" : "pt-2")}>
                     <div className="flex items-center gap-2">
-                        <PriorityBadge urgency={task.urgency || "Normal"} />
-                        <DeadlineBadge deadline={task.deadline} />
+                        <PriorityBadge urgency={task.urgency || "Normal"} compact={compact} />
+                        <DeadlineBadge deadline={task.deadline} compact={compact} />
                     </div>
                     
                     {hasValidCreatedAt && createdAtDate && (
                         <div className="flex items-center gap-1.5 text-slate-400 shrink-0">
-                            <CalendarIcon className="h-3.5 w-3.5" />
-                            <span className="text-[12px] font-medium" title={format(createdAtDate, "dd MMM yyyy, HH:mm")}>
+                            <CalendarIcon className={cn(compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+                            <span className={cn(compact ? "text-[10px]" : "text-[12px]", "font-medium")} title={format(createdAtDate, "dd MMM yyyy, HH:mm")}>
                                 {format(createdAtDate, "d MMM")}
                             </span>
                         </div>

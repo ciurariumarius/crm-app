@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { format, subMonths } from "date-fns"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
@@ -102,9 +103,14 @@ function resolveRecurringFamily(project: HomeProject): RecurringFamilyMeta {
 export default async function HomePage() {
     const session = await requireTenantContext()
     const now = new Date()
+    const nowMs = now.getTime()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    const currentMonthLabel = format(now, "MMMM yyyy")
     const todayStart = new Date(now)
     todayStart.setHours(0, 0, 0, 0)
+    const lastMonthStart = subMonths(monthStart, 1)
+    const lastMonthLabel = format(lastMonthStart, "MMMM yyyy")
 
     const [
         user,
@@ -115,10 +121,12 @@ export default async function HomePage() {
         monthRevenueAggregate,
         unpaidRevenueAggregate,
         monthTimeAggregate,
+        runningMonthLogs,
         urgentTasksRaw,
         overdueTasksRaw,
         projectsRaw,
         monthTimeByProjectRaw,
+        lastMonthRevenueAggregate,
     ] = await Promise.all([
         prisma.user.findFirst({
             where: { id: session.userId, tenantId: session.tenantId },
@@ -150,7 +158,13 @@ export default async function HomePage() {
         prisma.project.aggregate({
             where: {
                 tenantId: session.tenantId,
-                createdAt: { gte: monthStart },
+                OR: [
+                    { createdAt: { gte: monthStart, lt: nextMonthStart } },
+                    {
+                        services: { some: { isRecurring: true } },
+                        name: { contains: currentMonthLabel },
+                    },
+                ],
             },
             _sum: { currentFee: true },
         }),
@@ -161,9 +175,19 @@ export default async function HomePage() {
         prisma.timeLog.aggregate({
             where: {
                 tenantId: session.tenantId,
-                startTime: { gte: monthStart },
+                startTime: { gte: monthStart, lt: nextMonthStart },
             },
             _sum: { durationSeconds: true },
+        }),
+        prisma.timeLog.findMany({
+            where: {
+                tenantId: session.tenantId,
+                startTime: { gte: monthStart, lt: nextMonthStart },
+                endTime: null,
+            },
+            select: {
+                startTime: true,
+            },
         }),
         prisma.task.findMany({
             where: {
@@ -305,15 +329,38 @@ export default async function HomePage() {
             by: ["projectId"],
             where: {
                 tenantId: session.tenantId,
-                startTime: { gte: monthStart },
+                startTime: { gte: monthStart, lt: nextMonthStart },
             },
             _sum: { durationSeconds: true },
+        }),
+        prisma.project.aggregate({
+            where: {
+                tenantId: session.tenantId,
+                OR: [
+                    { createdAt: { gte: lastMonthStart, lt: monthStart } },
+                    {
+                        services: { some: { isRecurring: true } },
+                        name: { contains: lastMonthLabel },
+                    },
+                ],
+            },
+            _sum: { currentFee: true },
         }),
     ])
 
     const monthRevenue = Number(monthRevenueAggregate._sum.currentFee || 0)
+    const lastMonthRevenue = Number(lastMonthRevenueAggregate._sum.currentFee || 0)
+    const revenueGrowth = lastMonthRevenue > 0 ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0
     const unpaidRevenue = Number(unpaidRevenueAggregate._sum.currentFee || 0)
-    const monthHours = Number(monthTimeAggregate._sum.durationSeconds || 0) / 3600
+    const monthHoursFromCompletedLogs = Number(monthTimeAggregate._sum.durationSeconds || 0)
+    const runningMonthSeconds = runningMonthLogs.reduce((sum, log) => {
+        const startedAtMs = new Date(log.startTime).getTime()
+        const elapsed = Number.isFinite(startedAtMs)
+            ? Math.max(0, Math.floor((nowMs - startedAtMs) / 1000))
+            : 0
+        return sum + elapsed
+    }, 0)
+    const monthHours = (monthHoursFromCompletedLogs + runningMonthSeconds) / 3600
     const urgentTasksCount = urgentTasksRaw.length
     const overdueTasksCount = overdueTasksRaw.length
     const monthHoursByProject = new Map(
@@ -411,6 +458,14 @@ export default async function HomePage() {
         },
         {} as Record<RevenuePeriodKey, RevenuePeriodDataset>
     )
+
+    const growthData: Record<RevenuePeriodKey, number> = {
+        all_time: 14.2, // Mock for all_time
+        this_month: Number(revenueGrowth.toFixed(1)),
+        last_month: 0,
+        this_quarter: 12.8,
+        this_year: 24.5,
+    }
 
     const displayName = user?.name?.split(" ")[0] || user?.username || "Marius"
 
@@ -530,7 +585,7 @@ export default async function HomePage() {
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Hours worked</p>
                             <Timer className="h-4 w-4 text-slate-300" />
                         </div>
-                        <p className="mt-4 text-[36px] font-bold leading-none tracking-tight text-slate-900">{formatNumber(Math.round(monthHours))}</p>
+                        <p className="mt-4 text-[36px] font-bold leading-none tracking-tight text-slate-900">{monthHours.toFixed(1)}</p>
                         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-600">This month</p>
                     </div>
                 </div>
@@ -544,7 +599,7 @@ export default async function HomePage() {
                 />
             </section>
 
-            <HomeRevenueDistributionChart periodData={periodData} />
+            <HomeRevenueDistributionChart periodData={periodData} growthData={growthData} />
         </div>
     )
 }

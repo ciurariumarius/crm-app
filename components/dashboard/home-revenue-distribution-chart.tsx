@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Pie, PieChart, ResponsiveContainer, Tooltip, Cell } from "recharts"
+import { Pie, PieChart, ResponsiveContainer, Tooltip, Cell, BarChart, Bar } from "recharts"
+import { TrendingUp, BarChart3 } from "lucide-react"
+import { cn, formatCurrency } from "@/lib/utils"
 
 export type RevenuePeriodKey = "all_time" | "this_month" | "last_month" | "this_quarter" | "this_year"
 type RevenueMode = "partner" | "domain" | "project"
@@ -22,6 +24,7 @@ export type RevenuePeriodDataset = {
 
 type HomeRevenueDistributionChartProps = {
     periodData: Record<RevenuePeriodKey, RevenuePeriodDataset>
+    growthData?: Record<RevenuePeriodKey, number>
 }
 
 const COLORS = [
@@ -51,14 +54,6 @@ const MODE_OPTIONS: Array<{ label: string; value: RevenueMode }> = [
     { label: "Project", value: "project" },
 ]
 
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat("ro-RO", {
-        style: "currency",
-        currency: "RON",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(value)
-}
 
 function formatHours(value: number | undefined) {
     return `${(value || 0).toFixed(1)}h`
@@ -83,7 +78,7 @@ function getAttentionLabel(hoursThisMonth: number | undefined) {
     return { label: "High attention", className: "bg-emerald-50 border-emerald-200 text-emerald-700" }
 }
 
-export function HomeRevenueDistributionChart({ periodData }: HomeRevenueDistributionChartProps) {
+export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRevenueDistributionChartProps) {
     const [period, setPeriod] = React.useState<RevenuePeriodKey>("all_time")
     const [mode, setMode] = React.useState<RevenueMode>("project")
 
@@ -92,117 +87,165 @@ export function HomeRevenueDistributionChart({ periodData }: HomeRevenueDistribu
     const rows = React.useMemo(() => [...source].sort((a, b) => b.revenue - a.revenue), [source])
     const chartData = React.useMemo(() => reduceForChart(rows), [rows])
     const totalRevenue = activeDataset.totalRevenue
+    const totalCount = rows.length
 
     if (rows.length === 0) {
         return (
-            <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-sm">
-                <p className="text-sm font-semibold text-slate-900">Revenue Analysis</p>
-                <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                    No revenue data available.
+            <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="ui-text-section text-slate-900">Revenue Analysis</p>
+                <p className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                    No revenue data available for this period.
                 </p>
             </section>
         )
     }
 
+    const growth = (growthData && growthData[period]) || 0
+
     return (
-        <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-sm">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-900">Revenue Analysis</p>
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-slate-500">Date</span>
-                    <select
-                        value={period}
-                        onChange={(event) => setPeriod(event.target.value as RevenuePeriodKey)}
-                        className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-blue-300"
-                    >
-                        {PERIOD_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-                {MODE_OPTIONS.map((option) => (
-                    <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setMode(option.value)}
-                        className={[
-                            "rounded-lg border px-3 py-1.5 text-xs font-semibold transition",
-                            mode === option.value
-                                ? "border-blue-200 bg-blue-50 text-blue-700"
-                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
-                        ].join(" ")}
-                    >
-                        {option.label}
-                    </button>
-                ))}
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
-                <div className="h-[320px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={chartData}
-                                dataKey="revenue"
-                                nameKey="label"
-                                innerRadius={82}
-                                outerRadius={122}
-                                paddingAngle={3}
-                                stroke="transparent"
+        <section className="rounded-[24px] border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+                <h3 className="ui-text-title text-slate-900">Revenue Analysis</h3>
+                
+                <div className="flex items-center gap-3">
+                    {/* Mode Switcher */}
+                    <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200/50">
+                        {MODE_OPTIONS.map((option) => (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setMode(option.value)}
+                                className={cn(
+                                    "rounded-lg px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all",
+                                    mode === option.value
+                                        ? "bg-white text-blue-600 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-700"
+                                )}
                             >
-                                {chartData.map((entry, index) => (
-                                    <Cell key={`${entry.key}-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                formatter={(value: number) => formatCurrency(Number(value))}
-                                contentStyle={{
-                                    borderRadius: 10,
-                                    border: "1px solid rgb(226 232 240)",
-                                    boxShadow: "0 10px 20px rgba(15,23,42,0.08)",
-                                }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Period Selector */}
+                    <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200/50 shadow-inner-sm">
+                        <select
+                            value={period}
+                            onChange={(event) => setPeriod(event.target.value as RevenuePeriodKey)}
+                            className="rounded-lg bg-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-blue-600 shadow-sm outline-none transition-all cursor-pointer hover:bg-slate-50"
+                        >
+                            {PERIOD_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value} className="bg-white text-slate-700">
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid gap-12 lg:grid-cols-[400px_1fr]">
+                <div className="relative flex items-center justify-center h-[280px]">
+                    <div className="absolute inset-0 z-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={chartData}
+                                    dataKey="revenue"
+                                    nameKey="label"
+                                    cx="50%"
+                                    cy="55%"
+                                    innerRadius={80}
+                                    outerRadius={125}
+                                    startAngle={210}
+                                    endAngle={-30}
+                                    stroke="white"
+                                    strokeWidth={3}
+                                >
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`${entry.key}-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value: number) => formatCurrency(Number(value))}
+                                    contentStyle={{
+                                        borderRadius: 12,
+                                        border: "1px solid rgb(226 232 240)",
+                                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+                                    }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    {/* Central Label */}
+                    <div className="relative z-10 text-center mt-[-10px]">
+                        <p className="ui-overline text-slate-400">Total {mode}s</p>
+                        <p className="text-[38px] font-black text-slate-900 leading-none mt-1">{totalCount}</p>
+                    </div>
                 </div>
 
-                <div className="space-y-2">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                            Total Revenue ({PERIOD_OPTIONS.find((option) => option.value === period)?.label})
-                        </p>
-                        <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(totalRevenue)}</p>
+                <div className="flex flex-col gap-8">
+                    {/* Total Revenue Summary Sub-card */}
+                    <div className="rounded-[20px] bg-slate-50/50 border border-slate-100 p-6 flex items-center justify-between shadow-inner">
+                        <div className="space-y-1">
+                            <p className="ui-overline text-slate-400">Total Revenue ({PERIOD_OPTIONS.find(p => p.value === period)?.label})</p>
+                            <div className="flex items-center gap-3">
+                                <p className="text-[28px] font-bold text-slate-900 tracking-tight">
+                                    {formatCurrency(totalRevenue)}
+                                </p>
+                                <div className="h-8 w-12 text-blue-500 opacity-60">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={chartData.slice(0, 5)}>
+                                            <Bar dataKey="revenue" fill="currentColor" radius={[2, 2, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                                <TrendingUp className="h-3 w-3" />
+                                <span className="text-xs font-bold">+{growth}%</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="max-h-[245px] space-y-2 overflow-auto pr-1">
-                        {rows.map((entry, index) => {
+
+                    <div className="grid gap-x-12 gap-y-6 sm:grid-cols-2">
+                        {rows.slice(0, 10).map((entry, index) => {
                             const share = totalRevenue > 0 ? (entry.revenue / totalRevenue) * 100 : 0
                             const attention = mode === "project" ? getAttentionLabel(entry.hoursThisMonth) : null
                             return (
-                                <div key={entry.key} className="rounded-xl border border-slate-200 px-3 py-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            <span
-                                                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                                            />
-                                            <p className="truncate text-sm font-medium text-slate-800">{entry.label}</p>
+                                <div key={entry.key} className="flex items-start justify-between gap-4 group cursor-pointer border-b border-transparent hover:border-slate-100 py-1 transition-all">
+                                    <div className="flex items-start gap-3 min-w-0">
+                                        <span
+                                            className="h-2.5 w-2.5 shrink-0 rounded-full mt-1.5 shadow-sm"
+                                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                        />
+                                        <div className="flex flex-col min-w-0">
+                                            <p className="truncate ui-text-label text-slate-800 font-semibold group-hover:text-blue-600 transition-colors">
+                                                {entry.label}
+                                            </p>
+                                            <p className="ui-text-caption text-slate-400 mt-0.5">
+                                                {share.toFixed(1)}% share
+                                            </p>
                                         </div>
-                                        <p className="shrink-0 text-sm font-semibold text-slate-900">
+                                    </div>
+
+                                    <div className="flex flex-col items-end shrink-0">
+                                        <p className="ui-text-label font-bold text-slate-900">
                                             {formatCurrency(entry.revenue)}
                                         </p>
-                                    </div>
-                                    <div className="mt-1.5 flex items-center justify-between text-xs text-slate-500">
-                                        <span>{share.toFixed(1)}% share</span>
                                         {mode === "project" ? (
-                                            <span className={`rounded-md border px-2 py-0.5 font-semibold ${attention?.className}`}>
+                                            <span className={cn(
+                                                "mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded border leading-none shadow-sm",
+                                                attention?.className
+                                            )}>
                                                 {formatHours(entry.hoursThisMonth)} this month
                                             </span>
-                                        ) : null}
+                                        ) : entry.key === "__other__" ? null : (
+                                            <span className="mt-1 ui-text-caption text-slate-300">Scheduled</span>
+                                        )}
                                     </div>
                                 </div>
                             )
