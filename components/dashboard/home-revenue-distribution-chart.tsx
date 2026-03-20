@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Pie, PieChart, ResponsiveContainer, Tooltip, Cell, BarChart, Bar } from "recharts"
-import { TrendingUp, BarChart3 } from "lucide-react"
+import { TrendingUp, BarChart3, Timer } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
 
 export type RevenuePeriodKey = "all_time" | "this_month" | "last_month" | "this_quarter" | "this_year"
@@ -70,7 +70,7 @@ function reduceForChart(data: RevenueAnalysisEntry[], max = 8) {
 
 function getAttentionLabel(hoursThisMonth: number | undefined) {
     if ((hoursThisMonth || 0) <= 2) {
-        return { label: "Low attention", className: "bg-rose-50 border-rose-200 text-rose-700" }
+        return { label: "Low attention", className: "bg-slate-50 border-slate-200 text-slate-500" }
     }
     if ((hoursThisMonth || 0) <= 6) {
         return { label: "Moderate", className: "bg-amber-50 border-amber-200 text-amber-700" }
@@ -184,29 +184,22 @@ export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRev
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-6">
                     {/* Total Revenue Summary Sub-card */}
-                    <div className="rounded-[20px] bg-slate-50/50 border border-slate-100 p-6 flex items-center justify-between shadow-inner">
-                        <div className="space-y-1">
+                    <div className="rounded-[18px] bg-slate-50/50 border border-slate-100 p-4 py-3 flex items-center justify-between shadow-inner">
+                        <div className="space-y-0.5">
                             <p className="ui-overline text-slate-400">Total Revenue ({PERIOD_OPTIONS.find(p => p.value === period)?.label})</p>
                             <div className="flex items-center gap-3">
-                                <p className="text-[28px] font-bold text-slate-900 tracking-tight">
+                                <p className="text-[22px] font-bold text-slate-900 tracking-tight">
                                     {formatCurrency(totalRevenue)}
                                 </p>
-                                <div className="h-8 w-12 text-blue-500 opacity-60">
+                                <div className="h-6 w-10 text-blue-500 opacity-40">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={chartData.slice(0, 5)}>
-                                            <Bar dataKey="revenue" fill="currentColor" radius={[2, 2, 0, 0]} />
+                                            <Bar dataKey="revenue" fill="currentColor" radius={[1, 1, 0, 0]} />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div className="flex flex-col items-end gap-1">
-                            <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
-                                <TrendingUp className="h-3 w-3" />
-                                <span className="text-xs font-bold">+{growth}%</span>
                             </div>
                         </div>
                     </div>
@@ -227,7 +220,7 @@ export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRev
                                                 {entry.label}
                                             </p>
                                             <p className="ui-text-caption text-slate-400 mt-0.5">
-                                                {share.toFixed(1)}% share
+                                                {share.toFixed(1)}%
                                             </p>
                                         </div>
                                     </div>
@@ -237,15 +230,14 @@ export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRev
                                             {formatCurrency(entry.revenue)}
                                         </p>
                                         {mode === "project" ? (
-                                            <span className={cn(
-                                                "mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded border leading-none shadow-sm",
+                                            <div className={cn(
+                                                "mt-1 flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded border leading-none shadow-sm",
                                                 attention?.className
                                             )}>
-                                                {formatHours(entry.hoursThisMonth)} this month
-                                            </span>
-                                        ) : entry.key === "__other__" ? null : (
-                                            <span className="mt-1 ui-text-caption text-slate-300">Scheduled</span>
-                                        )}
+                                                <Timer className="h-2.5 w-2.5" />
+                                                <span>{formatHours(entry.hoursThisMonth)}</span>
+                                            </div>
+                                        ) : null}
                                     </div>
                                 </div>
                             )

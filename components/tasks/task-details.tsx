@@ -355,13 +355,18 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
     }
 
     const openProjectDetails = () => {
-        if (!task.projectId || !onOpenProject) return
-        onOpenProject({
-            ...(task.project || {}),
-            id: task.projectId,
-            tasks: task.project?.tasks || [],
-            timeLogs: task.project?.timeLogs || [],
-        })
+        if (!task.projectId) return
+        if (onOpenProject) {
+            onOpenProject({
+                ...(task.project || {}),
+                id: task.projectId,
+                tasks: task.project?.tasks || [],
+                timeLogs: task.project?.timeLogs || [],
+            })
+            return
+        }
+
+        router.push(`/projects?openProject=${encodeURIComponent(task.projectId)}`)
     }
 
     const openSitePanel = () => {
@@ -821,10 +826,10 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
                                 <button
                                     type="button"
                                     onClick={openProjectDetails}
-                                    disabled={!task.projectId || !onOpenProject}
+                                    disabled={!task.projectId}
                                     className={cn(
                                         "text-left",
-                                        task.projectId && onOpenProject
+                                        task.projectId
                                             ? "hover:border-slate-300"
                                             : "cursor-not-allowed opacity-60"
                                     )}

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
@@ -30,6 +31,9 @@ export const ProjectSheetContext = React.createContext<{
 })
 
 export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, children }: ProjectSheetWrapperProps) {
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
     const [selectedSite, setSelectedSite] = React.useState<Site & { partner?: { id: string; name: string } } | null>(null)
     const [selectedPartnerId, setSelectedPartnerId] = React.useState<string | null>(null)
@@ -70,6 +74,21 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
             }
         }
     }, [projects, selectedProject])
+
+    React.useEffect(() => {
+        const openProjectId = searchParams.get("openProject")
+        if (!openProjectId) return
+
+        const projectFromUrl = projects.find((entry) => entry.id === openProjectId)
+        if (!projectFromUrl) return
+
+        setSelectedProject((prev) => (prev?.id === projectFromUrl.id ? prev : projectFromUrl))
+
+        const nextParams = new URLSearchParams(searchParams.toString())
+        nextParams.delete("openProject")
+        const nextUrl = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname
+        router.replace(nextUrl, { scroll: false })
+    }, [pathname, projects, router, searchParams])
 
     return (
         <ProjectSheetContext.Provider value={{ openProject, closeProject, currentProject: selectedProject, hourlyRate }}>

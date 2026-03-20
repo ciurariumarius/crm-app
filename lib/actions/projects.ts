@@ -321,6 +321,43 @@ export async function deleteProject(projectId: string) {
     }
 }
 
+export async function getProjectById(projectId: string) {
+    try {
+        const session = await requireTenantContext()
+        const validatedProjectId = ProjectIdSchema.parse(projectId)
+
+        const project = await prisma.project.findFirst({
+            where: { id: validatedProjectId, tenantId: session.tenantId },
+            include: {
+                services: true,
+                site: {
+                    include: {
+                        partner: true,
+                    },
+                },
+                timeLogs: true,
+                tasks: {
+                    include: {
+                        timeLogs: true,
+                    },
+                },
+                _count: {
+                    select: { tasks: true },
+                },
+            },
+        })
+
+        if (!project) {
+            return { success: false, error: "Project not found" }
+        }
+
+        return { success: true, data: project }
+    } catch (error: unknown) {
+        console.error("Get project failed:", error)
+        return { success: false, error: getActionErrorMessage(error, "Failed to load project") }
+    }
+}
+
 export async function deleteProjects(projectIds: string[]) {
     try {
         const session = await requireTenantContext()

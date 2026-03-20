@@ -15,6 +15,7 @@ import {
     Square,
     ArrowUpRight,
     Circle,
+    Clock3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -68,7 +69,7 @@ function PriorityBadge({ urgency, compact = false }: { urgency: string; compact?
 
     if (normalizedUrgency === "Urgent") {
         return (
-            <StatusChip tone="urgent" size={size}>
+            <StatusChip tone="urgent" size={size} className={cn(compact && "font-black tracking-wider uppercase h-4.5 px-1.5")}>
                 Urgent
             </StatusChip>
         )
@@ -88,11 +89,20 @@ function DeadlineBadge({ deadline, compact = false }: { deadline: string | Date 
     const date = new Date(deadline)
     if (Number.isNaN(date.getTime())) return null
 
-    const label = format(date, "d MMMM")
     const overdue = isBefore(date, startOfDay(new Date()))
+    if (compact) {
+        if (!overdue) return null
+        return (
+            <StatusChip tone="unpaid" size="xs" className="border-orange-200 bg-orange-50 text-orange-600 font-black tracking-wider uppercase h-4.5 px-1.5">
+                Overdue
+            </StatusChip>
+        )
+    }
+
+    const label = format(date, "d MMMM")
 
     return (
-        <StatusChip tone={overdue ? "urgent" : "unpaid"} size={compact ? "xs" : "sm"}>
+        <StatusChip tone={overdue ? "urgent" : "unpaid"} size="sm">
             {label}
         </StatusChip>
     )
@@ -121,6 +131,123 @@ export function TaskGridCard({
     const createdAtDate = task.createdAt ? new Date(task.createdAt) : null
     const hasValidCreatedAt = createdAtDate !== null && !Number.isNaN(createdAtDate.getTime())
     const isOverdue = task.deadline ? isBefore(new Date(task.deadline), startOfDay(new Date())) : false
+
+    if (compact) {
+        return (
+            <div
+                className={cn(
+                    "group relative h-full cursor-pointer flex flex-col overflow-hidden rounded-[24px] border border-slate-100 bg-white p-5 transition-all duration-200",
+                    "hover:border-slate-200 hover:shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]",
+                    isRunning && "border-blue-200 bg-blue-50/20",
+                    isSelected && "border-primary/30 bg-primary/[0.02]",
+                    className
+                )}
+                onClick={() => onOpen(task.id)}
+            >
+
+                <div className="flex items-start justify-between gap-3">
+                    <h4
+                        className={cn(
+                            "text-[18px] font-bold leading-[1.2] text-slate-900 tracking-tight line-clamp-2",
+                            task.status === "Completed" && "line-through opacity-40"
+                        )}
+                    >
+                        {task.name || "Untitled task"}
+                    </h4>
+
+                    <div onClick={(e) => e.stopPropagation()} className="-mr-1 shrink-0">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-lg text-slate-100 hover:bg-slate-50 hover:text-slate-500 transition-colors"
+                                >
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52 rounded-2xl shadow-xl border-slate-100 p-1.5 backdrop-blur-sm grayscale-[0.2]">
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        if (isRunning) {
+                                            pauseTimer()
+                                            toast.success("Timer paused")
+                                            return
+                                        }
+                                        if (isPaused) {
+                                            resumeTimer()
+                                            toast.success("Timer resumed")
+                                            return
+                                        }
+                                        if (!task.projectId) {
+                                            toast.error("Task has no project")
+                                            return
+                                        }
+                                        startTimer(task.projectId, task.id, task.name || "Task")
+                                        toast.success("Timer started")
+                                    }}
+                                    className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
+                                >
+                                    {isRunning ? <Pause className="h-3.5 w-3.5 fill-current text-slate-500" /> : <Play className="h-3.5 w-3.5 fill-current text-slate-500" />}
+                                    {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
+                                </DropdownMenuItem>
+
+
+                                    <DropdownMenuSeparator />
+
+                                {task.status !== "Completed" && (
+                                    <DropdownMenuItem
+                                        onClick={() => onComplete(task.id)}
+                                        className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
+                                    >
+                                        <CheckCheck className="h-3.5 w-3.5 text-slate-500" />
+                                        Mark completed
+                                    </DropdownMenuItem>
+                                )}
+
+                                <DropdownMenuSeparator className="bg-slate-50" />
+                                <DropdownMenuItem
+                                    onClick={() => onOpen(task.id)}
+                                    className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
+                                >
+                                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
+                                    Open panel
+                                </DropdownMenuItem>
+
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </div>
+                <div className="mt-3 min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5 text-slate-400">
+                        {isRecurring
+                            ? <RefreshCcw className="h-2.5 w-2.5 shrink-0" />
+                            : <Circle className="h-2.5 w-2.5 shrink-0" />
+                        }
+                        <p className="min-w-0 truncate text-[12px] font-medium text-slate-500">
+                            {projectFullName}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mt-auto flex items-end justify-between pt-5">
+                    <div className="flex items-center gap-2">
+                        <PriorityBadge urgency={task.urgency || "Normal"} compact />
+                        <DeadlineBadge deadline={task.deadline} compact />
+                    </div>
+
+                    {hasValidCreatedAt && createdAtDate ? (
+                        <div className="flex shrink-0 items-center gap-1.5 text-slate-300">
+                            <Clock3 className="h-3.5 w-3.5" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">
+                                {format(createdAtDate, "d MMM")}
+                            </span>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div

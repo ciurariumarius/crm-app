@@ -3,7 +3,7 @@ import { format, subMonths } from "date-fns"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
-import { CirclePlus, FolderPlus, WalletCards, BadgeCheck, Timer } from "lucide-react"
+import { CirclePlus, FolderPlus, WalletCards, BadgeCheck, Timer, TrendingUp, Banknote } from "lucide-react"
 import { GlobalSearch } from "@/components/dashboard/global-search"
 import {
     HomeRevenueDistributionChart,
@@ -114,6 +114,7 @@ export default async function HomePage() {
 
     const [
         user,
+        allServicesRaw,
         activeProjectsCount,
         activeRecurringProjectsCount,
         activeOneTimeProjectsCount,
@@ -130,7 +131,10 @@ export default async function HomePage() {
     ] = await Promise.all([
         prisma.user.findFirst({
             where: { id: session.userId, tenantId: session.tenantId },
-            select: { name: true, username: true },
+            select: { name: true, username: true, hourlyRate: true },
+        }),
+        prisma.service.findMany({
+            where: { tenantId: session.tenantId },
         }),
         prisma.project.count({
             where: { tenantId: session.tenantId, status: "Active" },
@@ -468,10 +472,11 @@ export default async function HomePage() {
     }
 
     const displayName = user?.name?.split(" ")[0] || user?.username || "Marius"
+    const hourlyRate = Number(user?.hourlyRate || 0)
 
     return (
-        <div className="flex flex-col gap-6 pb-10">
-            <section className="space-y-4">
+        <div className="flex flex-col gap-10 pb-10">
+            <section className="space-y-6">
                 <div className="flex items-start justify-between gap-4 md:hidden">
                     <div className="flex items-start gap-3">
                         <MobileMenuTrigger />
@@ -516,86 +521,97 @@ export default async function HomePage() {
                     </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                        <div className="flex items-start justify-between gap-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Revenue</p>
-                            <WalletCards className="h-4 w-4 text-slate-300" />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {/* Revenue Card */}
+                    <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                        <div className="flex items-start justify-between">
+                            <p className="ui-overline text-slate-400">Revenue</p>
+                            <Banknote className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
                         </div>
-                        <div className="mt-4 flex items-end justify-between gap-3">
+                        <div className="mt-6 flex items-end justify-between">
                             <div>
-                                <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-rose-600">Unpaid</p>
-                                <p className="mt-1 text-[30px] font-bold leading-none tracking-tight text-rose-600">{formatCurrency(unpaidRevenue)}</p>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-rose-500">Unpaid</p>
+                                <p className="mt-1 text-[24px] font-bold leading-none tracking-tight text-rose-600">
+                                    {formatCurrency(unpaidRevenue)}
+                                </p>
                             </div>
                             <div className="text-right">
-                                <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-blue-600">This month</p>
-                                <p className="mt-1 text-sm font-bold leading-none text-slate-700">{formatCurrency(monthRevenue)}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                        <div className="flex items-start justify-between gap-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Active projects</p>
-                            <FolderPlus className="h-4 w-4 text-slate-300" />
-                        </div>
-                        <div className="mt-4 grid grid-cols-[auto_1fr] items-end gap-4">
-                            <div>
-                                <p className="text-[36px] font-bold leading-none tracking-tight text-slate-900">{formatNumber(activeProjectsCount)}</p>
-                                <p className="mt-1 text-[10px] font-medium italic text-slate-400">Total</p>
-                            </div>
-                            <div className="space-y-1.5 border-l border-slate-100 pl-3">
-                                <div className="flex items-center justify-between text-[10px]">
-                                    <span className="font-semibold uppercase tracking-[0.08em] text-violet-600">Recurring</span>
-                                    <span className="font-bold text-violet-700">{formatNumber(activeRecurringProjectsCount)}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-[10px]">
-                                    <span className="font-semibold uppercase tracking-[0.08em] text-emerald-600">One-time</span>
-                                    <span className="font-bold text-emerald-700">{formatNumber(activeOneTimeProjectsCount)}</span>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">This month</p>
+                                <div className="mt-1 flex items-center justify-end gap-2">
+                                    <p className="text-sm font-bold text-slate-800">{formatCurrency(monthRevenue)}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                        <div className="flex items-start justify-between gap-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Tasks overview</p>
-                            <BadgeCheck className="h-4 w-4 text-slate-300" />
+                    {/* Active Projects Card */}
+                    <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                        <div className="flex items-start justify-between">
+                            <p className="ui-overline text-slate-400">Active projects</p>
+                            <FolderPlus className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
                         </div>
-                        <div className="mt-4 grid grid-cols-[auto_1fr] items-end gap-4">
-                            <div>
-                                <p className="text-[36px] font-bold leading-none tracking-tight text-slate-900">{formatNumber(activeTasksCount)}</p>
-                                <p className="mt-1 text-[10px] font-medium italic text-slate-400">Total</p>
+                        <div className="mt-6 flex items-end gap-6">
+                            <div className="min-w-[60px]">
+                                <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{activeProjectsCount}</p>
+                                <p className="mt-1 text-[10px] italic text-slate-400">Total</p>
                             </div>
-                            <div className="space-y-1.5 border-l border-slate-100 pl-3">
-                                <div className="flex items-center justify-between text-[10px]">
-                                    <span className="font-semibold uppercase tracking-[0.08em] text-amber-600">Overdue</span>
-                                    <span className="font-bold text-amber-700">{formatNumber(overdueTasksCount)}</span>
+                            <div className="flex-1 space-y-2 border-l border-slate-100 pl-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-violet-500">Recurring</span>
+                                    <span className="text-sm font-bold text-slate-900">{activeRecurringProjectsCount}</span>
                                 </div>
-                                <div className="flex items-center justify-between text-[10px]">
-                                    <span className="font-semibold uppercase tracking-[0.08em] text-rose-600">Urgent</span>
-                                    <span className="font-bold text-rose-700">{formatNumber(urgentTasksCount)}</span>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500">One-time</span>
+                                    <span className="text-sm font-bold text-slate-900">{activeOneTimeProjectsCount}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                        <div className="flex items-start justify-between gap-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Hours worked</p>
-                            <Timer className="h-4 w-4 text-slate-300" />
+                    {/* Tasks Card */}
+                    <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                        <div className="flex items-start justify-between">
+                            <p className="ui-overline text-slate-400">Tasks overview</p>
+                            <BadgeCheck className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
                         </div>
-                        <p className="mt-4 text-[36px] font-bold leading-none tracking-tight text-slate-900">{monthHours.toFixed(1)}</p>
-                        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-600">This month</p>
+                        <div className="mt-6 flex items-end gap-6">
+                            <div className="min-w-[60px]">
+                                <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{activeTasksCount}</p>
+                                <p className="mt-1 text-[10px] italic text-slate-400">Total</p>
+                            </div>
+                            <div className="flex-1 space-y-2 border-l border-slate-100 pl-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-500">Overdue</span>
+                                    <span className="text-sm font-bold text-slate-900">{overdueTasksCount}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500">Urgent</span>
+                                    <span className="text-sm font-bold text-slate-900">{urgentTasksCount}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Hours Card */}
+                    <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                        <div className="flex items-start justify-between">
+                            <p className="ui-overline text-slate-400">Hours worked</p>
+                            <Timer className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
+                        </div>
+                        <div className="mt-6">
+                            <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{monthHours.toFixed(1)}</p>
+                            <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-emerald-500">This month</p>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <section className="space-y-3">
-                <h3 className="text-xl font-semibold tracking-tight text-slate-900">My Tasks</h3>
+            <section className="space-y-6">
                 <HomeTaskColumns
                     urgentTasks={serialize(urgentTasksRaw)}
                     overdueTasks={serialize(overdueTasksRaw)}
+                    allServices={serialize(allServicesRaw)}
+                    hourlyRate={hourlyRate}
                 />
             </section>
 
