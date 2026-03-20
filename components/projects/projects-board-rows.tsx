@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { CalendarDays, Check, Circle, Pause, Play, Plus, Square, RefreshCcw, Zap, Wallet, Timer, Layers } from "lucide-react"
+import { CalendarDays, Check, Circle, Pause, Play, Plus, Square, RefreshCcw, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
@@ -25,6 +25,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import { ProjectBoardHeaderRow } from "@/components/projects/project-board-header-row"
+import { ProjectBoardSummaryCards } from "@/components/projects/project-board-summary-cards"
 import type { ProjectWithDetails } from "@/types"
 import type { SearchPaginationState } from "@/types/search-pagination"
 
@@ -1199,67 +1200,13 @@ export function ProjectsBoardRows({
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
-                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100 shadow-inner">
-                                <Layers className="h-4 w-4" />
-                            </div>
-                            <p className="flex items-baseline gap-1.5 leading-none">
-                                <span className="text-lg font-bold tracking-tight text-slate-900">{totals.count}</span>
-                                <span className="text-[12px] font-semibold text-slate-500">Total</span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
-                                <Zap className="h-4 w-4" />
-                            </div>
-                            <p className="flex items-baseline gap-1.5 leading-none">
-                                <span className="text-lg font-bold tracking-tight text-slate-900">{oneTimeCount}</span>
-                                <span className="text-[12px] font-semibold text-slate-500">One-time</span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600 border border-violet-100 shadow-inner">
-                                <RefreshCcw className="h-4 w-4" />
-                            </div>
-                            <p className="flex items-baseline gap-1.5 leading-none">
-                                <span className="text-lg font-bold tracking-tight text-slate-900">{monthlyCount}</span>
-                                <span className="text-[12px] font-semibold text-slate-500">Monthly</span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
-                                <Wallet className="h-4 w-4" />
-                            </div>
-                            <p className="flex items-baseline gap-1.5 leading-none">
-                                <span className="text-lg font-bold tracking-tight text-slate-900">{currencyFormatter.format(totals.totalAmount)}</span>
-                                <span className="text-[12px] font-semibold text-slate-500">RON</span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-100 shadow-inner">
-                                <Timer className="h-4 w-4" />
-                            </div>
-                            <p className="flex items-baseline gap-1.5 leading-none">
-                                <span className="text-lg font-bold tracking-tight text-slate-900">{formatDuration(totals.totalSeconds)}</span>
-                                <span className="text-[12px] font-semibold text-slate-500">Logged</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <ProjectBoardSummaryCards
+                    totalCount={totals.count}
+                    oneTimeCount={oneTimeCount}
+                    monthlyCount={monthlyCount}
+                    totalAmountLabel={currencyFormatter.format(totals.totalAmount)}
+                    totalDurationLabel={formatDuration(totals.totalSeconds)}
+                />
 
                 <GlobalCreateProjectDialog
                     open={createProjectOpen}

@@ -120,7 +120,7 @@ export function TaskGridCard({
     return (
         <div
             className={cn(
-                "group relative rounded-3xl border bg-white cursor-pointer transition-all duration-200 h-full",
+                "group relative self-start rounded-3xl border bg-white cursor-pointer transition-all duration-200",
                 "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 border-slate-100",
                 isOverdue && "border-rose-200/80 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]",
                 isRunning && "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]",
@@ -138,7 +138,7 @@ export function TaskGridCard({
                 {/* Header row: title + options menu */}
                 <div className="flex items-start justify-between gap-3">
                     <h4 className={cn(
-                        "text-[16px] font-bold leading-tight text-slate-900 line-clamp-2 flex-1 pt-0.5",
+                        "text-[16px] font-bold leading-tight text-slate-900 line-clamp-2 flex-1 pt-0.5 min-h-[2.5rem]",
                         task.status === "Completed" && "line-through opacity-40"
                     )}>
                         {task.name || "Untitled task"}
@@ -228,12 +228,12 @@ export function TaskGridCard({
                 </div>
 
                 {/* Project subtitle */}
-                <div className="flex items-center gap-1.5 min-w-0">
+                <div className="flex items-start gap-1.5 min-w-0">
                     {isRecurring
-                        ? <RefreshCcw className="h-3 w-3 text-slate-400 shrink-0" />
-                        : <Circle className="h-3 w-3 text-slate-400 shrink-0" />
+                        ? <RefreshCcw className="mt-0.5 h-3 w-3 text-slate-400 shrink-0" />
+                        : <Circle className="mt-0.5 h-3 w-3 text-slate-400 shrink-0" />
                     }
-                    <p className="min-w-0 text-[12px] font-medium text-slate-400 line-clamp-2 leading-snug tracking-tight">
+                    <p className="min-w-0 text-[12px] font-medium text-slate-400 line-clamp-2 leading-snug tracking-tight min-h-[2rem]">
                         {projectFullName}
                     </p>
                 </div>

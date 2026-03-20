@@ -309,7 +309,7 @@ export default async function AnalyticsPage() {
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">Portfolio Composition</h2>
-                        <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.15em] mt-1">Global revenue distribution by partner entity</p>
+                        <p className="ui-overline mt-1 text-muted-foreground/40">Global revenue distribution by partner entity</p>
                     </div>
                 </div>
 

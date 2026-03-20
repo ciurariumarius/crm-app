@@ -155,6 +155,6 @@ export async function getPaymentLogs(params: {
         }
     } catch (error) {
         console.error("[payment-actions] failed to fetch logs", error)
-        return { success: false, error: "Failed to fetch payment logs" }
+        return { success: false, error: "Failed to fetch payments" }
     }
 }

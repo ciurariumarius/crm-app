@@ -5,9 +5,11 @@ import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { PaymentsTable } from "@/components/payments/payments-table"
 import { PaymentsFilters } from "@/components/payments/payments-filters"
 import { AddPartnerPaymentDialog } from "@/components/payments/add-partner-payment-dialog"
+import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { buttonLinkClassName } from "@/components/ui/button-link"
+import { formatProjectName, serialize } from "@/lib/utils"
 
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
@@ -40,6 +42,43 @@ export default async function PaymentsPage({
     ])
 
     const logs = logsResult.success && logsResult.data ? logsResult.data : []
+    const partnerNameById = new Map(partners.map((partner) => [partner.id, partner.name]))
+    const unpaidByPartnerMap = new Map<
+        string,
+        { id: string; name: string; totalUnpaid: number; unpaidProjects: { id: string; name: string; amount: number }[] }
+    >()
+
+    for (const project of projects) {
+        if (project.paymentStatus !== "Unpaid") continue
+        const partnerIdForProject = project.site?.partnerId
+        if (!partnerIdForProject) continue
+
+        const existing = unpaidByPartnerMap.get(partnerIdForProject) ?? {
+            id: partnerIdForProject,
+            name: partnerNameById.get(partnerIdForProject) || "Unknown partner",
+            totalUnpaid: 0,
+            unpaidProjects: [],
+        }
+
+        const amount = Number(project.currentFee || 0)
+        existing.totalUnpaid += amount
+        existing.unpaidProjects.push({
+            id: project.id,
+            name: formatProjectName(project),
+            amount,
+        })
+        unpaidByPartnerMap.set(partnerIdForProject, existing)
+    }
+
+    const unpaidByPartner = Array.from(unpaidByPartnerMap.values())
+        .map((entry) => ({
+            ...entry,
+            unpaidProjects: entry.unpaidProjects.sort((a, b) => b.amount - a.amount),
+        }))
+        .sort((a, b) => b.totalUnpaid - a.totalUnpaid)
+
+    const serializedProjects = serialize(projects)
+    const serializedLogs = serialize(logs)
     const totalLogs = logsResult.success ? logsResult.total ?? logs.length : 0
     const totalPages = Math.max(1, Math.ceil(totalLogs / PAGE_SIZE))
     const prevPage = page > 1 ? page - 1 : null
@@ -57,22 +96,24 @@ export default async function PaymentsPage({
     return (
         <div className="flex flex-col gap-8 pb-8">
             <DashboardPageHeader
-                title="Payment Log"
+                title="Payments"
                 actions={<AddPartnerPaymentDialog partners={partners} />}
                 showMobile
             />
 
             <div className="flex flex-col gap-6">
+                <UnpaidByPartnerChart partners={unpaidByPartner} />
+
                 <PaymentsFilters
                     partners={partners}
-                    projects={projects}
+                    projects={serializedProjects}
                     totalLogs={totalLogs}
                 />
 
             <div className="flex flex-col">
                     <PaymentsTable
-                        logs={logs}
-                        projects={projects}
+                        logs={serializedLogs}
+                        projects={serializedProjects}
                     />
 
                     <div className="flex items-center justify-between px-6 py-8">

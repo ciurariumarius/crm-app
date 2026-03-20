@@ -8,15 +8,12 @@ import {
     Check,
     CheckCircle,
     Clock3,
-    FolderOpen,
-    Globe,
     FileDown,
     Loader2,
     Pause,
     Play,
     Plus,
     Expand,
-    ArrowUpRight,
     Pencil,
     Square,
     Target,
@@ -43,9 +40,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ProjectWithDetails } from "@/types"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { Service, Site } from "@prisma/client"
-import { SidePanelChip, SidePanelEmptyState, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
+import { SidePanelChip, SidePanelEmptyState, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
 import { ProjectHistoryLogSections, type ProjectPaymentHistoryEntry, type ProjectStatusHistoryEntry } from "@/components/projects/project-history-log-sections"
+import { ProjectSheetInfoSection } from "@/components/projects/project-sheet-info-section"
 
 type UpdateProjectPayload = {
     name?: string
@@ -1316,156 +1314,31 @@ export function ProjectSheetContent({
                             isLoadingStatusHistory={isLoadingStatusHistory}
                         />
 
-                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <SidePanelSectionTitle title="Project info" />
-
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (onOpenPartner) onOpenPartner(project.site.partner.id)
-                                        else router.push(`/partners/${project.site.partner.id}`)
-                                    }}
-                                    className="text-left"
-                                >
-                                    <SidePanelInfoCard
-                                        title="Partner"
-                                        subtitle={(
-                                            <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
-                                                {project.site.partner.name}
-                                            </p>
-                                        )}
-                                        action={<FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />}
-                                    />
-                                </button>
-
-                                <SidePanelInfoCard
-                                    title="Domain"
-                                    subtitle={(
-                                        <button
-                                            type="button"
-                                            onClick={openSitePanel}
-                                            className="truncate text-left text-base font-black leading-tight tracking-tight text-slate-800 transition hover:text-blue-600 sm:text-lg"
-                                            title="Open site panel"
-                                        >
-                                            {project.site.domainName}
-                                        </button>
-                                    )}
-                                    action={
-                                        <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
-                                            <Globe className="h-4 w-4" />
-                                            <ArrowUpRight className="h-4 w-4" />
-                                        </span>
-                                    }
-                                >
-                                    <div className="flex items-center gap-2">
-                                        {externalSiteUrl ? (
-                                            <a
-                                                href={externalSiteUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                <SidePanelChip
-                                                    tone="blue"
-                                                    label={(
-                                                        <>
-                                                            Open website
-                                                            <ArrowUpRight className="h-3.5 w-3.5" />
-                                                        </>
-                                                    )}
-                                                    className="rounded-lg px-2.5 py-1.5 text-[10px]"
-                                                />
-                                            </a>
-                                        ) : (
-                                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-[10px] opacity-70" />
-                                        )}
-                                    </div>
-                                </SidePanelInfoCard>
-                            </div>
-
-                            <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                                <div className="flex items-center justify-between gap-3">
-                                    <SidePanelSectionTitle title="Project services" className="text-xs" />
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsEditingServices((current) => !current)}
-                                        className="rounded-full border border-slate-300 px-3.5 py-1.5 text-[11px] font-semibold tracking-[0.03em] text-slate-600 transition hover:border-slate-400 hover:bg-slate-50"
-                                    >
-                                        + Add
-                                    </button>
-                                </div>
-
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {project.services?.map((service) => (
-                                        <button
-                                            key={service.id}
-                                            type="button"
-                                            onClick={() => toggleService(service.id)}
-                                            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-semibold tracking-[0.03em] text-blue-700 transition hover:bg-blue-100/70"
-                                        >
-                                            {service.serviceName}
-                                            <X className="h-3.5 w-3.5" />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {isEditingServices && (
-                                <div className="rounded-[26px] border border-slate-200 bg-white p-4">
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        <div>
-                                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-indigo-500">Recurring</p>
-                                            <div className="mt-2 space-y-2">
-                                                {recurringServices.map((service) => {
-                                                    const isSelected = project.services?.some((item) => item.id === service.id)
-                                                    return (
-                                                        <button
-                                                            key={service.id}
-                                                            type="button"
-                                                            onClick={() => toggleService(service.id)}
-                                                            className={cn(
-                                                                "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
-                                                                isSelected
-                                                                    ? "border-blue-300 bg-blue-50 text-blue-700"
-                                                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
-                                                            )}
-                                                        >
-                                                            {service.serviceName}
-                                                            {isSelected && <Check className="h-4 w-4" />}
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-500">One-Time</p>
-                                            <div className="mt-2 space-y-2">
-                                                {oneTimeServices.map((service) => {
-                                                    const isSelected = project.services?.some((item) => item.id === service.id)
-                                                    return (
-                                                        <button
-                                                            key={service.id}
-                                                            type="button"
-                                                            onClick={() => toggleService(service.id)}
-                                                            className={cn(
-                                                                "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
-                                                                isSelected
-                                                                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                                                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
-                                                            )}
-                                                        >
-                                                            {service.serviceName}
-                                                            {isSelected && <Check className="h-4 w-4" />}
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </section>
+                        <ProjectSheetInfoSection
+                            partnerName={project.site.partner.name}
+                            domainName={project.site.domainName}
+                            onOpenPartner={() => {
+                                if (onOpenPartner) onOpenPartner(project.site.partner.id)
+                                else router.push(`/partners/${project.site.partner.id}`)
+                            }}
+                            onOpenSitePanel={openSitePanel}
+                            externalSiteUrl={externalSiteUrl}
+                            services={(project.services || []).map((service) => ({
+                                id: service.id,
+                                serviceName: service.serviceName,
+                            }))}
+                            isEditingServices={isEditingServices}
+                            onToggleEditServices={() => setIsEditingServices((current) => !current)}
+                            onToggleService={toggleService}
+                            recurringServices={recurringServices.map((service) => ({
+                                id: service.id,
+                                serviceName: service.serviceName,
+                            }))}
+                            oneTimeServices={oneTimeServices.map((service) => ({
+                                id: service.id,
+                                serviceName: service.serviceName,
+                            }))}
+                        />
 
                         <section className="flex justify-end">
                             <Button
@@ -1583,7 +1456,7 @@ export function ProjectSheetContent({
                                 </div>
                             </div>
                         </DialogHeader>
-                        <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-[#FCFCFB] px-8 pb-8 pt-6">
+                        <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-background px-8 pb-8 pt-6">
                             <RichTextEditor
                                 value={description}
                                 onChange={setDescription}

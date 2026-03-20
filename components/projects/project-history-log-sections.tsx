@@ -50,7 +50,7 @@ export function ProjectHistoryLogSections({
                                     <div
                                         className={cn(
                                             "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-                                            entry.status === "Paid" ? "bg-[#ECFDF5] text-[#10B981]" : "bg-[#FFF1F2] text-[#E11D48]"
+                                            entry.status === "Paid" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
                                         )}
                                     >
                                         <CheckCircle className="h-4 w-4" />
@@ -113,4 +113,3 @@ export function ProjectHistoryLogSections({
         </>
     )
 }
-

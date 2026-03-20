@@ -54,7 +54,7 @@ const dataNav: NavItem[] = [
     { name: "Domains", href: "/domains", icon: Globe },
     { name: "Services", href: "/services", icon: Package },
     { name: "Time Logs", href: "/time", icon: Clock },
-    { name: "Payment Log", href: "/payments", icon: CreditCard },
+    { name: "Payments", href: "/payments", icon: CreditCard },
 ]
 
 const ppcNav: NavItem[] = [
