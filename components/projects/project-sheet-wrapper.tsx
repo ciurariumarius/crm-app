@@ -97,7 +97,7 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
                 <SheetContent
                     side="right"
                     showCloseButton={false}
-                    className={sidePanelClass("wide")}
+                    className={sidePanelClass("wide", 0)}
                 >
                     <SheetTitle className="sr-only">Project details</SheetTitle>
                     {selectedProject && (
@@ -124,7 +124,7 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
 
             {/* Site detail view if needed */}
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow")}>
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow", 2)}>
                     <SheetTitle className="sr-only">Site Details</SheetTitle>
                     {selectedSite && (
                         <SiteSheetContent
@@ -141,7 +141,7 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
                 <SheetContent 
                     side="right"
                     showCloseButton={false}
-                    className={sidePanelClass("wide")}
+                    className={sidePanelClass("default", 1)}
                 >
                     <SheetTitle className="sr-only">Partner Details</SheetTitle>
                     {selectedPartnerId && (

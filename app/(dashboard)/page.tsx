@@ -1,9 +1,9 @@
 import Link from "next/link"
-import { format, subMonths } from "date-fns"
+import { format } from "date-fns"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
-import { CirclePlus, FolderPlus, WalletCards, BadgeCheck, Timer, TrendingUp, Banknote } from "lucide-react"
+import { CirclePlus, FolderPlus, WalletCards, BadgeCheck, Timer, Banknote } from "lucide-react"
 import { GlobalSearch } from "@/components/dashboard/global-search"
 import {
     HomeRevenueDistributionChart,
@@ -14,7 +14,6 @@ import {
 import { HomeTaskColumns } from "@/components/dashboard/home-task-columns"
 import {
     formatCurrency,
-    formatNumber,
     formatProjectServiceList,
     serialize,
 } from "@/lib/utils"
@@ -26,6 +25,7 @@ type HomeProject = {
     currentFee: number | null
     createdAt: Date
     site: {
+        id: string
         domainName: string | null
         partner: { id: string; name: string } | null
     } | null
@@ -109,8 +109,6 @@ export default async function HomePage() {
     const currentMonthLabel = format(now, "MMMM yyyy")
     const todayStart = new Date(now)
     todayStart.setHours(0, 0, 0, 0)
-    const lastMonthStart = subMonths(monthStart, 1)
-    const lastMonthLabel = format(lastMonthStart, "MMMM yyyy")
 
     const [
         user,
@@ -127,7 +125,6 @@ export default async function HomePage() {
         overdueTasksRaw,
         projectsRaw,
         monthTimeByProjectRaw,
-        lastMonthRevenueAggregate,
     ] = await Promise.all([
         prisma.user.findFirst({
             where: { id: session.userId, tenantId: session.tenantId },
@@ -317,6 +314,7 @@ export default async function HomePage() {
                 createdAt: true,
                 site: {
                     select: {
+                        id: true,
                         domainName: true,
                         partner: { select: { id: true, name: true } },
                     },
@@ -337,24 +335,9 @@ export default async function HomePage() {
             },
             _sum: { durationSeconds: true },
         }),
-        prisma.project.aggregate({
-            where: {
-                tenantId: session.tenantId,
-                OR: [
-                    { createdAt: { gte: lastMonthStart, lt: monthStart } },
-                    {
-                        services: { some: { isRecurring: true } },
-                        name: { contains: lastMonthLabel },
-                    },
-                ],
-            },
-            _sum: { currentFee: true },
-        }),
     ])
 
     const monthRevenue = Number(monthRevenueAggregate._sum.currentFee || 0)
-    const lastMonthRevenue = Number(lastMonthRevenueAggregate._sum.currentFee || 0)
-    const revenueGrowth = lastMonthRevenue > 0 ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0
     const unpaidRevenue = Number(unpaidRevenueAggregate._sum.currentFee || 0)
     const monthHoursFromCompletedLogs = Number(monthTimeAggregate._sum.durationSeconds || 0)
     const runningMonthSeconds = runningMonthLogs.reduce((sum, log) => {
@@ -419,32 +402,47 @@ export default async function HomePage() {
             const bucket = periodMaps[periodKey]
             bucket.totalRevenue += fee
 
+            const partnerId = project.site?.partner?.id || family.partnerName
             const partnerName = family.partnerName
+            const domainId = project.site?.id || family.domainName
             const domainName = family.domainName
 
-            const partnerEntry = bucket.partner.get(partnerName) || {
-                key: partnerName,
+            const partnerEntry = bucket.partner.get(partnerId) || {
+                key: partnerId,
                 label: partnerName,
                 revenue: 0,
+                openPartnerId: project.site?.partner?.id,
             }
             partnerEntry.revenue += fee
-            bucket.partner.set(partnerName, partnerEntry)
+            bucket.partner.set(partnerId, partnerEntry)
 
-            const domainEntry = bucket.domain.get(domainName) || {
-                key: domainName,
+            const domainEntry = bucket.domain.get(domainId) || {
+                key: domainId,
                 label: domainName,
                 revenue: 0,
+                openSiteId: project.site?.id,
+                openPartnerId: project.site?.partner?.id,
             }
             domainEntry.revenue += fee
-            bucket.domain.set(domainName, domainEntry)
+            bucket.domain.set(domainId, domainEntry)
 
             const projectEntry = bucket.project.get(family.key) || {
                 key: family.key,
                 label: family.label,
                 revenue: 0,
                 hoursThisMonth: allTimeHoursByFamily.get(family.key) || 0,
+                openProjectId: project.id,
+                openSiteId: project.site?.id,
+                openPartnerId: project.site?.partner?.id,
+                latestCreatedAtMs: createdAt.getTime(),
             }
             projectEntry.revenue += fee
+            if ((projectEntry.latestCreatedAtMs || 0) < createdAt.getTime()) {
+                projectEntry.openProjectId = project.id
+                projectEntry.openSiteId = project.site?.id
+                projectEntry.openPartnerId = project.site?.partner?.id
+                projectEntry.latestCreatedAtMs = createdAt.getTime()
+            }
             bucket.project.set(family.key, projectEntry)
         }
     }
@@ -462,14 +460,6 @@ export default async function HomePage() {
         },
         {} as Record<RevenuePeriodKey, RevenuePeriodDataset>
     )
-
-    const growthData: Record<RevenuePeriodKey, number> = {
-        all_time: 14.2, // Mock for all_time
-        this_month: Number(revenueGrowth.toFixed(1)),
-        last_month: 0,
-        this_quarter: 12.8,
-        this_year: 24.5,
-    }
 
     const displayName = user?.name?.split(" ")[0] || user?.username || "Marius"
     const hourlyRate = Number(user?.hourlyRate || 0)
@@ -615,7 +605,11 @@ export default async function HomePage() {
                 />
             </section>
 
-            <HomeRevenueDistributionChart periodData={periodData} growthData={growthData} />
+            <HomeRevenueDistributionChart
+                periodData={periodData}
+                allServices={serialize(allServicesRaw)}
+                hourlyRate={hourlyRate}
+            />
         </div>
     )
 }

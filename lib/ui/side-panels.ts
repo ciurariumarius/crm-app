@@ -1,18 +1,31 @@
-type SidePanelSize = "wide" | "default" | "compact" | "narrow"
-type SidePanelDialogSize = "compact" | "default" | "wide"
+export type SidePanelSize = "wide" | "default" | "compact" | "narrow"
+export type SidePanelDialogSize = "compact" | "default" | "wide"
 
 const SIDE_PANEL_BASE =
     "w-screen max-w-none p-0 flex flex-col overflow-hidden border-none bg-[#f8fafc] shadow-[var(--shadow-drawer)] focus-visible:outline-none"
 
 const SIDE_PANEL_SIZE_CLASS: Record<SidePanelSize, string> = {
     wide: "sm:w-full sm:max-w-[1020px] sm:rounded-l-[12px]",
-    default: "sm:w-full sm:max-w-[900px] sm:rounded-l-[12px]",
-    compact: "sm:w-full sm:max-w-[760px] sm:rounded-l-[12px]",
-    narrow: "sm:w-full sm:max-w-xl sm:rounded-l-[12px]",
+    default: "sm:w-full sm:max-w-[860px] sm:rounded-l-[12px]",
+    compact: "sm:w-full sm:max-w-[700px] sm:rounded-l-[12px]",
+    narrow: "sm:w-[clamp(460px,42vw,680px)] sm:max-w-[clamp(460px,42vw,680px)] sm:rounded-l-[12px]",
 }
 
-export function sidePanelClass(size: SidePanelSize = "default") {
-    return `${SIDE_PANEL_BASE} ${SIDE_PANEL_SIZE_CLASS[size]}`
+const SIDE_PANEL_STACK_CLASS: Record<number, string> = {
+    0: "sm:right-0",
+    1: "sm:right-3",
+    2: "sm:right-6",
+    3: "sm:right-9",
+}
+
+function clampStackLevel(level: number) {
+    if (!Number.isFinite(level)) return 0
+    return Math.min(3, Math.max(0, Math.round(level)))
+}
+
+export function sidePanelClass(size: SidePanelSize = "default", stackLevel = 0) {
+    const resolvedLevel = clampStackLevel(stackLevel)
+    return `${SIDE_PANEL_BASE} ${SIDE_PANEL_SIZE_CLASS[size]} ${SIDE_PANEL_STACK_CLASS[resolvedLevel]}`
 }
 
 export const SIDE_PANEL_HEADER_CLASS = "px-8 pt-9 pb-6 relative bg-transparent"

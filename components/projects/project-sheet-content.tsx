@@ -792,8 +792,29 @@ export function ProjectSheetContent({
         router.push(sitePanelHref)
     }, [onOpenSite, project.site, router, sitePanelHref])
 
+    const openTaskSiteFromTaskPanel = React.useCallback((siteValue: unknown) => {
+        const site = siteValue as Site & { partner?: { id: string; name: string } }
+        if (site?.id && site?.partner?.id) {
+            if (onOpenSite) {
+                onOpenSite(site)
+                return
+            }
+            router.push(`/partners/${site.partner.id}/${site.id}`)
+            return
+        }
+
+        openSitePanel()
+    }, [onOpenSite, openSitePanel, router])
+
     return (
-        <TaskSheetWrapper tasks={project.tasks || []} project={project}>
+        <TaskSheetWrapper
+            tasks={project.tasks || []}
+            project={project}
+            panelSize="compact"
+            panelStackLevel={1}
+            onOpenProject={() => undefined}
+            onOpenSite={openTaskSiteFromTaskPanel}
+        >
             <div className="relative flex h-full flex-col overflow-hidden bg-[#f8fafc]">
                 <div className="absolute right-8 top-8 z-20 flex items-center gap-2">
                     {!standalone && onClose && (
@@ -1415,6 +1436,7 @@ export function ProjectSheetContent({
                     }}
                     projects={timeLogProjects}
                     tasks={timeLogTasks}
+                    panelStackLevel={1}
                 />
 
                 <Dialog open={isNotesModalOpen} onOpenChange={setIsNotesModalOpen}>

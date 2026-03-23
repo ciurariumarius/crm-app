@@ -2,8 +2,18 @@
 
 import * as React from "react"
 import { Pie, PieChart, ResponsiveContainer, Tooltip, Cell, BarChart, Bar } from "recharts"
-import { TrendingUp, BarChart3, Timer } from "lucide-react"
+import { Timer, ArrowUpRight } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
+import { SiteSheetContent } from "@/components/vault/site-sheet-content"
+import { PartnerSheetContent } from "@/components/vault/partner-sheet-content"
+import { sidePanelClass } from "@/lib/ui/side-panels"
+import { getProjectById } from "@/lib/actions/projects"
+import { getSiteById } from "@/lib/actions/sites"
+import { toast } from "sonner"
+import type { ProjectWithDetails } from "@/types"
+import type { Service, Site } from "@prisma/client"
 
 export type RevenuePeriodKey = "all_time" | "this_month" | "last_month" | "this_quarter" | "this_year"
 type RevenueMode = "partner" | "domain" | "project"
@@ -13,6 +23,10 @@ export type RevenueAnalysisEntry = {
     label: string
     revenue: number
     hoursThisMonth?: number
+    openProjectId?: string
+    openPartnerId?: string
+    openSiteId?: string
+    latestCreatedAtMs?: number
 }
 
 export type RevenuePeriodDataset = {
@@ -24,7 +38,8 @@ export type RevenuePeriodDataset = {
 
 type HomeRevenueDistributionChartProps = {
     periodData: Record<RevenuePeriodKey, RevenuePeriodDataset>
-    growthData?: Record<RevenuePeriodKey, number>
+    allServices: Service[]
+    hourlyRate?: number
 }
 
 const COLORS = [
@@ -78,9 +93,13 @@ function getAttentionLabel(hoursThisMonth: number | undefined) {
     return { label: "High attention", className: "bg-emerald-50 border-emerald-200 text-emerald-700" }
 }
 
-export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRevenueDistributionChartProps) {
+export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRate = 0 }: HomeRevenueDistributionChartProps) {
     const [period, setPeriod] = React.useState<RevenuePeriodKey>("all_time")
     const [mode, setMode] = React.useState<RevenueMode>("project")
+    const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
+    const [selectedSite, setSelectedSite] = React.useState<(Site & { partner?: { id: string; name: string } }) | null>(null)
+    const [selectedPartnerId, setSelectedPartnerId] = React.useState<string | null>(null)
+    const [isOpeningEntity, setIsOpeningEntity] = React.useState(false)
 
     const activeDataset = periodData[period]
     const source = activeDataset[mode]
@@ -88,6 +107,47 @@ export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRev
     const chartData = React.useMemo(() => reduceForChart(rows), [rows])
     const totalRevenue = activeDataset.totalRevenue
     const totalCount = rows.length
+
+    const openRowEntity = React.useCallback(async (entry: RevenueAnalysisEntry) => {
+        if (mode === "project") {
+            if (!entry.openProjectId) return
+            setIsOpeningEntity(true)
+            try {
+                const result = await getProjectById(entry.openProjectId)
+                if (!result.success || !result.data) {
+                    toast.error(result.error || "Failed to load project")
+                    return
+                }
+                setSelectedProject(result.data as ProjectWithDetails)
+            } catch {
+                toast.error("Failed to load project")
+            } finally {
+                setIsOpeningEntity(false)
+            }
+            return
+        }
+
+        if (mode === "partner") {
+            if (!entry.openPartnerId) return
+            setSelectedPartnerId(entry.openPartnerId)
+            return
+        }
+
+        if (!entry.openSiteId) return
+        setIsOpeningEntity(true)
+        try {
+            const result = await getSiteById(entry.openSiteId)
+            if (!result.success || !result.site) {
+                toast.error(result.error || "Failed to load domain")
+                return
+            }
+            setSelectedSite(result.site as Site & { partner?: { id: string; name: string } })
+        } catch {
+            toast.error("Failed to load domain")
+        } finally {
+            setIsOpeningEntity(false)
+        }
+    }, [mode])
 
     if (rows.length === 0) {
         return (
@@ -99,8 +159,6 @@ export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRev
             </section>
         )
     }
-
-    const growth = (growthData && growthData[period]) || 0
 
     return (
         <section className="rounded-[24px] border border-slate-200 bg-white p-8 shadow-sm">
@@ -208,8 +266,24 @@ export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRev
                         {rows.slice(0, 10).map((entry, index) => {
                             const share = totalRevenue > 0 ? (entry.revenue / totalRevenue) * 100 : 0
                             const attention = mode === "project" ? getAttentionLabel(entry.hoursThisMonth) : null
+                            const canOpen = mode === "project"
+                                ? Boolean(entry.openProjectId)
+                                : mode === "partner"
+                                  ? Boolean(entry.openPartnerId)
+                                  : Boolean(entry.openSiteId)
                             return (
-                                <div key={entry.key} className="flex items-start justify-between gap-4 group cursor-pointer border-b border-transparent hover:border-slate-100 py-1 transition-all">
+                                <button
+                                    key={entry.key}
+                                    type="button"
+                                    onClick={() => {
+                                        if (canOpen) void openRowEntity(entry)
+                                    }}
+                                    disabled={!canOpen}
+                                    className={cn(
+                                        "flex items-start justify-between gap-4 border-b border-transparent py-1 text-left transition-all",
+                                        canOpen ? "group cursor-pointer hover:border-slate-100" : "cursor-default"
+                                    )}
+                                >
                                     <div className="flex items-start gap-3 min-w-0">
                                         <span
                                             className="h-2.5 w-2.5 shrink-0 rounded-full mt-1.5 shadow-sm"
@@ -226,7 +300,7 @@ export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRev
                                     </div>
 
                                     <div className="flex flex-col items-end shrink-0">
-                                        <p className="ui-text-label font-bold text-slate-900">
+                                        <p className={cn("ui-text-label font-bold text-slate-900", canOpen && "group-hover:text-blue-600 transition-colors")}>
                                             {formatCurrency(entry.revenue)}
                                         </p>
                                         {mode === "project" ? (
@@ -238,13 +312,63 @@ export function HomeRevenueDistributionChart({ periodData, growthData }: HomeRev
                                                 <span>{formatHours(entry.hoursThisMonth)}</span>
                                             </div>
                                         ) : null}
+                                        {canOpen ? (
+                                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 group-hover:text-blue-500 transition-colors">
+                                                Open <ArrowUpRight className="h-3 w-3" />
+                                            </span>
+                                        ) : null}
                                     </div>
-                                </div>
+                                </button>
                             )
                         })}
                     </div>
                 </div>
             </div>
+
+            <Sheet open={Boolean(selectedProject)} onOpenChange={(open) => !open && setSelectedProject(null)}>
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("default", 1)}>
+                    <SheetTitle className="sr-only">Project details</SheetTitle>
+                    {selectedProject ? (
+                        <ProjectSheetContent
+                            project={selectedProject}
+                            allServices={allServices}
+                            hourlyRate={hourlyRate}
+                            onUpdate={(updated) => setSelectedProject(updated)}
+                            onOpenSite={(site) => setSelectedSite(site)}
+                            onClose={() => setSelectedProject(null)}
+                        />
+                    ) : null}
+                </SheetContent>
+            </Sheet>
+
+            <Sheet open={Boolean(selectedSite)} onOpenChange={(open) => !open && setSelectedSite(null)}>
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("default", 2)}>
+                    <SheetTitle className="sr-only">Domain details</SheetTitle>
+                    {selectedSite ? (
+                        <SiteSheetContent
+                            site={selectedSite}
+                            onUpdate={(updated) => setSelectedSite((prev) => (prev ? { ...prev, ...updated } : prev))}
+                            onClose={() => setSelectedSite(null)}
+                        />
+                    ) : null}
+                </SheetContent>
+            </Sheet>
+
+            <Sheet open={Boolean(selectedPartnerId)} onOpenChange={(open) => !open && setSelectedPartnerId(null)}>
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("default", 1)}>
+                    <SheetTitle className="sr-only">Partner details</SheetTitle>
+                    {selectedPartnerId ? (
+                        <PartnerSheetContent
+                            partnerId={selectedPartnerId}
+                            onClose={() => setSelectedPartnerId(null)}
+                        />
+                    ) : null}
+                </SheetContent>
+            </Sheet>
+
+            {isOpeningEntity ? (
+                <div className="pointer-events-none fixed inset-0 z-[79] bg-transparent" aria-hidden="true" />
+            ) : null}
         </section>
     )
 }

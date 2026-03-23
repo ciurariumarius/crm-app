@@ -216,6 +216,7 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourly
                 onOpenChange={(open) => {
                     if (!open) setSelectedTask(null)
                 }}
+                panelStackLevel={0}
                 onOpenProject={handleOpenProjectFromTask}
                 onOpenSite={(site) => {
                     setSelectedSite(site as Site & { partner?: { id: string; name: string } })
@@ -223,7 +224,7 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourly
             />
 
             <Sheet open={Boolean(selectedProject)} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("wide"))}>
+                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("compact", 1))}>
                     {selectedProject ? (
                         <ProjectSheetContent
                             project={selectedProject}
@@ -238,7 +239,7 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourly
             </Sheet>
 
             <Sheet open={Boolean(selectedSite)} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow")}>
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow", 2)}>
                     {selectedSite ? (
                         <SiteSheetContent
                             site={selectedSite}

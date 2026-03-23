@@ -242,6 +242,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                 onOpenChange={(open) => !open && setSelectedLog(null)}
                 projects={projects}
                 tasks={tasks}
+                panelStackLevel={0}
             />
         </div>
     )

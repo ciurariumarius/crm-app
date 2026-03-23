@@ -150,3 +150,28 @@ export async function deleteSite(siteId: string) {
         return { success: false, error: getActionErrorMessage(error, "Failed to delete site") }
     }
 }
+
+export async function getSiteById(siteId: string) {
+    try {
+        const session = await requireTenantContext()
+        const validatedSiteId = SiteIdSchema.parse(siteId)
+
+        const site = await prisma.site.findFirst({
+            where: { id: validatedSiteId, tenantId: session.tenantId },
+            include: {
+                partner: {
+                    select: { id: true, name: true },
+                },
+            },
+        })
+
+        if (!site) {
+            return { success: false, error: "Site not found" }
+        }
+
+        return { success: true, site }
+    } catch (error) {
+        console.error("Get site by id failed:", error)
+        return { success: false, error: getActionErrorMessage(error, "Failed to load site") }
+    }
+}

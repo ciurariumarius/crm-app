@@ -40,7 +40,7 @@ import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { useRouter } from "next/navigation"
-import { SIDE_PANEL_DIALOG_HEADER_CLASS, SIDE_PANEL_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
+import { SIDE_PANEL_DIALOG_HEADER_CLASS, SIDE_PANEL_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass, type SidePanelSize } from "@/lib/ui/side-panels"
 import { SidePanelChip, SidePanelEmptyState, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
 import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
 
@@ -98,6 +98,8 @@ interface TaskDetailsProps {
     onOpenChange: (open: boolean) => void
     onOpenProject?: (project: TaskDetailsProject) => void
     onOpenSite?: (site: TaskDetailsSite) => void
+    panelSize?: SidePanelSize
+    panelStackLevel?: number
 }
 
 const TASK_NOTES_TEMPLATE = [
@@ -139,7 +141,15 @@ function formatBottomDate(value: Date | null) {
     return format(value, "dd MMMM yyyy, HH:mm")
 }
 
-export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSite }: TaskDetailsProps) {
+export function TaskDetails({
+    task,
+    open,
+    onOpenChange,
+    onOpenProject,
+    onOpenSite,
+    panelSize = "default",
+    panelStackLevel = 0,
+}: TaskDetailsProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const router = useRouter()
     const [loading, setLoading] = React.useState(false)
@@ -432,7 +442,7 @@ export function TaskDetails({ task, open, onOpenChange, onOpenProject, onOpenSit
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className={cn(sidePanelClass("default"), "overflow-y-auto md:overflow-hidden")}
+                className={cn(sidePanelClass(panelSize, panelStackLevel), "overflow-y-auto md:overflow-hidden")}
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 showCloseButton={false}
             >

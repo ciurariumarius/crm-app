@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { TaskDetails, type TaskDetailsTask } from "@/components/tasks/task-details"
+import type { SidePanelSize } from "@/lib/ui/side-panels"
 
 type TaskSheetTask = {
     id: string
@@ -12,6 +13,10 @@ type TaskSheetTask = {
 interface TaskSheetWrapperProps {
     tasks: TaskSheetTask[]
     project?: unknown // Optional project context to inject into tasks
+    onOpenProject?: (project: unknown) => void
+    onOpenSite?: (site: unknown) => void
+    panelSize?: SidePanelSize
+    panelStackLevel?: number
     children: React.ReactNode
 }
 
@@ -26,7 +31,15 @@ export const TaskSheetContext = React.createContext<{
     currentTask: null
 })
 
-export function TaskSheetWrapper({ tasks, project, children }: TaskSheetWrapperProps) {
+export function TaskSheetWrapper({
+    tasks,
+    project,
+    onOpenProject,
+    onOpenSite,
+    panelSize = "compact",
+    panelStackLevel = 1,
+    children,
+}: TaskSheetWrapperProps) {
     const [selectedTask, setSelectedTask] = React.useState<TaskSheetTask | null>(null)
 
     const openTask = (taskId: string, taskData?: TaskSheetTask) => {
@@ -65,6 +78,10 @@ export function TaskSheetWrapper({ tasks, project, children }: TaskSheetWrapperP
                 task={selectedTask as TaskDetailsTask | null}
                 open={!!selectedTask}
                 onOpenChange={(open) => !open && closeTask()}
+                panelSize={panelSize}
+                panelStackLevel={panelStackLevel}
+                onOpenProject={onOpenProject}
+                onOpenSite={onOpenSite}
             />
         </TaskSheetContext.Provider>
     )

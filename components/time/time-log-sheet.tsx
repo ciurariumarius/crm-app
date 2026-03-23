@@ -15,7 +15,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { updateTimeLog, deleteTimeLog } from "@/lib/actions/time"
 import { toast } from "sonner"
-import { SIDE_PANEL_HEADER_CLASS, sidePanelClass } from "@/lib/ui/side-panels"
+import { SIDE_PANEL_HEADER_CLASS, sidePanelClass, type SidePanelSize } from "@/lib/ui/side-panels"
 import { SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 
 type TimeLogSheetLog = {
@@ -46,9 +46,19 @@ interface TimeLogSheetProps {
     onOpenChange: (open: boolean) => void
     projects: TimeLogSheetProject[]
     tasks: TimeLogSheetTask[]
+    panelSize?: SidePanelSize
+    panelStackLevel?: number
 }
 
-export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeLogSheetProps) {
+export function TimeLogSheet({
+    log,
+    open,
+    onOpenChange,
+    projects,
+    tasks,
+    panelSize = "narrow",
+    panelStackLevel = 0,
+}: TimeLogSheetProps) {
     const [projectId, setProjectId] = React.useState<string>("")
     const [taskId, setTaskId] = React.useState<string>("no-task") // 'no-task' for general project time
     const [description, setDescription] = React.useState("")
@@ -144,7 +154,7 @@ export function TimeLogSheet({ log, open, onOpenChange, projects, tasks }: TimeL
             <SheetContent
                 side="right"
                 showCloseButton={false}
-                className={sidePanelClass("narrow")}
+                className={sidePanelClass(panelSize, panelStackLevel)}
             >
                 <SheetHeader className={SIDE_PANEL_HEADER_CLASS}>
                     <div className="absolute right-6 top-6 z-10">

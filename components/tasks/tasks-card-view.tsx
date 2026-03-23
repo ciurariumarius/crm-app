@@ -611,6 +611,7 @@ export function TasksCardView({
                 task={selectedTask}
                 open={!!selectedTask}
                 onOpenChange={(open) => !open && setSelectedTask(null)}
+                panelStackLevel={0}
                 onOpenProject={(project) => {
                     setSelectedProject(project as unknown as ProjectWithDetails)
                 }}
@@ -621,7 +622,7 @@ export function TasksCardView({
 
             {/* Project Details Sheet */}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("compact"))}>
+                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("compact", 1))}>
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}
@@ -637,7 +638,7 @@ export function TasksCardView({
 
             {/* Site detail view if needed */}
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow")}>
+                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow", 2)}>
                     {selectedSite && (
                         <SiteSheetContent
                             site={selectedSite as Site & { partner?: { id: string; name: string } }}
