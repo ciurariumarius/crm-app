@@ -26,7 +26,7 @@ const PROJECT_SORT_VALUES = [
     "name_desc",
 ] as const
 type ProjectSortValue = (typeof PROJECT_SORT_VALUES)[number]
-const DEFAULT_PROJECT_SORT: ProjectSortValue = "updated_desc"
+const DEFAULT_PROJECT_SORT: ProjectSortValue = "amount_desc"
 
 function parseLimit(raw: string | null) {
     const parsed = Number(raw)

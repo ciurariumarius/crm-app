@@ -50,7 +50,7 @@ const sortOptions = [
     { label: "Name (A-Z)", value: "name_asc" },
     { label: "Name (Z-A)", value: "name_desc" },
 ] as const
-const DEFAULT_SORT = "updated_desc"
+const DEFAULT_SORT = "amount_desc"
 const SORT_VALUES = new Set(sortOptions.map((option) => option.value))
 
 type ProjectBoardSortBy = "createdAt" | "updatedAt" | "amount" | "name" | "time"

@@ -109,6 +109,7 @@ const SORT_OPTIONS = [
     { label: "Name (A-Z)", value: "name_asc" },
     { label: "Name (Z-A)", value: "name_desc" },
 ]
+const DEFAULT_SORT = "amount_desc"
 
 function toYmd(value: Date) {
     return format(value, "yyyy-MM-dd")
@@ -155,7 +156,7 @@ export function ProjectsFiltersToolbar({
             const isDefaultPayment = key === "payment" && value === "All"
             const isDefaultRecurring = key === "recurring" && value === "All"
             const isDefaultPeriod = key === "period" && value === "all_time"
-            const isDefaultSort = key === "sort" && value === "updated_desc"
+            const isDefaultSort = key === "sort" && value === DEFAULT_SORT
             const isDefaultPartner = key === "partnerId" && value === "all"
             const isDefaultFrom = key === "from" && !value
             const isDefaultTo = key === "to" && !value
@@ -187,7 +188,10 @@ export function ProjectsFiltersToolbar({
 
     const selectedPartner = partners.find((partner) => partner.id === currentPartnerId)
     const selectedPeriod = PERIOD_OPTIONS.find((option) => option.value === currentPeriod) ?? PERIOD_OPTIONS[0]
-    const selectedSort = SORT_OPTIONS.find((option) => option.value === currentSort) ?? SORT_OPTIONS[0]
+    const selectedSort =
+        SORT_OPTIONS.find((option) => option.value === currentSort) ??
+        SORT_OPTIONS.find((option) => option.value === DEFAULT_SORT) ??
+        SORT_OPTIONS[0]
     const fromDate = parseMaybeDate(currentFrom)
     const toDate = parseMaybeDate(currentTo)
     const hasCustomRange = Boolean(fromDate || toDate)
@@ -202,7 +206,7 @@ export function ProjectsFiltersToolbar({
     if (currentPartnerId !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: "all" }) })
     if (hasCustomRange) activeFilters.push({ key: "period_custom", label: `Period: ${customRangeLabel}`, href: buildHref({ period: "all_time", from: null, to: null }) })
     if (!hasCustomRange && currentPeriod !== "all_time") activeFilters.push({ key: "period", label: `Period: ${selectedPeriod.label}`, href: buildHref({ period: "all_time", from: null, to: null }) })
-    if (currentSort !== "updated_desc") activeFilters.push({ key: "sort", label: `Sort: ${selectedSort.label}`, href: buildHref({ sort: "updated_desc" }) })
+    if (currentSort !== DEFAULT_SORT) activeFilters.push({ key: "sort", label: `Sort: ${selectedSort.label}`, href: buildHref({ sort: DEFAULT_SORT }) })
 
     const clearAllHref = buildHref({
         status: "Active",
@@ -212,7 +216,7 @@ export function ProjectsFiltersToolbar({
         period: "all_time",
         from: null,
         to: null,
-        sort: "updated_desc",
+        sort: DEFAULT_SORT,
     })
     const hasSearchTerm = Boolean(searchContext?.searchTerm.trim())
     const searchResultCount = searchContext?.searchResultCount
@@ -345,8 +349,11 @@ function SortCombobox({
     onSelect: (value: string) => void
 }) {
     const [open, setOpen] = React.useState(false)
-    const isActive = currentSort !== "updated_desc"
-    const selectedSort = SORT_OPTIONS.find((option) => option.value === currentSort) ?? SORT_OPTIONS[0]
+    const isActive = currentSort !== DEFAULT_SORT
+    const selectedSort =
+        SORT_OPTIONS.find((option) => option.value === currentSort) ??
+        SORT_OPTIONS.find((option) => option.value === DEFAULT_SORT) ??
+        SORT_OPTIONS[0]
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
