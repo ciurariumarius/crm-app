@@ -21,6 +21,7 @@ type HomeTaskColumnsTask = TaskDetailsTask
 interface HomeTaskColumnsProps {
     urgentTasks: HomeTaskColumnsTask[]
     overdueTasks: HomeTaskColumnsTask[]
+    normalTasks: HomeTaskColumnsTask[]
     allServices: Service[]
     hourlyRate?: number
 }
@@ -42,9 +43,10 @@ function toTimestamp(value: Date | string | number | null | undefined, fallback:
     return Number.isNaN(parsed) ? fallback : parsed
 }
 
-export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourlyRate = 0 }: HomeTaskColumnsProps) {
+export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allServices, hourlyRate = 0 }: HomeTaskColumnsProps) {
     const [urgentState, setUrgentState] = React.useState<HomeTaskColumnsTask[]>(urgentTasks)
     const [overdueState, setOverdueState] = React.useState<HomeTaskColumnsTask[]>(overdueTasks)
+    const [normalState, setNormalState] = React.useState<HomeTaskColumnsTask[]>(normalTasks)
     const [selectedTask, setSelectedTask] = React.useState<HomeTaskColumnsTask | null>(null)
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
     const [selectedSite, setSelectedSite] = React.useState<Site & { partner?: { id: string; name: string } } | null>(null)
@@ -58,15 +60,20 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourly
         setOverdueState(overdueTasks)
     }, [overdueTasks])
 
+    React.useEffect(() => {
+        setNormalState(normalTasks)
+    }, [normalTasks])
+
     const overdueIds = React.useMemo(() => new Set(overdueState.map((task) => task.id)), [overdueState])
     const urgentIds = React.useMemo(() => new Set(urgentState.map((task) => task.id)), [urgentState])
 
     const mergedById = React.useMemo(() => {
         const map = new Map<string, HomeTaskColumnsTask>()
+        for (const task of normalState) map.set(task.id, task)
         for (const task of overdueState) map.set(task.id, task)
         for (const task of urgentState) map.set(task.id, task)
         return map
-    }, [overdueState, urgentState])
+    }, [normalState, overdueState, urgentState])
 
     const sortByPriority = React.useCallback(
         (left: HomeTaskColumnsTask, right: HomeTaskColumnsTask) => {
@@ -104,14 +111,26 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourly
         ).sort(sortByPriority)
     }, [mergedById, overdueState, sortByPriority, urgentIds])
 
+    const normalOnlyOrdered = React.useMemo(() => {
+        return uniqueById(
+            normalState
+                .map((task) => mergedById.get(task.id) || task)
+                .filter((task) => !urgentIds.has(task.id) && !overdueIds.has(task.id))
+                .filter(Boolean)
+        ).sort(sortByPriority)
+    }, [mergedById, normalState, overdueIds, sortByPriority, urgentIds])
+
     const orderedTasks = React.useMemo(
         () => [...urgentOrdered, ...overdueOnlyOrdered],
         [overdueOnlyOrdered, urgentOrdered]
     )
-    const visibleTasks = React.useMemo(
-        () => orderedTasks.slice(0, HOME_MAX_VISIBLE_TASKS),
-        [orderedTasks]
-    )
+    const visibleTasks = React.useMemo(() => {
+        if (orderedTasks.length >= HOME_MAX_VISIBLE_TASKS) {
+            return orderedTasks.slice(0, HOME_MAX_VISIBLE_TASKS)
+        }
+        const fillCount = HOME_MAX_VISIBLE_TASKS - orderedTasks.length
+        return [...orderedTasks, ...normalOnlyOrdered.slice(0, fillCount)]
+    }, [normalOnlyOrdered, orderedTasks])
 
     const handleOpenTask = React.useCallback(
         (taskId: string) => {
@@ -131,6 +150,7 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourly
 
             setUrgentState((prev) => prev.filter((task) => task.id !== taskId))
             setOverdueState((prev) => prev.filter((task) => task.id !== taskId))
+            setNormalState((prev) => prev.filter((task) => task.id !== taskId))
             setSelectedTask((prev) => {
                 if (!prev || prev.id !== taskId) return prev
                 return { ...prev, status: "Completed" }
@@ -179,6 +199,14 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourly
                             <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{overdueState.length}</p>
                             <p className="text-[11px] font-black uppercase tracking-[0.09em] text-orange-600">Overdue tasks</p>
                         </div>
+
+                        <div className="hidden h-10 w-px bg-slate-200 sm:block" />
+
+                        <div className="flex items-center gap-2.5">
+                            <span className="mt-1.5 h-2 w-2 rounded-full bg-slate-500" />
+                            <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{normalOnlyOrdered.length}</p>
+                            <p className="text-[11px] font-black uppercase tracking-[0.09em] text-slate-600">Normal tasks</p>
+                        </div>
                     </div>
 
                     <Link
@@ -189,9 +217,9 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, allServices, hourly
                     </Link>
                 </div>
 
-                {orderedTasks.length === 0 ? (
+                {visibleTasks.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                        No urgent or overdue active tasks.
+                        No active tasks.
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:auto-rows-[156px] xl:grid-cols-3">

@@ -123,6 +123,7 @@ export default async function HomePage() {
         runningMonthLogs,
         urgentTasksRaw,
         overdueTasksRaw,
+        normalTasksRaw,
         projectsRaw,
         monthTimeByProjectRaw,
     ] = await Promise.all([
@@ -253,6 +254,64 @@ export default async function HomePage() {
                 tenantId: session.tenantId,
                 status: { in: ["Active", "Paused"] },
                 deadline: { not: null, lt: todayStart },
+            },
+            orderBy: [{ deadline: "asc" }, { updatedAt: "desc" }],
+            take: 100,
+            select: {
+                id: true,
+                projectId: true,
+                name: true,
+                description: true,
+                status: true,
+                urgency: true,
+                deadline: true,
+                createdAt: true,
+                updatedAt: true,
+                timeLogs: {
+                    select: {
+                        id: true,
+                        startTime: true,
+                        endTime: true,
+                        durationSeconds: true,
+                    },
+                },
+                project: {
+                    select: {
+                        id: true,
+                        createdAt: true,
+                        site: { select: { id: true, domainName: true, partner: { select: { id: true, name: true } } } },
+                        services: { select: { serviceName: true, isRecurring: true } },
+                        tasks: {
+                            select: {
+                                id: true,
+                                name: true,
+                                timeLogs: {
+                                    select: {
+                                        id: true,
+                                        startTime: true,
+                                        endTime: true,
+                                        durationSeconds: true,
+                                    },
+                                },
+                            },
+                        },
+                        timeLogs: {
+                            select: {
+                                id: true,
+                                startTime: true,
+                                endTime: true,
+                                durationSeconds: true,
+                            },
+                        },
+                    },
+                },
+            },
+        }),
+        prisma.task.findMany({
+            where: {
+                tenantId: session.tenantId,
+                status: { in: ["Active", "Paused"] },
+                urgency: "Normal",
             },
             orderBy: [{ deadline: "asc" }, { updatedAt: "desc" }],
             take: 100,
@@ -600,6 +659,7 @@ export default async function HomePage() {
                 <HomeTaskColumns
                     urgentTasks={serialize(urgentTasksRaw)}
                     overdueTasks={serialize(overdueTasksRaw)}
+                    normalTasks={serialize(normalTasksRaw)}
                     allServices={serialize(allServicesRaw)}
                     hourlyRate={hourlyRate}
                 />

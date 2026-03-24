@@ -111,6 +111,16 @@ function formatDurationLabel(totalSeconds: number) {
     return `${seconds}s`
 }
 
+function formatHoursWithMinutes(totalHours: number) {
+    if (!Number.isFinite(totalHours)) return "0m"
+    const totalMinutes = Math.max(0, Math.round(totalHours * 60))
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    if (hours === 0) return `${minutes}m`
+    if (minutes === 0) return `${hours}h`
+    return `${hours}h ${minutes}m`
+}
+
 function formatBottomDate(value: Date | null) {
     if (!value) return "—"
     return format(value, "dd MMMM yyyy, HH:mm")
@@ -1117,14 +1127,14 @@ export function ProjectSheetContent({
                                             <div className="rounded-2xl border border-blue-100 bg-blue-50/50 px-2.5 py-2 sm:px-3 sm:py-2.5">
                                                 <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-blue-500 sm:text-[10px]">Recommended</p>
                                                 <p className="mt-1 font-mono text-lg font-black tabular-nums text-blue-700 sm:text-xl">
-                                                    {budgetInsights.recommendedHours.toFixed(1)}h
+                                                    {formatHoursWithMinutes(budgetInsights.recommendedHours)}
                                                 </p>
                                             </div>
 
                                             <div className="rounded-2xl border border-slate-200 bg-slate-50/60 px-2.5 py-2 sm:px-3 sm:py-2.5">
                                                 <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500 sm:text-[10px]">Tracked</p>
                                                 <p className="mt-1 font-mono text-lg font-black tabular-nums text-slate-800 sm:text-xl">
-                                                    {budgetInsights.trackedHoursNow.toFixed(1)}h
+                                                    {formatHoursWithMinutes(budgetInsights.trackedHoursNow)}
                                                 </p>
                                             </div>
 
@@ -1144,7 +1154,7 @@ export function ProjectSheetContent({
                                                     "mt-1 font-mono text-lg font-black tabular-nums sm:text-xl",
                                                     budgetInsights.isOverBudget ? "text-rose-700" : "text-emerald-700"
                                                 )}>
-                                                    {Math.abs(budgetInsights.remainingHours).toFixed(1)}h
+                                                    {formatHoursWithMinutes(Math.abs(budgetInsights.remainingHours))}
                                                 </p>
                                             </div>
                                         </div>
