@@ -545,34 +545,40 @@ export default async function HomePage() {
                     <div className="flex-1 min-w-[280px] px-2">
                         <GlobalSearch />
                     </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                        <Link
-                            href="/tasks"
-                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-blue-300 bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-                        >
-                            <CirclePlus className="h-3.5 w-3.5" />
-                            Add Task
-                        </Link>
-                        <Link
-                            href="/projects"
-                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100/70"
-                        >
-                            <FolderPlus className="h-3.5 w-3.5" />
-                            Add Project
-                        </Link>
-                        <Link
-                            href="/payments"
-                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-4 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-100/70"
-                        >
-                            <WalletCards className="h-3.5 w-3.5" />
-                            Add Payment
-                        </Link>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center rounded-[16px] bg-white p-1 shadow-sm border border-slate-100">
+                            <Link
+                                href="/tasks"
+                                className="inline-flex h-[34px] items-center gap-2 rounded-xl bg-[#2563eb] px-4 text-[13px] font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
+                            >
+                                <CirclePlus className="h-4 w-4" />
+                                Add Task
+                            </Link>
+                            
+                            <div className="mx-2 h-4 w-px bg-slate-200" />
+                            
+                            <Link
+                                href="/projects"
+                                className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[#2563eb] transition-colors hover:bg-slate-50"
+                            >
+                                <FolderPlus className="h-4 w-4 stroke-[2.5px]" />
+                                Add Project
+                            </Link>
+                            
+                            <Link
+                                href="/payments"
+                                className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[#2563eb] transition-colors hover:bg-slate-50"
+                            >
+                                <WalletCards className="h-4 w-4 stroke-[2.5px]" />
+                                Add Payment
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex flex-col lg:flex-row overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
                     {/* Revenue Card */}
-                    <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
                         <div className="flex items-start justify-between">
                             <p className="ui-overline text-slate-400">Revenue</p>
                             <Banknote className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
@@ -594,7 +600,7 @@ export default async function HomePage() {
                     </div>
 
                     {/* Active Projects Card */}
-                    <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
                         <div className="flex items-start justify-between">
                             <p className="ui-overline text-slate-400">Active projects</p>
                             <FolderPlus className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
@@ -618,7 +624,7 @@ export default async function HomePage() {
                     </div>
 
                     {/* Tasks Card */}
-                    <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
                         <div className="flex items-start justify-between">
                             <p className="ui-overline text-slate-400">Tasks overview</p>
                             <BadgeCheck className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
@@ -642,7 +648,7 @@ export default async function HomePage() {
                     </div>
 
                     {/* Hours Card */}
-                    <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                    <div className="flex-1 relative p-6 lg:p-8">
                         <div className="flex items-start justify-between">
                             <p className="ui-overline text-slate-400">Hours worked</p>
                             <Timer className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
@@ -655,7 +661,7 @@ export default async function HomePage() {
                 </div>
             </section>
 
-            <section className="space-y-6">
+            <section className="space-y-10 pt-4">
                 <HomeTaskColumns
                     urgentTasks={serialize(urgentTasksRaw)}
                     overdueTasks={serialize(overdueTasksRaw)}

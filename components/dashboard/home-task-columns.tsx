@@ -182,9 +182,9 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
     }, [])
 
     return (
-        <>
-            <section className="space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-10 w-full mb-8">
+            <section className="w-full">
+                <div className="mb-8 flex items-end justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-5">
                         <div className="flex items-center gap-2.5">
                             <span className="mt-1.5 h-2 w-2 rounded-full bg-rose-500" />
@@ -222,7 +222,7 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
                         No active tasks.
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:auto-rows-[156px] xl:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 sm:auto-rows-[156px]">
                         {visibleTasks.map((task) => (
                             <div key={task.id} className="sm:h-[156px]">
                                 <TaskGridCard
@@ -281,6 +281,7 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
             {isOpeningProject ? (
                 <div className="pointer-events-none fixed inset-0 z-[79] bg-transparent" aria-hidden="true" />
             ) : null}
-        </>
+        </div>
     )
 }
+

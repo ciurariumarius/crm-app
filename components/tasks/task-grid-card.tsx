@@ -68,8 +68,15 @@ function PriorityBadge({ urgency, compact = false }: { urgency: string; compact?
     const size = compact ? "xs" : "sm"
 
     if (normalizedUrgency === "Urgent") {
+        if (compact) {
+            return (
+                <div className="inline-flex h-5 items-center justify-center rounded-full border border-rose-100 bg-rose-50/50 px-2 text-[10px] font-black uppercase tracking-wider text-rose-500">
+                    Urgent
+                </div>
+            )
+        }
         return (
-            <StatusChip tone="urgent" size={size} className={cn(compact && "font-black tracking-wider uppercase h-4.5 px-1.5")}>
+            <StatusChip tone="urgent" size="sm">
                 Urgent
             </StatusChip>
         )
@@ -93,9 +100,9 @@ function DeadlineBadge({ deadline, compact = false }: { deadline: string | Date 
     if (compact) {
         if (!overdue) return null
         return (
-            <StatusChip tone="unpaid" size="xs" className="border-orange-200 bg-orange-50 text-orange-600 font-black tracking-wider uppercase h-4.5 px-1.5">
+            <div className="inline-flex h-5 items-center justify-center rounded-full border border-orange-100 bg-orange-50/50 px-2 text-[10px] font-black uppercase tracking-wider text-orange-500">
                 Overdue
-            </StatusChip>
+            </div>
         )
     }
 
@@ -136,8 +143,8 @@ export function TaskGridCard({
         return (
             <div
                 className={cn(
-                    "group relative h-full cursor-pointer flex flex-col overflow-hidden rounded-[24px] border border-slate-100 bg-white p-5 transition-all duration-200",
-                    "hover:border-slate-200 hover:shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]",
+                    "group relative h-full cursor-pointer flex flex-col overflow-hidden rounded-[24px] bg-white p-5 transition-all duration-200",
+                    "border border-slate-100 hover:border-slate-200 hover:shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]",
                     isRunning && "border-blue-200 bg-blue-50/20",
                     isSelected && "border-primary/30 bg-primary/[0.02]",
                     className
@@ -238,7 +245,7 @@ export function TaskGridCard({
 
                     {hasValidCreatedAt && createdAtDate ? (
                         <div className="flex shrink-0 items-center gap-1.5 text-slate-300">
-                            <Clock3 className="h-3.5 w-3.5" />
+                            <CalendarIcon className="h-3 w-3" />
                             <span className="text-[10px] font-bold uppercase tracking-wider">
                                 {format(createdAtDate, "d MMM")}
                             </span>

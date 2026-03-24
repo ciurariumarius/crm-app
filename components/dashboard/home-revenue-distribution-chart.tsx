@@ -248,7 +248,7 @@ export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRa
                 </div>
             </div>
 
-            <div className="grid gap-12 lg:grid-cols-[400px_1fr]">
+            <div className="grid gap-12 lg:grid-cols-[400px_1fr] items-center">
                 <div className="relative flex items-center justify-center h-[340px]">
                     <div className="absolute inset-0 z-0 outline-none">
                         <ResponsiveContainer width="100%" height="100%" className="outline-none">
