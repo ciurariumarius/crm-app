@@ -8,7 +8,6 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
@@ -31,17 +30,21 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, CheckCircle2, Trash2, Loader2, X, Play, Pause, Square, Expand, Pencil, Plus, ArrowUpRight, FolderOpen, Globe } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Check, Trash2, Loader2, X, Play, Pencil, Plus, ArrowUpRight, FolderOpen, Globe } from "lucide-react"
 import { updateTask, deleteTask, getTaskHistory } from "@/lib/actions/tasks"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
-import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { useTimer } from "@/components/providers/timer-provider"
+import { TimeTrackerWidget } from "@/components/shared/time-tracker-widget"
+import { SidePanelManualTimeForm } from "@/components/shared/side-panel-manual-time-form"
+import { SidePanelNotesSection } from "@/components/shared/side-panel-notes-section"
+import { SidePanelTimeLogHistoryList } from "@/components/shared/side-panel-time-log-history-list"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { useRouter } from "next/navigation"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, SIDE_PANEL_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass, type SidePanelSize } from "@/lib/ui/side-panels"
-import { SidePanelChip, SidePanelEmptyState, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
+import { SidePanelChip, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
 
 type TaskTimeLog = {
@@ -112,23 +115,6 @@ const TASK_NOTES_TEMPLATE = [
     "<h2>Screenshots</h2>",
     "<p></p>",
 ].join("")
-
-function formatClock(totalSeconds: number) {
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
-    return [hours, minutes, seconds].map((unit) => String(unit).padStart(2, "0")).join(":")
-}
-
-function formatDurationLabel(totalSeconds: number) {
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
-
-    if (hours > 0) return `${hours}h ${minutes}m`
-    if (minutes > 0) return `${minutes}m ${seconds}s`
-    return `${seconds}s`
-}
 
 function toDate(value: Date | string | null | undefined) {
     if (!value) return null
@@ -329,7 +315,6 @@ export function TaskDetails({
     const loggedHours = Math.floor(loggedSeconds / 3600)
     const loggedMinutes = Math.floor((loggedSeconds % 3600) / 60)
     const timerStatusLabel = isTaskRunning ? "Running" : isTaskPaused ? "Paused" : "Ready"
-    const timerPrimaryLabel = isTaskRunning ? "Pause" : isTaskPaused ? "Resume" : "Start"
     const sortedTimeLogs = [...(task.timeLogs || [])].sort((a: TaskTimeLog, b: TaskTimeLog) => {
         const aTime = toDate(a.startTime)?.getTime() ?? 0
         const bTime = toDate(b.startTime)?.getTime() ?? 0
@@ -630,59 +615,18 @@ export function TaskDetails({
                             </div>
                         </div>
 
-                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <SidePanelSectionTitle title="Task notes" />
-                                <SidePanelChip
-                                    tone={sidePanelChipToneByLabel(notesSaveState)}
-                                    icon={
-                                        notesSaveState === "saving"
-                                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                            : notesSaveState === "ready"
-                                                ? <CheckCircle2 className="h-3.5 w-3.5" />
-                                                : undefined
-                                    }
-                                    label={notesSaveState === "typing" ? "Typing" : notesSaveState === "saving" ? "Saving" : "Ready"}
-                                />
-                            </div>
-                            <RichTextEditor
-                                value={description}
-                                onChange={setDescription}
-                                placeholder=""
-                                variant="plain"
-                                mode="document"
-                                className="rounded-[22px] bg-white"
-                                minHeightClassName="h-[360px]"
-                                uploadProjectId={task?.projectId || task?.id}
-                                toolbarVisibility="always"
-                                toolbarActions={
-                                    <>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={appendTaskNotesTemplate}
-                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                            aria-label="Add template"
-                                            title="Add template"
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => setIsNotesModalOpen(true)}
-                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                            aria-label="Open notes in full view"
-                                            title="Open notes in full view"
-                                        >
-                                            <Expand className="h-4 w-4" />
-                                        </Button>
-                                    </>
-                                }
-                            />
-                        </section>
+                        <SidePanelNotesSection
+                            title="Task notes"
+                            statusLabel={notesSaveState === "typing" ? "Typing" : notesSaveState === "saving" ? "Saving" : "Ready"}
+                            statusTone={notesSaveState === "saving" ? "blue" : notesSaveState === "typing" ? "amber" : "emerald"}
+                            statusState={notesSaveState}
+                            value={description}
+                            onChange={setDescription}
+                            uploadProjectId={task?.projectId || task?.id}
+                            onAddTemplate={appendTaskNotesTemplate}
+                            onExpand={() => setIsNotesModalOpen(true)}
+                            expandLabel="Open notes in full view"
+                        />
 
                     <section className="space-y-4">
                         <div className="space-y-3">
@@ -698,91 +642,28 @@ export function TaskDetails({
                                     Add Time
                                 </Button>
                             </div>
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4 premium-card shadow-sm">
-                                <div className="flex flex-wrap items-center justify-between gap-4">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-2xl font-bold leading-none text-slate-900 tabular-nums">
-                                                {formatClock(timerDisplaySeconds)}
-                                            </span>
-                                            <span className={cn(
-                                                "ui-text-caption font-semibold",
-                                                isTaskRunning ? "text-[#10B981]" : isTaskPaused ? "text-[#D97706]" : "text-slate-400"
-                                            )}>
-                                                {timerStatusLabel}
-                                            </span>
-                                        </div>
-                                        <div className="mt-1 text-[11px] font-medium text-slate-500">
-                                            {loggedHours}h {loggedMinutes}m logged
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5">
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                e.stopPropagation()
-                                                handleTaskTimerPrimaryAction()
-                                            }}
-                                            className={cn(
-                                                "h-8 rounded-lg px-3 text-xs font-semibold transition-all active:scale-[0.98]",
-                                                isTaskRunning
-                                                    ? "bg-[#FFFBEB] text-[#D97706] hover:bg-[#FEF3C7]"
-                                                    : "bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE]"
-                                            )}
-                                        >
-                                            {isTaskRunning ? (
-                                                <Pause className="mr-1.5 h-3.5 w-3.5 fill-current" />
-                                            ) : (
-                                                <Play className="mr-1.5 h-3.5 w-3.5 fill-current" />
-                                            )}
-                                            {timerPrimaryLabel}
-                                        </Button>
-
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            disabled={!isActiveTimerThisTask}
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                e.stopPropagation()
-                                                void globalStopTimer()
-                                            }}
-                                            className="h-8 w-8 rounded-lg bg-[#FFF1F2] text-[#E11D48] hover:bg-[#FFE4E8] disabled:bg-slate-100 disabled:text-slate-300"
-                                        >
-                                            <Square className="h-3.5 w-3.5 fill-current" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
+                            <TimeTrackerWidget
+                                totalTrackedHours={loggedHours}
+                                totalTrackedMinutes={loggedMinutes}
+                                currentSessionSeconds={timerDisplaySeconds} // Using currentSessionSeconds to display the running active time. Actually, the task view used to display total time in the big slot.
+                                isRunning={isTaskRunning}
+                                isPaused={isTaskPaused}
+                                timerStatusLabel={timerStatusLabel}
+                                onPrimaryAction={handleTaskTimerPrimaryAction}
+                                onStopAction={() => void globalStopTimer()}
+                                isStopDisabled={!isActiveTimerThisTask}
+                            />
 
                             {isManualTimeOpen && (
-                                <div className="rounded-2xl border border-slate-200 bg-white p-3 premium-card shadow-sm">
-                                    <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
-                                        <Input
-                                            type="number"
-                                            value={manualMinutes}
-                                            onChange={(event) => setManualMinutes(event.target.value)}
-                                            placeholder="Minutes"
-                                            className="h-10 rounded-xl border-slate-200"
-                                        />
-                                        <Input
-                                            value={manualNotes}
-                                            onChange={(event) => setManualNotes(event.target.value)}
-                                            placeholder="Optional note"
-                                            className="h-10 rounded-xl border-slate-200"
-                                        />
-                                        <Button
-                                            onClick={handleManualLog}
-                                            disabled={isLoggingTime || !manualMinutes}
-                                            className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500"
-                                        >
-                                            {isLoggingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                                        </Button>
-                                    </div>
-                                </div>
+                                <SidePanelManualTimeForm
+                                    minutes={manualMinutes}
+                                    notes={manualNotes}
+                                    onMinutesChange={setManualMinutes}
+                                    onNotesChange={setManualNotes}
+                                    onSave={handleManualLog}
+                                    isSaving={isLoggingTime}
+                                    className="rounded-2xl border border-slate-200 bg-white p-3 premium-card shadow-sm"
+                                />
                             )}
                         </div>
 
@@ -794,39 +675,10 @@ export function TaskDetails({
                                 </div>
                             </div>
 
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                                {sortedTimeLogs.length === 0 && (
-                                    <SidePanelEmptyState message="No time logs recorded for this task yet." className="rounded-xl bg-white/70 text-sm" />
-                                )}
-
-                                {sortedTimeLogs.map((log: TaskTimeLog) => {
-                                    const startDate = log.startTime ? new Date(log.startTime) : null
-                                    const endDate = log.endTime ? new Date(log.endTime) : null
-                                    const hasValidStart = Boolean(startDate && !Number.isNaN(startDate.getTime()))
-                                    const hasValidEnd = Boolean(endDate && !Number.isNaN(endDate.getTime()))
-
-                                    return (
-                                        <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-bold text-foreground">
-                                                    {formatRelativeDate(log.startTime)}
-                                                </span>
-                                                <span className="text-xs font-medium text-muted-foreground/60">
-                                                    {hasValidStart ? format(startDate as Date, "HH:mm") : "—"} - {hasValidEnd ? format(endDate as Date, "HH:mm") : log.endTime ? "—" : "Ongoing"}
-                                                </span>
-                                                {log.notes && (
-                                                    <span className="text-xs text-muted-foreground italic mt-1 max-w-[200px] truncate">
-                                                        {log.notes}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="text-sm font-bold text-foreground tabular-nums">
-                                                {formatDurationLabel(log.durationSeconds || 0)}
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
+                            <SidePanelTimeLogHistoryList
+                                logs={sortedTimeLogs}
+                                emptyMessage="No time logs recorded for this task yet."
+                            />
                         </div>
                     </section>
 

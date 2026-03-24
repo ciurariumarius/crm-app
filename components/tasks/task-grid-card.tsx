@@ -168,12 +168,25 @@ export function TaskGridCard({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 rounded-lg text-slate-100 hover:bg-slate-50 hover:text-slate-500 transition-colors"
+                                    className="h-8 w-8 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                                 >
-                                    <MoreVertical className="h-4 w-4" />
+                                    <MoreVertical className="h-5 w-5" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-52 rounded-2xl shadow-xl border-slate-100 p-1.5 backdrop-blur-sm grayscale-[0.2]">
+                                {task.status !== "Completed" && (
+                                    <>
+                                        <DropdownMenuItem
+                                            onClick={() => onComplete(task.id)}
+                                            className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
+                                        >
+                                            <CheckCheck className="h-4 w-4 text-slate-500" />
+                                            Mark completed
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                    </>
+                                )}
+
                                 <DropdownMenuItem
                                     onClick={() => {
                                         if (isRunning) {
@@ -195,34 +208,12 @@ export function TaskGridCard({
                                     }}
                                     className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                 >
-                                    {isRunning ? <Pause className="h-3.5 w-3.5 fill-current text-slate-500" /> : <Play className="h-3.5 w-3.5 fill-current text-slate-500" />}
+                                    {isRunning ? <Pause className="h-4 w-4 fill-slate-500 text-slate-500" /> : <Play className="h-4 w-4 fill-slate-500 text-slate-500" />}
                                     {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
                                 </DropdownMenuItem>
 
-
-                                    <DropdownMenuSeparator />
-
-                                {task.status !== "Completed" && (
-                                    <DropdownMenuItem
-                                        onClick={() => onComplete(task.id)}
-                                        className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
-                                    >
-                                        <CheckCheck className="h-3.5 w-3.5 text-slate-500" />
-                                        Mark completed
-                                    </DropdownMenuItem>
-                                )}
-
-                                <DropdownMenuSeparator className="bg-slate-50" />
-                                <DropdownMenuItem
-                                    onClick={() => onOpen(task.id)}
-                                    className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
-                                >
-                                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
-                                    Open panel
-                                </DropdownMenuItem>
-
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         </div>
                     </div>
                 <div className="mt-3 min-w-0">

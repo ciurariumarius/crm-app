@@ -13,7 +13,6 @@ import {
     Pause,
     Play,
     Plus,
-    Expand,
     Pencil,
     Square,
     Target,
@@ -25,7 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ProjectTasks } from "@/components/projects/project-tasks"
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
-import { cn, formatProjectName, formatRelativeDate } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
 import { updateProject, deleteProject } from "@/lib/actions/projects"
 import { logTime } from "@/lib/actions/time"
@@ -34,13 +33,17 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useTimer } from "@/components/providers/timer-provider"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { SidePanelManualTimeForm } from "@/components/shared/side-panel-manual-time-form"
+import { SidePanelNotesSection } from "@/components/shared/side-panel-notes-section"
+import { SidePanelTimeLogHistoryList } from "@/components/shared/side-panel-time-log-history-list"
 import { TimeLogSheet } from "@/components/time/time-log-sheet"
+import { TimeTrackerWidget } from "@/components/shared/time-tracker-widget"
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ProjectWithDetails } from "@/types"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { Service, Site } from "@prisma/client"
-import { SidePanelChip, SidePanelEmptyState, SidePanelMetaBar, SidePanelSectionTitle, sidePanelChipToneByLabel } from "@/components/ui/side-panel-primitives"
+import { SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
 import { ProjectHistoryLogSections, type ProjectPaymentHistoryEntry, type ProjectStatusHistoryEntry } from "@/components/projects/project-history-log-sections"
 import { ProjectSheetInfoSection } from "@/components/projects/project-sheet-info-section"
@@ -92,24 +95,6 @@ const PROJECT_REQUIREMENTS_TEMPLATE = [
     "<h3>Screenshots</h3>",
     "<p></p>",
 ].join("")
-
-function formatClock(totalSeconds: number) {
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
-    return [hours, minutes, seconds].map((unit) => String(unit).padStart(2, "0")).join(":")
-}
-
-function formatDurationLabel(totalSeconds: number) {
-    if (!totalSeconds) return "0s"
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
-
-    if (hours > 0) return `${hours}h ${minutes}m`
-    if (minutes > 0) return `${minutes}m ${seconds}s`
-    return `${seconds}s`
-}
 
 function formatHoursWithMinutes(totalHours: number) {
     if (!Number.isFinite(totalHours)) return "0m"
@@ -702,13 +687,6 @@ export function ProjectSheetContent({
     const timerStatusLabel = isProjectTimerRunning ? "Running" : isProjectTimerPaused ? "Paused" : "Ready"
     const loggedHours = Math.floor(logsSeconds / 3600)
     const loggedMinutes = Math.floor((logsSeconds % 3600) / 60)
-    const timerPrimaryLabel =
-        isProjectTimerRunning
-            ? "Pause"
-            : isProjectTimerPaused
-                ? "Resume"
-                : "Start"
-
     const handleTimerPrimaryAction = () => {
         if (isTimerForProject) {
             if (timerState.isRunning) {
@@ -996,92 +974,54 @@ export function ProjectSheetContent({
                             <ProjectTasks projectId={project.id} initialTasks={project.tasks || []} />
                         </section>
 
-                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <SidePanelSectionTitle title="Project notes" />
-                                <SidePanelChip
-                                    tone={sidePanelChipToneByLabel(
-                                        notesSaveState === "idle"
-                                            ? "ready"
-                                            : notesSaveState
-                                    )}
-                                    icon={
-                                        notesSaveState === "saving"
-                                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <SidePanelNotesSection
+                            title="Project notes"
+                            statusLabel={
+                                notesSaveState === "idle"
+                                    ? "Ready"
+                                    : notesSaveState === "typing"
+                                        ? "Typing"
+                                        : notesSaveState === "saving"
+                                            ? "Saving"
                                             : notesSaveState === "saved"
-                                                ? <CheckCircle className="h-3.5 w-3.5" />
-                                                : notesSaveState === "error"
-                                                    ? <AlertCircle className="h-3.5 w-3.5" />
-                                                    : undefined
-                                    }
-                                    label={
-                                        notesSaveState === "idle"
-                                            ? "Ready"
-                                            : notesSaveState === "typing"
-                                                ? "Typing"
-                                                : notesSaveState === "saving"
-                                                    ? "Saving"
-                                                    : notesSaveState === "saved"
-                                                        ? "Saved"
-                                                        : "Error"
-                                    }
-                                />
-                            </div>
-
-                            <RichTextEditor
-                                value={description}
-                                onChange={setDescription}
-                                placeholder=""
-                                variant="plain"
-                                mode="document"
-                                className="rounded-[22px] bg-white"
-                                minHeightClassName="h-[360px]"
-                                uploadProjectId={project.id}
-                                toolbarVisibility="always"
-                                toolbarActions={
-                                    <>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={appendRequirementsTemplate}
-                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                            aria-label="Add template"
-                                            title="Add template"
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={exportNotesAsPdf}
-                                            disabled={isExportingNotes}
-                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                            aria-label="Export notes as PDF"
-                                            title="Export notes as PDF"
-                                        >
-                                            {isExportingNotes ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <FileDown className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => setIsNotesModalOpen(true)}
-                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                                            aria-label="Open in modal"
-                                            title="Open in modal"
-                                        >
-                                            <Expand className="h-4 w-4" />
-                                        </Button>
-                                    </>
-                                }
-                            />
-                        </section>
+                                                ? "Saved"
+                                                : "Error"
+                            }
+                            statusTone={
+                                notesSaveState === "saving"
+                                    ? "blue"
+                                    : notesSaveState === "saved" || notesSaveState === "idle"
+                                        ? "emerald"
+                                        : notesSaveState === "typing"
+                                            ? "amber"
+                                            : "rose"
+                            }
+                            statusState={notesSaveState === "idle" ? "ready" : notesSaveState}
+                            value={description}
+                            onChange={setDescription}
+                            uploadProjectId={project.id}
+                            onAddTemplate={appendRequirementsTemplate}
+                            onExpand={() => setIsNotesModalOpen(true)}
+                            expandLabel="Open in modal"
+                            extraToolbarActions={
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={exportNotesAsPdf}
+                                    disabled={isExportingNotes}
+                                    className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                    aria-label="Export notes as PDF"
+                                    title="Export notes as PDF"
+                                >
+                                    {isExportingNotes ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <FileDown className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            }
+                        />
 
                         <section className="space-y-2 border-t border-slate-200/80 pt-3">
                             <div className="flex items-center justify-between">
@@ -1208,134 +1148,47 @@ export function ProjectSheetContent({
                                 </Button>
                             </div>
 
-                            <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                                <div className="flex flex-wrap items-center justify-between gap-4">
-                                    <div className="grid gap-2">
-                                        <p className="ui-overline text-slate-400">Project Time Tracker</p>
-                                        <div className="inline-flex items-baseline gap-2">
-                                            <span className="text-sm font-semibold text-slate-500">Total tracked (all time):</span>
-                                            <span className="font-mono text-3xl font-black leading-none tabular-nums text-slate-900">
-                                                {loggedHours}h {loggedMinutes}m
-                                            </span>
-                                        </div>
-                                        <div className="inline-flex items-center gap-2">
-                                            <span className="text-xs font-semibold text-slate-400">Current session</span>
-                                            <span className="font-mono text-lg font-bold leading-none tabular-nums text-slate-700">
-                                                {formatClock(currentSessionSeconds)}
-                                            </span>
-                                            <span className={cn(
-                                                "ui-text-caption font-semibold",
-                                                isProjectTimerRunning ? "text-[#10B981]" : isProjectTimerPaused ? "text-[#D97706]" : "text-slate-400"
-                                            )}>
-                                                {timerStatusLabel}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5">
-                                        <Button
-                                            type="button"
-                                            onClick={handleTimerPrimaryAction}
-                                            className={cn(
-                                                "h-8 rounded-lg px-3 text-xs font-semibold transition-all active:scale-[0.98]",
-                                                isProjectTimerRunning
-                                                    ? "bg-[#FFFBEB] text-[#D97706] hover:bg-[#FEF3C7]"
-                                                    : "bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE]"
-                                            )}
-                                        >
-                                            {isProjectTimerRunning ? (
-                                                <Pause className="mr-1.5 h-3.5 w-3.5 fill-current" />
-                                            ) : (
-                                                <Play className="mr-1.5 h-3.5 w-3.5 fill-current" />
-                                            )}
-                                            {timerPrimaryLabel}
-                                        </Button>
-
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            disabled={!isTimerForProject}
-                                            onClick={() => void globalStopTimer()}
-                                            className="h-8 w-8 rounded-lg bg-[#FFF1F2] text-[#E11D48] hover:bg-[#FFE4E8] disabled:bg-slate-100 disabled:text-slate-300"
-                                        >
-                                            <Square className="h-3.5 w-3.5 fill-current" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
+                            <TimeTrackerWidget
+                                totalTrackedHours={loggedHours}
+                                totalTrackedMinutes={loggedMinutes}
+                                currentSessionSeconds={currentSessionSeconds}
+                                isRunning={isProjectTimerRunning}
+                                isPaused={isProjectTimerPaused}
+                                timerStatusLabel={timerStatusLabel}
+                                onPrimaryAction={handleTimerPrimaryAction}
+                                onStopAction={() => void globalStopTimer()}
+                                isStopDisabled={!isTimerForProject}
+                            />
 
                             {isManualTimeOpen && (
-                                <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                                    <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
-                                        <Input
-                                            type="number"
-                                            value={manualMinutes}
-                                            onChange={(event) => setManualMinutes(event.target.value)}
-                                            placeholder="Minutes"
-                                            className="h-10 rounded-xl border-slate-200"
-                                        />
-                                        <Input
-                                            value={manualNotes}
-                                            onChange={(event) => setManualNotes(event.target.value)}
-                                            placeholder="Optional note"
-                                            className="h-10 rounded-xl border-slate-200"
-                                        />
-                                        <Button
-                                            onClick={handleManualLog}
-                                            disabled={isLoggingTime || !manualMinutes}
-                                            className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500"
-                                        >
-                                            {isLoggingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                                        </Button>
-                                    </div>
-                                </div>
+                                <SidePanelManualTimeForm
+                                    minutes={manualMinutes}
+                                    notes={manualNotes}
+                                    onMinutesChange={setManualMinutes}
+                                    onNotesChange={setManualNotes}
+                                    onSave={handleManualLog}
+                                    isSaving={isLoggingTime}
+                                />
                             )}
 
-                            <div className="space-y-1.5">
-                                {recentLogs.length === 0 && (
-                                    <SidePanelEmptyState message="No time logged for this project yet." className="py-8 text-sm" />
-                                )}
-
-                                {recentLogs.map((log) => {
-                                    const start = toDate(log.startTime)
-                                    const end = toDate(log.endTime)
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={log.id}
-                                            onClick={() => {
-                                                setSelectedTimeLog(log)
-                                                setIsTimeLogSheetOpen(true)
-                                            }}
-                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-left transition hover:border-slate-300 hover:bg-slate-50"
-                                        >
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="min-w-0">
-                                                    <p className="text-lg font-bold text-slate-700">
-                                                        {start ? formatRelativeDate(start) : "Unknown date"}
-                                                    </p>
-                                                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                                                        <span>
-                                                        {start ? format(start, "HH:mm") : "--:--"} - {end ? format(end, "HH:mm") : "Ongoing"}
-                                                        </span>
-                                                        {log.task?.name && (
-                                                            <SidePanelChip
-                                                                tone="emerald"
-                                                                label={log.task.name}
-                                                                className="rounded-md px-2 py-0.5 text-xs"
-                                                            />
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <span className="text-lg font-black text-slate-600">
-                                                    {formatDurationLabel(log.durationSeconds || 0)}
-                                                </span>
-                                            </div>
-                                        </button>
-                                    )
-                                })}
-                            </div>
+                            <SidePanelTimeLogHistoryList
+                                logs={recentLogs.map((log) => ({
+                                    id: log.id,
+                                    startTime: log.startTime,
+                                    endTime: log.endTime,
+                                    durationSeconds: log.durationSeconds,
+                                    taskName: log.task?.name || undefined,
+                                }))}
+                                emptyMessage="No time logged for this project yet."
+                                className="space-y-1.5"
+                                emptyClassName="py-8 text-sm"
+                                onSelectLog={(log) => {
+                                    const selected = recentLogs.find((entry) => entry.id === log.id)
+                                    if (!selected) return
+                                    setSelectedTimeLog(selected as ProjectTimeLogWithTask)
+                                    setIsTimeLogSheetOpen(true)
+                                }}
+                            />
                         </section>
 
                         <ProjectHistoryLogSections
