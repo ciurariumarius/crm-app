@@ -43,16 +43,16 @@ type HomeRevenueDistributionChartProps = {
 }
 
 const COLORS = [
-    "hsl(var(--chart-1, 221.2 83.2% 53.3%))",
-    "hsl(var(--chart-2, 142.1 76.2% 36.3%))",
-    "hsl(var(--chart-3, 47.9 95.8% 51.8%))",
-    "hsl(var(--chart-4, 24.3 91.1% 65.1%))",
-    "hsl(var(--chart-5, 346.8 77.2% 49.8%))",
-    "hsl(var(--primary))",
-    "#4f46e5",
-    "#0f766e",
-    "#0891b2",
-    "#be123c",
+    "#3b82f6", // Blue
+    "#10b981", // Green
+    "#eab308", // Yellow
+    "#f97316", // Orange
+    "#ef4444", // Red
+    "#1e293b", // Slate 900
+    "#8b5cf6", // Violet
+    "#ec4899", // Pink
+    "#06b6d4", // Cyan
+    "#64748b", // Slate
 ]
 
 const PERIOD_OPTIONS: Array<{ label: string; value: RevenuePeriodKey }> = [
@@ -69,6 +69,29 @@ const MODE_OPTIONS: Array<{ label: string; value: RevenueMode }> = [
     { label: "Project", value: "project" },
 ]
 
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    const RADIAN = Math.PI / 180
+    // Position text in the exact center of the donut ring
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+    // Hide labels for very small slices to prevent text overlapping
+    if (percent < 0.04) return null
+
+    return (
+        <text
+            x={x}
+            y={y}
+            fill="rgba(255,255,255,0.9)"
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="text-[11.5px] font-semibold tracking-tight pointer-events-none"
+        >
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    )
+}
 
 function formatHours(value: number | undefined) {
     return `${(value || 0).toFixed(1)}h`
@@ -100,6 +123,26 @@ export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRa
     const [selectedSite, setSelectedSite] = React.useState<(Site & { partner?: { id: string; name: string } }) | null>(null)
     const [selectedPartnerId, setSelectedPartnerId] = React.useState<string | null>(null)
     const [isOpeningEntity, setIsOpeningEntity] = React.useState(false)
+    const [isListExpanded, setIsListExpanded] = React.useState(false)
+    const [activeSegment, setActiveSegment] = React.useState<string | null>(null)
+
+    React.useEffect(() => {
+        setActiveSegment(null)
+        setIsListExpanded(false)
+    }, [mode, period])
+
+    React.useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as HTMLElement
+            // If the user clicks on a Recharts pie slice, do nothing here.
+            if (target?.closest?.(".recharts-sector")) {
+                return
+            }
+            setActiveSegment(null)
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
 
     const activeDataset = periodData[period]
     const source = activeDataset[mode]
@@ -161,167 +204,168 @@ export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRa
     }
 
     return (
-        <section className="rounded-[24px] border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="mb-2 flex items-center justify-between">
-                <h3 className="ui-text-title text-slate-900">Revenue Analysis</h3>
-                
-                <div className="flex items-center gap-3">
-                    {/* Mode Switcher */}
-                    <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200/50">
-                        {MODE_OPTIONS.map((option) => (
-                            <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => setMode(option.value)}
-                                className={cn(
-                                    "rounded-lg px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all",
-                                    mode === option.value
-                                        ? "bg-white text-blue-600 shadow-sm"
-                                        : "text-slate-500 hover:text-slate-700"
-                                )}
-                            >
-                                {option.label}
-                            </button>
-                        ))}
+        <section className="rounded-[24px] border border-slate-100 bg-white p-8 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-2">
+                        <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
+                        <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">Revenue Analysis</h3>
                     </div>
-
                     {/* Period Selector */}
-                    <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200/50 shadow-inner-sm">
+                    <div className="flex items-center gap-1.5 rounded-full bg-slate-100/60 px-3 py-1.5 text-xs font-bold tracking-tight text-slate-600">
+                        <span>Date:</span>
                         <select
                             value={period}
                             onChange={(event) => setPeriod(event.target.value as RevenuePeriodKey)}
-                            className="rounded-lg bg-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-blue-600 shadow-sm outline-none transition-all cursor-pointer hover:bg-slate-50"
+                            className="bg-transparent font-bold outline-none cursor-pointer tracking-tight"
                         >
                             {PERIOD_OPTIONS.map((option) => (
-                                <option key={option.value} value={option.value} className="bg-white text-slate-700">
+                                <option key={option.value} value={option.value} className="bg-white text-slate-900">
                                     {option.label}
                                 </option>
                             ))}
                         </select>
                     </div>
                 </div>
+
+                {/* Mode Switcher */}
+                <div className="flex items-center gap-1 rounded-full bg-slate-100/60 p-1">
+                    {MODE_OPTIONS.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setMode(option.value)}
+                            className={cn(
+                                "rounded-full px-5 py-1.5 text-[11px] font-bold transition-all tracking-tight",
+                                mode === option.value
+                                    ? "bg-white text-blue-600 shadow-sm"
+                                    : "text-slate-500 hover:text-slate-700"
+                            )}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             <div className="grid gap-12 lg:grid-cols-[400px_1fr]">
-                <div className="relative flex items-center justify-center h-[280px]">
-                    <div className="absolute inset-0 z-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                <div className="relative flex items-center justify-center h-[340px]">
+                    <div className="absolute inset-0 z-0 outline-none">
+                        <ResponsiveContainer width="100%" height="100%" className="outline-none">
+                            <PieChart style={{ outline: 'none' }}>
                                 <Pie
                                     data={chartData}
                                     dataKey="revenue"
                                     nameKey="label"
                                     cx="50%"
-                                    cy="55%"
-                                    innerRadius={80}
-                                    outerRadius={125}
-                                    startAngle={210}
-                                    endAngle={-30}
+                                    cy="50%"
+                                    innerRadius={105}
+                                    outerRadius={145}
+                                    startAngle={90}
+                                    endAngle={-270}
                                     stroke="white"
-                                    strokeWidth={3}
+                                    strokeWidth={4}
+                                    style={{ outline: 'none' }}
+                                    labelLine={false}
+                                    label={renderCustomizedLabel}
+                                    isAnimationActive={false}
                                 >
                                     {chartData.map((entry, index) => (
-                                        <Cell key={`${entry.key}-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        <Cell 
+                                            key={`${entry.key}-${index}`} 
+                                            fill={COLORS[index]} 
+                                            style={{ 
+                                                cursor: "pointer", 
+                                                outline: "none",
+                                                opacity: activeSegment && activeSegment !== entry.key ? 0.3 : 1, 
+                                                transition: "opacity 0.2s" 
+                                            }}
+                                            onClick={() => {
+                                                const newActive = activeSegment === entry.key ? null : entry.key;
+                                                setActiveSegment(newActive);
+                                                if (newActive && index >= 4) setIsListExpanded(true);
+                                            }}
+                                        />
                                     ))}
                                 </Pie>
-                                <Tooltip
-                                    formatter={(value: number) => formatCurrency(Number(value))}
-                                    contentStyle={{
-                                        borderRadius: 12,
-                                        border: "1px solid rgb(226 232 240)",
-                                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
-                                    }}
-                                />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
                     {/* Central Label */}
-                    <div className="relative z-10 text-center mt-[-10px]">
-                        <p className="ui-overline text-slate-400">Total {mode}s</p>
-                        <p className="text-[38px] font-black text-slate-900 leading-none mt-1">{totalCount}</p>
+                    <div className="relative z-10 flex flex-col items-center justify-center pt-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Total Revenue</p>
+                        <p className="mt-1 text-[36px] font-bold text-slate-900 leading-none tracking-tight">
+                            {formatCurrency(totalRevenue).replace(/[\s\u00A0]*RON/i, "")} <span className="text-[14px] text-slate-400 font-bold ml-1">RON</span>
+                        </p>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-6">
-                    {/* Total Revenue Summary Sub-card */}
-                    <div className="rounded-[18px] bg-slate-50/50 border border-slate-100 p-4 py-3 flex items-center justify-between shadow-inner">
-                        <div className="space-y-0.5">
-                            <p className="ui-overline text-slate-400">Total Revenue ({PERIOD_OPTIONS.find(p => p.value === period)?.label})</p>
-                            <div className="flex items-center gap-3">
-                                <p className="text-[22px] font-bold text-slate-900 tracking-tight">
-                                    {formatCurrency(totalRevenue)}
-                                </p>
-                                <div className="h-6 w-10 text-blue-500 opacity-40">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={chartData.slice(0, 5)}>
-                                            <Bar dataKey="revenue" fill="currentColor" radius={[1, 1, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid gap-x-12 gap-y-6 sm:grid-cols-2">
-                        {rows.slice(0, 10).map((entry, index) => {
-                            const share = totalRevenue > 0 ? (entry.revenue / totalRevenue) * 100 : 0
-                            const attention = mode === "project" ? getAttentionLabel(entry.hoursThisMonth) : null
-                            const canOpen = mode === "project"
-                                ? Boolean(entry.openProjectId)
-                                : mode === "partner"
-                                  ? Boolean(entry.openPartnerId)
-                                  : Boolean(entry.openSiteId)
-                            return (
-                                <button
-                                    key={entry.key}
-                                    type="button"
-                                    onClick={() => {
-                                        if (canOpen) void openRowEntity(entry)
-                                    }}
-                                    disabled={!canOpen}
-                                    className={cn(
-                                        "flex items-start justify-between gap-4 border-b border-transparent py-1 text-left transition-all",
-                                        canOpen ? "group cursor-pointer hover:border-slate-100" : "cursor-default"
-                                    )}
-                                >
-                                    <div className="flex items-start gap-3 min-w-0">
-                                        <span
-                                            className="h-2.5 w-2.5 shrink-0 rounded-full mt-1.5 shadow-sm"
-                                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                                        />
-                                        <div className="flex flex-col min-w-0">
-                                            <p className="truncate ui-text-label text-slate-800 font-semibold group-hover:text-blue-600 transition-colors">
-                                                {entry.label}
-                                            </p>
-                                            <p className="ui-text-caption text-slate-400 mt-0.5">
-                                                {share.toFixed(1)}%
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col items-end shrink-0">
-                                        <p className={cn("ui-text-label font-bold text-slate-900", canOpen && "group-hover:text-blue-600 transition-colors")}>
-                                            {formatCurrency(entry.revenue)}
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col justify-center gap-3">
+                        {(isListExpanded ? chartData : chartData.slice(0, 4)).map((entry, index) => {
+                            const isOther = entry.key === "__other__"
+                        const share = totalRevenue > 0 ? (entry.revenue / totalRevenue) * 100 : 0
+                        
+                        // We cast back because our entry from reduceForChart might not align perfectly with active dataset
+                        const originalEntry = isOther ? null : rows.find(r => r.key === entry.key)
+                        const attention = mode === "project" ? getAttentionLabel(originalEntry?.hoursThisMonth) : null
+                        const canOpen = !isOther && (
+                            mode === "project" ? Boolean(originalEntry?.openProjectId) :
+                            mode === "partner" ? Boolean(originalEntry?.openPartnerId) :
+                            Boolean(originalEntry?.openSiteId)
+                        )
+                        const dotColor = COLORS[index]
+                        const isHighlighted = activeSegment === entry.key
+                        
+                        return (
+                            <button
+                                key={entry.key}
+                                type="button"
+                                onClick={() => {
+                                    if (canOpen && originalEntry) void openRowEntity(originalEntry)
+                                }}
+                                disabled={!canOpen}
+                                className={cn(
+                                    "flex items-center justify-between gap-4 rounded-[16px] px-5 py-4 text-left transition-all",
+                                    isHighlighted ? "bg-white ring-2 ring-blue-500 shadow-lg scale-[1.02] z-10 relative" : "bg-[#F8F9FB] border border-transparent",
+                                    canOpen && !isHighlighted ? "group cursor-pointer hover:bg-[#F1F3F7]" : !canOpen && !isHighlighted ? "cursor-default" : ""
+                                )}
+                            >
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <span
+                                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                        style={{ backgroundColor: dotColor }}
+                                    />
+                                    <div className="flex flex-col min-w-0">
+                                        <p className="truncate text-[13px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                                            {entry.label}
                                         </p>
-                                        {mode === "project" ? (
-                                            <div className={cn(
-                                                "mt-1 flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded border leading-none shadow-sm",
-                                                attention?.className
-                                            )}>
-                                                <Timer className="h-2.5 w-2.5" />
-                                                <span>{formatHours(entry.hoursThisMonth)}</span>
-                                            </div>
-                                        ) : null}
-                                        {canOpen ? (
-                                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 group-hover:text-blue-500 transition-colors">
-                                                Open <ArrowUpRight className="h-3 w-3" />
-                                            </span>
-                                        ) : null}
+                                        <p className="text-[10px] font-bold text-slate-400">
+                                            {isOther ? "Multiple small items" : originalEntry?.hoursThisMonth ? `${formatHours(originalEntry.hoursThisMonth)} this month` : "0.0h this month"}
+                                        </p>
                                     </div>
-                                </button>
-                            )
-                        })}
+                                </div>
+
+                                <div className="flex flex-col items-end shrink-0">
+                                    <p className="text-[14px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                                        {formatCurrency(entry.revenue)}
+                                    </p>
+                                    <div className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                                        {share.toFixed(1)}%
+                                    </div>
+                                </div>
+                            </button>
+                        )
+                    })}
                     </div>
+                    {chartData.length > 4 && (
+                        <button
+                            onClick={() => setIsListExpanded(!isListExpanded)}
+                            className="text-[12px] font-bold text-slate-500 hover:text-slate-800 transition-colors w-full text-center py-2.5 rounded-xl hover:bg-slate-50/80 border border-transparent hover:border-slate-200/60"
+                        >
+                            {isListExpanded ? "Show less" : `View all ${totalCount} ${mode}s`}
+                        </button>
+                    )}
                 </div>
             </div>
 
