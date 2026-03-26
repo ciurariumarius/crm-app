@@ -60,6 +60,12 @@ function formatDateTimeParts(value: Date | string | null | undefined) {
     }
 }
 
+function getFaviconUrl(domain: string | null | undefined) {
+    const normalized = (domain || "").trim().replace(/^https?:\/\//, "").split("/")[0]
+    if (!normalized) return null
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(normalized)}&sz=32`
+}
+
 function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
     const { dateLabel, dateTimeLabel } = formatDateTimeParts(value)
     return (
@@ -613,11 +619,24 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project)}
-                                        className={cn("w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-left premium-card md:hidden", getProjectToneClass(projectStatus))}
+                                        className="w-full rounded-xl border border-border/60 bg-white px-4 py-3 text-left md:hidden"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
-                                                <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                                <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
+                                                    <span className="inline-flex items-center gap-2">
+                                                        {getFaviconUrl(project.site.domainName) ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img
+                                                                src={getFaviconUrl(project.site.domainName) || undefined}
+                                                                alt=""
+                                                                className="h-4 w-4 rounded-sm shrink-0"
+                                                                loading="lazy"
+                                                            />
+                                                        ) : null}
+                                                        <span>{project.site.domainName}</span>
+                                                    </span>
+                                                </p>
                                                 <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
                                                     <span className="break-words">{project.serviceLabel}</span>
                                                     {projectStatus !== "Active" && (
@@ -670,10 +689,23 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
+                                        className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-white px-6 py-2.5", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
-                                            <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                            <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
+                                                <span className="inline-flex items-center gap-2">
+                                                    {getFaviconUrl(project.site.domainName) ? (
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img
+                                                            src={getFaviconUrl(project.site.domainName) || undefined}
+                                                            alt=""
+                                                            className="h-4 w-4 rounded-sm shrink-0"
+                                                            loading="lazy"
+                                                        />
+                                                    ) : null}
+                                                    <span>{project.site.domainName}</span>
+                                                </span>
+                                            </p>
                                             <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
                                                 <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
                                                 {projectStatus !== "Active" && (
@@ -904,11 +936,24 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project)}
-                                        className={cn("w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-left premium-card md:hidden", getProjectToneClass(projectStatus))}
+                                        className="w-full rounded-xl border border-border/60 bg-white px-4 py-3 text-left md:hidden"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
-                                                <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                                <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
+                                                    <span className="inline-flex items-center gap-2">
+                                                        {getFaviconUrl(project.site.domainName) ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img
+                                                                src={getFaviconUrl(project.site.domainName) || undefined}
+                                                                alt=""
+                                                                className="h-4 w-4 rounded-sm shrink-0"
+                                                                loading="lazy"
+                                                            />
+                                                        ) : null}
+                                                        <span>{project.site.domainName}</span>
+                                                    </span>
+                                                </p>
                                                 <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
                                                     <span className="break-words">{project.serviceLabel}</span>
                                                     <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight text-blue-600">
@@ -964,10 +1009,23 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-card px-6 py-2.5 premium-card", LIST_GRID_COLUMNS, getProjectToneClass(projectStatus))}
+                                        className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-white px-6 py-2.5", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
-                                            <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
+                                            <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
+                                                <span className="inline-flex items-center gap-2">
+                                                    {getFaviconUrl(project.site.domainName) ? (
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img
+                                                            src={getFaviconUrl(project.site.domainName) || undefined}
+                                                            alt=""
+                                                            className="h-4 w-4 rounded-sm shrink-0"
+                                                            loading="lazy"
+                                                        />
+                                                    ) : null}
+                                                    <span>{project.site.domainName}</span>
+                                                </span>
+                                            </p>
                                             <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
                                                 <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
                                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
