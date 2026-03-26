@@ -42,8 +42,8 @@ jobs:
             export NVM_DIR="/home/${{ secrets.SERVER_USER }}/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-            echo "--- PUSHING DATABASE SCHEMA ---"
-            DATABASE_URL="file:$DB_PATH" npx prisma db push --accept-data-loss
+            echo "--- APPLYING PRISMA MIGRATIONS ---"
+            DATABASE_URL="file:$DB_PATH" npx prisma migrate deploy
             
             echo "--- RESTARTING PM2 PROCESS ---"
             npx pm2 delete pixelist-crm || true
