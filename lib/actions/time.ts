@@ -31,6 +31,7 @@ const TimeLogIdSchema = z.string().uuid()
 const TimeLogIdsSchema = z.array(TimeLogIdSchema).max(1000)
 const ProjectIdSchema = z.string().uuid()
 const TaskIdSchema = z.string().uuid()
+const OptionalTimeLogIdSchema = z.string().uuid().optional()
 
 const LogTimeInputSchema = z.object({
     projectId: ProjectIdSchema,
@@ -91,6 +92,7 @@ export async function logTime(data: {
         const log = await prisma.timeLog.create({
             data: {
                 tenantId: session.tenantId,
+                userId: session.userId,
                 projectId: validated.projectId,
                 taskId: validated.taskId,
                 description: validated.description,
@@ -336,7 +338,11 @@ export async function startTimer(projectId: string, taskId?: string, description
             }
         }
         const activeTimer = await prisma.timeLog.findFirst({
-            where: { endTime: null, tenantId: session.tenantId }
+            where: {
+                endTime: null,
+                tenantId: session.tenantId,
+                userId: session.userId,
+            }
         })
 
         if (activeTimer) {
@@ -352,19 +358,25 @@ export async function startTimer(projectId: string, taskId?: string, description
         }
 
         await prisma.timeLog.updateMany({
-            where: { isPaused: true, tenantId: session.tenantId },
+            where: {
+                isPaused: true,
+                tenantId: session.tenantId,
+                userId: session.userId,
+            },
             data: { isPaused: false }
         })
 
         const log = await prisma.timeLog.create({
             data: {
                 tenantId: session.tenantId,
+                userId: session.userId,
                 projectId: validatedProjectId,
                 taskId: validatedTaskId,
                 description: validatedDescription,
                 startTime: new Date(),
                 endTime: null,
-                durationSeconds: null
+                durationSeconds: null,
+                source: "TIMER",
             },
             include: { project: { include: { site: true } } }
         })
@@ -381,12 +393,25 @@ export async function startTimer(projectId: string, taskId?: string, description
     }
 }
 
-export async function stopTimer() {
+export async function stopTimer(timerId?: string) {
     try {
         const session = await requireTenantContext()
-        const activeTimer = await prisma.timeLog.findFirst({
-            where: { endTime: null, tenantId: session.tenantId }
-        })
+        const validatedTimerId = OptionalTimeLogIdSchema.parse(timerId)
+        const baseTimerWhere = {
+            tenantId: session.tenantId,
+            userId: session.userId,
+        }
+        const activeTimer = validatedTimerId
+            ? await prisma.timeLog.findFirst({
+                where: {
+                    ...baseTimerWhere,
+                    id: validatedTimerId,
+                    endTime: null,
+                }
+            })
+            : await prisma.timeLog.findFirst({
+                where: { ...baseTimerWhere, endTime: null }
+            })
 
         if (activeTimer) {
             const endTime = new Date()
@@ -404,10 +429,19 @@ export async function stopTimer() {
                 details: `timeLogId=${activeTimer.id}; mode=running`,
             })
         } else {
-            const pausedTimer = await prisma.timeLog.findFirst({
-                where: { isPaused: true, tenantId: session.tenantId },
-                orderBy: { endTime: "desc" }
-            })
+            const pausedTimer = validatedTimerId
+                ? await prisma.timeLog.findFirst({
+                    where: {
+                        ...baseTimerWhere,
+                        id: validatedTimerId,
+                        isPaused: true,
+                    },
+                    orderBy: { endTime: "desc" }
+                })
+                : await prisma.timeLog.findFirst({
+                    where: { ...baseTimerWhere, isPaused: true },
+                    orderBy: { endTime: "desc" }
+                })
 
             if (pausedTimer) {
                 await prisma.timeLog.update({
@@ -429,19 +463,33 @@ export async function stopTimer() {
         }
 
         revalidateTimePaths()
-        return { success: true }
+        return { success: true, data: { id: activeTimer?.id ?? validatedTimerId ?? null } }
     } catch (error) {
         console.error("Stop timer failed:", error)
         return { success: false, error: getActionErrorMessage(error, "Failed to stop timer") }
     }
 }
 
-export async function pauseTimer() {
+export async function pauseTimer(timerId?: string) {
     try {
         const session = await requireTenantContext()
-        const activeTimer = await prisma.timeLog.findFirst({
-            where: { endTime: null, tenantId: session.tenantId }
-        })
+        const validatedTimerId = OptionalTimeLogIdSchema.parse(timerId)
+        const activeTimer = validatedTimerId
+            ? await prisma.timeLog.findFirst({
+                where: {
+                    id: validatedTimerId,
+                    endTime: null,
+                    tenantId: session.tenantId,
+                    userId: session.userId,
+                }
+            })
+            : await prisma.timeLog.findFirst({
+                where: {
+                    endTime: null,
+                    tenantId: session.tenantId,
+                    userId: session.userId,
+                }
+            })
 
         if (!activeTimer) {
             await logSessionAuditEvent(session, {
@@ -455,7 +503,7 @@ export async function pauseTimer() {
         const endTime = new Date()
         const durationSeconds = Math.floor((endTime.getTime() - activeTimer.startTime.getTime()) / 1000)
 
-        await prisma.timeLog.update({
+        const pausedLog = await prisma.timeLog.update({
             where: { id: activeTimer.id },
             data: {
                 endTime,
@@ -469,20 +517,35 @@ export async function pauseTimer() {
             details: `timeLogId=${activeTimer.id}`,
         })
         revalidateTimePaths()
-        return { success: true }
+        return { success: true, data: pausedLog }
     } catch (error) {
         console.error("Pause timer failed:", error)
         return { success: false, error: getActionErrorMessage(error, "Failed to pause timer") }
     }
 }
 
-export async function resumeTimer() {
+export async function resumeTimer(timerId?: string) {
     try {
         const session = await requireTenantContext()
-        const pausedTimer = await prisma.timeLog.findFirst({
-            where: { isPaused: true, tenantId: session.tenantId },
-            orderBy: { endTime: "desc" }
-        })
+        const validatedTimerId = OptionalTimeLogIdSchema.parse(timerId)
+        const pausedTimer = validatedTimerId
+            ? await prisma.timeLog.findFirst({
+                where: {
+                    id: validatedTimerId,
+                    isPaused: true,
+                    tenantId: session.tenantId,
+                    userId: session.userId,
+                },
+                orderBy: { endTime: "desc" }
+            })
+            : await prisma.timeLog.findFirst({
+                where: {
+                    isPaused: true,
+                    tenantId: session.tenantId,
+                    userId: session.userId,
+                },
+                orderBy: { endTime: "desc" }
+            })
 
         if (!pausedTimer) {
             await logSessionAuditEvent(session, {
@@ -522,7 +585,11 @@ export async function getActiveTimer() {
     try {
         const session = await requireTenantContext()
         const activeTimer = await prisma.timeLog.findFirst({
-            where: { endTime: null, tenantId: session.tenantId },
+            where: {
+                endTime: null,
+                tenantId: session.tenantId,
+                userId: session.userId,
+            },
             include: {
                 task: true,
                 project: {
@@ -538,7 +605,11 @@ export async function getActiveTimer() {
         }
 
         const pausedTimer = await prisma.timeLog.findFirst({
-            where: { isPaused: true, tenantId: session.tenantId },
+            where: {
+                isPaused: true,
+                tenantId: session.tenantId,
+                userId: session.userId,
+            },
             orderBy: { endTime: "desc" },
             include: {
                 task: true,

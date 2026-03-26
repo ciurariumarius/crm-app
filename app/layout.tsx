@@ -4,6 +4,9 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/providers/providers"
 import { getActiveTimer } from "@/lib/actions/time"
+import { getSession } from "@/lib/auth"
+import type { TimerPreferences } from "@/components/providers/timer-provider"
+import prisma from "@/lib/prisma"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,16 +45,45 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const activeTimerResult = await getActiveTimer()
+  const session = await getSession()
+  const activeTimerResult = session ? await getActiveTimer() : { success: true, data: null, status: "idle" as const }
   const rawActiveTimer = activeTimerResult.success && activeTimerResult.data
     ? { ...activeTimerResult.data, status: activeTimerResult.status }
     : null
   const initialActiveTimer = rawActiveTimer ? JSON.parse(JSON.stringify(rawActiveTimer)) : null
+  let timerPreferenceRecord: {
+    timerIdlePauseMinutes: number | null
+    timerHardCapHours: number | null
+    timerReminderIntervalMinutes: number | null
+  } | null = null
+
+  if (session) {
+    try {
+      timerPreferenceRecord = await prisma.user.findFirst({
+        where: { id: session.userId, tenantId: session.tenantId },
+        select: {
+          timerIdlePauseMinutes: true,
+          timerHardCapHours: true,
+          timerReminderIntervalMinutes: true,
+        }
+      })
+    } catch (error) {
+      console.warn("[layout] Timer preference fields unavailable; using defaults.", error)
+      timerPreferenceRecord = null
+    }
+  }
+  const timerPreferences: TimerPreferences | null = timerPreferenceRecord
+    ? {
+      idlePauseMinutes: timerPreferenceRecord.timerIdlePauseMinutes,
+      hardCapHours: timerPreferenceRecord.timerHardCapHours,
+      reminderIntervalMinutes: timerPreferenceRecord.timerReminderIntervalMinutes,
+    }
+    : null
 
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans">
-        <Providers initialActiveTimer={initialActiveTimer}>
+        <Providers initialActiveTimer={initialActiveTimer} timerPreferences={timerPreferences}>
           {children}
           <Toaster />
         </Providers>

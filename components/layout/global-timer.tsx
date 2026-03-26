@@ -18,7 +18,9 @@ export function GlobalTimer() {
         return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
     }
 
-    if (!timerState.isRunning) {
+    const hasTimerSession = Boolean(timerState.activeLogId) || timerState.elapsedSeconds > 0
+
+    if (!hasTimerSession) {
         return null
     }
 
@@ -28,10 +30,13 @@ export function GlobalTimer() {
         return (
             <div className="fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 z-50 md:bottom-[max(1rem,env(safe-area-inset-bottom))] md:right-6 animate-in fade-in zoom-in duration-300">
                 <div className="relative h-[3.25rem] w-[3.25rem]">
-                    <div className="timer-heartbeat absolute inset-0 rounded-full bg-[#2563EB] shadow-[0_4px_12px_-4px_rgba(37,99,235,0.75)]" />
+                    <div className={timerState.isRunning
+                        ? "timer-heartbeat absolute inset-0 rounded-full bg-[#2563EB] shadow-[0_4px_12px_-4px_rgba(37,99,235,0.75)]"
+                        : "absolute inset-0 rounded-full bg-slate-400 shadow-[0_4px_12px_-4px_rgba(100,116,139,0.6)]"
+                    } />
                     <Button
                         size="icon"
-                        className="relative h-full w-full rounded-full border-0 bg-transparent text-white hover:bg-[#1D4ED8]/10 p-0"
+                        className="relative h-full w-full rounded-full border-0 bg-transparent p-0 text-white hover:bg-transparent"
                         onClick={() => setIsExpanded(true)}
                         aria-label="Open timer controls"
                     >
@@ -69,17 +74,17 @@ export function GlobalTimer() {
 
                 <div className="flex items-center gap-2 justify-end">
                     {timerState.isRunning ? (
-                        <Button variant="outline" size="sm" onClick={pauseTimer}>
+                        <Button variant="outline" size="sm" onClick={() => void pauseTimer()}>
                             <Pause className="mr-2 h-4 w-4" />
                             Pause
                         </Button>
                     ) : (
-                        <Button variant="outline" size="sm" onClick={resumeTimer}>
+                        <Button variant="outline" size="sm" onClick={() => void resumeTimer()}>
                             <Play className="mr-2 h-4 w-4" />
                             Resume
                         </Button>
                     )}
-                    <Button variant="destructive" size="sm" onClick={stopTimer}>
+                    <Button variant="destructive" size="sm" onClick={() => void stopTimer()}>
                         <Square className="mr-2 h-4 w-4" />
                         Stop
                     </Button>

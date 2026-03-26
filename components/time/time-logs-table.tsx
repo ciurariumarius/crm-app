@@ -36,30 +36,27 @@ import { TimeLogSheet } from "@/components/time/time-log-sheet"
 import { useState, useMemo, Fragment } from "react"
 import { cn } from "@/lib/utils"
 
-import { stopTimer, updateTimeLog, startTimer } from "@/lib/actions/time"
+import { updateTimeLog } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { StatusChip } from "@/components/ui/status-chip"
 import { ListEmptyState } from "@/components/ui/list-state"
+import { useTimer } from "@/components/providers/timer-provider"
 
 export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
     const [selectedLog, setSelectedLog] = useState<TimeLogWithDetails | null>(null)
     const [isStopping, setIsStopping] = useState<string | null>(null)
     const router = useRouter()
+    const { stopTimer, startTimer } = useTimer()
 
     const handleStopTimer = async (e: React.MouseEvent, logId: string) => {
         e.stopPropagation()
         setIsStopping(logId)
         try {
-            const result = await stopTimer()
-            if (result.success) {
-                toast.success("Timer stopped")
-                router.refresh()
-            } else {
-                toast.error(result.error || "Failed to stop timer")
-            }
+            await stopTimer(logId)
+            router.refresh()
         } catch {
             toast.error("Process failed")
         } finally {
@@ -85,8 +82,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
     const handleResume = async (e: React.MouseEvent, log: TimeLogWithDetails) => {
         e.stopPropagation()
         try {
-            await startTimer(log.project.id, log.task?.id)
-            toast.success("Timer started")
+            await startTimer(log.project.id, log.task?.id, log.description || log.task?.name || undefined)
             router.refresh()
         } catch {
             toast.error("Failed to start timer")

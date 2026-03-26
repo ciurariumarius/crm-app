@@ -30,7 +30,8 @@ async function main() {
             tenantId: tenant.id,
             username: seedUsername,
             passwordHash,
-            twoFactorEnabled: false
+            twoFactorEnabled: false,
+            timerIdlePauseMinutes: 60,
         }
     })
     if (!configuredSeedPassword) {

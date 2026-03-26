@@ -49,71 +49,97 @@ export function SidePanelTimeLogHistoryList({
     emptyClassName,
 }: SidePanelTimeLogHistoryListProps) {
     return (
-        <div className={cn("space-y-2", className)}>
+        <div className={cn("space-y-0", className)}>
             {logs.length === 0 ? (
                 <SidePanelEmptyState message={emptyMessage} className={cn("rounded-xl bg-white/70 text-sm", emptyClassName)} />
-            ) : null}
+            ) : (
+                <>
+                    {/* Table Header */}
+                    <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                        <div className="w-24 shrink-0">Date</div>
+                        <div className="w-20 shrink-0">Time</div>
+                        <div className="w-14 shrink-0 text-right">Duration</div>
+                        <div className="w-28 shrink-0 ml-1">Task</div>
+                        <div className="flex-1 ml-1">Notes</div>
+                    </div>
 
-            <div className={cn("space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2", listClassName)}>
-                {logs.map((log) => {
-                    const startDate = toDate(log.startTime)
-                    const endDate = toDate(log.endTime)
-                    const hasValidStart = Boolean(startDate)
-                    const hasValidEnd = Boolean(endDate)
-                    const rowClasses = "flex items-center gap-2 rounded-md border border-transparent px-2.5 py-1.5 transition hover:bg-slate-100 group w-full text-left"
+                    <div className={cn("max-h-[400px] overflow-y-auto custom-scrollbar", listClassName)}>
+                        {logs.map((log) => {
+                            const startDate = toDate(log.startTime)
+                            const endDate = toDate(log.endTime)
+                            const hasValidStart = Boolean(startDate)
+                            const hasValidEnd = Boolean(endDate)
+                            
+                            // Row styling: simple border-b, no card-like padding/background unless hovered
+                            const rowClasses = "flex items-center gap-2 px-2.5 py-1.5 transition hover:bg-slate-50 group w-full text-left border-b border-slate-50 last:border-0"
 
-                    const content = (
-                        <div className={rowClasses}>
-                            <div className="flex shrink-0 items-center justify-between w-24">
-                                <span className="text-[11px] font-medium text-slate-500 truncate">
-                                    {hasValidStart ? formatRelativeDate(startDate as Date) : "Unknown date"}
-                                </span>
-                            </div>
+                            const content = (
+                                <div className={rowClasses}>
+                                    {/* Date Column */}
+                                    <div className="w-24 shrink-0">
+                                        <span className="text-[11px] font-medium text-slate-500 truncate block">
+                                            {hasValidStart ? formatRelativeDate(startDate as Date) : "—"}
+                                        </span>
+                                    </div>
 
-                            <div className="flex shrink-0 items-center gap-1 w-20 text-[11px] font-mono text-slate-400">
-                                <span>{hasValidStart ? format(startDate as Date, "HH:mm") : "--:--"}</span>
-                                <span className="opacity-50">-</span>
-                                <span>{hasValidEnd ? format(endDate as Date, "HH:mm") : "..."}</span>
-                            </div>
+                                    {/* Time Column */}
+                                    <div className="w-20 shrink-0 flex items-center gap-1 text-[11px] font-mono text-slate-400">
+                                        <span>{hasValidStart ? format(startDate as Date, "HH:mm") : "--:--"}</span>
+                                        <span className="opacity-30">-</span>
+                                        <span>{hasValidEnd ? format(endDate as Date, "HH:mm") : "..."}</span>
+                                    </div>
 
-                            <div className="flex shrink-0 items-center w-14 justify-end">
-                                <span className="text-[11px] font-bold tabular-nums text-slate-700">
-                                    {formatDurationLabel(log.durationSeconds || 0)}
-                                </span>
-                            </div>
+                                    {/* Duration Column */}
+                                    <div className="w-14 shrink-0 flex justify-end">
+                                        <span className="text-[11px] font-bold tabular-nums text-slate-700">
+                                            {formatDurationLabel(log.durationSeconds || 0)}
+                                        </span>
+                                    </div>
 
-                            {log.taskName ? (
-                                <SidePanelChip
-                                    tone="emerald"
-                                    label={log.taskName}
-                                    className="rounded px-1.5 py-0.5 text-[10px] truncate max-w-[100px] shrink-0 ml-1"
-                                />
-                            ) : null}
+                                    {/* Task Column */}
+                                    <div className="w-28 shrink-0 ml-1 overflow-hidden">
+                                        {log.taskName ? (
+                                            <SidePanelChip
+                                                tone="emerald"
+                                                label={log.taskName}
+                                                className="rounded px-1.5 py-0.5 text-[9px] font-bold truncate block w-full text-center"
+                                            />
+                                        ) : (
+                                            <span className="text-[10px] text-slate-300 italic ml-2">—</span>
+                                        )}
+                                    </div>
 
-                            {log.notes ? (
-                                <span className="min-w-0 flex-1 truncate text-[11px] italic text-slate-400 group-hover:text-slate-500 transition-colors ml-1">
-                                    {log.notes}
-                                </span>
-                            ) : null}
-                        </div>
-                    )
+                                    {/* Notes Column */}
+                                    <div className="flex-1 ml-1 min-w-0">
+                                        {log.notes ? (
+                                            <span className="truncate text-[11px] text-slate-400 group-hover:text-slate-600 transition-colors block">
+                                                {log.notes}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] text-slate-200 block italic">—</span>
+                                        )}
+                                    </div>
+                                </div>
+                            )
 
-                    if (!onSelectLog) {
-                        return <div key={log.id || `${log.startTime || "start"}-${log.endTime || "end"}`}>{content}</div>
-                    }
+                            if (!onSelectLog) {
+                                return <div key={log.id || `${log.startTime || "start"}-${log.endTime || "end"}`}>{content}</div>
+                            }
 
-                    return (
-                        <button
-                            type="button"
-                            key={log.id || `${log.startTime || "start"}-${log.endTime || "end"}`}
-                            onClick={() => onSelectLog(log)}
-                            className="block w-full"
-                        >
-                            {content}
-                        </button>
-                    )
-                })}
-            </div>
+                            return (
+                                <button
+                                    type="button"
+                                    key={log.id || `${log.startTime || "start"}-${log.endTime || "end"}`}
+                                    onClick={() => onSelectLog(log)}
+                                    className="block w-full"
+                                >
+                                    {content}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </>
+            )}
         </div>
     )
 }

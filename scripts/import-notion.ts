@@ -46,6 +46,24 @@ async function importNotionProjects() {
         create: { id: DEFAULT_TENANT_ID, name: "Default Tenant" },
     })
 
+    const existingTenantUser = await prisma.user.findFirst({
+        where: { tenantId: DEFAULT_TENANT_ID },
+        select: { id: true },
+    })
+
+    const importUserId = existingTenantUser
+        ? existingTenantUser.id
+        : (await prisma.user.create({
+            data: {
+                tenantId: DEFAULT_TENANT_ID,
+                username: "import-bot",
+                name: "Import Bot",
+                passwordHash: "import-bot-password",
+                timerIdlePauseMinutes: 60,
+            },
+            select: { id: true },
+        })).id
+
     for (const row of records) {
         const projectName = row["Project Name"] || "Unnamed Project"
         try {
@@ -138,6 +156,7 @@ async function importNotionProjects() {
                 await prisma.timeLog.create({
                     data: {
                         tenantId: DEFAULT_TENANT_ID,
+                        userId: importUserId,
                         projectId: project.id,
                         description: `Imported from Notion: ${projectName}`,
                         startTime: createdAt,

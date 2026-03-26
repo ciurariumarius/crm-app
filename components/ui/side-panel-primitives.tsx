@@ -1,5 +1,5 @@
 import * as React from "react"
-import { AlertTriangle, Loader2 } from "lucide-react"
+import { AlertTriangle, Loader2, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type SidePanelSectionTitleProps = {
@@ -22,16 +22,30 @@ type SidePanelMetaBarProps = {
     entityId: React.ReactNode
     createdAt: React.ReactNode
     updatedAt?: React.ReactNode
+    onDelete?: () => void
     className?: string
 }
 
-export function SidePanelMetaBar({ entityLabel, entityId, createdAt, updatedAt, className }: SidePanelMetaBarProps) {
+export function SidePanelMetaBar({ entityLabel, entityId, createdAt, updatedAt, onDelete, className }: SidePanelMetaBarProps) {
     return (
-        <div className={cn("mt-12 border-t border-slate-200 pt-8 text-slate-500", className)}>
+        <div className={cn("mt-6 border-t border-slate-200 pt-6 text-slate-500", className)}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <span className="ui-text-caption font-semibold text-slate-500">
-                    # {entityLabel}: {entityId}
-                </span>
+                <div className="flex items-center gap-3">
+                    <span className="ui-text-caption font-semibold text-slate-500">
+                        # {entityLabel}: {entityId}
+                    </span>
+                    {onDelete && (
+                        <button
+                            type="button"
+                            onClick={onDelete}
+                            className="text-slate-300 transition hover:text-rose-500"
+                            aria-label={`Delete ${entityLabel}`}
+                            title={`Delete ${entityLabel}`}
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
                 <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                     <span className="ui-text-caption inline-flex items-center gap-1.5">
                         <span className="font-semibold text-slate-500">Created:</span>
@@ -151,7 +165,7 @@ export function SidePanelEmptyState({ message, className }: SidePanelEmptyStateP
     return (
         <div
             className={cn(
-                "rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-[12px] font-medium text-slate-500",
+                "px-2 py-4 text-center text-[11px] font-medium text-slate-400 opacity-80",
                 className
             )}
         >

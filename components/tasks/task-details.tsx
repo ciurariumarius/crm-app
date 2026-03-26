@@ -30,7 +30,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, Trash2, Loader2, X, Play, Pencil, Plus, ArrowUpRight, FolderOpen, Globe } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Check, Loader2, X, Play, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, FileText, Info } from "lucide-react"
 import { updateTask, deleteTask, getTaskHistory } from "@/lib/actions/tasks"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
@@ -139,7 +139,6 @@ export function TaskDetails({
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
     const router = useRouter()
     const [loading, setLoading] = React.useState(false)
-    const [isDeleting, setIsDeleting] = React.useState(false)
 
     // Form state
     const [name, setName] = React.useState("")
@@ -250,7 +249,6 @@ export function TaskDetails({
 
     const handleDelete = async () => {
         if (!task) return
-        setIsDeleting(true)
         try {
             if (!task.projectId) {
                 toast.error("Task has no project")
@@ -265,8 +263,6 @@ export function TaskDetails({
             }
         } catch {
             toast.error("Failed to delete task")
-        } finally {
-            setIsDeleting(false)
         }
     }
 
@@ -502,7 +498,7 @@ export function TaskDetails({
                 </SheetHeader>
 
                 <div className="px-8 pb-6 pt-0 md:flex-1 md:overflow-y-auto">
-                    <div className="space-y-8 pb-20">
+                    <div className="space-y-8 pb-8">
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-3">
                             <div className="flex items-center">
                                 <DropdownMenu>
@@ -617,6 +613,7 @@ export function TaskDetails({
 
                         <SidePanelNotesSection
                             title="Task notes"
+                            icon={<FileText className="h-3.5 w-3.5" />}
                             statusLabel={notesSaveState === "typing" ? "Typing" : notesSaveState === "saving" ? "Saving" : "Ready"}
                             statusTone={notesSaveState === "saving" ? "blue" : notesSaveState === "typing" ? "amber" : "emerald"}
                             statusState={notesSaveState}
@@ -669,7 +666,7 @@ export function TaskDetails({
 
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <SidePanelSectionTitle title="Time logs history" icon={<Clock className="h-3.5 w-3.5" />} />
+                                <SidePanelSectionTitle title="Time history" icon={<Clock className="h-3.5 w-3.5" />} />
                                 <div className="text-[11px] font-semibold text-slate-400">
                                     {sortedTimeLogs.length} Sessions
                                 </div>
@@ -683,7 +680,7 @@ export function TaskDetails({
                     </section>
 
                         <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <SidePanelSectionTitle title="Task info" />
+                            <SidePanelSectionTitle title="Task info" icon={<Info className="h-3.5 w-3.5" />} />
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <button
                                     type="button"
@@ -758,22 +755,11 @@ export function TaskDetails({
 
                     <TaskHistorySection entries={taskHistoryEntries} isLoading={isLoadingTaskHistory} />
 
-                        <section className="pt-1">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 rounded-lg px-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                                onClick={handleDelete}
-                                disabled={isDeleting}
-                            >
-                                {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                                Delete Task
-                            </Button>
-                        </section>
 
                         <SidePanelMetaBar
                             entityLabel="Task ID"
                             entityId={task.id.split("-")[0]}
+                            onDelete={handleDelete}
                             createdAt={formatBottomDate(createdTimestamp)}
                             updatedAt={lastUpdatedTimestamp ? formatBottomDate(lastUpdatedTimestamp) : undefined}
                         />

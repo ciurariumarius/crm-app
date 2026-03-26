@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Pie, PieChart, ResponsiveContainer, Tooltip, Cell, BarChart, Bar } from "recharts"
-import { Timer, ArrowUpRight } from "lucide-react"
+import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts"
 import { cn, formatCurrency } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
@@ -69,7 +68,16 @@ const MODE_OPTIONS: Array<{ label: string; value: RevenueMode }> = [
     { label: "Project", value: "project" },
 ]
 
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+type PieLabelProps = {
+    cx: number
+    cy: number
+    midAngle: number
+    innerRadius: number
+    outerRadius: number
+    percent: number
+}
+
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: PieLabelProps) => {
     const RADIAN = Math.PI / 180
     // Position text in the exact center of the donut ring
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
@@ -104,16 +112,6 @@ function reduceForChart(data: RevenueAnalysisEntry[], max = 8) {
     const kept = sorted.slice(0, max)
     const otherTotal = sorted.slice(max).reduce((sum, entry) => sum + entry.revenue, 0)
     return [...kept, { key: "__other__", label: "Other", revenue: otherTotal }]
-}
-
-function getAttentionLabel(hoursThisMonth: number | undefined) {
-    if ((hoursThisMonth || 0) <= 2) {
-        return { label: "Low attention", className: "bg-slate-50 border-slate-200 text-slate-500" }
-    }
-    if ((hoursThisMonth || 0) <= 6) {
-        return { label: "Moderate", className: "bg-amber-50 border-amber-200 text-amber-700" }
-    }
-    return { label: "High attention", className: "bg-emerald-50 border-emerald-200 text-emerald-700" }
 }
 
 export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRate = 0 }: HomeRevenueDistributionChartProps) {
@@ -308,7 +306,6 @@ export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRa
                         
                         // We cast back because our entry from reduceForChart might not align perfectly with active dataset
                         const originalEntry = isOther ? null : rows.find(r => r.key === entry.key)
-                        const attention = mode === "project" ? getAttentionLabel(originalEntry?.hoursThisMonth) : null
                         const canOpen = !isOther && (
                             mode === "project" ? Boolean(originalEntry?.openProjectId) :
                             mode === "partner" ? Boolean(originalEntry?.openPartnerId) :

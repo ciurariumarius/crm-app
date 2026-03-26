@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { formatProjectName } from "@/lib/utils"
 import { z } from "zod"
 
 const CreatePartnerSchema = z.object({
@@ -15,7 +16,8 @@ const CreatePartnerSchema = z.object({
 
 const AddAdHocPaymentSchema = z.object({
     partnerId: z.string().uuid(),
-    name: z.string().trim().min(1, "Name is required"),
+    projectId: z.string().uuid().optional(),
+    name: z.string().trim().min(1, "Name is required").optional(),
     amount: z.number().positive("Amount must be positive"),
     description: z.string().max(2000).optional(),
 })
@@ -161,13 +163,43 @@ export async function getPartnerById(partnerId: string) {
 
 export async function addPartnerAdHocPayment(data: {
     partnerId: string
-    name: string
+    projectId?: string
+    name?: string
     amount: number
     description?: string
 }) {
     try {
         const session = await requireTenantContext()
         const validated = AddAdHocPaymentSchema.parse(data)
+        const selectedProject = validated.projectId
+            ? await prisma.project.findFirst({
+                where: {
+                    id: validated.projectId,
+                    tenantId: session.tenantId,
+                    site: { partnerId: validated.partnerId },
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    createdAt: true,
+                    site: { select: { domainName: true } },
+                    services: { select: { serviceName: true, isRecurring: true } },
+                },
+            })
+            : null
+
+        if (validated.projectId && !selectedProject) {
+            return { success: false, error: "Selected project does not belong to this partner" }
+        }
+
+        const resolvedName = (
+            validated.name?.trim()
+            || (selectedProject ? formatProjectName(selectedProject) : "")
+        ).trim()
+
+        if (!resolvedName) {
+            return { success: false, error: "Please select a project or provide a payment name" }
+        }
 
         // Find or create a generic Site for this Partner
         let site = await prisma.site.findFirst({
@@ -213,7 +245,7 @@ export async function addPartnerAdHocPayment(data: {
             data: {
                 tenantId: session.tenantId,
                 siteId: site.id,
-                name: validated.name,
+                name: resolvedName,
                 description: validated.description || null,
                 status: "Completed",
                 paymentStatus: "Paid",
@@ -227,7 +259,7 @@ export async function addPartnerAdHocPayment(data: {
 
         await logSessionAuditEvent(session, {
             action: "PARTNER_AD_HOC_PAYMENT_ADDED",
-            details: `partnerId=${validated.partnerId}; projectId=${project.id}; amount=${validated.amount}`,
+            details: `partnerId=${validated.partnerId}; projectId=${project.id}; sourceProjectId=${selectedProject?.id || "none"}; amount=${validated.amount}`,
         })
 
         revalidatePath("/")
@@ -236,9 +268,46 @@ export async function addPartnerAdHocPayment(data: {
         revalidatePath(`/partners/${validated.partnerId}`)
         revalidatePath("/vault")
         revalidatePath(`/vault/${validated.partnerId}`)
+        revalidatePath("/payments")
         
         return { success: true }
     } catch (error) {
         return { success: false, error: getActionErrorMessage(error, "Failed to add payment") }
+    }
+}
+
+export async function getPartnerProjectsForPayment(partnerId: string) {
+    try {
+        const session = await requireTenantContext()
+        const validatedPartnerId = z.string().uuid().parse(partnerId)
+        const projects = await prisma.project.findMany({
+            where: {
+                tenantId: session.tenantId,
+                site: { partnerId: validatedPartnerId },
+            },
+            select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                currentFee: true,
+                paymentStatus: true,
+                site: { select: { domainName: true } },
+                services: { select: { serviceName: true, isRecurring: true } },
+            },
+            orderBy: [{ createdAt: "desc" }],
+            take: 200,
+        })
+
+        return {
+            success: true,
+            data: projects.map((project) => ({
+                id: project.id,
+                name: formatProjectName(project),
+                amount: Number(project.currentFee || 0),
+                paymentStatus: project.paymentStatus,
+            })),
+        }
+    } catch (error) {
+        return { success: false, error: getActionErrorMessage(error, "Failed to load partner projects") }
     }
 }

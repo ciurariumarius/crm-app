@@ -13,16 +13,52 @@ export default async function SettingsPage() {
         redirect("/login")
     }
 
-    const user = await prisma.user.findFirst({
-        where: { id: session.userId, tenantId: session.tenantId },
-        select: {
-            name: true,
-            username: true,
-            profilePic: true,
-            twoFactorEnabled: true,
-            hourlyRate: true
+    let user: {
+        name: string | null
+        username: string
+        profilePic: string | null
+        twoFactorEnabled: boolean
+        hourlyRate: unknown
+        timerIdlePauseMinutes: number | null
+        timerHardCapHours: number | null
+        timerReminderIntervalMinutes: number | null
+    } | null = null
+
+    try {
+        user = await prisma.user.findFirst({
+            where: { id: session.userId, tenantId: session.tenantId },
+            select: {
+                name: true,
+                username: true,
+                profilePic: true,
+                twoFactorEnabled: true,
+                hourlyRate: true,
+                timerIdlePauseMinutes: true,
+                timerHardCapHours: true,
+                timerReminderIntervalMinutes: true,
+            }
+        })
+    } catch (error) {
+        console.warn("[settings] Timer preference fields unavailable; using defaults.", error)
+        const fallbackUser = await prisma.user.findFirst({
+            where: { id: session.userId, tenantId: session.tenantId },
+            select: {
+                name: true,
+                username: true,
+                profilePic: true,
+                twoFactorEnabled: true,
+                hourlyRate: true,
+            }
+        })
+        if (fallbackUser) {
+            user = {
+                ...fallbackUser,
+                timerIdlePauseMinutes: 60,
+                timerHardCapHours: 3,
+                timerReminderIntervalMinutes: 60,
+            }
         }
-    })
+    }
 
     if (!user) {
         redirect("/login")

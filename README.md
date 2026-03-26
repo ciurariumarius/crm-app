@@ -20,6 +20,18 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Maintenance Commands
+
+```bash
+npm run clean:artifacts   # remove local build/temp artifacts
+npm run typecheck         # TypeScript check
+npm run verify            # lint + typecheck + build
+```
+
+Cleanup and context compaction guide:
+- `docs/codebase-cleanup-playbook.md`
+- `docs/context-map.md`
+
 ## Debug API Controls
 
 Debug routes are disabled by default and require explicit opt-in.

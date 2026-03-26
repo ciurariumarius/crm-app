@@ -28,64 +28,81 @@ type TaskHistorySectionProps = {
 
 export function TaskHistorySection({ entries, isLoading }: TaskHistorySectionProps) {
     return (
-        <section className="space-y-2 border-t border-slate-200/80 pt-3">
-            <SidePanelSectionTitle title="Task history (log)" icon={<History className="h-3.5 w-3.5" />} />
-            <div className="space-y-1.5">
-                {isLoading && entries.length === 0 ? (
-                    <SidePanelLoadingState message="Loading task history..." />
-                ) : entries.length === 0 ? (
+        <section className="space-y-0 border-t border-slate-200/80 pt-3">
+            <SidePanelSectionTitle title="Task history" icon={<History className="h-3.5 w-3.5" />} />
+            
+            {isLoading && entries.length === 0 ? (
+                <SidePanelLoadingState message="Loading task history..." />
+            ) : entries.length === 0 ? (
+                <div className="pt-2">
                     <SidePanelEmptyState message="No task history records found." />
-                ) : (
-                    entries.map((entry) => {
-                        const sourceLabel = entry.source ? entry.source.replaceAll("_", " ") : null
-                        const fromDate = decodeAuditDateToken(entry.from)
-                        const toDateValue = decodeAuditDateToken(entry.to)
+                </div>
+            ) : (
+                <div className="mt-2">
+                    {/* Table Header */}
+                    <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                        <div className="w-24 shrink-0">Date</div>
+                        <div className="flex-1">Event</div>
+                        <div className="w-16 shrink-0 text-right">Type</div>
+                    </div>
 
-                        let entryTitle = "Task updated"
-                        let entryBadge = "Update"
+                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                        {entries.map((entry) => {
+                            const sourceLabel = entry.source ? entry.source.replaceAll("_", " ") : null
+                            const fromDate = decodeAuditDateToken(entry.from)
+                            const toDateValue = decodeAuditDateToken(entry.to)
 
-                        if (entry.action === "TASK_CREATED") {
-                            entryTitle = "Task created"
-                            entryBadge = "Created"
-                        } else if (entry.action === "TASK_STATUS_CHANGED") {
-                            entryTitle = `${entry.from || "Unknown"} -> ${entry.to || "Unknown"}`
-                            entryBadge = "Status"
-                        } else if (entry.action === "TASK_PRIORITY_CHANGED") {
-                            entryTitle = `Priority: ${entry.from || "Unknown"} -> ${entry.to || "Unknown"}`
-                            entryBadge = "Priority"
-                        } else if (entry.action === "TASK_DEADLINE_CHANGED") {
-                            if (!fromDate && toDateValue) {
-                                entryTitle = `Deadline set: ${format(toDateValue, "dd MMM yyyy")}`
-                            } else if (fromDate && !toDateValue) {
-                                entryTitle = "Deadline removed"
-                            } else if (fromDate && toDateValue) {
-                                entryTitle = `Deadline: ${format(fromDate, "dd MMM yyyy")} -> ${format(toDateValue, "dd MMM yyyy")}`
-                            } else {
-                                entryTitle = "Deadline updated"
+                            let entryTitle = "Task updated"
+                            let entryBadge = "Update"
+
+                            if (entry.action === "TASK_CREATED") {
+                                entryTitle = "Task created"
+                                entryBadge = "Created"
+                            } else if (entry.action === "TASK_STATUS_CHANGED") {
+                                entryTitle = `${entry.from || "—"} → ${entry.to || "—"}`
+                                entryBadge = "Status"
+                            } else if (entry.action === "TASK_PRIORITY_CHANGED") {
+                                entryTitle = `Priority: ${entry.from || "—"} → ${entry.to || "—"}`
+                                entryBadge = "Priority"
+                            } else if (entry.action === "TASK_DEADLINE_CHANGED") {
+                                if (!fromDate && toDateValue) {
+                                    entryTitle = `Deadline set: ${format(toDateValue, "dd MMM yyyy")}`
+                                } else if (fromDate && !toDateValue) {
+                                    entryTitle = "Deadline removed"
+                                } else if (fromDate && toDateValue) {
+                                    entryTitle = `Deadline: ${format(fromDate, "dd MMM yyyy")} → ${format(toDateValue, "dd MMM yyyy")}`
+                                } else {
+                                    entryTitle = "Deadline updated"
+                                }
+                                entryBadge = "Deadline"
                             }
-                            entryBadge = "Deadline"
-                        }
 
-                        return (
-                            <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-2.5">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                                        <History className="h-4 w-4" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-slate-700">{entryTitle}</span>
-                                        <span className="ui-text-caption text-slate-400">
+                            return (
+                                <div key={entry.id} className="flex items-center gap-2 px-2.5 py-2 transition hover:bg-slate-50 border-b border-slate-50 last:border-0 group">
+                                    <div className="w-24 shrink-0">
+                                        <span className="text-[11px] font-medium text-slate-500 truncate block">
                                             {formatRelativeDate(entry.date)}
-                                            {sourceLabel ? ` • ${sourceLabel}` : ""}
                                         </span>
                                     </div>
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-[11px] font-bold text-slate-700 truncate block">
+                                            {entryTitle}
+                                        </span>
+                                        {sourceLabel && (
+                                            <span className="text-[10px] text-slate-400 group-hover:text-slate-500 transition-colors block truncate">
+                                                {sourceLabel}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="w-16 shrink-0 flex justify-end">
+                                        <SidePanelChip tone={sidePanelChipToneByLabel(entryBadge)} label={entryBadge} className="text-[9px] font-bold px-1.5 py-0.5" />
+                                    </div>
                                 </div>
-                                <SidePanelChip tone={sidePanelChipToneByLabel(entryBadge)} label={entryBadge} className="px-2 py-1 text-[10px]" />
-                            </div>
-                        )
-                    })
-                )}
-            </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
         </section>
     )
 }

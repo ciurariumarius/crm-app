@@ -15,7 +15,6 @@ import {
     Square,
     ArrowUpRight,
     Circle,
-    Clock3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -191,12 +190,10 @@ export function TaskGridCard({
                                     onClick={() => {
                                         if (isRunning) {
                                             pauseTimer()
-                                            toast.success("Timer paused")
                                             return
                                         }
                                         if (isPaused) {
                                             resumeTimer()
-                                            toast.success("Timer resumed")
                                             return
                                         }
                                         if (!task.projectId) {
@@ -204,7 +201,6 @@ export function TaskGridCard({
                                             return
                                         }
                                         startTimer(task.projectId, task.id, task.name || "Task")
-                                        toast.success("Timer started")
                                     }}
                                     className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                 >
@@ -296,12 +292,10 @@ export function TaskGridCard({
                                     onClick={() => {
                                         if (isRunning) {
                                             pauseTimer()
-                                            toast.success("Timer paused")
                                             return
                                         }
                                         if (isPaused) {
                                             resumeTimer()
-                                            toast.success("Timer resumed")
                                             return
                                         }
                                         if (!task.projectId) {
@@ -309,7 +303,6 @@ export function TaskGridCard({
                                             return
                                         }
                                         startTimer(task.projectId, task.id, task.name || "Task")
-                                        toast.success("Timer started")
                                     }}
                                     className="gap-2 text-sm font-medium cursor-pointer"
                                 >
@@ -321,7 +314,6 @@ export function TaskGridCard({
                                     <DropdownMenuItem
                                         onClick={() => {
                                             stopTimer()
-                                            toast.success("Timer stopped")
                                         }}
                                         className="gap-2 text-sm font-medium cursor-pointer"
                                     >

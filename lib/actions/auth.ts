@@ -32,6 +32,13 @@ function parseRememberDeviceValue(value: FormDataEntryValue | undefined) {
     return normalized === "on" || normalized === "true" || normalized === "1"
 }
 
+function parseNonNegativeInt(value: FormDataEntryValue | null, fallback: number, max: number) {
+    if (typeof value !== "string") return fallback
+    const parsed = Number.parseInt(value, 10)
+    if (!Number.isFinite(parsed) || parsed < 0) return fallback
+    return Math.min(parsed, max)
+}
+
 const RATE_LIMIT_FALLBACK_WINDOW_MS = 15 * 60 * 1000
 
 function blockRequestWhenRateLimitUnavailable() {
@@ -478,15 +485,40 @@ export async function updateProfile(formData: FormData) {
         const profilePic = formData.get("profilePic") as string
         const hourlyRateRaw = formData.get("hourlyRate") as string
         const hourlyRate = hourlyRateRaw ? Number(hourlyRateRaw) : 0
+        const timerIdlePauseMinutes = parseNonNegativeInt(formData.get("timerIdlePauseMinutes"), 60, 240)
+        const timerHardCapHours = parseNonNegativeInt(formData.get("timerHardCapHours"), 3, 24)
+        const timerReminderIntervalMinutes = parseNonNegativeInt(formData.get("timerReminderIntervalMinutes"), 60, 240)
 
-        await prisma.user.updateMany({
-            where: { id: session.userId, tenantId: session.tenantId },
-            data: {
-                name: name || null,
-                profilePic: profilePic || null,
-                hourlyRate: hourlyRate
-            }
-        })
+        try {
+            await prisma.user.updateMany({
+                where: { id: session.userId, tenantId: session.tenantId },
+                data: {
+                    name: name || null,
+                    profilePic: profilePic || null,
+                    hourlyRate,
+                    timerIdlePauseMinutes,
+                    timerHardCapHours,
+                    timerReminderIntervalMinutes,
+                }
+            })
+        } catch (error) {
+            const message = error instanceof Error ? error.message : ""
+            const timerColumnsUnavailable = message.includes("timerIdlePauseMinutes")
+                || message.includes("timerHardCapHours")
+                || message.includes("timerReminderIntervalMinutes")
+
+            if (!timerColumnsUnavailable) throw error
+
+            // Backward-compatible fallback while migration is pending.
+            await prisma.user.updateMany({
+                where: { id: session.userId, tenantId: session.tenantId },
+                data: {
+                    name: name || null,
+                    profilePic: profilePic || null,
+                    hourlyRate,
+                }
+            })
+        }
 
         await logAuditEvent({
             action: "AUTH_PROFILE_UPDATED",

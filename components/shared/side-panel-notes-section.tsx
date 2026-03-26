@@ -19,6 +19,7 @@ type SidePanelNotesSectionProps = {
     onExpand?: () => void
     expandLabel?: string
     extraToolbarActions?: React.ReactNode
+    icon?: React.ReactNode
     className?: string
     editorClassName?: string
     minHeightClassName?: string
@@ -32,6 +33,7 @@ function buildStatusIcon(state?: SidePanelNotesSectionProps["statusState"]) {
 
 export function SidePanelNotesSection({
     title,
+    icon,
     statusLabel,
     statusTone,
     statusState,
@@ -49,7 +51,7 @@ export function SidePanelNotesSection({
     return (
         <section className={cn("space-y-3 border-t border-slate-200/80 pt-3", className)}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <SidePanelSectionTitle title={title} />
+                <SidePanelSectionTitle title={title} icon={icon} />
                 <SidePanelChip
                     tone={statusTone}
                     icon={buildStatusIcon(statusState)}

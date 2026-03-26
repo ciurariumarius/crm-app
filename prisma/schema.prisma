@@ -176,6 +176,7 @@ model Task {
 model TimeLog {
   id        String  @id @default(uuid())
   tenantId  String  @map("tenant_id")
+  userId    String  @map("user_id")
   projectId String  @map("project_id")
   taskId    String? @map("task_id") // Optional: can log to project generally
 
@@ -189,12 +190,16 @@ model TimeLog {
   createdAt DateTime @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade)
   task    Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
+  @@index([userId])
   @@index([projectId])
   @@index([tenantId, projectId])
+  @@index([tenantId, userId, endTime])
+  @@index([tenantId, userId, isPaused, endTime])
   @@index([taskId])
   @@index([tenantId, endTime])
   @@index([tenantId, startTime])
@@ -203,20 +208,24 @@ model TimeLog {
 }
 
 model User {
-  id               String   @id @default(uuid())
-  tenantId         String   @map("tenant_id")
-  username         String   @unique
-  name             String?
-  profilePic       String?  @map("profile_pic")
-  passwordHash     String   @map("password_hash")
-  hourlyRate       Decimal? @default(0) @map("hourly_rate")
-  twoFactorSecret  String?  @map("two_factor_secret")
-  twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @default(now()) @updatedAt
+  id                           String   @id @default(uuid())
+  tenantId                     String   @map("tenant_id")
+  username                     String   @unique
+  name                         String?
+  profilePic                   String?  @map("profile_pic")
+  passwordHash                 String   @map("password_hash")
+  hourlyRate                   Decimal? @default(0) @map("hourly_rate")
+  timerIdlePauseMinutes        Int?     @default(60) @map("timer_idle_pause_minutes")
+  timerHardCapHours            Int?     @default(3) @map("timer_hard_cap_hours")
+  timerReminderIntervalMinutes Int?     @default(60) @map("timer_reminder_interval_minutes")
+  twoFactorSecret              String?  @map("two_factor_secret")
+  twoFactorEnabled             Boolean  @default(false) @map("two_factor_enabled")
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @default(now()) @updatedAt
 
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   authSessions AuthSession[]
+  timeLogs     TimeLog[]
 
   @@index([tenantId])
   @@map("users")

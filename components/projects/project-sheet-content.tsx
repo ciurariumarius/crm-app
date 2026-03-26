@@ -16,8 +16,9 @@ import {
     Pencil,
     Square,
     Target,
-    Trash2,
     X,
+    FileText,
+    ListTodo,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -174,7 +175,6 @@ export function ProjectSheetContent({
     const [isEditingServices, setIsEditingServices] = React.useState(false)
     const [description, setDescription] = React.useState(initialProject.description || "")
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
-    const [isDeleting, setIsDeleting] = React.useState(false)
     const [isManualTimeOpen, setIsManualTimeOpen] = React.useState(false)
     const [isNotesModalOpen, setIsNotesModalOpen] = React.useState(false)
     const [isEditingCreatedAt, setIsEditingCreatedAt] = React.useState(false)
@@ -620,7 +620,6 @@ export function ProjectSheetContent({
             return
         }
 
-        setIsDeleting(true)
         try {
             const result = await deleteProject(project.id)
             if (!result.success) {
@@ -638,8 +637,6 @@ export function ProjectSheetContent({
             router.refresh()
         } catch {
             toast.error("Failed to delete project")
-        } finally {
-            setIsDeleting(false)
         }
     }
 
@@ -818,7 +815,7 @@ export function ProjectSheetContent({
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
-                    <div className="mx-auto max-w-[980px] space-y-4 pb-12">
+                    <div className="mx-auto max-w-[980px] space-y-4 pb-6">
                         <div className="space-y-3 pr-4 pt-1 pb-1">
                             {isEditingTitle ? (
                                 <Textarea
@@ -970,12 +967,13 @@ export function ProjectSheetContent({
                         </div>
 
                         <section className="space-y-3 border-t border-slate-200/80 pt-3">
-                            <SidePanelSectionTitle title="Project tasks" />
+                            <SidePanelSectionTitle title="Project tasks" icon={<ListTodo className="h-3.5 w-3.5" />} />
                             <ProjectTasks projectId={project.id} initialTasks={project.tasks || []} />
                         </section>
 
                         <SidePanelNotesSection
                             title="Project notes"
+                            icon={<FileText className="h-3.5 w-3.5" />}
                             statusLabel={
                                 notesSaveState === "idle"
                                     ? "Ready"
@@ -1025,10 +1023,7 @@ export function ProjectSheetContent({
 
                         <section className="space-y-2 border-t border-slate-200/80 pt-3">
                             <div className="flex items-center justify-between">
-                                <h2 className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-                                    <Target className="h-3.5 w-3.5" />
-                                    Hour Recommendation
-                                </h2>
+                                <SidePanelSectionTitle title="Hour Recommendation" icon={<Target className="h-3.5 w-3.5" />} />
                                 {budgetInsights.hasHourlyRate && budgetInsights.hasFee && (
                                     <span
                                         className={cn(
@@ -1135,7 +1130,7 @@ export function ProjectSheetContent({
                             <div className="flex items-center justify-between">
                                 <h2 className="ui-overline inline-flex items-center gap-2 text-slate-500">
                                     <Clock3 className="h-3.5 w-3.5" />
-                                    Recent Time Logs
+                                    Recent Time
                                 </h2>
                                 <Button
                                     variant="ghost"
@@ -1191,13 +1186,6 @@ export function ProjectSheetContent({
                             />
                         </section>
 
-                        <ProjectHistoryLogSections
-                            paymentHistory={paymentHistory}
-                            isLoadingHistory={isLoadingHistory}
-                            statusHistoryEntries={statusHistoryEntries}
-                            isLoadingStatusHistory={isLoadingStatusHistory}
-                        />
-
                         <ProjectSheetInfoSection
                             partnerName={project.site.partner.name}
                             domainName={project.site.domainName}
@@ -1224,22 +1212,18 @@ export function ProjectSheetContent({
                             }))}
                         />
 
-                        <section className="flex justify-end">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={handleDelete}
-                                disabled={isDeleting}
-                                className="h-9 rounded-full border border-rose-200 bg-rose-50 px-4 text-xs font-bold uppercase tracking-[0.08em] text-rose-600 hover:bg-rose-100"
-                            >
-                                {isDeleting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-1.5 h-3.5 w-3.5" />}
-                                Delete
-                            </Button>
-                        </section>
+                        <ProjectHistoryLogSections
+                            paymentHistory={paymentHistory}
+                            isLoadingHistory={isLoadingHistory}
+                            statusHistoryEntries={statusHistoryEntries}
+                            isLoadingStatusHistory={isLoadingStatusHistory}
+                        />
+
 
                         <SidePanelMetaBar
                             entityLabel="Project ID"
                             entityId={project.id.split("-")[0]}
+                            onDelete={handleDelete}
                             createdAt={
                                 isEditingCreatedAt ? (
                                     <span className="inline-flex items-center gap-2">

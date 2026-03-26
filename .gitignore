@@ -33,9 +33,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
+
+# local agent/assistant metadata
+/.agent/
+/.gemini/
 
 # vercel
 .vercel
@@ -53,3 +58,6 @@ next-env.d.ts
 
 # protected uploads
 /storage/
+
+# local temp workspace
+/tmp/

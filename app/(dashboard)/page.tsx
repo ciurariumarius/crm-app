@@ -3,8 +3,9 @@ import { format } from "date-fns"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
-import { CirclePlus, FolderPlus, WalletCards, BadgeCheck, Timer, Banknote } from "lucide-react"
+import { FolderPlus, BadgeCheck, Timer, Banknote } from "lucide-react"
 import { GlobalSearch } from "@/components/dashboard/global-search"
+import { HomeHeaderActions } from "@/components/dashboard/home-header-actions"
 import {
     HomeRevenueDistributionChart,
     type RevenueAnalysisEntry,
@@ -22,6 +23,8 @@ export const dynamic = "force-dynamic"
 
 type HomeProject = {
     id: string
+    name?: string | null
+    status?: string | null
     currentFee: number | null
     createdAt: Date
     site: {
@@ -113,6 +116,7 @@ export default async function HomePage() {
     const [
         user,
         allServicesRaw,
+        partnersForDialogsRaw,
         activeProjectsCount,
         activeRecurringProjectsCount,
         activeOneTimeProjectsCount,
@@ -133,6 +137,18 @@ export default async function HomePage() {
         }),
         prisma.service.findMany({
             where: { tenantId: session.tenantId },
+        }),
+        prisma.partner.findMany({
+            where: { tenantId: session.tenantId },
+            include: {
+                sites: {
+                    select: {
+                        id: true,
+                        domainName: true,
+                    },
+                },
+            },
+            orderBy: { name: "asc" },
         }),
         prisma.project.count({
             where: { tenantId: session.tenantId, status: "Active" },
@@ -369,6 +385,8 @@ export default async function HomePage() {
             where: { tenantId: session.tenantId },
             select: {
                 id: true,
+                name: true,
+                status: true,
                 currentFee: true,
                 createdAt: true,
                 site: {
@@ -522,6 +540,23 @@ export default async function HomePage() {
 
     const displayName = user?.name?.split(" ")[0] || user?.username || "Marius"
     const hourlyRate = Number(user?.hourlyRate || 0)
+    const homeDialogProjects = serialize(
+        allProjects.map((project) => ({
+            id: project.id,
+            name: project.name,
+            status: project.status || "Active",
+            createdAt: project.createdAt,
+            site: project.site ? { domainName: project.site.domainName || undefined } : undefined,
+            services: project.services.map((service) => ({
+                serviceName: service.serviceName || "",
+                isRecurring: service.isRecurring,
+            })),
+        }))
+    )
+    const homeDialogPartners = serialize(partnersForDialogsRaw)
+    const homeDialogServices = serialize(allServicesRaw)
+    const unpaidProjectsHref = "/projects?status=All&payment=Unpaid"
+    const thisMonthProjectsHref = "/projects?status=All&period=this_month"
 
     return (
         <div className="flex flex-col gap-10 pb-10">
@@ -546,33 +581,11 @@ export default async function HomePage() {
                         <GlobalSearch />
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center rounded-[16px] bg-white p-1 shadow-sm border border-slate-100">
-                            <Link
-                                href="/tasks"
-                                className="inline-flex h-[34px] items-center gap-2 rounded-xl bg-[#2563eb] px-4 text-[13px] font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
-                            >
-                                <CirclePlus className="h-4 w-4" />
-                                Add Task
-                            </Link>
-                            
-                            <div className="mx-2 h-4 w-px bg-slate-200" />
-                            
-                            <Link
-                                href="/projects"
-                                className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[#2563eb] transition-colors hover:bg-slate-50"
-                            >
-                                <FolderPlus className="h-4 w-4 stroke-[2.5px]" />
-                                Add Project
-                            </Link>
-                            
-                            <Link
-                                href="/payments"
-                                className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[#2563eb] transition-colors hover:bg-slate-50"
-                            >
-                                <WalletCards className="h-4 w-4 stroke-[2.5px]" />
-                                Add Payment
-                            </Link>
-                        </div>
+                        <HomeHeaderActions
+                            partners={homeDialogPartners}
+                            services={homeDialogServices}
+                            projects={homeDialogProjects}
+                        />
                     </div>
                 </div>
 
@@ -585,16 +598,28 @@ export default async function HomePage() {
                         </div>
                         <div className="mt-6 flex items-end justify-between">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-wider text-rose-500">Unpaid</p>
-                                <p className="mt-1 text-[24px] font-bold leading-none tracking-tight text-rose-600">
-                                    {formatCurrency(unpaidRevenue)}
-                                </p>
+                                <Link
+                                    href={unpaidProjectsHref}
+                                    className="group inline-flex flex-col rounded-md transition-colors hover:bg-rose-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
+                                    aria-label="View unpaid projects"
+                                >
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-rose-500">Unpaid</p>
+                                    <p className="mt-1 text-[24px] font-bold leading-none tracking-tight text-rose-600 group-hover:underline">
+                                        {formatCurrency(unpaidRevenue)}
+                                    </p>
+                                </Link>
                             </div>
                             <div className="text-right">
-                                <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">This month</p>
-                                <div className="mt-1 flex items-center justify-end gap-2">
-                                    <p className="text-sm font-bold text-slate-800">{formatCurrency(monthRevenue)}</p>
-                                </div>
+                                <Link
+                                    href={thisMonthProjectsHref}
+                                    className="group inline-flex flex-col items-end rounded-md transition-colors hover:bg-blue-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                    aria-label="View this month projects"
+                                >
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">This month</p>
+                                    <div className="mt-1 flex items-center justify-end gap-2">
+                                        <p className="text-sm font-bold text-slate-800 group-hover:underline">{formatCurrency(monthRevenue)}</p>
+                                    </div>
+                                </Link>
                             </div>
                         </div>
                     </div>

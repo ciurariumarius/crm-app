@@ -40,6 +40,9 @@ export interface UserData {
     profilePic: string | null
     twoFactorEnabled: boolean
     hourlyRate?: number | { toString(): string } | null
+    timerIdlePauseMinutes?: number | null
+    timerHardCapHours?: number | null
+    timerReminderIntervalMinutes?: number | null
 }
 
 export interface DeviceSessionData {
@@ -241,6 +244,41 @@ export function SettingsContent({
                                 <Input name="profilePic" defaultValue={user.profilePic || ""} placeholder="https://..." className="pl-10" />
                             </div>
                             <p className="text-[10px] text-muted-foreground">Provide an absolute URL to an image. Leave blank to use defaults.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <div className="space-y-2">
+                                <Label>Auto-pause idle (min)</Label>
+                                <Input
+                                    name="timerIdlePauseMinutes"
+                                    type="number"
+                                    min={0}
+                                    defaultValue={user.timerIdlePauseMinutes ?? 60}
+                                    placeholder="60"
+                                />
+                                <p className="text-[10px] text-muted-foreground">Set `0` to disable idle auto-pause.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Hard stop (hours)</Label>
+                                <Input
+                                    name="timerHardCapHours"
+                                    type="number"
+                                    min={0}
+                                    defaultValue={user.timerHardCapHours ?? 3}
+                                    placeholder="3"
+                                />
+                                <p className="text-[10px] text-muted-foreground">Set `0` to disable hard stop.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Reminder every (min)</Label>
+                                <Input
+                                    name="timerReminderIntervalMinutes"
+                                    type="number"
+                                    min={0}
+                                    defaultValue={user.timerReminderIntervalMinutes ?? 60}
+                                    placeholder="60"
+                                />
+                                <p className="text-[10px] text-muted-foreground">Set `0` to disable timer reminders.</p>
+                            </div>
                         </div>
                         <Button type="submit" disabled={loading} className="gap-2 bg-blue-600 hover:bg-blue-700">
                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
