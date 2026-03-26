@@ -30,10 +30,20 @@ export function GlobalTimer() {
         return (
             <div className="fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 z-50 md:bottom-[max(1rem,env(safe-area-inset-bottom))] md:right-6 animate-in fade-in zoom-in duration-300">
                 <div className="relative h-[3.25rem] w-[3.25rem]">
-                    <div className={timerState.isRunning
-                        ? "timer-heartbeat absolute inset-0 rounded-full bg-[#2563EB] shadow-[0_4px_12px_-4px_rgba(37,99,235,0.75)]"
-                        : "absolute inset-0 rounded-full bg-slate-400 shadow-[0_4px_12px_-4px_rgba(100,116,139,0.6)]"
-                    } />
+                    <div
+                        className={timerState.isRunning
+                            ? "timer-heartbeat absolute inset-0 rounded-full"
+                            : "absolute inset-0 rounded-full bg-slate-400 shadow-[0_4px_12px_-4px_rgba(100,116,139,0.6)]"
+                        }
+                        style={
+                            timerState.isRunning
+                                ? {
+                                    background: "var(--primary-container)",
+                                    boxShadow: "0 4px 12px -4px color-mix(in srgb, var(--primary-container) 72%, transparent)",
+                                }
+                                : undefined
+                        }
+                    />
                     <Button
                         size="icon"
                         className="relative h-full w-full rounded-full border-0 bg-transparent p-0 text-white hover:bg-transparent"

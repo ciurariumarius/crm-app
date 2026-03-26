@@ -272,7 +272,7 @@ export default async function ProjectsPage({
                                 variant="full"
                                 label="Add Project"
                                 showLabelOnMobile
-                                className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !bg-[#EFF6FF] !text-[#2563EB] !shadow-none border border-[#BFDBFE] hover:!bg-[#DBEAFE]"
+                                className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] !text-[var(--primary)] !shadow-none border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] hover:!bg-[color:color-mix(in_srgb,var(--primary-container)_24%,white)]"
                                 partners={partnersForClient}
                                 services={servicesForClient}
                             />
@@ -305,7 +305,7 @@ export default async function ProjectsPage({
                                             className={cn(
                                                 "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
                                                 queryStatus === option.value
-                                                    ? "bg-white text-[#2563EB] shadow-sm"
+                                                    ? "bg-white text-[var(--primary)] shadow-sm"
                                                     : "text-slate-600"
                                             )}
                                         >
@@ -324,7 +324,7 @@ export default async function ProjectsPage({
                                             className={cn(
                                                 "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
                                                 payment === option.value
-                                                    ? "bg-white text-[#2563EB] shadow-sm"
+                                                    ? "bg-white text-[var(--primary)] shadow-sm"
                                                     : "text-slate-600"
                                             )}
                                         >
@@ -349,7 +349,7 @@ export default async function ProjectsPage({
                                             className={cn(
                                                 "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
                                                 sort === option.value
-                                                    ? "bg-white text-[#2563EB] shadow-sm"
+                                                    ? "bg-white text-[var(--primary)] shadow-sm"
                                                     : "text-slate-600"
                                             )}
                                         >

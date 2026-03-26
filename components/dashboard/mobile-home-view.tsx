@@ -88,13 +88,6 @@ export interface MobileHomeViewProps {
     dashboardQueryFailed?: boolean
 }
 
-function greetingByHour() {
-    const hour = new Date().getHours()
-    if (hour < 12) return "Good morning"
-    if (hour < 18) return "Good afternoon"
-    return "Good evening"
-}
-
 function formatHours(hours: number | string) {
     const value = typeof hours === "number" ? hours : Number(hours || 0)
     if (!Number.isFinite(value)) return "0.0"
@@ -183,8 +176,7 @@ export function MobileHomeView({
         <div className="md:hidden flex flex-col gap-6">
             <section className="flex items-center justify-between gap-4 pt-1">
                 <div className="flex min-w-0 flex-1 flex-col justify-center">
-                    <p className="text-[13px] text-slate-600 leading-none">{greetingByHour()},</p>
-                    <h1 className="text-[34px] font-semibold text-slate-900 leading-none tracking-[-0.03em] truncate mt-1">
+                    <h1 className="text-[34px] font-semibold text-slate-900 leading-none tracking-[-0.03em] truncate">
                         {name}
                     </h1>
                 </div>
@@ -225,15 +217,15 @@ export function MobileHomeView({
                     <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
                         <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">{monthName} revenue</p>
                         <p className="mt-2 flex items-baseline gap-1.5">
-                            <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[#2563EB] leading-none">{revenueLabel.amount}</span>
-                            <span className="font-mono text-[12px] font-semibold text-[#2563EB]">{revenueLabel.code}</span>
+                            <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[var(--primary)] leading-none">{revenueLabel.amount}</span>
+                            <span className="font-mono text-[12px] font-semibold text-[var(--primary)]">{revenueLabel.code}</span>
                         </p>
                     </div>
                     <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
                         <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">Unpaid projects</p>
                         <p className="mt-2 flex items-baseline gap-1.5">
-                            <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[#E11D48] leading-none">{unpaidLabel.amount}</span>
-                            <span className="font-mono text-[12px] font-semibold text-[#E11D48]">{unpaidLabel.code}</span>
+                            <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[var(--debt)] leading-none">{unpaidLabel.amount}</span>
+                            <span className="font-mono text-[12px] font-semibold text-[var(--debt)]">{unpaidLabel.code}</span>
                         </p>
                     </div>
                 </div>
@@ -244,14 +236,14 @@ export function MobileHomeView({
                 <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="border-r border-slate-100 pr-3">
-                            <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-[#2563EB] leading-none">{liveProjects}</p>
+                            <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-[var(--primary)] leading-none">{liveProjects}</p>
                             <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-slate-500">Live projects</p>
                             <div className="mt-3 flex flex-wrap gap-1.5">
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2 py-1 text-[11px] font-semibold text-[#2563EB]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
                                     <RotateCw className="h-2.5 w-2.5" />
                                     {activeMonthlyProjects}
                                 </span>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[#EEF2FF] px-2 py-1 text-[11px] font-semibold text-[#4F46E5]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary)_10%,white)] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
                                     <Zap className="h-2.5 w-2.5" />
                                     {activeOneTimeProjects}
                                 </span>
@@ -302,11 +294,11 @@ export function MobileHomeView({
                                     </p>
                                     <div className="mt-3 flex items-center gap-2">
                                         {isOverdue ? (
-                                            <Badge className="rounded-full border border-[#FECACA] bg-[#FFF1F2] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[#E11D48]">
+                                            <Badge className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[var(--debt)]">
                                                 Overdue
                                             </Badge>
                                         ) : (
-                                            <Badge className="rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[#2563EB]">
+                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--primary-container)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[var(--primary)]">
                                                 {task?.status || "Active"}
                                             </Badge>
                                         )}
@@ -329,13 +321,13 @@ export function MobileHomeView({
 
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
-                    <FolderOpen className="h-5 w-5 text-[#2563EB]" />
+                    <FolderOpen className="h-5 w-5 text-[var(--primary)]" />
                     <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Projects</h2>
                 </div>
 
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[#2563EB]">Monthly subscriptions</p>
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--primary)]">Monthly subscriptions</p>
                         <div className="space-y-2">
                             {visibleMonthlyProjects.map((project) => {
                                 return (
@@ -348,7 +340,7 @@ export function MobileHomeView({
                                         <p className="text-[15px] font-bold leading-tight text-slate-900">{project.siteName || "Untitled project"}</p>
                                         <div className="mt-2 flex items-center justify-between gap-3">
                                             <div className="inline-flex items-center gap-3 text-[11px] font-semibold text-slate-500">
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[#2563EB]">
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[var(--primary)]">
                                                     {format(new Date(project.createdAt || new Date()), "MMMM")}
                                                 </span>
                                                 <p className="font-mono font-bold text-slate-900">
@@ -376,7 +368,7 @@ export function MobileHomeView({
                     </div>
 
                     <div className="space-y-2">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[#2563EB]">Fixed-fee projects</p>
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--primary)]">Fixed-fee projects</p>
                         <div className="space-y-2">
                             {visibleOneTimeProjects.map((project) => {
                                 const parsed = splitProjectLabel(project.siteName || "Untitled project")
@@ -429,7 +421,7 @@ export function MobileHomeView({
 
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-[#D97706]" />
+                    <CreditCard className="h-5 w-5 text-[var(--warning)]" />
                     <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Payments</h2>
                 </div>
 
@@ -463,7 +455,7 @@ export function MobileHomeView({
                                                     <p className="text-[13px] font-semibold text-slate-900">{partner.name}</p>
                                                     <p className="mt-0.5 text-[11px] text-slate-500">
                                                         Owed sum:
-                                                        <span className="ml-1 font-mono font-bold text-[#E11D48]">
+                                                        <span className="ml-1 font-mono font-bold text-[var(--debt)]">
                                                             {formatCurrency(partner.totalUnpaid)}
                                                         </span>
                                                     </p>
@@ -511,7 +503,7 @@ export function MobileHomeView({
                             <History className="h-4 w-4 text-slate-500" />
                             <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">Payment history</p>
                         </div>
-                        <Link href="/payments" className="text-[12px] font-semibold tracking-[0.03em] text-[#2563EB]">
+                        <Link href="/payments" className="text-[12px] font-semibold tracking-[0.03em] text-[var(--primary)]">
                             View all
                         </Link>
                     </div>

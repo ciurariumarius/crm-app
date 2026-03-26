@@ -39,14 +39,14 @@ function NavLink({
             href={href}
             className={cn(
                 "inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl transition-all",
-                active ? "text-[#2563EB]" : "text-slate-400 hover:text-slate-600"
+                active ? "text-[var(--primary)]" : "text-slate-400 hover:text-slate-600"
             )}
         >
             <Icon className={cn("h-5 w-5", active && "scale-105")} strokeWidth={1.7} />
             <span
                 className={cn(
                     "text-[11px] font-medium tracking-[0.03em]",
-                    active ? "text-[#2563EB]" : "text-slate-500"
+                    active ? "text-[var(--primary)]" : "text-slate-500"
                 )}
             >
                 {label}
@@ -76,7 +76,7 @@ export function MobileBottomNav({
                     <button
                         type="button"
                         onClick={() => setQuickActionsOpen(true)}
-                        className="absolute left-1/2 top-1/2 z-10 inline-flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#1D4ED8] bg-[#2563EB] text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.85)] transition-transform active:scale-[0.97]"
+                        className="absolute left-1/2 top-1/2 z-10 inline-flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[var(--shadow-apple)] transition-transform active:scale-[0.97]"
                         aria-label="Quick actions"
                     >
                         <Plus className="h-6 w-6" strokeWidth={2.3} />
@@ -119,9 +119,9 @@ export function MobileBottomNav({
                                 setQuickActionsOpen(false)
                                 setCreateTaskOpen(true)
                             }}
-                            className="w-full rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3.5 text-left transition-colors hover:bg-[#DBEAFE]"
+                            className="w-full rounded-2xl border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] px-4 py-3.5 text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--primary-container)_24%,white)]"
                         >
-                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#1D4ED8]">
+                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--primary)]">
                                 <Sparkles className="h-4 w-4" />
                                 Add Task
                             </span>
@@ -137,7 +137,7 @@ export function MobileBottomNav({
                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left transition-colors hover:bg-slate-50"
                         >
                             <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                <FolderPlus className="h-4 w-4 text-[#2563EB]" />
+                                <FolderPlus className="h-4 w-4 text-[var(--primary)]" />
                                 Add Project
                             </span>
                             <p className="mt-1 text-xs text-slate-500">Start a new project with partner, domain and services.</p>

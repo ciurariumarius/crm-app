@@ -222,17 +222,16 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
                         No active tasks.
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 sm:auto-rows-[156px]">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {visibleTasks.map((task) => (
-                            <div key={task.id} className="sm:h-[156px]">
-                                <TaskGridCard
-                                    task={task}
-                                    onOpen={handleOpenTask}
-                                    onComplete={handleComplete}
-                                    compact
-                                    className="h-full"
-                                />
-                            </div>
+                            <TaskGridCard
+                                key={task.id}
+                                task={task}
+                                onOpen={handleOpenTask}
+                                onComplete={handleComplete}
+                                compact
+                                className="h-full"
+                            />
                         ))}
                     </div>
                 )}
@@ -284,4 +283,3 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
         </div>
     )
 }
-

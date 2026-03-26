@@ -2,10 +2,10 @@
 
 import * as React from "react"
 import { format, isBefore, startOfDay } from "date-fns"
-import { cn, formatProjectName, formatProjectServiceList } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import {
-    Calendar as CalendarIcon,
+    ArrowUpRight,
     CheckCheck,
     Lightbulb,
     MoreVertical,
@@ -13,9 +13,11 @@ import {
     Play,
     RefreshCcw,
     Square,
-    ArrowUpRight,
     Circle,
 } from "lucide-react"
+import { toast } from "sonner"
+import { useTimer } from "@/components/providers/timer-provider"
+import { StatusChip } from "@/components/ui/status-chip"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -24,9 +26,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { toast } from "sonner"
-import { useTimer } from "@/components/providers/timer-provider"
-import { StatusChip } from "@/components/ui/status-chip"
 
 interface TaskGridCardProps {
     task: TaskCardItem
@@ -133,47 +132,163 @@ export function TaskGridCard({
     const isRecurring = services.some((s: TaskCardService) => s.isRecurring)
     const projectFullName = task.project ? formatProjectName(task.project) : "No Project"
     const projectDomain = task.project?.site?.domainName || "No domain"
-    const projectServices = services.length ? formatProjectServiceList(services, "No services") : "No services"
-    const createdAtDate = task.createdAt ? new Date(task.createdAt) : null
-    const hasValidCreatedAt = createdAtDate !== null && !Number.isNaN(createdAtDate.getTime())
     const isOverdue = task.deadline ? isBefore(new Date(task.deadline), startOfDay(new Date())) : false
+    const normalizedUrgency = normalizeTaskUrgency(task.urgency || "Normal")
+    const hasTopLabels = normalizedUrgency === "Urgent" || normalizedUrgency === "Idea" || isOverdue
 
     if (compact) {
         return (
             <div
                 className={cn(
-                    "group relative h-full cursor-pointer flex flex-col overflow-hidden rounded-[24px] bg-white p-5 transition-all duration-200",
-                    "border border-slate-100 hover:border-slate-200 hover:shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]",
+                    "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-[var(--shadow-apple)] transition-all duration-200",
+                    "hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]",
                     isRunning && "border-blue-200 bg-blue-50/20",
                     isSelected && "border-primary/30 bg-primary/[0.02]",
                     className
                 )}
                 onClick={() => onOpen(task.id)}
             >
+                <div onClick={(e) => e.stopPropagation()} className="absolute right-3 top-3 z-10">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                            >
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52 rounded-2xl shadow-xl border-slate-100 p-1.5">
+                            {task.status !== "Completed" ? (
+                                <>
+                                    <DropdownMenuItem
+                                        onClick={() => onComplete(task.id)}
+                                        className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
+                                    >
+                                        <CheckCheck className="h-4 w-4 text-slate-500" />
+                                        Mark completed
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                </>
+                            ) : null}
 
-                <div className="flex items-start justify-between gap-3">
-                    <h4
-                        className={cn(
-                            "text-[18px] font-bold leading-[1.2] text-slate-900 tracking-tight line-clamp-2",
-                            task.status === "Completed" && "line-through opacity-40"
-                        )}
-                    >
-                        {task.name || "Untitled task"}
-                    </h4>
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    if (isRunning) {
+                                        pauseTimer()
+                                        return
+                                    }
+                                    if (isPaused) {
+                                        resumeTimer()
+                                        return
+                                    }
+                                    if (!task.projectId) {
+                                        toast.error("Task has no project")
+                                        return
+                                    }
+                                    startTimer(task.projectId, task.id, task.name || "Task")
+                                }}
+                                className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
+                            >
+                                {isRunning ? <Pause className="h-4 w-4 fill-slate-500 text-slate-500" /> : <Play className="h-4 w-4 fill-slate-500 text-slate-500" />}
+                                {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
+                            </DropdownMenuItem>
 
-                    <div onClick={(e) => e.stopPropagation()} className="-mr-1 shrink-0">
+                            {isActiveTimerThisTask ? (
+                                <DropdownMenuItem
+                                    onClick={() => stopTimer()}
+                                    className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
+                                >
+                                    <Square className="h-4 w-4 fill-slate-500 text-slate-500" />
+                                    Stop timer
+                                </DropdownMenuItem>
+                            ) : null}
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                                onClick={() => onOpen(task.id)}
+                                className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
+                            >
+                                <ArrowUpRight className="h-4 w-4 text-slate-500" />
+                                Open panel
+                            </DropdownMenuItem>
+
+                            {renderMenu ? (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    {renderMenu(task)}
+                                </>
+                            ) : null}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                {hasTopLabels ? (
+                    <div className="mb-2 flex items-center gap-2 pr-8">
+                        <PriorityBadge urgency={task.urgency || "Normal"} compact />
+                        <DeadlineBadge deadline={task.deadline} compact />
+                    </div>
+                ) : null}
+
+                <h4
+                    className={cn(
+                        "line-clamp-2 text-[16px] font-bold leading-[1.3] tracking-tight text-slate-900",
+                        task.status === "Completed" && "line-through opacity-40"
+                    )}
+                >
+                    {task.name || "Untitled task"}
+                </h4>
+
+                <div className="mt-2 min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5 text-slate-400">
+                        {isRecurring
+                            ? <RefreshCcw className="h-2.5 w-2.5 shrink-0" />
+                            : <Circle className="h-2.5 w-2.5 shrink-0" />
+                        }
+                        <p className="min-w-0 truncate text-[12px] font-medium text-slate-500">
+                            {projectFullName}
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        )
+    }
+
+    return (
+        <div
+            className={cn(
+                "group relative self-start border bg-white cursor-pointer transition-all duration-200",
+                compact ? "rounded-2xl border-slate-200 shadow-sm" : "rounded-3xl",
+                "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 border-slate-100",
+                isOverdue && "border-rose-200/80 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]",
+                isRunning && "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]",
+                isSelected && "border-primary/30 bg-primary/[0.02] shadow-[0_0_0_2px_rgba(var(--primary),0.1)]",
+                className
+            )}
+            onClick={() => onOpen(task.id)}
+        >
+            {/* Running timer indicator */}
+            {isRunning && (
+                <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-3xl bg-blue-500 animate-pulse" />
+            )}
+
+            <div className={cn("flex flex-col", compact ? "gap-2.5 p-4" : "gap-3 p-4")}>
+                <div onClick={(e) => e.stopPropagation()} className="absolute right-3 top-3 z-10">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                                    className="h-7 w-7 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                                 >
-                                    <MoreVertical className="h-5 w-5" />
+                                    <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-52 rounded-2xl shadow-xl border-slate-100 p-1.5 backdrop-blur-sm grayscale-[0.2]">
-                                {task.status !== "Completed" && (
+                            <DropdownMenuContent align="end" className="w-52 rounded-2xl shadow-xl border-slate-100 p-1.5">
+                                {task.status !== "Completed" ? (
                                     <>
                                         <DropdownMenuItem
                                             onClick={() => onComplete(task.id)}
@@ -184,7 +299,7 @@ export function TaskGridCard({
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                     </>
-                                )}
+                                ) : null}
 
                                 <DropdownMenuItem
                                     onClick={() => {
@@ -208,138 +323,23 @@ export function TaskGridCard({
                                     {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
                                 </DropdownMenuItem>
 
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        </div>
-                    </div>
-                <div className="mt-3 min-w-0">
-                    <div className="flex min-w-0 items-center gap-1.5 text-slate-400">
-                        {isRecurring
-                            ? <RefreshCcw className="h-2.5 w-2.5 shrink-0" />
-                            : <Circle className="h-2.5 w-2.5 shrink-0" />
-                        }
-                        <p className="min-w-0 truncate text-[12px] font-medium text-slate-500">
-                            {projectFullName}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="mt-auto flex items-end justify-between pt-5">
-                    <div className="flex items-center gap-2">
-                        <PriorityBadge urgency={task.urgency || "Normal"} compact />
-                        <DeadlineBadge deadline={task.deadline} compact />
-                    </div>
-
-                    {hasValidCreatedAt && createdAtDate ? (
-                        <div className="flex shrink-0 items-center gap-1.5 text-slate-300">
-                            <CalendarIcon className="h-3 w-3" />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">
-                                {format(createdAtDate, "d MMM")}
-                            </span>
-                        </div>
-                    ) : null}
-                </div>
-            </div>
-        )
-    }
-
-    return (
-        <div
-            className={cn(
-                "group relative self-start border bg-white cursor-pointer transition-all duration-200",
-                compact ? "rounded-2xl border-slate-200 shadow-sm" : "rounded-3xl",
-                "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 border-slate-100",
-                isOverdue && "border-rose-200/80 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]",
-                isRunning && "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]",
-                isSelected && "border-primary/30 bg-primary/[0.02] shadow-[0_0_0_2px_rgba(var(--primary),0.1)]",
-                className
-            )}
-            onClick={() => onOpen(task.id)}
-        >
-            {/* Running timer indicator */}
-            {isRunning && (
-                <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-3xl bg-blue-500 animate-pulse" />
-            )}
-
-            <div className={cn("flex flex-col", compact ? "gap-2.5 p-3" : "gap-3 p-4")}>
-                {/* Header row: title + options menu */}
-                <div className="flex items-start justify-between gap-3">
-                    <h4 className={cn(
-                        "line-clamp-2 flex-1 font-bold leading-tight text-slate-900",
-                        compact ? "min-h-[2.15rem] pt-0 text-[15px]" : "min-h-[2.5rem] pt-0.5 text-[16px]",
-                        task.status === "Completed" && "line-through opacity-40"
-                    )}>
-                        {task.name || "Untitled task"}
-                    </h4>
-
-                    {/* Options menu */}
-                    <div onClick={e => e.stopPropagation()} className="shrink-0 -mr-1">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className={cn(
-                                        "rounded-xl text-slate-300 hover:bg-slate-50 hover:text-slate-500 transition-colors",
-                                        compact ? "h-7 w-7" : "h-8 w-8"
-                                    )}
-                                >
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl border-slate-100">
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        if (isRunning) {
-                                            pauseTimer()
-                                            return
-                                        }
-                                        if (isPaused) {
-                                            resumeTimer()
-                                            return
-                                        }
-                                        if (!task.projectId) {
-                                            toast.error("Task has no project")
-                                            return
-                                        }
-                                        startTimer(task.projectId, task.id, task.name || "Task")
-                                    }}
-                                    className="gap-2 text-sm font-medium cursor-pointer"
-                                >
-                                    {isRunning ? <Pause className="h-3.5 w-3.5 fill-current text-slate-500" /> : <Play className="h-3.5 w-3.5 fill-current text-slate-500" />}
-                                    {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
-                                </DropdownMenuItem>
-
-                                {isActiveTimerThisTask && (
+                                {isActiveTimerThisTask ? (
                                     <DropdownMenuItem
-                                        onClick={() => {
-                                            stopTimer()
-                                        }}
-                                        className="gap-2 text-sm font-medium cursor-pointer"
+                                        onClick={() => stopTimer()}
+                                        className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                     >
-                                        <Square className="h-3.5 w-3.5 fill-current text-slate-500" />
+                                        <Square className="h-4 w-4 fill-slate-500 text-slate-500" />
                                         Stop timer
                                     </DropdownMenuItem>
-                                )}
+                                ) : null}
 
                                 <DropdownMenuSeparator />
 
-                                {task.status !== "Completed" && (
-                                    <DropdownMenuItem
-                                        onClick={() => onComplete(task.id)}
-                                        className="gap-2 text-sm font-medium cursor-pointer"
-                                    >
-                                        <CheckCheck className="h-3.5 w-3.5 text-slate-500" />
-                                        Mark completed
-                                    </DropdownMenuItem>
-                                )}
-
-                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     onClick={() => onOpen(task.id)}
-                                    className="gap-2 text-sm font-medium cursor-pointer"
+                                    className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                 >
-                                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
+                                    <ArrowUpRight className="h-4 w-4 text-slate-500" />
                                     Open panel
                                 </DropdownMenuItem>
 
@@ -351,8 +351,22 @@ export function TaskGridCard({
                                 ) : null}
                             </DropdownMenuContent>
                         </DropdownMenu>
-                    </div>
                 </div>
+
+                {hasTopLabels ? (
+                    <div className="flex items-center gap-2 pr-8">
+                        <PriorityBadge urgency={task.urgency || "Normal"} compact={compact} />
+                        <DeadlineBadge deadline={task.deadline} compact={compact} />
+                    </div>
+                ) : null}
+
+                <h4 className={cn(
+                    "line-clamp-2 flex-1 font-bold leading-tight text-slate-900",
+                    compact ? "min-h-[2.15rem] pt-0 text-[15px]" : "min-h-[2.5rem] pt-0.5 text-[16px]",
+                    task.status === "Completed" && "line-through opacity-40"
+                )}>
+                    {task.name || "Untitled task"}
+                </h4>
 
                 {/* Project subtitle */}
                 {compact ? (
@@ -364,9 +378,6 @@ export function TaskGridCard({
                             }
                             <p className="min-w-0 truncate text-[11px] font-medium text-slate-400">{projectDomain}</p>
                         </div>
-                        <p className="mt-1 truncate text-[10px] font-medium text-slate-300">
-                            {projectServices}
-                        </p>
                     </div>
                 ) : (
                     <div className="flex items-start gap-1.5 min-w-0">
@@ -379,23 +390,6 @@ export function TaskGridCard({
                         </p>
                     </div>
                 )}
-
-                {/* Badges: priority + deadline + absolute date */}
-                <div className={cn("flex items-end justify-between mt-auto", compact ? "pt-1.5" : "pt-2")}>
-                    <div className="flex items-center gap-2">
-                        <PriorityBadge urgency={task.urgency || "Normal"} compact={compact} />
-                        <DeadlineBadge deadline={task.deadline} compact={compact} />
-                    </div>
-                    
-                    {hasValidCreatedAt && createdAtDate && (
-                        <div className="flex items-center gap-1.5 text-slate-400 shrink-0">
-                            <CalendarIcon className={cn(compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
-                            <span className={cn(compact ? "text-[10px]" : "text-[12px]", "font-medium")} title={format(createdAtDate, "dd MMM yyyy, HH:mm")}>
-                                {format(createdAtDate, "d MMM")}
-                            </span>
-                        </div>
-                    )}
-                </div>
             </div>
         </div>
     )

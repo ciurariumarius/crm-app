@@ -214,7 +214,6 @@ export function SettingsContent({
         <div className="max-w-4xl mx-auto flex flex-col gap-6">
             <PageHeader
                 title="Settings"
-                subtitle="Manage your profile, password, and security preferences."
             />
 
             <div className="grid grid-cols-1 gap-8">

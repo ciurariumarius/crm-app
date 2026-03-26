@@ -151,19 +151,19 @@ export function TasksToolbar({
                                         label: "All",
                                         value: "All",
                                         icon: <Circle className="h-2.5 w-2.5 fill-current" />,
-                                        activeClass: "bg-slate-100 text-slate-700",
+                                        activeClass: "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]",
                                     },
                                     {
                                         label: "Active",
                                         value: "Active",
                                         icon: <Play className="h-2.5 w-2.5 fill-current" />,
-                                        activeClass: "bg-blue-100 text-blue-700",
+                                        activeClass: "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]",
                                     },
                                     {
                                         label: "Completed",
                                         value: "Completed",
                                         icon: <CheckCircle2 className="h-3 w-3" />,
-                                        activeClass: "bg-emerald-100 text-emerald-700",
+                                        activeClass: "bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
                                     },
                                 ].map((option) => (
                                         <Link
@@ -173,7 +173,7 @@ export function TasksToolbar({
                                                 "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
                                                 currentStatus === option.value
                                                     ? option.activeClass
-                                                    : "text-slate-600 hover:text-slate-800"
+                                                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                             )}
                                         >
                                             {option.icon}
@@ -187,9 +187,9 @@ export function TasksToolbar({
                             <div className="inline-flex h-10 items-center gap-1">
                                     {[
                                         { label: "All", value: "all", icon: <Circle className="h-3 w-3" /> },
-                                        { label: "Urgent", value: "Urgent", icon: <AlertTriangle className="h-3 w-3 text-rose-500" /> },
+                                        { label: "Urgent", value: "Urgent", icon: <AlertTriangle className="h-3 w-3 text-[var(--state-urgent)]" /> },
                                         { label: "Normal", value: "Normal", icon: <Circle className="h-3 w-3 fill-current" /> },
-                                        { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3 w-3 text-amber-500" /> },
+                                        { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3 w-3 text-[var(--state-warning)]" /> },
                                     ].map((option) => (
                                         <Link
                                             key={option.value}
@@ -197,8 +197,8 @@ export function TasksToolbar({
                                             className={cn(
                                                 "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
                                                 currentUrgency === option.value
-                                                    ? "bg-blue-100 text-blue-700"
-                                                    : "text-slate-600 hover:text-slate-800"
+                                                    ? "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                                                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                             )}
                                         >
                                             {option.icon}
@@ -215,14 +215,14 @@ export function TasksToolbar({
                             className={cn(
                                 "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-colors",
                                 currentOverdue
-                                    ? "border-rose-300 bg-rose-50 text-rose-700 ring-1 ring-rose-200"
-                                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                    ? "border-[color:color-mix(in_srgb,var(--state-overdue)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_14%,white)] text-[var(--state-overdue)] ring-1 ring-[color:color-mix(in_srgb,var(--state-overdue)_22%,transparent)]"
+                                    : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                             )}
                         >
                             <CalendarClock className="h-3.5 w-3.5" />
                             <span>Overdue</span>
                             {currentOverdue ? (
-                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-200/80 text-rose-700">
+                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--state-overdue)_24%,white)] text-[var(--state-overdue)]">
                                     <Check className="h-3 w-3" />
                                 </span>
                             ) : null}
@@ -273,7 +273,7 @@ export function TasksToolbar({
                 <p className="ui-text-label">
                     {searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`}
                 </p>
-                {activeFilters.length > 0 && <span className="text-slate-300">|</span>}
+                {activeFilters.length > 0 && <span className="text-[var(--line-subtle)]">|</span>}
                 {activeFilters.map((filter) => (
                     <Link
                         key={filter.key}
@@ -304,7 +304,7 @@ function ColumnsToggle({
     onSelect: (value: 3 | 4) => void
 }) {
     return (
-        <div className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white p-1">
+        <div className="inline-flex h-10 items-center rounded-[10px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-1">
             {[3, 4].map((col) => (
                 <button
                     key={col}
@@ -314,8 +314,8 @@ function ColumnsToggle({
                     className={cn(
                         "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs font-semibold transition-colors",
                         currentCols === col
-                            ? "bg-slate-100 text-slate-900"
-                            : "text-slate-500 hover:text-slate-700"
+                            ? "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]"
+                            : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                     )}
                 >
                     {col}
@@ -346,14 +346,14 @@ function SortCombobox({
                     className={cn(
                         "inline-flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                     )}
                 >
-                    <ArrowUpDown className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <ArrowUpDown className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[260px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[260px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-apple)]">
                 <Command className="rounded-xl">
                     <CommandList>
                         <CommandGroup>
@@ -400,16 +400,16 @@ function ProjectCombobox({
                     className={cn(
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                     )}
                 >
-                    <Briefcase className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <Briefcase className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[180px] truncate">{selectedProject?.name || "Project"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[320px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[320px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-apple)]">
                 <Command className="rounded-xl">
                     <CommandInput placeholder="Search project..." />
                     <CommandList>
@@ -469,16 +469,16 @@ function PartnerCombobox({
                     className={cn(
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                     )}
                 >
-                    <Users className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <Users className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[180px] truncate">{selectedPartner?.name || "Partner"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[320px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[320px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-apple)]">
                 <Command className="rounded-xl">
                     <CommandInput placeholder="Search partner..." />
                     <CommandList>

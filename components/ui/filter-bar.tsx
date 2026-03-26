@@ -9,7 +9,7 @@ export function FilterBarShell({
     children: React.ReactNode
 }) {
     return (
-        <div className={cn("rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm", className)}>
+        <div className={cn("rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-4 py-3 shadow-[var(--shadow-apple)]", className)}>
             {children}
         </div>
     )
@@ -58,7 +58,7 @@ export function FilterBarDivider({
 }: {
     className?: string
 }) {
-    return <div className={cn("h-6 w-px bg-slate-200", className)} />
+    return <div className={cn("h-6 w-px bg-[var(--line-subtle)]", className)} />
 }
 
 export function FilterResultsRow({

@@ -50,38 +50,38 @@ const STATUS_OPTIONS = [
         label: "All",
         value: "All",
         icon: <Circle className="h-2.5 w-2.5 fill-current" />,
-        activeClass: "bg-slate-100 text-slate-700",
+        activeClass: "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]",
     },
     {
         label: "Active",
         value: "Active",
         icon: <Play className="h-2.5 w-2.5 fill-current" />,
-        activeClass: "bg-blue-100 text-blue-700",
+        activeClass: "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]",
     },
     {
         label: "Paused",
         value: "Paused",
         icon: <Circle className="h-2.5 w-2.5" />,
-        activeClass: "bg-amber-100 text-amber-700",
+        activeClass: "bg-[color:color-mix(in_srgb,var(--state-warning)_14%,white)] text-[var(--state-warning)]",
     },
     {
         label: "Completed",
         value: "Completed",
         icon: <CheckCircle2 className="h-3 w-3" />,
-        activeClass: "bg-emerald-100 text-emerald-700",
+        activeClass: "bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
     },
     {
         label: "Closed",
         value: "Closed",
         icon: <XCircle className="h-3 w-3" />,
-        activeClass: "bg-slate-200 text-slate-700",
+        activeClass: "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]",
     },
 ]
 
 const PAYMENT_OPTIONS = [
-    { label: "All", value: "All", icon: <Wallet className="h-3 w-3" />, activeClass: "bg-slate-100 text-slate-700" },
-    { label: "Paid", value: "Paid", icon: <CheckCircle2 className="h-3 w-3" />, activeClass: "bg-emerald-100 text-emerald-700" },
-    { label: "Unpaid", value: "Unpaid", icon: <AlertCircle className="h-3 w-3" />, activeClass: "bg-rose-100 text-rose-700" },
+    { label: "All", value: "All", icon: <Wallet className="h-3 w-3" />, activeClass: "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]" },
+    { label: "Paid", value: "Paid", icon: <CheckCircle2 className="h-3 w-3" />, activeClass: "bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]" },
+    { label: "Unpaid", value: "Unpaid", icon: <AlertCircle className="h-3 w-3" />, activeClass: "bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,white)] text-[var(--state-urgent)]" },
 ]
 
 const RECURRING_OPTIONS = [
@@ -239,7 +239,7 @@ export function ProjectsFiltersToolbar({
                                             "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
                                             currentStatus === option.value
                                                 ? option.activeClass
-                                                : "text-slate-600 hover:text-slate-800"
+                                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                         )}
                                     >
                                         {option.icon}
@@ -259,7 +259,7 @@ export function ProjectsFiltersToolbar({
                                             "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
                                             currentPayment === option.value
                                                 ? option.activeClass
-                                                : "text-slate-600 hover:text-slate-800"
+                                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                         )}
                                     >
                                         {option.icon}
@@ -318,7 +318,7 @@ export function ProjectsFiltersToolbar({
                 <p className="ui-text-label">
                     {searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`}
                 </p>
-                {activeFilters.length > 0 && <span className="text-slate-300">|</span>}
+                {activeFilters.length > 0 && <span className="text-[var(--line-subtle)]">|</span>}
                 {activeFilters.map((filter) => (
                     <Link
                         key={filter.key}
@@ -365,14 +365,14 @@ function SortCombobox({
                     className={cn(
                         "inline-flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                     )}
                 >
-                    <ArrowUpDown className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <ArrowUpDown className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[260px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[260px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-apple)]">
                 <Command className="rounded-xl">
                     <CommandList>
                         <CommandGroup>
@@ -449,16 +449,16 @@ function PeriodCombobox({
                     className={cn(
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                     )}
                 >
-                    <CalendarDays className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <CalendarDays className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[140px] truncate">{label}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[320px] rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+            <PopoverContent align="start" className="w-[320px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3 shadow-[var(--shadow-apple)]">
                 <div className="grid grid-cols-2 gap-2">
                     {PERIOD_OPTIONS.map((option) => (
                         <button
@@ -471,8 +471,8 @@ function PeriodCombobox({
                             className={cn(
                                 "inline-flex h-8 items-center justify-center rounded-md border px-2 text-xs font-medium transition-colors",
                                 currentPeriod === option.value && !currentFrom && !currentTo
-                                    ? "border-blue-200 bg-blue-50 text-blue-700"
-                                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                    ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                                    : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                             )}
                         >
                             {option.label}
@@ -480,7 +480,7 @@ function PeriodCombobox({
                     ))}
                 </div>
 
-                <div className="my-3 h-px bg-slate-200" />
+                <div className="my-3 h-px bg-[var(--line-subtle)]" />
 
                 <Calendar
                     mode="range"
@@ -493,7 +493,7 @@ function PeriodCombobox({
                         }
                     }}
                     numberOfMonths={1}
-                    className="rounded-xl border border-slate-100 bg-slate-50/50"
+                    className="rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)]"
                 />
 
                 <div className="mt-3 flex items-center justify-between">
@@ -503,11 +503,11 @@ function PeriodCombobox({
                             onSelectPreset("all_time")
                             setOpen(false)
                         }}
-                        className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                        className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     >
                         Clear range
                     </button>
-                    <span className="text-[11px] font-medium text-slate-500">
+                    <span className="text-[11px] font-medium text-[var(--text-secondary)]">
                         Pick start and end date
                     </span>
                 </div>
@@ -534,16 +534,16 @@ function TypeCombobox({
                     className={cn(
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                     )}
                 >
-                    <Repeat className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <Repeat className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span>Type</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[220px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[220px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-apple)]">
                 <Command className="rounded-xl">
                     <CommandList>
                         <CommandGroup>
@@ -590,16 +590,16 @@ function PartnerCombobox({
                     className={cn(
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                     )}
                 >
-                    <Users className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <Users className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[180px] truncate">{selectedPartner?.name || "Partner"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[320px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[320px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-apple)]">
                 <Command className="rounded-xl">
                     <CommandInput placeholder="Search partner..." />
                     <CommandList>

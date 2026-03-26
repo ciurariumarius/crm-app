@@ -26,7 +26,7 @@ export function PageHeader({
             <div className="flex min-h-10 items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                     <MobileMenuTrigger />
-                    <h1 className={cn("page-title", titleClassName)}>{title}</h1>
+                    <h1 className={cn("page-title data-blade-title", titleClassName)}>{title}</h1>
                 </div>
                 {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
             </div>

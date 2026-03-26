@@ -505,11 +505,11 @@ export function InlineQuickAddRow({
                                     "inline-flex h-6 items-center gap-1 rounded-lg px-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-all",
                                     isActive
                                         ? option === "Active"
-                                            ? "bg-[#2563EB] text-white shadow-sm"
+                                            ? "bg-primary text-primary-foreground shadow-sm"
                                             : option === "Paused"
-                                                ? "bg-[#FFFBEB] text-[#B45309] shadow-sm"
+                                                ? "bg-[var(--warning-surface)] text-[var(--warning-foreground)] shadow-sm"
                                             : option === "Completed"
-                                                ? "bg-[#ECFDF5] text-[#047857] shadow-sm"
+                                                ? "bg-[var(--success-surface)] text-[var(--success-foreground)] shadow-sm"
                                                 : "bg-slate-700 text-white shadow-sm"
                                         : "text-slate-500 hover:bg-white/80"
                                 )}
@@ -533,8 +533,8 @@ export function InlineQuickAddRow({
                                     "inline-flex h-6 items-center rounded-lg px-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-all",
                                     isActive
                                         ? option === "Paid"
-                                            ? "bg-[#ECFDF5] text-[#047857] shadow-sm"
-                                            : "bg-[#FFF1F2] text-[#BE123C] shadow-sm"
+                                            ? "bg-[var(--success-surface)] text-[var(--success-foreground)] shadow-sm"
+                                            : "bg-[var(--debt-surface)] text-[var(--debt)] shadow-sm"
                                         : "text-slate-500 hover:bg-white/80"
                                 )}
                             >

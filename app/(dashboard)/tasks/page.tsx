@@ -389,7 +389,7 @@ export default async function TasksPage({
                         projects={activeProjects}
                         label="Add Task"
                         showLabelOnMobile
-                        className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !bg-[#EFF6FF] !text-[#2563EB] !shadow-none border border-[#BFDBFE] hover:!bg-[#DBEAFE]"
+                        className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] !text-[var(--primary)] !shadow-none border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] hover:!bg-[color:color-mix(in_srgb,var(--primary-container)_24%,white)]"
                     />
                 </div>
 
@@ -423,7 +423,7 @@ export default async function TasksPage({
                                     className={
                                         "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
                                         (statusFilter === option.value
-                                            ? "bg-white text-[#2563EB] shadow-sm"
+                                            ? "bg-white text-[var(--primary)] shadow-sm"
                                             : "text-slate-600")
                                     }
                                 >
@@ -447,7 +447,7 @@ export default async function TasksPage({
                                     className={
                                         "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
                                         (urgencyFilter === option.value
-                                            ? "bg-white text-[#2563EB] shadow-sm"
+                                            ? "bg-white text-[var(--primary)] shadow-sm"
                                             : "text-slate-600")
                                     }
                                 >
@@ -472,7 +472,7 @@ export default async function TasksPage({
                                     className={
                                         "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
                                         (sort === option.value
-                                            ? "bg-white text-[#2563EB] shadow-sm"
+                                            ? "bg-white text-[var(--primary)] shadow-sm"
                                             : "text-slate-600")
                                     }
                                 >
@@ -488,7 +488,7 @@ export default async function TasksPage({
                                 href={buildTasksHref({ overdue: overdueOnly ? null : "1", page: "1" })}
                                 className={
                                     "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
-                                    (overdueOnly ? "bg-white text-[#2563EB] shadow-sm" : "text-slate-600")
+                                    (overdueOnly ? "bg-white text-[var(--primary)] shadow-sm" : "text-slate-600")
                                 }
                             >
                                 Overdue

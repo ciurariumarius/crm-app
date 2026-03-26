@@ -31,7 +31,7 @@ export function HomeHeaderActions({ partners, services, projects }: HomeHeaderAc
                 <button
                     type="button"
                     onClick={() => setCreateTaskOpen(true)}
-                    className="inline-flex h-[34px] items-center gap-2 rounded-xl bg-[#2563eb] px-4 text-[13px] font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
+                    className="inline-flex h-[34px] items-center gap-2 rounded-xl bg-primary px-4 text-[13px] font-bold text-primary-foreground shadow-sm transition-colors hover:brightness-95"
                 >
                     <CirclePlus className="h-4 w-4" />
                     Add Task
@@ -42,7 +42,7 @@ export function HomeHeaderActions({ partners, services, projects }: HomeHeaderAc
                 <button
                     type="button"
                     onClick={() => setCreateProjectOpen(true)}
-                    className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[#2563eb] transition-colors hover:bg-slate-50"
+                    className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-slate-50"
                 >
                     <FolderPlus className="h-4 w-4 stroke-[2.5px]" />
                     Add Project
@@ -51,7 +51,7 @@ export function HomeHeaderActions({ partners, services, projects }: HomeHeaderAc
                 <button
                     type="button"
                     onClick={() => setCreatePaymentOpen(true)}
-                    className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[#2563eb] transition-colors hover:bg-slate-50"
+                    className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-slate-50"
                 >
                     <WalletCards className="h-4 w-4 stroke-[2.5px]" />
                     Add Payment

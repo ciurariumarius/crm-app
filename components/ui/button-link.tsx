@@ -6,13 +6,13 @@ export const buttonLinkVariants = cva(
     {
         variants: {
             size: {
-                sm: "h-8 rounded-md px-2.5 text-xs",
-                md: "h-10 rounded-lg px-3 text-xs",
-                lg: "h-11 rounded-xl px-4 text-sm",
+                sm: "h-8 rounded-[10px] px-2.5 text-xs",
+                md: "h-10 rounded-[10px] px-3 text-xs",
+                lg: "h-11 rounded-[10px] px-4 text-sm",
             },
             variant: {
-                subtle: "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
-                activeBlue: "border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100/60",
+                subtle: "border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]",
+                activeBlue: "border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_18%,white)] text-[var(--primary)] hover:bg-[color:color-mix(in_srgb,var(--primary-container)_24%,white)]",
                 activeRose: "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100/60",
             },
             emphasis: {

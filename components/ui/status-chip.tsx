@@ -3,24 +3,24 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const statusChipVariants = cva(
-    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold tracking-[0.02em]",
+    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] border",
     {
         variants: {
             tone: {
-                neutral: "border-slate-200 bg-slate-100 text-slate-600",
-                active: "border-blue-200 bg-blue-50 text-blue-700",
-                paused: "border-amber-200 bg-amber-50 text-amber-700",
-                completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-                closed: "border-slate-300 bg-slate-200/70 text-slate-700",
-                paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
-                unpaid: "border-rose-200 bg-rose-50 text-rose-700",
-                urgent: "border-rose-200 bg-rose-50 text-rose-700",
-                idea: "border-amber-200 bg-amber-50 text-amber-700",
-                normal: "border-slate-200 bg-slate-100 text-slate-600",
-                recurring: "border-violet-200 bg-violet-50 text-violet-700",
-                oneTime: "border-emerald-200 bg-emerald-50 text-emerald-700",
-                outstanding: "border-rose-200 bg-rose-50 text-rose-700",
-                settled: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                neutral: "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]",
+                active: "border-[color:color-mix(in_srgb,var(--state-active)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-active)_14%,white)] text-[var(--state-active)]",
+                paused: "border-[color:color-mix(in_srgb,var(--state-paused)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-paused)_14%,white)] text-[var(--state-paused)]",
+                completed: "border-[color:color-mix(in_srgb,var(--state-success)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
+                closed: "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]",
+                paid: "border-[color:color-mix(in_srgb,var(--state-success)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
+                unpaid: "border-[color:color-mix(in_srgb,var(--state-urgent)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,white)] text-[var(--state-urgent)]",
+                urgent: "border-[color:color-mix(in_srgb,var(--state-urgent)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,white)] text-[var(--state-urgent)]",
+                idea: "border-[color:color-mix(in_srgb,var(--state-idea)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-idea)_14%,white)] text-[var(--state-idea)]",
+                normal: "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]",
+                recurring: "border-[color:color-mix(in_srgb,var(--brand-cyan)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_14%,white)] text-[var(--brand-primary)]",
+                oneTime: "border-[color:color-mix(in_srgb,var(--brand-indigo)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-indigo)_14%,white)] text-[var(--brand-indigo)]",
+                outstanding: "border-[color:color-mix(in_srgb,var(--state-overdue)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_14%,white)] text-[var(--state-overdue)]",
+                settled: "border-[color:color-mix(in_srgb,var(--state-success)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
             },
             size: {
                 xs: "h-5 px-2 text-[10px]",

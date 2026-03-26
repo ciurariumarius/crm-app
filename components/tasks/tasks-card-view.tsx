@@ -371,27 +371,26 @@ export function TasksCardView({
     }, [normalizedSearch, remoteTasks, searchSourceTasks])
 
     const renderGridView = () => (
-        <div className={cn("grid gap-3 sm:auto-rows-[156px]", colsClass)}>
+        <div className={cn("grid gap-4", colsClass)}>
             {visibleTasks.map((task) => (
-                <div key={task.id} className="sm:h-[156px]">
-                    <TaskGridCard
-                        task={task}
-                        onOpen={(taskId) => {
-                            const found = visibleTasks.find(t => t.id === taskId)
-                            if (found) setSelectedTask(found)
-                        }}
-                        onComplete={handleComplete}
-                        renderMenu={renderTaskActionMenu}
-                        isSelected={selectedIds.includes(task.id)}
-                        onSelect={toggleSelect}
-                        compact
-                        className="h-full"
-                    />
-                </div>
+                <TaskGridCard
+                    key={task.id}
+                    task={task}
+                    onOpen={(taskId) => {
+                        const found = visibleTasks.find(t => t.id === taskId)
+                        if (found) setSelectedTask(found)
+                    }}
+                    onComplete={handleComplete}
+                    renderMenu={renderTaskActionMenu}
+                    isSelected={selectedIds.includes(task.id)}
+                    onSelect={toggleSelect}
+                    compact
+                    className="h-full"
+                />
             ))}
 
             <div
-                className="group self-start cursor-pointer rounded-2xl border border-dashed border-slate-200 bg-slate-50/30 px-4 py-6 text-center transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-sm sm:h-[156px]"
+                className="group self-start cursor-pointer rounded-2xl border border-dashed border-slate-200 bg-slate-50/30 px-4 py-6 text-center transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-sm"
                 onClick={() => setCreateTaskOpen(true)}
             >
                 <div className="flex h-full flex-col items-center justify-center">

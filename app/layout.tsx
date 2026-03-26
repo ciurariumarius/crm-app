@@ -1,4 +1,4 @@
-import { Inter, JetBrains_Mono } from "next/font/google"
+import { Plus_Jakarta_Sans } from "next/font/google"
 import type { Metadata } from "next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
@@ -8,20 +8,14 @@ import { getSession } from "@/lib/auth"
 import type { TimerPreferences } from "@/components/providers/timer-provider"
 import prisma from "@/lib/prisma"
 
-const inter = Inter({
+const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
+  variable: "--font-plus-jakarta-sans",
   display: "swap",
 })
 
 export const viewport: import("next").Viewport = {
-  themeColor: "#F8FAFC",
+  themeColor: "#f7f9fb",
   width: "device-width",
   initialScale: 1,
 }
@@ -59,14 +53,18 @@ export default async function RootLayout({
 
   if (session) {
     try {
-      timerPreferenceRecord = await prisma.user.findFirst({
+      timerPreferenceRecord = (await prisma.user.findFirst({
         where: { id: session.userId, tenantId: session.tenantId },
         select: {
           timerIdlePauseMinutes: true,
           timerHardCapHours: true,
           timerReminderIntervalMinutes: true,
         }
-      })
+      })) as {
+        timerIdlePauseMinutes: number | null
+        timerHardCapHours: number | null
+        timerReminderIntervalMinutes: number | null
+      } | null
     } catch (error) {
       console.warn("[layout] Timer preference fields unavailable; using defaults.", error)
       timerPreferenceRecord = null
@@ -81,7 +79,7 @@ export default async function RootLayout({
     : null
 
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={plusJakartaSans.variable}>
       <body className="font-sans">
         <Providers initialActiveTimer={initialActiveTimer} timerPreferences={timerPreferences}>
           {children}

@@ -532,7 +532,7 @@ export function ProjectSheetContent({
             container.style.background = "#ffffff"
             container.style.color = "#0f172a"
             container.style.fontFamily =
-                "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+                "\"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
             container.innerHTML = `
                 <h1 style="font-size:24px;margin:0 0 8px 0;">Project Notes - ${safeTitle}</h1>
                 <div style="font-size:12px;color:#64748b;margin-bottom:24px;">

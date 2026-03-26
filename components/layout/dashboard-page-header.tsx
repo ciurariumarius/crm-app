@@ -36,9 +36,11 @@ export function DashboardPageHeader({
             ) : null}
 
             <div className={["hidden md:flex flex-col lg:flex-row lg:items-center gap-4", className].filter(Boolean).join(" ")}>
-                <div className="flex items-center gap-3 min-w-[180px]">
-                    <MobileMenuTrigger />
-                    <h1 className="ui-text-title text-slate-900">{title}</h1>
+                <div className="min-w-[220px]">
+                    <div className="flex items-center gap-3">
+                        <MobileMenuTrigger />
+                        <h1 className="ui-text-title text-slate-900">{title}</h1>
+                    </div>
                 </div>
 
                 {search ? <div className="flex-1 min-w-0">{search}</div> : <div className="flex-1 min-w-0" />}

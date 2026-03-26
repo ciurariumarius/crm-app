@@ -538,7 +538,6 @@ export default async function HomePage() {
         {} as Record<RevenuePeriodKey, RevenuePeriodDataset>
     )
 
-    const displayName = user?.name?.split(" ")[0] || user?.username || "Marius"
     const hourlyRate = Number(user?.hourlyRate || 0)
     const homeDialogProjects = serialize(
         allProjects.map((project) => ({
@@ -564,19 +563,13 @@ export default async function HomePage() {
                 <div className="flex items-start justify-between gap-4 md:hidden">
                     <div className="flex items-start gap-3">
                         <MobileMenuTrigger />
-                        <div>
-                            <h1 className="ui-text-title text-slate-900">Overview</h1>
-                            <p className="mt-1 text-sm text-slate-500">Good morning, {displayName}</p>
-                        </div>
+                        <h1 className="ui-text-title text-slate-900">Overview</h1>
                     </div>
                     <GlobalSearch />
                 </div>
 
                 <div className="hidden items-start justify-between gap-4 md:flex">
-                    <div>
-                        <h1 className="ui-text-title text-slate-900">Overview</h1>
-                        <p className="mt-1 text-sm text-slate-500">Good morning, {displayName}</p>
-                    </div>
+                    <h1 className="ui-text-title text-slate-900">Overview</h1>
                     <div className="flex-1 min-w-[280px] px-2">
                         <GlobalSearch />
                     </div>
@@ -612,10 +605,10 @@ export default async function HomePage() {
                             <div className="text-right">
                                 <Link
                                     href={thisMonthProjectsHref}
-                                    className="group inline-flex flex-col items-end rounded-md transition-colors hover:bg-blue-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                    className="group inline-flex flex-col items-end rounded-md transition-colors hover:bg-[color:color-mix(in_srgb,var(--primary-container)_14%,white)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-container)_35%,transparent)]"
                                     aria-label="View this month projects"
                                 >
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">This month</p>
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-[var(--primary)]">This month</p>
                                     <div className="mt-1 flex items-center justify-end gap-2">
                                         <p className="text-sm font-bold text-slate-800 group-hover:underline">{formatCurrency(monthRevenue)}</p>
                                     </div>
