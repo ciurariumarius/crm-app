@@ -39,6 +39,7 @@ import { SidePanelNotesSection } from "@/components/shared/side-panel-notes-sect
 import { SidePanelTimeLogHistoryList } from "@/components/shared/side-panel-time-log-history-list"
 import { TimeLogSheet } from "@/components/time/time-log-sheet"
 import { TimeTrackerWidget } from "@/components/shared/time-tracker-widget"
+import { StatusChip } from "@/components/ui/status-chip"
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ProjectWithDetails } from "@/types"
@@ -870,26 +871,25 @@ export function ProjectSheetContent({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-3">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-4 md:gap-3">
                             <div className="flex items-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
                                             className={cn(
-                                                "group/status relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
-                                                project.status === "Active" && "border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-100/50 text-blue-600 shadow-[0_2px_10px_-4px_rgba(37,99,235,0.15)] hover:border-blue-300/60",
-                                                project.status === "Paused" && "border-amber-200/50 bg-gradient-to-br from-amber-50/80 to-amber-100/50 text-amber-600 shadow-[0_2px_10px_-4px_rgba(217,119,6,0.15)] hover:border-amber-300/60",
-                                                project.status === "Completed" && "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60",
-                                                project.status === "Closed" && "border-slate-200/50 bg-gradient-to-br from-slate-50/80 to-slate-100/50 text-slate-600 shadow-[0_2px_10px_-4px_rgba(71,85,105,0.15)] hover:border-slate-300/60"
+                                                "group/status relative flex h-10 w-full items-center justify-center gap-2 rounded-[8px] border transition-all duration-300 active:scale-[0.98] sm:h-11 px-4 text-[11px] font-black uppercase tracking-[0.05em]",
+                                                project.status === "Active" && "border-[#0b8fa8/20] bg-[#edf9fb] text-[#0b8fa8] hover:bg-[#e4f6f8]",
+                                                project.status === "Paused" && "border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100/50",
+                                                project.status === "Completed" && "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100/50",
+                                                project.status === "Closed" && "border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200/50"
                                             )}
                                         >
-                                            <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover/status:translate-y-0" />
-                                            {project.status === "Active" && <Play className="relative z-10 h-3.5 w-3.5 fill-current" />}
-                                            {project.status === "Paused" && <Pause className="relative z-10 h-3.5 w-3.5" />}
-                                            {project.status === "Completed" && <Check className="relative z-10 h-3.5 w-3.5" />}
-                                            {project.status === "Closed" && <Square className="relative z-10 h-3.5 w-3.5 fill-current" />}
-                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.status}</span>
+                                            {project.status === "Active" && <Play className="h-3 w-3 fill-current" />}
+                                            {project.status === "Paused" && <Pause className="h-3 w-3" />}
+                                            {project.status === "Completed" && <Check className="h-3 w-3" />}
+                                            {project.status === "Closed" && <Square className="h-3 w-3 fill-current" />}
+                                            <span>{project.status}</span>
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -915,23 +915,31 @@ export function ProjectSheetContent({
                             </div>
 
                             <div className="flex items-center">
+                                <StatusChip 
+                                    tone={project.services?.[0]?.isRecurring ? "recurring" : "oneTime"} 
+                                    className="h-10 w-full justify-center rounded-[8px] sm:h-11"
+                                >
+                                    {project.services?.[0]?.isRecurring ? "Recurring" : "One-Time"}
+                                </StatusChip>
+                            </div>
+
+                            <div className="flex items-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
                                             className={cn(
-                                                "group/payment relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
+                                                "group/payment relative flex h-10 w-full items-center justify-center gap-2 rounded-[8px] border transition-all duration-300 active:scale-[0.98] sm:h-11 px-4 text-[11px] font-black uppercase tracking-[0.05em]",
                                                 project.paymentStatus === "Paid" 
-                                                    ? "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60" 
-                                                    : "border-rose-200/50 bg-gradient-to-br from-rose-50/80 to-rose-100/50 text-rose-600 shadow-[0_2px_10px_-4px_rgba(225,29,72,0.15)] hover:border-rose-300/60"
+                                                    ? "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100/50" 
+                                                    : "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100/50"
                                             )}
                                         >
-                                            <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover/payment:translate-y-0" />
                                             <span className={cn(
-                                                "relative z-10 h-2.5 w-2.5 rounded-full shadow-sm", 
+                                                "h-2 w-2 rounded-full", 
                                                 project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
                                             )} />
-                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.paymentStatus}</span>
+                                            <span>{project.paymentStatus}</span>
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">

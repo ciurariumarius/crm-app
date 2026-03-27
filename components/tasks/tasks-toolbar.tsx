@@ -4,17 +4,14 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
-    Circle,
-    Play,
-    CheckCircle2,
     AlertTriangle,
     Lightbulb,
     CalendarClock,
-    Briefcase,
-    Users,
     ChevronDown,
-    ArrowUpDown,
+    SlidersHorizontal,
     Check,
+    LayoutGrid,
+    Table2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -25,7 +22,6 @@ import {
     FilterBarShell,
     FilterResultsRow,
 } from "@/components/ui/filter-bar"
-import { buttonLinkClassName } from "@/components/ui/button-link"
 import {
     Popover,
     PopoverContent,
@@ -47,6 +43,19 @@ const SORT_OPTIONS = [
     { label: "Recently Updated", value: "updated" },
     { label: "Name A-Z", value: "name_asc" },
     { label: "Name Z-A", value: "name_desc" },
+]
+
+const STATUS_OPTIONS = [
+    { label: "All", value: "All", dotClass: "bg-slate-400", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+    { label: "Active", value: "Active", dotClass: "bg-emerald-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+    { label: "Completed", value: "Completed", dotClass: "bg-cyan-700", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+]
+
+const PRIORITY_OPTIONS = [
+    { label: "All", value: "all", icon: <span className="h-2 w-2 rounded-full bg-slate-400" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+    { label: "Urgent", value: "Urgent", icon: <AlertTriangle className="h-3 w-3" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+    { label: "Normal", value: "Normal", icon: <span className="h-2 w-2 rounded-full bg-slate-500" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+    { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3 w-3" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
 ]
 
 export function TasksToolbar({
@@ -126,6 +135,7 @@ export function TasksToolbar({
     const displayTotal = hasSearchTerm && searchResultCount !== null && searchResultCount !== undefined
         ? searchResultCount
         : totalTasks
+    const resultsLabel = searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`
 
     const selectedProject = projects.find((project) => project.id === currentProject)
     const selectedPartner = partners.find((partner) => partner.id === currentPartner)
@@ -141,74 +151,52 @@ export function TasksToolbar({
 
     return (
         <div className="space-y-3">
-            <FilterBarShell>
+            <FilterBarShell className="rounded-2xl border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 shadow-none">
                 <FilterBarScroll>
-                    <FilterBarRow>
+                    <FilterBarRow className="items-center md:gap-4">
                         <FilterBarGroup className={cn(mobileSecondaryOnly && "hidden")}>
-                            <div className="inline-flex h-10 items-center gap-1">
-                                {[
-                                    {
-                                        label: "All",
-                                        value: "All",
-                                        icon: <Circle className="h-2.5 w-2.5 fill-current" />,
-                                        activeClass: "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]",
-                                    },
-                                    {
-                                        label: "Active",
-                                        value: "Active",
-                                        icon: <Play className="h-2.5 w-2.5 fill-current" />,
-                                        activeClass: "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]",
-                                    },
-                                    {
-                                        label: "Completed",
-                                        value: "Completed",
-                                        icon: <CheckCircle2 className="h-3 w-3" />,
-                                        activeClass: "bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
-                                    },
-                                ].map((option) => (
+                            <div className="inline-flex h-10 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
+                                {STATUS_OPTIONS.map((option) => (
                                         <Link
                                             key={option.value}
                                             href={buildHref({ status: option.value })}
                                             className={cn(
-                                                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                                                "inline-flex h-8 items-center gap-2 rounded-md px-3 text-[12px] font-semibold uppercase tracking-[0.04em] transition-colors",
                                                 currentStatus === option.value
                                                     ? option.activeClass
                                                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                             )}
                                         >
-                                            {option.icon}
+                                            {option.value !== "All" ? (
+                                                <span className={cn("h-2 w-2 rounded-full", option.dotClass)} />
+                                            ) : null}
                                             {option.label}
                                         </Link>
                                 ))}
                             </div>
 
-                            <FilterBarDivider className="md:mx-1" />
+                            <FilterBarDivider className="md:mx-2" />
 
-                            <div className="inline-flex h-10 items-center gap-1">
-                                    {[
-                                        { label: "All", value: "all", icon: <Circle className="h-3 w-3" /> },
-                                        { label: "Urgent", value: "Urgent", icon: <AlertTriangle className="h-3 w-3 text-[var(--state-urgent)]" /> },
-                                        { label: "Normal", value: "Normal", icon: <Circle className="h-3 w-3 fill-current" /> },
-                                        { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3 w-3 text-[var(--state-warning)]" /> },
-                                    ].map((option) => (
+                            <div className="inline-flex h-10 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
+                                    {PRIORITY_OPTIONS.map((option) => (
                                         <Link
                                             key={option.value}
                                             href={buildHref({ urgency: option.value })}
                                             className={cn(
-                                                "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                                                "inline-flex h-8 items-center gap-2 rounded-md px-3 text-[12px] font-semibold uppercase tracking-[0.04em] transition-colors",
                                                 currentUrgency === option.value
-                                                    ? "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                                                    ? option.activeClass
                                                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                             )}
                                         >
-                                            {option.icon}
+                                            {option.value !== "all" ? option.icon : null}
                                             {option.label}
                                         </Link>
                                     ))}
                             </div>
                         </FilterBarGroup>
 
-                        <FilterBarDivider className={cn("md:mx-1", mobileSecondaryOnly && "hidden")} />
+                        <FilterBarDivider className={cn("md:mx-2", mobileSecondaryOnly && "hidden")} />
 
                         <Link
                             href={buildHref({ overdue: currentOverdue ? null : "1" })}
@@ -216,7 +204,7 @@ export function TasksToolbar({
                                 "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-colors",
                                 currentOverdue
                                     ? "border-[color:color-mix(in_srgb,var(--state-overdue)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_14%,white)] text-[var(--state-overdue)] ring-1 ring-[color:color-mix(in_srgb,var(--state-overdue)_22%,transparent)]"
-                                    : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                                    : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                             )}
                         >
                             <CalendarClock className="h-3.5 w-3.5" />
@@ -228,7 +216,7 @@ export function TasksToolbar({
                             ) : null}
                         </Link>
 
-                        <FilterBarDivider className="md:mx-1" />
+                        <FilterBarDivider className="md:mx-2" />
 
                         <ProjectCombobox
                             projects={projects}
@@ -250,7 +238,7 @@ export function TasksToolbar({
                             }}
                         />
 
-                        <FilterBarDivider className="md:ml-auto md:mr-1" />
+                        <FilterBarDivider className="md:ml-auto md:mr-2" />
 
                         <SortCombobox
                             currentSort={currentSort}
@@ -269,28 +257,46 @@ export function TasksToolbar({
                 </FilterBarScroll>
             </FilterBarShell>
 
-            <FilterResultsRow>
-                <p className="ui-text-label">
-                    {searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`}
-                </p>
-                {activeFilters.length > 0 && <span className="text-[var(--line-subtle)]">|</span>}
-                {activeFilters.map((filter) => (
-                    <Link
-                        key={filter.key}
-                        href={filter.href}
-                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "gap-1 text-[12px]" })}
+            <FilterResultsRow className="justify-between gap-4 pt-1">
+                <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{resultsLabel}</p>
+                    {activeFilters.length > 0 && <span className="text-[var(--line-subtle)]">|</span>}
+                    {activeFilters.map((filter) => (
+                        <Link
+                            key={filter.key}
+                            href={filter.href}
+                            className="inline-flex h-7 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
+                        >
+                            <span>{filter.label}</span>
+                        </Link>
+                    ))}
+                    {activeFilters.length > 0 && (
+                        <Link
+                            href={clearAllHref}
+                            className="inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800"
+                        >
+                            Clear all
+                        </Link>
+                    )}
+                </div>
+                <div className="hidden items-center gap-2 md:flex">
+                    <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
+                        title="Board view"
+                        aria-label="Board view"
                     >
-                        <span>{filter.label}</span>
-                    </Link>
-                ))}
-                {activeFilters.length > 0 && (
-                    <Link
-                        href={clearAllHref}
-                        className={buttonLinkClassName({ size: "sm", variant: "subtle", emphasis: "strong", className: "text-[12px]" })}
+                        <LayoutGrid className="h-4 w-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                        title="Table view"
+                        aria-label="Table view"
                     >
-                        Clear all
-                    </Link>
-                )}
+                        <Table2 className="h-4 w-4" />
+                    </button>
+                </div>
             </FilterResultsRow>
         </div>
     )
@@ -304,7 +310,7 @@ function ColumnsToggle({
     onSelect: (value: 3 | 4) => void
 }) {
     return (
-        <div className="inline-flex h-10 items-center rounded-[10px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-1">
+        <div className="inline-flex h-10 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-1">
             {[3, 4].map((col) => (
                 <button
                     key={col}
@@ -314,7 +320,7 @@ function ColumnsToggle({
                     className={cn(
                         "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs font-semibold transition-colors",
                         currentCols === col
-                            ? "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]"
+                            ? "bg-white text-[var(--text-primary)] shadow-sm"
                             : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                     )}
                 >
@@ -347,10 +353,10 @@ function SortCombobox({
                         "inline-flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
                         isActive
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                     )}
                 >
-                    <ArrowUpDown className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
+                    <SlidersHorizontal className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                 </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[260px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-apple)]">
@@ -401,10 +407,9 @@ function ProjectCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                     )}
                 >
-                    <Briefcase className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[180px] truncate">{selectedProject?.name || "Project"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
@@ -470,10 +475,9 @@ function PartnerCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                     )}
                 >
-                    <Users className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[180px] truncate">{selectedPartner?.name || "Partner"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>

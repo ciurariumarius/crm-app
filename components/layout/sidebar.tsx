@@ -72,14 +72,14 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
   const { isMobileMenuOpen, setIsMobileMenuOpen, isSidebarCollapsed, setIsSidebarCollapsed } = useHeader()
   const asideRef = useRef<HTMLElement | null>(null)
   const [isSidebarFocusExpanded, setIsSidebarFocusExpanded] = useState(false)
-  const [databaseOpen, setDatabaseOpen] = useState(true)
-  const [ppcOpen, setPpcOpen] = useState(true)
+  const [databaseOpen, setDatabaseOpen] = useState(false)
+  const [ppcOpen, setPpcOpen] = useState(false)
 
   const isDesktopCollapsed = isSidebarCollapsed && !isSidebarFocusExpanded
   const isDatabaseActive = databaseNav.some((item) => isActivePath(pathname, item.href))
   const isPpcActive = ppcNav.some((item) => isActivePath(pathname, item.href))
-  const showDatabaseChildren = databaseOpen || isDatabaseActive
-  const showPpcChildren = ppcOpen || isPpcActive
+  const showDatabaseChildren = databaseOpen
+  const showPpcChildren = ppcOpen
   const displayName = user?.name || user?.username || "Admin"
   const displayRole = "Admin"
   const initials = displayName.substring(0, 2).toUpperCase()
@@ -187,7 +187,6 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
       {!isDesktopCollapsed && expanded ? (
         <div className="space-y-1 pl-3">{items.map(renderDesktopItem)}</div>
       ) : null}
-      {isDesktopCollapsed && isActive ? <div className="space-y-1">{items.map(renderDesktopItem)}</div> : null}
       </div>
     )
   }

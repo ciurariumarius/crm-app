@@ -65,18 +65,6 @@ export function ProjectBoardHeaderRow({
             <span className="ui-overline text-slate-500">Partner</span>
             <button
                 type="button"
-                onClick={() => onSort("updatedAt")}
-                className={cn(
-                    "ui-overline inline-flex items-center justify-end gap-1 text-right",
-                    sortBy === "updatedAt" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
-                )}
-                title={`Sort by last edit (${sortBy === "updatedAt" && sortDirection === "desc" ? "newest first" : "oldest first"})`}
-            >
-                Last Edit
-                <ArrowDownUp className="h-3 w-3" />
-            </button>
-            <button
-                type="button"
                 onClick={() => onSort("createdAt")}
                 className={cn(
                     "ui-overline inline-flex items-center justify-end gap-1 text-right",
@@ -90,4 +78,3 @@ export function ProjectBoardHeaderRow({
         </div>
     )
 }
-

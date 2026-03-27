@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { CalendarDays, Check, Circle, Pause, Play, Plus, Square, RefreshCcw, Zap } from "lucide-react"
+import { CalendarDays, Check, Circle, Pause, Plus, Square } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/popover"
 import { ProjectBoardHeaderRow } from "@/components/projects/project-board-header-row"
 import { ProjectBoardSummaryCards } from "@/components/projects/project-board-summary-cards"
+import { StatusChip, statusToneFromLabel } from "@/components/ui/status-chip"
 import type { ProjectWithDetails } from "@/types"
 import type { SearchPaginationState } from "@/types/search-pagination"
 
@@ -33,6 +34,7 @@ const currencyFormatter = new Intl.NumberFormat("ro-RO", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
 })
+const PROJECT_ROW_CHIP_CLASS = "h-6 min-w-[84px] px-2.5 text-[10px] leading-none tracking-[0.06em] whitespace-nowrap"
 
 function formatDuration(totalSeconds: number) {
     if (totalSeconds <= 0) return "0h 0m"
@@ -41,7 +43,7 @@ function formatDuration(totalSeconds: number) {
     return `${hours}h ${minutes}m`
 }
 
-const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,3.5fr)_72px_90px_78px_95px_60px_78px_96px_116px_116px]"
+const LIST_GRID_COLUMNS = "grid-cols-[minmax(300px,2.7fr)_72px_90px_78px_95px_60px_78px_120px_116px]"
 
 function toTimestamp(value: Date | string | null | undefined) {
     if (!value) return null
@@ -60,10 +62,72 @@ function formatDateTimeParts(value: Date | string | null | undefined) {
     }
 }
 
-function getFaviconUrl(domain: string | null | undefined) {
-    const normalized = (domain || "").trim().replace(/^https?:\/\//, "").split("/")[0]
-    if (!normalized) return null
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(normalized)}&sz=32`
+function normalizeDomain(domain: string | null | undefined) {
+    return (domain || "").trim().replace(/^https?:\/\//, "").split("/")[0]
+}
+
+function getFaviconCandidates(domain: string | null | undefined) {
+    const normalized = normalizeDomain(domain)
+    if (!normalized) return []
+    return [
+        `https://${normalized}/favicon.ico`,
+        `https://www.google.com/s2/favicons?domain=${encodeURIComponent(normalized)}&sz=128`,
+    ]
+}
+
+function getDomainInitials(domain: string | null | undefined) {
+    const normalized = normalizeDomain(domain)
+    if (!normalized) return "??"
+    const token = normalized.split(".")[0] || normalized
+    return token.slice(0, 2).toUpperCase()
+}
+
+
+function DomainFaviconTile({ domain }: { domain: string | null | undefined }) {
+    const [failed, setFailed] = React.useState(false)
+    const [candidateIndex, setCandidateIndex] = React.useState(0)
+    const candidates = React.useMemo(() => getFaviconCandidates(domain), [domain])
+    const faviconUrl = candidates[candidateIndex] || null
+    const fallback = getDomainInitials(domain)
+
+    React.useEffect(() => {
+        setFailed(false)
+        setCandidateIndex(0)
+    }, [domain])
+
+    return (
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+            {!failed && faviconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                    src={faviconUrl}
+                    alt=""
+                    className="h-7 w-7 rounded-md object-contain"
+                    loading="lazy"
+                    onLoad={(event) => {
+                        const { naturalWidth, naturalHeight } = event.currentTarget
+                        // Avoid blurry placeholders from low-res/default favicons.
+                        if (naturalWidth < 24 || naturalHeight < 24) {
+                            if (candidateIndex < candidates.length - 1) {
+                                setCandidateIndex((prev) => prev + 1)
+                                return
+                            }
+                            setFailed(true)
+                        }
+                    }}
+                    onError={() => {
+                        if (candidateIndex < candidates.length - 1) {
+                            setCandidateIndex((prev) => prev + 1)
+                            return
+                        }
+                        setFailed(true)
+                    }}
+                />
+            ) : (
+                <span className="text-[11px] font-extrabold tracking-wide text-slate-700">{fallback}</span>
+            )}
+        </span>
+    )
 }
 
 function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
@@ -74,46 +138,6 @@ function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
             <span className="text-[11px] font-medium text-slate-500">{dateLabel}</span>
         </div>
     )
-}
-
-function getStatusBadge(status: string) {
-    if (status === "Active") {
-        return {
-            label: "Active",
-            className: "status-pill status-pill-action",
-            icon: <Play className="h-3 w-3 fill-current" />,
-        }
-    }
-
-    if (status === "Closed") {
-        return {
-            label: "Closed",
-            className: "status-pill status-pill-closed",
-            icon: <Square className="h-3 w-3 fill-current" />,
-        }
-    }
-
-    if (status === "Paused") {
-        return {
-            label: "Paused",
-            className: "status-pill status-pill-warning",
-            icon: <Pause className="h-3 w-3" />,
-        }
-    }
-
-    if (status === "Completed") {
-        return {
-            label: "Completed",
-            className: "status-pill status-pill-success",
-            icon: <Check className="h-3.5 w-3.5" />,
-        }
-    }
-
-    return {
-        label: status,
-        className: "status-pill",
-        icon: <Circle className="h-3 w-3" />,
-    }
 }
 
 type BoardProject = {
@@ -507,7 +531,7 @@ export function ProjectsBoardRows({
                     const overAllocated = isTimeOverAllocated(project)
                     const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                     const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
-                    const statusBadge = getStatusBadge(projectStatus)
+
                     return (
                         <button
                             key={project.id}
@@ -520,33 +544,27 @@ export function ProjectsBoardRows({
                                     <p className={cn("text-lg font-bold tracking-tight truncate", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
                                     <div className={cn("mt-1 flex items-center gap-2 text-sm", getProjectMetaClass(projectStatus))}>
                                         <p className="truncate">{project.serviceLabel}</p>
-                                        {projectStatus !== "Active" && (
-                                            <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
-                                                {statusBadge.icon}
-                                                {statusBadge.label}
-                                            </span>
-                                        )}
                                     </div>
                                 </div>
-                                <span className={cn(
-                                    "status-pill",
-                                    projectStatus === "Active" ? "status-pill-action" :
-                                        projectStatus === "Paused" ? "status-pill-warning" :
-                                        projectStatus === "Completed" ? "status-pill-success" :
-                                            "status-pill-closed"
-                                )}>
-                                    {projectStatus}
-                                </span>
+                                <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                                    <StatusChip tone={statusToneFromLabel(projectStatus)} size="sm">
+                                        {projectStatus}
+                                    </StatusChip>
+                                </div>
                             </div>
 
                             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                                 <div>
-                                    <p className="text-slate-400 text-xs font-medium">Type</p>
-                                    <p className="font-medium text-slate-700">{project.isRecurring ? "Monthly" : "One-time"}</p>
+                                    <p className="text-slate-400 text-xs font-medium mb-1">Type</p>
+                                    <StatusChip tone={project.isRecurring ? "recurring" : "oneTime"} size="sm">
+                                        {project.isRecurring ? "Recurring" : "One-Time"}
+                                    </StatusChip>
                                 </div>
                                 <div>
-                                    <p className="text-slate-400 text-xs font-medium">Payment</p>
-                                    <p className={cn("font-medium", project.paymentStatus === "Paid" ? "text-emerald-700" : "text-rose-600")}>{project.paymentStatus}</p>
+                                    <p className="text-slate-400 text-xs font-medium mb-1">Payment</p>
+                                    <StatusChip tone={project.paymentStatus === "Paid" ? "paid" : "unpaid"} size="sm">
+                                        {project.paymentStatus}
+                                    </StatusChip>
                                 </div>
                                 <div>
                                     <p className="text-slate-400 text-xs font-medium">Amount</p>
@@ -613,7 +631,7 @@ export function ProjectsBoardRows({
                             const overAllocated = isTimeOverAllocated(project)
                             const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                             const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
-                            const statusBadge = getStatusBadge(projectStatus)
+
                             return (
                                 <React.Fragment key={project.id}>
                                     <button
@@ -623,59 +641,33 @@ export function ProjectsBoardRows({
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
-                                                <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
-                                                    <span className="inline-flex items-center gap-2">
-                                                        {getFaviconUrl(project.site.domainName) ? (
-                                                            // eslint-disable-next-line @next/next/no-img-element
-                                                            <img
-                                                                src={getFaviconUrl(project.site.domainName) || undefined}
-                                                                alt=""
-                                                                className="h-4 w-4 rounded-sm shrink-0"
-                                                                loading="lazy"
-                                                            />
-                                                        ) : null}
-                                                        <span>{project.site.domainName}</span>
-                                                    </span>
-                                                </p>
-                                                <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
-                                                    <span className="break-words">{project.serviceLabel}</span>
-                                                    {projectStatus !== "Active" && (
-                                                        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
-                                                            {statusBadge.icon}
-                                                            {statusBadge.label}
-                                                        </span>
-                                                    )}
+                                                <div className="flex items-center gap-2.5">
+                                                    <DomainFaviconTile domain={project.site.domainName} />
+                                                    <div className="min-w-0">
+                                                        <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
+                                                            <span>{project.site.domainName}</span>
+                                                        </p>
+                                                        <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
+                                                            <span className="break-words">{project.serviceLabel}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <span className={cn(
-                                                "status-pill min-w-[72px] justify-center",
-                                                project.paymentStatus === "Paid" ? "status-pill-success" : "status-pill-debt"
-                                            )}>
-                                                {project.paymentStatus}
-                                            </span>
+                                            <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="sm">
+                                                {projectPayment}
+                                            </StatusChip>
                                         </div>
                                         <div className="mt-3 flex items-center justify-between">
                                             <span className="font-mono text-base font-bold text-slate-900">
                                                 {currencyFormatter.format(project.amount)} <span className="text-[10px] text-slate-400">RON</span>
                                             </span>
                                             <div className="flex items-center gap-2">
-                                                <span
-                                                    title={statusBadge.label}
-                                                    aria-label={statusBadge.label}
-                                                    className={cn(
-                                                        "inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all",
-                                                        statusBadge.className
-                                                    )}
-                                                >
-                                                    {statusBadge.icon}
-                                                </span>
-                                                <span
-                                                    title="One-time"
-                                                    aria-label="One-time"
-                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm transition-all"
-                                                >
-                                                    <Zap className="h-4 w-4 [stroke-width:1.5]" />
-                                                </span>
+                                                <StatusChip tone={statusToneFromLabel(projectStatus)} size="sm">
+                                                    {projectStatus}
+                                                </StatusChip>
+                                                <StatusChip tone={project.isRecurring ? "recurring" : "oneTime"} size="sm">
+                                                    {project.isRecurring ? "Recurring" : "One-Time"}
+                                                </StatusChip>
                                             </div>
                                         </div>
                                     </button>
@@ -692,28 +684,16 @@ export function ProjectsBoardRows({
                                         className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-white px-6 py-2.5", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
-                                            <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
-                                                <span className="inline-flex items-center gap-2">
-                                                    {getFaviconUrl(project.site.domainName) ? (
-                                                        // eslint-disable-next-line @next/next/no-img-element
-                                                        <img
-                                                            src={getFaviconUrl(project.site.domainName) || undefined}
-                                                            alt=""
-                                                            className="h-4 w-4 rounded-sm shrink-0"
-                                                            loading="lazy"
-                                                        />
-                                                    ) : null}
-                                                    <span>{project.site.domainName}</span>
-                                                </span>
-                                            </p>
-                                            <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
-                                                <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
-                                                {projectStatus !== "Active" && (
-                                                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
-                                                        {statusBadge.icon}
-                                                        {statusBadge.label}
-                                                    </span>
-                                                )}
+                                            <div className="flex items-center gap-2.5">
+                                                <DomainFaviconTile domain={project.site.domainName} />
+                                                <div className="min-w-0">
+                                                    <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
+                                                        <span>{project.site.domainName}</span>
+                                                    </p>
+                                                    <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
+                                                        <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex justify-center">
@@ -721,18 +701,12 @@ export function ProjectsBoardRows({
                                                 <DropdownMenuTrigger asChild>
                                                     <button
                                                         type="button"
-                                                        title={`Status: ${statusBadge.label}`}
-                                                        aria-label={`Status: ${statusBadge.label}`}
                                                         onClick={(event) => event.stopPropagation()}
-                                                        className={cn(
-                                                            "inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all",
-                                                            projectStatus === "Active" && "border-blue-300 bg-blue-100 text-blue-700",
-                                                            projectStatus === "Paused" && "border-amber-300 bg-amber-100 text-amber-700",
-                                                            projectStatus === "Completed" && "border-emerald-300 bg-emerald-100 text-emerald-700",
-                                                            projectStatus === "Closed" && "border-slate-300 bg-slate-200 text-slate-700",
-                                                        )}
+                                                        className="focus:outline-none"
                                                     >
-                                                        {statusBadge.icon}
+                                                        <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
+                                                            {projectStatus}
+                                                        </StatusChip>
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -762,13 +736,11 @@ export function ProjectsBoardRows({
                                                     <button
                                                         type="button"
                                                         onClick={(event) => event.stopPropagation()}
-                                                        className={cn(
-                                                            "status-pill h-9 min-w-[84px] justify-center transition-all rounded-xl",
-                                                            projectPayment === "Paid" ? "status-pill-success" : "status-pill-debt"
-                                                        )}
-                                                        title={`Payment: ${projectPayment}`}
+                                                        className="focus:outline-none"
                                                     >
-                                                        {projectPayment}
+                                                        <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
+                                                            {projectPayment}
+                                                        </StatusChip>
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -790,13 +762,9 @@ export function ProjectsBoardRows({
                                             </DropdownMenu>
                                         </div>
                                         <div className="flex justify-center">
-                                            <span
-                                                title="One-time"
-                                                aria-label="One-time"
-                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm transition-all"
-                                            >
-                                                <Zap className="h-4 w-4 [stroke-width:1.5]" />
-                                            </span>
+                                            <StatusChip tone={project.isRecurring ? "recurring" : "oneTime"} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
+                                                {project.isRecurring ? "Recurring" : "One-Time"}
+                                            </StatusChip>
                                         </div>
                                         <div className="flex justify-end">
                                             <Popover
@@ -896,9 +864,6 @@ export function ProjectsBoardRows({
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 truncate block">{project.site.partner.name}</span>
                                         <div className="flex w-full justify-end justify-self-end">
-                                            <DateTimeCell value={project.updatedAt} />
-                                        </div>
-                                        <div className="flex w-full justify-end justify-self-end">
                                             <DateTimeCell value={project.createdAt} />
                                         </div>
                                     </div>
@@ -930,7 +895,7 @@ export function ProjectsBoardRows({
                             const overAllocated = isTimeOverAllocated(project)
                             const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                             const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
-                            const statusBadge = getStatusBadge(projectStatus)
+
                             return (
                                 <React.Fragment key={project.id}>
                                     <button
@@ -940,62 +905,36 @@ export function ProjectsBoardRows({
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
-                                                <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
-                                                    <span className="inline-flex items-center gap-2">
-                                                        {getFaviconUrl(project.site.domainName) ? (
-                                                            // eslint-disable-next-line @next/next/no-img-element
-                                                            <img
-                                                                src={getFaviconUrl(project.site.domainName) || undefined}
-                                                                alt=""
-                                                                className="h-4 w-4 rounded-sm shrink-0"
-                                                                loading="lazy"
-                                                            />
-                                                        ) : null}
-                                                        <span>{project.site.domainName}</span>
-                                                    </span>
-                                                </p>
-                                                <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
-                                                    <span className="break-words">{project.serviceLabel}</span>
-                                                    <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight text-blue-600">
-                                                        {format(new Date(project.createdAt), "MMMM yyyy")}
-                                                    </span>
-                                                    {projectStatus !== "Active" && (
-                                                        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
-                                                            {statusBadge.icon}
-                                                            {statusBadge.label}
-                                                        </span>
-                                                    )}
+                                                <div className="flex items-center gap-2.5">
+                                                    <DomainFaviconTile domain={project.site.domainName} />
+                                                    <div className="min-w-0">
+                                                        <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
+                                                            <span>{project.site.domainName}</span>
+                                                        </p>
+                                                        <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 text-sm", getProjectMetaClass(projectStatus))}>
+                                                            <span className="break-words">{project.serviceLabel}</span>
+                                                            <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight text-blue-600">
+                                                                {format(new Date(project.createdAt), "MMMM yyyy")}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <span className={cn(
-                                                "status-pill min-w-[72px] justify-center",
-                                                project.paymentStatus === "Paid" ? "status-pill-success" : "status-pill-debt"
-                                            )}>
-                                                {project.paymentStatus}
-                                            </span>
+                                            <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="sm">
+                                                {projectPayment}
+                                            </StatusChip>
                                         </div>
                                         <div className="mt-3 flex items-center justify-between">
                                             <span className="font-mono text-base font-bold text-slate-900">
                                                 {currencyFormatter.format(project.amount)} <span className="text-[10px] text-slate-400">RON</span>
                                             </span>
                                             <div className="flex items-center gap-2">
-                                                <span
-                                                    title={statusBadge.label}
-                                                    aria-label={statusBadge.label}
-                                                    className={cn(
-                                                        "inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all",
-                                                        statusBadge.className
-                                                    )}
-                                                >
-                                                    {statusBadge.icon}
-                                                </span>
-                                                <span
-                                                    title="Monthly"
-                                                    aria-label="Monthly"
-                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-700 shadow-sm transition-all"
-                                                >
-                                                    <RefreshCcw className="h-4 w-4 [stroke-width:1.5]" />
-                                                </span>
+                                                <StatusChip tone={statusToneFromLabel(projectStatus)} size="sm">
+                                                    {projectStatus}
+                                                </StatusChip>
+                                                <StatusChip tone={project.isRecurring ? "recurring" : "oneTime"} size="sm">
+                                                    {project.isRecurring ? "Recurring" : "One-Time"}
+                                                </StatusChip>
                                             </div>
                                         </div>
                                     </button>
@@ -1012,31 +951,19 @@ export function ProjectsBoardRows({
                                         className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-white px-6 py-2.5", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
-                                            <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
-                                                <span className="inline-flex items-center gap-2">
-                                                    {getFaviconUrl(project.site.domainName) ? (
-                                                        // eslint-disable-next-line @next/next/no-img-element
-                                                        <img
-                                                            src={getFaviconUrl(project.site.domainName) || undefined}
-                                                            alt=""
-                                                            className="h-4 w-4 rounded-sm shrink-0"
-                                                            loading="lazy"
-                                                        />
-                                                    ) : null}
-                                                    <span>{project.site.domainName}</span>
-                                                </span>
-                                            </p>
-                                            <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
-                                                <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
-                                                    {format(new Date(project.createdAt), "MMMM yyyy")}
-                                                </span>
-                                                {projectStatus !== "Active" && (
-                                                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]", statusBadge.className)}>
-                                                        {statusBadge.icon}
-                                                        {statusBadge.label}
-                                                    </span>
-                                                )}
+                                            <div className="flex items-center gap-2.5">
+                                                <DomainFaviconTile domain={project.site.domainName} />
+                                                <div className="min-w-0">
+                                                    <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
+                                                        <span>{project.site.domainName}</span>
+                                                    </p>
+                                                    <div className={cn("flex items-center gap-2 text-sm min-w-0", getProjectMetaClass(projectStatus))}>
+                                                        <span className="whitespace-nowrap overflow-x-auto hidescrollbar">{project.serviceLabel}</span>
+                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0 uppercase tracking-tighter">
+                                                            {format(new Date(project.createdAt), "MMMM yyyy")}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex justify-center">
@@ -1044,18 +971,12 @@ export function ProjectsBoardRows({
                                                 <DropdownMenuTrigger asChild>
                                                     <button
                                                         type="button"
-                                                        title={`Status: ${statusBadge.label}`}
-                                                        aria-label={`Status: ${statusBadge.label}`}
                                                         onClick={(event) => event.stopPropagation()}
-                                                        className={cn(
-                                                            "inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all",
-                                                            projectStatus === "Active" && "border-blue-300 bg-blue-100 text-blue-700",
-                                                            projectStatus === "Paused" && "border-amber-300 bg-amber-100 text-amber-700",
-                                                            projectStatus === "Completed" && "border-emerald-300 bg-emerald-100 text-emerald-700",
-                                                            projectStatus === "Closed" && "border-slate-300 bg-slate-200 text-slate-700",
-                                                        )}
+                                                        className="focus:outline-none"
                                                     >
-                                                        {statusBadge.icon}
+                                                        <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
+                                                            {projectStatus}
+                                                        </StatusChip>
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -1085,13 +1006,11 @@ export function ProjectsBoardRows({
                                                     <button
                                                         type="button"
                                                         onClick={(event) => event.stopPropagation()}
-                                                        className={cn(
-                                                            "status-pill h-9 min-w-[84px] justify-center transition-all rounded-xl",
-                                                            projectPayment === "Paid" ? "status-pill-success" : "status-pill-debt"
-                                                        )}
-                                                        title={`Payment: ${projectPayment}`}
+                                                        className="focus:outline-none"
                                                     >
-                                                        {projectPayment}
+                                                        <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
+                                                            {projectPayment}
+                                                        </StatusChip>
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
@@ -1113,13 +1032,9 @@ export function ProjectsBoardRows({
                                             </DropdownMenu>
                                         </div>
                                         <div className="flex justify-center">
-                                            <span
-                                                title="Monthly"
-                                                aria-label="Monthly"
-                                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-700 shadow-sm transition-all"
-                                            >
-                                                <RefreshCcw className="h-4 w-4 [stroke-width:1.5]" />
-                                            </span>
+                                            <StatusChip tone={project.isRecurring ? "recurring" : "oneTime"} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
+                                                {project.isRecurring ? "Recurring" : "One-Time"}
+                                            </StatusChip>
                                         </div>
                                         <div className="flex justify-end">
                                             <Popover
@@ -1218,9 +1133,6 @@ export function ProjectsBoardRows({
                                             </span>
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 truncate block">{project.site.partner.name}</span>
-                                        <div className="flex w-full justify-end justify-self-end">
-                                            <DateTimeCell value={project.updatedAt} />
-                                        </div>
                                         <div className="flex w-full justify-end justify-self-end">
                                             <DateTimeCell value={project.createdAt} />
                                         </div>

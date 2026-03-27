@@ -4,6 +4,7 @@ import * as React from "react"
 import { ArrowUpRight, Check, FolderOpen, Globe, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SidePanelChip, SidePanelInfoCard, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
+import { StatusChip } from "@/components/ui/status-chip"
 
 type ServiceOption = {
     id: string
@@ -113,7 +114,7 @@ export function ProjectSheetInfoSection({
                             key={service.id}
                             type="button"
                             onClick={() => onToggleService(service.id)}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 ui-text-caption font-semibold text-blue-700 transition hover:bg-blue-100/70"
+                            className="inline-flex items-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-700 transition hover:bg-blue-100/70"
                         >
                             {service.serviceName}
                             <X className="h-3.5 w-3.5" />
@@ -126,7 +127,7 @@ export function ProjectSheetInfoSection({
                 <div className="rounded-[26px] border border-slate-200 bg-white p-4">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                            <p className="ui-overline text-indigo-500">Recurring</p>
+                            <StatusChip tone="recurring" size="xs" className="mb-2">Recurring</StatusChip>
                             <div className="mt-2 space-y-2">
                                 {recurringServices.map((service) => {
                                     const isSelected = services.some((item) => item.id === service.id)
@@ -151,7 +152,7 @@ export function ProjectSheetInfoSection({
                         </div>
 
                         <div>
-                            <p className="ui-overline text-emerald-500">One-time</p>
+                            <StatusChip tone="oneTime" size="xs" className="mb-2">One-time</StatusChip>
                             <div className="mt-2 space-y-2">
                                 {oneTimeServices.map((service) => {
                                     const isSelected = services.some((item) => item.id === service.id)

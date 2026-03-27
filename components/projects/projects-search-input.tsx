@@ -4,7 +4,7 @@ import * as React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
-import { Search, X } from "lucide-react"
+import { Search } from "lucide-react"
 import { useProjectsSearchContext } from "./projects-search-context"
 
 export function ProjectsSearchInput() {
@@ -63,7 +63,7 @@ export function ProjectsSearchInput() {
     }, [debouncedSearch, pathname, router, searchContext, searchParams])
 
     return (
-        <div className="relative h-11 w-full">
+        <div className="relative h-11 w-full md:mx-auto md:max-w-[640px]">
             <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <Search className="h-4 w-4" />
             </div>
@@ -71,17 +71,11 @@ export function ProjectsSearchInput() {
                 placeholder="Search projects..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 text-sm shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-blue-100 focus-visible:ring-offset-0 focus-visible:border-blue-300 placeholder:text-slate-400 text-slate-900"
+                className="h-11 w-full rounded-[8px] border border-slate-300 bg-white pl-11 pr-16 text-[14px] font-medium shadow-none outline-none transition focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] focus-visible:ring-offset-0 focus-visible:border-[var(--brand-cyan)] placeholder:text-slate-400 placeholder:font-medium text-slate-900"
             />
-            {searchTerm && (
-                <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                    <X className="h-4 w-4" />
-                </button>
-            )}
+            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex h-6 min-w-[34px] items-center justify-center rounded-md border border-slate-200 bg-slate-100 px-2 text-[10px] font-semibold tracking-[0.03em] text-slate-500">
+                ⌘ K
+            </div>
         </div>
     )
 }

@@ -3,29 +3,30 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const statusChipVariants = cva(
-    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] border",
+    "inline-flex items-center justify-center gap-1.5 rounded-[10px] transition-colors font-bold uppercase tracking-[0.05em]",
     {
         variants: {
             tone: {
-                neutral: "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]",
-                active: "border-[color:color-mix(in_srgb,var(--state-active)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-active)_14%,white)] text-[var(--state-active)]",
-                paused: "border-[color:color-mix(in_srgb,var(--state-paused)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-paused)_14%,white)] text-[var(--state-paused)]",
-                completed: "border-[color:color-mix(in_srgb,var(--state-success)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
-                closed: "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]",
-                paid: "border-[color:color-mix(in_srgb,var(--state-success)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
-                unpaid: "border-[color:color-mix(in_srgb,var(--state-urgent)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,white)] text-[var(--state-urgent)]",
-                urgent: "border-[color:color-mix(in_srgb,var(--state-urgent)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,white)] text-[var(--state-urgent)]",
-                idea: "border-[color:color-mix(in_srgb,var(--state-idea)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-idea)_14%,white)] text-[var(--state-idea)]",
-                normal: "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]",
-                recurring: "border-[color:color-mix(in_srgb,var(--brand-cyan)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_14%,white)] text-[var(--brand-primary)]",
-                oneTime: "border-[color:color-mix(in_srgb,var(--brand-indigo)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-indigo)_14%,white)] text-[var(--brand-indigo)]",
-                outstanding: "border-[color:color-mix(in_srgb,var(--state-overdue)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_14%,white)] text-[var(--state-overdue)]",
-                settled: "border-[color:color-mix(in_srgb,var(--state-success)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
+                neutral: "bg-slate-100 text-slate-500",
+                active: "bg-[#edf7ff] text-[#2563eb]",
+                paused: "bg-amber-50 text-amber-600",
+                completed: "bg-emerald-50 text-emerald-600",
+                closed: "bg-slate-100 text-slate-500 shadow-sm",
+                paid: "bg-emerald-50 text-emerald-600 border border-emerald-100/50",
+                unpaid: "bg-[#fff1f2] text-[#be123c] border border-rose-100/50",
+                urgent: "bg-rose-50 text-rose-600",
+                idea: "bg-slate-100 text-slate-400 font-medium",
+                normal: "bg-slate-100 text-slate-500",
+                recurring: "bg-[#edf9fb] text-[#0b8fa8] border border-blue-100/50",
+                oneTime: "bg-[#f1f5f9] text-[#475569] border border-slate-200/50",
+                outstanding: "bg-amber-50 text-amber-600",
+                settled: "bg-emerald-50 text-emerald-600",
             },
             size: {
                 xs: "h-5 px-2 text-[10px]",
-                sm: "h-6 px-2.5 text-[11px]",
-                md: "h-7 px-3 text-xs",
+                sm: "h-[34px] px-3 text-[11px]",
+                md: "h-9 px-4 text-xs",
+                icon: "h-9 w-9 p-0",
             },
         },
         defaultVariants: {
@@ -49,7 +50,7 @@ export function StatusChip({
     size?: StatusChipSize
     icon?: React.ReactNode
     className?: string
-    children: React.ReactNode
+    children?: React.ReactNode
 }) {
     return (
         <span className={cn(statusChipVariants({ tone, size }), className)}>

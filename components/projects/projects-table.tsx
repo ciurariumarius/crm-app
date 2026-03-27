@@ -13,7 +13,8 @@ import {
     Plus,
     Activity,
     Zap,
-    RefreshCcw
+    RefreshCcw,
+    Play
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { updateProject } from "@/lib/actions/projects"
@@ -26,6 +27,7 @@ import { InlineQuickAddRow } from "@/components/projects/inline-quick-add-row"
 import { Service, Site } from "@prisma/client"
 import type { PartnerWithSites, ProjectWithDetails } from "@/types"
 import { sidePanelClass } from "@/lib/ui/side-panels"
+import { StatusChip, statusToneFromLabel } from "@/components/ui/status-chip"
 
 import {
     DropdownMenu,
@@ -235,24 +237,23 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button
-                                    className={cn(
-                                        "status-pill flex items-center gap-1.5 transition-all shadow-sm",
-                                        isActive ? "status-pill-action" :
-                                            isPaused ? "status-pill-warning" :
-                                            isCompleted ? "status-pill-success" :
-                                                "status-pill-closed"
-                                    )}
+                                    className="focus:outline-none"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                    {normalizedStatus}
+                                    {isActive ? (
+                                        <StatusChip tone="active" size="icon" icon={<Play className="h-4 w-4 fill-current ml-0.5" />} />
+                                    ) : (
+                                        <StatusChip tone={statusToneFromLabel(normalizedStatus)} size="sm">
+                                            {normalizedStatus}
+                                        </StatusChip>
+                                    )}
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="rounded-xl">
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-medium text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-medium text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-medium text-slate-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-medium text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-semibold text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
@@ -261,27 +262,24 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className="focus:outline-none" onClick={(e) => e.stopPropagation()}>
-                                    <div className={cn(
-                                        "status-pill flex items-center gap-1.5 transition-all shadow-sm",
-                                        project.paymentStatus === "Paid"
-                                            ? "status-pill-success"
-                                            : "status-pill-debt"
-                                    )}>
-                                        <div className={cn(
-                                            "h-2 w-2 rounded-full",
-                                            project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
-                                        )} />
-                                        <span className="text-xs font-medium">
-                                            {project.paymentStatus === "Paid" ? "Paid" : "Unpaid"}
-                                        </span>
-                                    </div>
+                                    <StatusChip tone={project.paymentStatus === "Paid" ? "paid" : "unpaid"} size="sm">
+                                        {project.paymentStatus}
+                                    </StatusChip>
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="rounded-xl">
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-medium text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-medium text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-semibold text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+
+
+                        {/* Type Pill */}
+                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                             <StatusChip tone={isMonthly ? "recurring" : "oneTime"} size="sm">
+                                 {isMonthly ? "Recurring" : "One-Time"}
+                             </StatusChip>
+                        </div>
                     </div>
 
                     {/* Amount */}
@@ -348,33 +346,32 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
-                                className={cn(
-                                    "status-pill min-w-[70px] justify-center transition-all",
-                                    isActive ? "status-pill-action" :
-                                        isPaused ? "status-pill-warning" :
-                                        isCompleted ? "status-pill-success" :
-                                            "status-pill-closed"
-                                )}
+                                className="focus:outline-none"
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {normalizedStatus.substring(0, 6)}
+                                {isActive ? (
+                                    <StatusChip tone="active" size="icon" icon={<Play className="h-4 w-4 fill-current ml-0.5" />} />
+                                ) : (
+                                    <StatusChip tone={statusToneFromLabel(normalizedStatus)} size="sm" className="min-w-[70px] justify-center">
+                                        {normalizedStatus.substring(0, 12)}
+                                    </StatusChip>
+                                )}
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="rounded-xl">
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-medium text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-medium text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-medium text-slate-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-medium text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-semibold text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
 
                 {/* 3. Type Pill */}
                 <div className="w-[70px] shrink-0 flex items-center justify-center">
-                    <div className="flex w-full items-center justify-center gap-1.5 truncate rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold tracking-[0.01em] text-slate-600">
-                        {isMonthly ? <RefreshCcw className="h-3 w-3 mr-0.5" /> : <Zap className="h-3 w-3 mr-0.5" />}
+                    <StatusChip tone={isMonthly ? "recurring" : "oneTime"} size="sm" className="w-full justify-center">
                         {isMonthly ? "Monthly" : "One-Time"}
-                    </div>
+                    </StatusChip>
                 </div>
 
                 {/* 4. Payment */}
@@ -385,21 +382,14 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                 className="focus:outline-none"
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                <div className={cn(
-                                    "status-pill min-w-[75px] justify-center transition-all",
-                                    project.paymentStatus === "Paid"
-                                        ? "status-pill-success"
-                                        : "status-pill-debt"
-                                )}>
-                                    <span className="text-[11px] font-semibold tracking-[0.01em]">
-                                        {project.paymentStatus}
-                                    </span>
-                                </div>
+                                <StatusChip tone={project.paymentStatus === "Paid" ? "paid" : "unpaid"} size="sm" className="min-w-[75px] justify-center">
+                                    {project.paymentStatus}
+                                </StatusChip>
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="rounded-xl">
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-medium text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-medium text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-semibold text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>

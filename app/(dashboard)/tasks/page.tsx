@@ -378,7 +378,7 @@ export default async function TasksPage({
 
     return (
         <TasksSearchProvider initialSearch={q || ""}>
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
             <div className="md:hidden flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">

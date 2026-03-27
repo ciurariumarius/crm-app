@@ -594,7 +594,13 @@ export async function getActiveTimer() {
                 task: true,
                 project: {
                     include: {
-                        site: true
+                        site: true,
+                        services: {
+                            select: {
+                                serviceName: true,
+                                isRecurring: true,
+                            }
+                        }
                     }
                 }
             }
@@ -615,7 +621,13 @@ export async function getActiveTimer() {
                 task: true,
                 project: {
                     include: {
-                        site: true
+                        site: true,
+                        services: {
+                            select: {
+                                serviceName: true,
+                                isRecurring: true,
+                            }
+                        }
                     }
                 }
             }

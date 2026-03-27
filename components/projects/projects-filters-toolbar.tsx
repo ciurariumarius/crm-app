@@ -5,18 +5,13 @@ import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { format, isValid, parseISO } from "date-fns"
 import {
-    Circle,
-    Play,
-    CheckCircle2,
-    XCircle,
     Wallet,
     AlertCircle,
-    Repeat,
-    Users,
-    CalendarDays,
     ChevronDown,
-    ArrowUpDown,
+    SlidersHorizontal,
     Check,
+    LayoutGrid,
+    Table2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -27,7 +22,6 @@ import {
     FilterBarShell,
     FilterResultsRow,
 } from "@/components/ui/filter-bar"
-import { buttonLinkClassName } from "@/components/ui/button-link"
 import {
     Popover,
     PopoverContent,
@@ -49,39 +43,39 @@ const STATUS_OPTIONS = [
     {
         label: "All",
         value: "All",
-        icon: <Circle className="h-2.5 w-2.5 fill-current" />,
-        activeClass: "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]",
+        dotClass: "bg-slate-400",
+        activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm",
     },
     {
         label: "Active",
         value: "Active",
-        icon: <Play className="h-2.5 w-2.5 fill-current" />,
-        activeClass: "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]",
+        dotClass: "bg-emerald-500",
+        activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm",
     },
     {
         label: "Paused",
         value: "Paused",
-        icon: <Circle className="h-2.5 w-2.5" />,
-        activeClass: "bg-[color:color-mix(in_srgb,var(--state-warning)_14%,white)] text-[var(--state-warning)]",
+        dotClass: "bg-amber-500",
+        activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm",
     },
     {
         label: "Completed",
         value: "Completed",
-        icon: <CheckCircle2 className="h-3 w-3" />,
-        activeClass: "bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]",
+        dotClass: "bg-cyan-700",
+        activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm",
     },
     {
         label: "Closed",
         value: "Closed",
-        icon: <XCircle className="h-3 w-3" />,
-        activeClass: "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]",
+        dotClass: "bg-slate-500",
+        activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm",
     },
 ]
 
 const PAYMENT_OPTIONS = [
-    { label: "All", value: "All", icon: <Wallet className="h-3 w-3" />, activeClass: "bg-[var(--bg-surface-soft)] text-[var(--text-primary)]" },
-    { label: "Paid", value: "Paid", icon: <CheckCircle2 className="h-3 w-3" />, activeClass: "bg-[color:color-mix(in_srgb,var(--state-success)_14%,white)] text-[var(--state-success)]" },
-    { label: "Unpaid", value: "Unpaid", icon: <AlertCircle className="h-3 w-3" />, activeClass: "bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,white)] text-[var(--state-urgent)]" },
+    { label: "All", value: "All", icon: null, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+    { label: "Paid", value: "Paid", icon: <Wallet className="h-3 w-3" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+    { label: "Unpaid", value: "Unpaid", icon: <AlertCircle className="h-3 w-3" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
 ]
 
 const RECURRING_OPTIONS = [
@@ -223,52 +217,55 @@ export function ProjectsFiltersToolbar({
     const displayTotal = hasSearchTerm && searchResultCount !== null && searchResultCount !== undefined
         ? searchResultCount
         : totalProjects
+    const resultsLabel = searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`
 
     return (
         <div className="space-y-3">
-            <FilterBarShell>
+            <FilterBarShell className="rounded-2xl border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 shadow-none">
                 <FilterBarScroll>
-                    <FilterBarRow>
+                    <FilterBarRow className="items-center md:gap-4">
                         <FilterBarGroup>
-                            <div className="inline-flex h-10 items-center gap-1">
+                            <div className="inline-flex h-10 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
                                 {STATUS_OPTIONS.map((option) => (
                                     <Link
                                         key={option.value}
                                         href={buildHref({ status: option.value })}
                                         className={cn(
-                                            "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                                            "inline-flex h-8 items-center gap-2 rounded-md px-3 text-[12px] font-semibold uppercase tracking-[0.04em] transition-colors",
                                             currentStatus === option.value
                                                 ? option.activeClass
                                                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                         )}
                                     >
-                                        {option.icon}
+                                        {option.value !== "All" ? (
+                                            <span className={cn("h-2 w-2 rounded-full", option.dotClass)} />
+                                        ) : null}
                                         {option.label}
                                     </Link>
                                 ))}
                             </div>
 
-                            <FilterBarDivider className="md:mx-1" />
+                            <FilterBarDivider className="md:mx-2" />
 
-                            <div className="inline-flex h-10 items-center gap-1">
+                            <div className="inline-flex h-10 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
                                 {PAYMENT_OPTIONS.map((option) => (
                                     <Link
                                         key={option.value}
                                         href={buildHref({ payment: option.value })}
                                         className={cn(
-                                            "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors",
+                                            "inline-flex h-8 items-center gap-2 rounded-md px-4 text-[12px] font-semibold uppercase tracking-[0.04em] transition-colors",
                                             currentPayment === option.value
                                                 ? option.activeClass
                                                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                         )}
                                     >
-                                        {option.icon}
+                                        {option.icon ? <span className="shrink-0">{option.icon}</span> : null}
                                         {option.label}
                                     </Link>
                                 ))}
                             </div>
 
-                            <FilterBarDivider className="md:mx-1" />
+                            <FilterBarDivider className="md:mx-2" />
 
                             <TypeCombobox
                                 currentRecurring={currentRecurring}
@@ -278,7 +275,7 @@ export function ProjectsFiltersToolbar({
                             />
                         </FilterBarGroup>
 
-                        <FilterBarDivider className="md:mx-1" />
+                        <FilterBarDivider className="md:mx-2" />
 
                         <PartnerCombobox
                             partners={partners}
@@ -302,7 +299,7 @@ export function ProjectsFiltersToolbar({
                             }}
                         />
 
-                        <FilterBarDivider className="md:ml-auto md:mr-1" />
+                        <FilterBarDivider className="md:ml-auto md:mr-2" />
 
                         <SortCombobox
                             currentSort={currentSort}
@@ -314,28 +311,46 @@ export function ProjectsFiltersToolbar({
                 </FilterBarScroll>
             </FilterBarShell>
 
-            <FilterResultsRow>
-                <p className="ui-text-label">
-                    {searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`}
-                </p>
-                {activeFilters.length > 0 && <span className="text-[var(--line-subtle)]">|</span>}
-                {activeFilters.map((filter) => (
-                    <Link
-                        key={filter.key}
-                        href={filter.href}
-                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "gap-1 text-[12px]" })}
+            <FilterResultsRow className="justify-between gap-4 pt-1">
+                <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{resultsLabel}</p>
+                    {activeFilters.length > 0 && <span className="text-[var(--line-subtle)]">|</span>}
+                    {activeFilters.map((filter) => (
+                        <Link
+                            key={filter.key}
+                            href={filter.href}
+                            className="inline-flex h-7 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
+                        >
+                            <span>{filter.label}</span>
+                        </Link>
+                    ))}
+                    {activeFilters.length > 0 && (
+                        <Link
+                            href={clearAllHref}
+                            className="inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800"
+                        >
+                            Clear all
+                        </Link>
+                    )}
+                </div>
+                <div className="hidden items-center gap-2 md:flex">
+                    <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
+                        title="Board view"
+                        aria-label="Board view"
                     >
-                        <span>{filter.label}</span>
-                    </Link>
-                ))}
-                {activeFilters.length > 0 && (
-                    <Link
-                        href={clearAllHref}
-                        className={buttonLinkClassName({ size: "sm", variant: "subtle", emphasis: "strong", className: "text-[12px]" })}
+                        <LayoutGrid className="h-4 w-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                        title="Table view"
+                        aria-label="Table view"
                     >
-                        Clear all
-                    </Link>
-                )}
+                        <Table2 className="h-4 w-4" />
+                    </button>
+                </div>
             </FilterResultsRow>
         </div>
     )
@@ -366,10 +381,10 @@ function SortCombobox({
                         "inline-flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
                         isActive
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                     )}
                 >
-                    <ArrowUpDown className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
+                    <SlidersHorizontal className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                 </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[260px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-apple)]">
@@ -450,10 +465,9 @@ function PeriodCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                     )}
                 >
-                    <CalendarDays className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[140px] truncate">{label}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
@@ -535,10 +549,9 @@ function TypeCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                     )}
                 >
-                    <Repeat className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span>Type</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
@@ -591,10 +604,9 @@ function PartnerCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                         isActive
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                            : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                     )}
                 >
-                    <Users className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[180px] truncate">{selectedPartner?.name || "Partner"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </button>
