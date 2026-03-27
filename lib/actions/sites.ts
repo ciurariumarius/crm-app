@@ -7,6 +7,7 @@ import { requireTenantContext } from "@/lib/tenant"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
+import { normalizeDomainHost, resolveDomainFaviconUrl } from "@/lib/favicon"
 import { z } from "zod"
 
 const SiteIdSchema = z.string().uuid()
@@ -37,11 +38,14 @@ export async function createSite(partnerId: string, domainName: string) {
         if (!partner) {
             throw new ActionError("PARTNER_NOT_FOUND", "Partner not found")
         }
+        const normalizedDomainName = normalizeDomainHost(validated.domainName)
+        const faviconUrl = await resolveDomainFaviconUrl(normalizedDomainName || validated.domainName)
         const site = await prisma.site.create({
             data: {
                 tenantId: session.tenantId,
                 partnerId: validated.partnerId,
-                domainName: validated.domainName,
+                domainName: normalizedDomainName || validated.domainName,
+                faviconUrl,
             }
         })
         await logSessionAuditEvent(session, {
@@ -72,6 +76,11 @@ export async function updateSiteDetails(siteId: string, data: {
         const updateData: Prisma.SiteUpdateInput = { ...validated }
         delete (updateData as Record<string, unknown>).siteId
         if (updateData.name === "") updateData.name = null
+        if (typeof validated.domainName === "string") {
+            const normalizedDomainName = normalizeDomainHost(validated.domainName) || validated.domainName
+            updateData.domainName = normalizedDomainName
+            updateData.faviconUrl = await resolveDomainFaviconUrl(normalizedDomainName)
+        }
         if (validated.driveLink !== undefined) {
             if (validated.driveLink === "") {
                 updateData.driveLink = ""

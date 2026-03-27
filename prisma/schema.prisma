@@ -58,6 +58,7 @@ model Site {
   partnerId   String  @map("partner_id")
   name        String? // Optional custom name override
   domainName  String  @map("domain_name")
+  faviconUrl  String? @map("favicon_url")
   gtmId       String? @map("gtm_id")
   googleAdsId String? @map("google_ads_id")
   driveLink   String? @map("drive_link")

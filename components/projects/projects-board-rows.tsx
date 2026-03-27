@@ -66,10 +66,11 @@ function normalizeDomain(domain: string | null | undefined) {
     return (domain || "").trim().replace(/^https?:\/\//, "").split("/")[0]
 }
 
-function getFaviconCandidates(domain: string | null | undefined) {
+function getFaviconCandidates(domain: string | null | undefined, storedFaviconUrl?: string | null) {
     const normalized = normalizeDomain(domain)
-    if (!normalized) return []
+    if (!normalized) return storedFaviconUrl ? [storedFaviconUrl] : []
     return [
+        ...(storedFaviconUrl ? [storedFaviconUrl] : []),
         `https://${normalized}/favicon.ico`,
         `https://www.google.com/s2/favicons?domain=${encodeURIComponent(normalized)}&sz=128`,
     ]
@@ -83,11 +84,17 @@ function getDomainInitials(domain: string | null | undefined) {
 }
 
 
-function DomainFaviconTile({ domain }: { domain: string | null | undefined }) {
+function DomainFaviconTile({
+    domain,
+    faviconUrl,
+}: {
+    domain: string | null | undefined
+    faviconUrl?: string | null
+}) {
     const [failed, setFailed] = React.useState(false)
     const [candidateIndex, setCandidateIndex] = React.useState(0)
-    const candidates = React.useMemo(() => getFaviconCandidates(domain), [domain])
-    const faviconUrl = candidates[candidateIndex] || null
+    const candidates = React.useMemo(() => getFaviconCandidates(domain, faviconUrl), [domain, faviconUrl])
+    const activeFaviconUrl = candidates[candidateIndex] || null
     const fallback = getDomainInitials(domain)
 
     React.useEffect(() => {
@@ -97,10 +104,10 @@ function DomainFaviconTile({ domain }: { domain: string | null | undefined }) {
 
     return (
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
-            {!failed && faviconUrl ? (
+            {!failed && activeFaviconUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                    src={faviconUrl}
+                    src={activeFaviconUrl}
                     alt=""
                     className="h-7 w-7 rounded-md object-contain"
                     loading="lazy"
@@ -154,6 +161,7 @@ type BoardProject = {
     serviceLabel: string
     site: {
         domainName: string
+        faviconUrl?: string | null
         partner: {
             name: string
         }
@@ -642,7 +650,7 @@ export function ProjectsBoardRows({
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
                                                 <div className="flex items-center gap-2.5">
-                                                    <DomainFaviconTile domain={project.site.domainName} />
+                                                    <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
                                                     <div className="min-w-0">
                                                         <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
                                                             <span>{project.site.domainName}</span>
@@ -685,7 +693,7 @@ export function ProjectsBoardRows({
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
-                                                <DomainFaviconTile domain={project.site.domainName} />
+                                                <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
                                                 <div className="min-w-0">
                                                     <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
                                                         <span>{project.site.domainName}</span>
@@ -906,7 +914,7 @@ export function ProjectsBoardRows({
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
                                                 <div className="flex items-center gap-2.5">
-                                                    <DomainFaviconTile domain={project.site.domainName} />
+                                                    <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
                                                     <div className="min-w-0">
                                                         <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
                                                             <span>{project.site.domainName}</span>
@@ -952,7 +960,7 @@ export function ProjectsBoardRows({
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
-                                                <DomainFaviconTile domain={project.site.domainName} />
+                                                <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
                                                 <div className="min-w-0">
                                                     <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
                                                         <span>{project.site.domainName}</span>
