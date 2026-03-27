@@ -1,15 +1,9 @@
 import prisma from "@/lib/prisma"
-import Link from "next/link"
-import {
-    SlidersHorizontal,
-} from "lucide-react"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
-import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
-import { cn, formatProjectServiceList } from "@/lib/utils"
+import { formatProjectServiceList } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
-import { buttonLinkClassName } from "@/components/ui/button-link"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
 import { ProjectsFiltersToolbar } from "@/components/projects/projects-filters-toolbar"
@@ -24,20 +18,6 @@ const PAGE_SIZE_OPTIONS = [100, 250, 500] as const
 const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
 const PAGE_SIZE_VALUES = new Set<number>(PAGE_SIZE_OPTIONS)
 const PAGINATION_THRESHOLD = 250
-
-const statusOptions = [
-    { label: "All", value: "All" },
-    { label: "Active", value: "Active" },
-    { label: "Paused", value: "Paused" },
-    { label: "Completed", value: "Completed" },
-    { label: "Closed", value: "Closed" },
-]
-
-const paymentOptions = [
-    { label: "All", value: "All" },
-    { label: "Paid", value: "Paid" },
-    { label: "Unpaid", value: "Unpaid" },
-]
 
 const sortOptions = [
     { label: "Recently Updated", value: "updated_desc" },
@@ -94,7 +74,6 @@ export default async function ProjectsPage({
         to?: string
         sort?: string
         perPage?: string
-        filters?: string
         page?: string
     }>
 }) {
@@ -123,7 +102,6 @@ export default async function ProjectsPage({
     const perPageRaw = Number(params.perPage)
     const perPage = PAGE_SIZE_VALUES.has(perPageRaw) ? perPageRaw : DEFAULT_PAGE_SIZE
     const layout = "list"
-    const mobileFiltersOpen = params.filters === "1"
     const requestedPage = Math.max(1, Number(params.page) || 1)
 
     const projectWhere = buildProjectWhereInput({
@@ -207,47 +185,6 @@ export default async function ProjectsPage({
     const pageStart = totalProjects === 0 ? 0 : (page - 1) * perPage + 1
     const pageEnd = shouldPaginate ? Math.min(page * perPage, totalProjects) : totalProjects
 
-    const buildHref = (overrides: Record<string, string | null | undefined>) => {
-        const next = new URLSearchParams()
-        if (q) next.set("q", q)
-        if (queryStatus) next.set("status", queryStatus)
-        if (partnerId) next.set("partnerId", partnerId)
-        if (payment) next.set("payment", payment)
-        if (recurring) next.set("recurring", recurring)
-        if (period) next.set("period", period)
-        if (fromParam) next.set("from", fromParam)
-        if (toParam) next.set("to", toParam)
-        if (sort && sort !== DEFAULT_SORT) next.set("sort", sort)
-        if (perPage !== DEFAULT_PAGE_SIZE) next.set("perPage", String(perPage))
-        if (mobileFiltersOpen) next.set("filters", "1")
-        if (shouldPaginate) {
-            next.set("page", String(page))
-        }
-
-        for (const [key, value] of Object.entries(overrides)) {
-            if (
-                value === null ||
-                value === undefined ||
-                value === "" ||
-                (key === "sort" && value === DEFAULT_SORT) ||
-                (key === "perPage" && Number(value) === DEFAULT_PAGE_SIZE)
-            ) {
-                next.delete(key)
-            } else {
-                next.set(key, value)
-            }
-        }
-
-        if (shouldPaginate && !next.get("page")) {
-            next.set("page", "1")
-        }
-        if (!shouldPaginate) {
-            next.delete("page")
-        }
-
-        return `/projects?${next.toString()}`
-    }
-
     const user = await prisma.user.findFirst({
         where: { id: session.userId, tenantId: session.tenantId },
         select: { hourlyRate: true }
@@ -261,13 +198,13 @@ export default async function ProjectsPage({
         >
             <ProjectsSearchProvider initialSearch={q || ""}>
                 <div className="space-y-6">
-                <div className="flex flex-col gap-4">
-                    <div className="md:hidden flex flex-col gap-3">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <MobileMenuTrigger />
-                                <h1 className="page-title text-slate-900">Projects</h1>
-                            </div>
+                    <div className="flex flex-col gap-4">
+                    <DashboardPageHeader
+                        title="Projects"
+                        showMobile
+                        search={<ProjectsSearchInput />}
+                        mobileSearch={<ProjectsSearchInput />}
+                        mobileActions={(
                             <CreateProjectButton
                                 variant="full"
                                 label="Add Project"
@@ -276,94 +213,7 @@ export default async function ProjectsPage({
                                 partners={partnersForClient}
                                 services={servicesForClient}
                             />
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <div className="flex-1 min-w-0">
-                                <ProjectsSearchInput />
-                            </div>
-
-                            <Link
-                                href={buildHref({ filters: mobileFiltersOpen ? null : "1", page: "1" })}
-                                className={buttonLinkClassName({
-                                    size: "lg",
-                                    variant: mobileFiltersOpen ? "activeBlue" : "subtle",
-                                    className: "w-11 rounded-2xl px-0",
-                                })}
-                            >
-                                <SlidersHorizontal className="h-4 w-4" />
-                            </Link>
-                        </div>
-
-                        <div className="-mx-1 overflow-x-auto px-1 hidescrollbar">
-                            <div className="inline-flex min-w-max items-center gap-3">
-                                <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                                    {statusOptions.map((option) => (
-                                        <Link
-                                            key={option.value}
-                                            href={buildHref({ status: option.value, page: "1" })}
-                                            className={cn(
-                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
-                                                queryStatus === option.value
-                                                    ? "bg-white text-[var(--primary)] shadow-sm"
-                                                    : "text-slate-600"
-                                            )}
-                                        >
-                                            {option.label}
-                                        </Link>
-                                    ))}
-                                </div>
-
-                                <div className="h-8 w-px shrink-0 bg-slate-200" />
-
-                                <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                                    {paymentOptions.map((option) => (
-                                        <Link
-                                            key={option.value}
-                                            href={buildHref({ payment: option.value, page: "1" })}
-                                            className={cn(
-                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
-                                                payment === option.value
-                                                    ? "bg-white text-[var(--primary)] shadow-sm"
-                                                    : "text-slate-600"
-                                            )}
-                                        >
-                                            {option.label}
-                                        </Link>
-                                    ))}
-                                </div>
-
-                                <div className="h-8 w-px shrink-0 bg-slate-200" />
-
-                                <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                                    {[
-                                        { label: "Updated", value: "updated_desc" },
-                                        { label: "Newest", value: "created_desc" },
-                                        { label: "Oldest", value: "created_asc" },
-                                        { label: "Amount", value: "amount_desc" },
-                                        { label: "Time", value: "time_desc" },
-                                    ].map((option) => (
-                                        <Link
-                                            key={option.value}
-                                            href={buildHref({ sort: option.value, page: "1" })}
-                                            className={cn(
-                                                "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors",
-                                                sort === option.value
-                                                    ? "bg-white text-[var(--primary)] shadow-sm"
-                                                    : "text-slate-600"
-                                            )}
-                                        >
-                                            {option.label}
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <DashboardPageHeader
-                        title="Projects"
-                        search={<ProjectsSearchInput />}
+                        )}
                         actions={(
                             <CreateProjectButton
                                 variant="full"
@@ -373,21 +223,18 @@ export default async function ProjectsPage({
                             />
                         )}
                     />
-
-                    <div className={cn(mobileFiltersOpen ? "block" : "hidden", "md:block")}>
-                        <ProjectsFiltersToolbar
-                            partners={partnersList}
-                            currentStatus={queryStatus}
-                            currentPayment={payment}
-            currentRecurring={recurring}
-            currentPeriod={period}
-            currentFrom={fromParam || ""}
-            currentTo={toParam || ""}
-            currentSort={sort}
-            currentPartnerId={partnerId || "all"}
-            totalProjects={totalProjects}
-                        />
-                    </div>
+                    <ProjectsFiltersToolbar
+                        partners={partnersList}
+                        currentStatus={queryStatus}
+                        currentPayment={payment}
+                        currentRecurring={recurring}
+                        currentPeriod={period}
+                        currentFrom={fromParam || ""}
+                        currentTo={toParam || ""}
+                        currentSort={sort}
+                        currentPartnerId={partnerId || "all"}
+                        totalProjects={totalProjects}
+                    />
                 </div>
 
                 <ProjectsBoardRows

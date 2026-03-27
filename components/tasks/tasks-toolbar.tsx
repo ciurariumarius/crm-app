@@ -70,7 +70,6 @@ export function TasksToolbar({
     currentProject,
     currentPartner,
     totalTasks,
-    mobileSecondaryOnly = false,
 }: {
     projects: { id: string; name: string }[]
     partners: { id: string; name: string }[]
@@ -83,7 +82,6 @@ export function TasksToolbar({
     currentProject: string
     currentPartner: string
     totalTasks: number
-    mobileSecondaryOnly?: boolean
 }) {
     const router = useRouter()
     const pathname = usePathname()
@@ -154,7 +152,7 @@ export function TasksToolbar({
             <FilterBarShell className="rounded-2xl border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 shadow-none">
                 <FilterBarScroll>
                     <FilterBarRow className="items-center md:gap-4">
-                        <FilterBarGroup className={cn(mobileSecondaryOnly && "hidden")}>
+                        <FilterBarGroup>
                             <div className="inline-flex h-10 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
                                 {STATUS_OPTIONS.map((option) => (
                                         <Link
@@ -196,7 +194,7 @@ export function TasksToolbar({
                             </div>
                         </FilterBarGroup>
 
-                        <FilterBarDivider className={cn("md:mx-2", mobileSecondaryOnly && "hidden")} />
+                        <FilterBarDivider className="md:mx-2" />
 
                         <Link
                             href={buildHref({ overdue: currentOverdue ? null : "1" })}

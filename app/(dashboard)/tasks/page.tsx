@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma"
 import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
-import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
@@ -11,10 +10,9 @@ import { TasksSearchProvider } from "@/components/tasks/tasks-search-context"
 import { TasksPaginationBar } from "@/components/tasks/tasks-pagination-bar"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
-import { SlidersHorizontal, X, ListChecks, Play, AlertTriangle, CalendarClock, CalendarDays } from "lucide-react"
+import { ListChecks, Play, AlertTriangle, CalendarClock, CalendarDays } from "lucide-react"
 import { requireTenantContext } from "@/lib/tenant"
 import { buildTaskWhereInput, getLocalDayBounds, normalizeTaskFilters } from "@/lib/filters/task-filters"
-import { buttonLinkClassName } from "@/components/ui/button-link"
 
 export const dynamic = "force-dynamic"
 
@@ -61,7 +59,6 @@ export default async function TasksPage({
         dueToday?: string
         sort?: string
         perPage?: string
-        filters?: string
         page?: string
         cols?: string
     }>
@@ -91,7 +88,6 @@ export default async function TasksPage({
     const perPageRaw = Number(params.perPage)
     const perPage = PAGE_SIZE_VALUES.has(perPageRaw) ? perPageRaw : DEFAULT_PAGE_SIZE
     const view = "grid" as const
-    const mobileFiltersOpen = params.filters === "1"
     const requestedPage = Math.max(1, Number(params.page) || 1)
     const { todayStart, todayEnd } = getLocalDayBounds(new Date())
     const where = buildTaskWhereInput({
@@ -227,7 +223,6 @@ export default async function TasksPage({
         if (sort && sort !== "newest") next.set("sort", sort)
         if (cols !== 3) next.set("cols", String(cols))
         if (perPage !== DEFAULT_PAGE_SIZE) next.set("perPage", String(perPage))
-        if (mobileFiltersOpen) next.set("filters", "1")
         if (shouldPaginate) {
             next.set("page", String(page))
         }
@@ -256,29 +251,6 @@ export default async function TasksPage({
 
         return `/tasks?${next.toString()}`
     }
-    const selectedProject = projectsList.find((project) => project.id === projectId)
-    const selectedPartner = partnersList.find((partner) => partner.id === partnerId)
-    const activeFilters: { key: string; label: string; href: string }[] = []
-    if (q) activeFilters.push({ key: "q", label: `Search: ${q}`, href: buildTasksHref({ q: null, page: "1" }) })
-    if (statusFilter !== "Active") activeFilters.push({ key: "status", label: `Status: ${statusFilter}`, href: buildTasksHref({ status: "Active", page: "1" }) })
-    if (urgencyFilter !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${urgencyFilter}`, href: buildTasksHref({ urgency: "all", page: "1" }) })
-    if (overdueOnly) activeFilters.push({ key: "overdue", label: "Overdue", href: buildTasksHref({ overdue: null, page: "1" }) })
-    if (dueTodayOnly) activeFilters.push({ key: "dueToday", label: "Due today", href: buildTasksHref({ dueToday: null, page: "1" }) })
-    if (projectId && projectId !== "all") activeFilters.push({ key: "projectId", label: `Project: ${selectedProject?.name || "Selected"}`, href: buildTasksHref({ projectId: null, page: "1" }) })
-    if (partnerId && partnerId !== "all") activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner?.name || "Selected"}`, href: buildTasksHref({ partnerId: null, page: "1" }) })
-    const clearAllHref = buildTasksHref({
-        q: null,
-        status: "Active",
-        urgency: "all",
-        overdue: null,
-        dueToday: null,
-        sort: "newest",
-        cols: "3",
-        projectId: null,
-        partnerId: null,
-        page: "1",
-    })
-
     const renderTasksSummaryRow = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <Link
@@ -379,210 +351,22 @@ export default async function TasksPage({
     return (
         <TasksSearchProvider initialSearch={q || ""}>
             <div className="flex flex-col gap-4">
-            <div className="md:hidden flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                        <MobileMenuTrigger />
-                        <h1 className="page-title text-slate-900">Tasks</h1>
-                    </div>
-                    <CreateTaskButton
-                        projects={activeProjects}
-                        label="Add Task"
-                        showLabelOnMobile
-                        className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] !text-[var(--primary)] !shadow-none border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] hover:!bg-[color:color-mix(in_srgb,var(--primary-container)_24%,white)]"
-                    />
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                        <TasksSearchInput />
-                    </div>
-                    <Link
-                        href={buildTasksHref({ filters: mobileFiltersOpen ? null : "1", page: "1" })}
-                        className={buttonLinkClassName({
-                            size: "lg",
-                            variant: mobileFiltersOpen ? "activeBlue" : "subtle",
-                            className: "w-11 rounded-2xl px-0",
-                        })}
-                    >
-                        <SlidersHorizontal className="h-4 w-4" />
-                    </Link>
-                </div>
-
-                <div className="-mx-1 overflow-x-auto px-1 hidescrollbar">
-                    <div className="inline-flex min-w-max items-center gap-3">
-                        <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                            {[
-                                { label: "All", value: "All" },
-                                { label: "Active", value: "Active" },
-                                { label: "Completed", value: "Completed" },
-                            ].map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildTasksHref({ status: option.value, page: "1" })}
-                                    className={
-                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
-                                        (statusFilter === option.value
-                                            ? "bg-white text-[var(--primary)] shadow-sm"
-                                            : "text-slate-600")
-                                    }
-                                >
-                                    {option.label}
-                                </Link>
-                            ))}
-                        </div>
-
-                        <div className="h-8 w-px shrink-0 bg-slate-200" />
-
-                        <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                            {[
-                                { label: "All", value: "all" },
-                                { label: "Urgent", value: "Urgent" },
-                                { label: "Normal", value: "Normal" },
-                                { label: "Idea", value: "Idea" },
-                            ].map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildTasksHref({ urgency: option.value, page: "1" })}
-                                    className={
-                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
-                                        (urgencyFilter === option.value
-                                            ? "bg-white text-[var(--primary)] shadow-sm"
-                                            : "text-slate-600")
-                                    }
-                                >
-                                    {option.label}
-                                </Link>
-                            ))}
-                        </div>
-
-                        <div className="h-8 w-px shrink-0 bg-slate-200" />
-
-                        <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                            {[
-                                { label: "Newest", value: "newest" },
-                                { label: "Oldest", value: "oldest" },
-                                { label: "Updated", value: "updated" },
-                                { label: "A-Z", value: "name_asc" },
-                                { label: "Z-A", value: "name_desc" },
-                            ].map((option) => (
-                                <Link
-                                    key={option.value}
-                                    href={buildTasksHref({ sort: option.value, page: "1" })}
-                                    className={
-                                        "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
-                                        (sort === option.value
-                                            ? "bg-white text-[var(--primary)] shadow-sm"
-                                            : "text-slate-600")
-                                    }
-                                >
-                                    {option.label}
-                                </Link>
-                            ))}
-                        </div>
-
-                        <div className="h-8 w-px shrink-0 bg-slate-200" />
-
-                        <div className="inline-flex h-12 shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 p-1">
-                            <Link
-                                href={buildTasksHref({ overdue: overdueOnly ? null : "1", page: "1" })}
-                                className={
-                                    "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12px] font-medium tracking-[0.02em] transition-colors " +
-                                    (overdueOnly ? "bg-white text-[var(--primary)] shadow-sm" : "text-slate-600")
-                                }
-                            >
-                                Overdue
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <div className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-50 px-3 text-[11px] text-slate-500 font-semibold">
-                        <SlidersHorizontal className="h-3.5 w-3.5" />
-                        <span>{totalTasks} results</span>
-                    </div>
-                    {activeFilters.length > 0 && (
-                        <Link
-                            href={clearAllHref}
-                            className="inline-flex h-9 items-center rounded-full border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                            Clear all
-                        </Link>
-                    )}
-                </div>
-
-                {activeFilters.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2">
-                        {activeFilters.map((filter) => (
-                            <Link
-                                key={filter.key}
-                                href={filter.href}
-                                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 pl-2.5 pr-2 text-[11px] font-medium text-slate-700 hover:bg-white"
-                            >
-                                <span className="max-w-[180px] truncate">{filter.label}</span>
-                                <X className="h-3 w-3 text-slate-400" />
-                            </Link>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Header Row (Desktop) */}
-            <DashboardPageHeader
-                title="Tasks"
-                search={<TasksSearchInput />}
-                actions={<CreateTaskButton projects={activeProjects} />}
-            />
-
-            <div className="md:hidden space-y-4">
-                {mobileFiltersOpen ? (
-                    <TasksToolbar
-                        projects={projectsList}
-                        partners={partnersList}
-                        currentStatus={statusFilter}
-                        currentUrgency={urgencyFilter}
-                        currentOverdue={overdueOnly}
-                        currentDueToday={dueTodayOnly}
-                        currentSort={sort}
-                        currentCols={cols}
-                        currentProject={projectId || "all"}
-                        currentPartner={partnerId || "all"}
-                        totalTasks={totalTasks}
-                        mobileSecondaryOnly
-                    />
-                ) : null}
-
-                <TasksCardView
-                    tasks={serializedTasks}
-                    allServices={allServices}
-                    initialActiveTimer={initialActiveTimer}
-                    projects={activeProjects}
-                    hourlyRate={hourlyRate}
-                    view="grid"
-                    cols={1}
-                    searchApiFilters={{
-                        status: statusFilter,
-                        partnerId,
-                        projectId,
-                        urgency: urgencyFilter,
-                        overdue: overdueOnly,
-                        dueToday: dueTodayOnly,
-                        sort,
-                        page,
-                        perPage,
-                    }}
+                <DashboardPageHeader
+                    title="Tasks"
+                    showMobile
+                    search={<TasksSearchInput />}
+                    mobileSearch={<TasksSearchInput />}
+                    mobileActions={
+                        <CreateTaskButton
+                            projects={activeProjects}
+                            label="Add Task"
+                            showLabelOnMobile
+                            className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] !text-[var(--primary)] !shadow-none border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] hover:!bg-[color:color-mix(in_srgb,var(--primary-container)_24%,white)]"
+                        />
+                    }
+                    actions={<CreateTaskButton projects={activeProjects} />}
                 />
-                <div className="mt-10 border-t border-slate-200/70 pt-7">
-                    {renderTasksSummaryRow()}
-                </div>
 
-                <div className="mt-5 border-t border-slate-200/70 pt-5">
-                    {renderPaginationBar()}
-                </div>
-            </div>
-
-            <div className="hidden md:block space-y-4">
                 <TasksToolbar
                     projects={projectsList}
                     partners={partnersList}
@@ -596,6 +380,7 @@ export default async function TasksPage({
                     currentPartner={partnerId || "all"}
                     totalTasks={totalTasks}
                 />
+
                 <TasksCardView
                     tasks={serializedTasks}
                     allServices={allServices}
@@ -623,7 +408,6 @@ export default async function TasksPage({
                 <div className="mt-5 border-t border-slate-200/70 pt-5">
                     {renderPaginationBar()}
                 </div>
-            </div>
             </div>
         </TasksSearchProvider>
     )

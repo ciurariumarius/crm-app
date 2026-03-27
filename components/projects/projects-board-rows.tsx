@@ -72,7 +72,6 @@ function getFaviconCandidates(domain: string | null | undefined, storedFaviconUr
     return [
         ...(storedFaviconUrl ? [storedFaviconUrl] : []),
         `https://${normalized}/favicon.ico`,
-        `https://www.google.com/s2/favicons?domain=${encodeURIComponent(normalized)}&sz=128`,
     ]
 }
 

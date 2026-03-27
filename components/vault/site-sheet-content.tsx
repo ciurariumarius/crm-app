@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Site } from "@prisma/client"
 import { Copy, ExternalLink, Globe, Pencil, X } from "lucide-react"
@@ -20,6 +20,78 @@ interface SiteSheetContentProps {
     site: Site & { partner?: { id: string; name: string } }
     onUpdate?: (updatedSite: Site & { partner?: { id: string; name: string } }) => void
     onClose?: () => void
+}
+
+function normalizeDomain(domain: string | null | undefined) {
+    return (domain || "").trim().replace(/^https?:\/\//, "").split("/")[0]
+}
+
+function getFaviconCandidates(domain: string | null | undefined, storedFaviconUrl?: string | null) {
+    const normalized = normalizeDomain(domain)
+    if (!normalized) return storedFaviconUrl ? [storedFaviconUrl] : []
+    return [
+        ...(storedFaviconUrl ? [storedFaviconUrl] : []),
+        `https://${normalized}/favicon.ico`,
+    ]
+}
+
+function getDomainInitials(domain: string | null | undefined) {
+    const normalized = normalizeDomain(domain)
+    if (!normalized) return "??"
+    const token = normalized.split(".")[0] || normalized
+    return token.slice(0, 2).toUpperCase()
+}
+
+function SiteFaviconTile({
+    domain,
+    faviconUrl,
+}: {
+    domain: string | null | undefined
+    faviconUrl?: string | null
+}) {
+    const [failed, setFailed] = useState(false)
+    const [candidateIndex, setCandidateIndex] = useState(0)
+    const candidates = useMemo(() => getFaviconCandidates(domain, faviconUrl), [domain, faviconUrl])
+    const activeFaviconUrl = candidates[candidateIndex] || null
+    const fallback = getDomainInitials(domain)
+
+    useEffect(() => {
+        setFailed(false)
+        setCandidateIndex(0)
+    }, [domain, faviconUrl])
+
+    return (
+        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+            {!failed && activeFaviconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                    src={activeFaviconUrl}
+                    alt=""
+                    className="h-8 w-8 rounded-md object-contain"
+                    loading="lazy"
+                    onLoad={(event) => {
+                        const { naturalWidth, naturalHeight } = event.currentTarget
+                        if (naturalWidth < 24 || naturalHeight < 24) {
+                            if (candidateIndex < candidates.length - 1) {
+                                setCandidateIndex((prev) => prev + 1)
+                                return
+                            }
+                            setFailed(true)
+                        }
+                    }}
+                    onError={() => {
+                        if (candidateIndex < candidates.length - 1) {
+                            setCandidateIndex((prev) => prev + 1)
+                            return
+                        }
+                        setFailed(true)
+                    }}
+                />
+            ) : (
+                <span className="text-[11px] font-extrabold tracking-wide text-slate-700">{fallback}</span>
+            )}
+        </span>
+    )
 }
 
 export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentProps) {
@@ -128,7 +200,8 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             />
                         ) : (
                             <div className="group flex w-full items-start gap-3 py-1">
-                                <div className="min-w-0 flex-1">
+                                <SiteFaviconTile domain={formData.domainName} faviconUrl={site.faviconUrl} />
+                                <div className="min-w-0 flex-1 pt-1">
                                     <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-2xl">
                                         {formData.domainName}
                                     </h1>
