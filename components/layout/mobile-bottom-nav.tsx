@@ -42,7 +42,7 @@ function NavLink({
                 active ? "text-[var(--primary)]" : "text-slate-400 hover:text-slate-600"
             )}
         >
-            <Icon className={cn("h-5 w-5", active && "scale-105")} strokeWidth={1.7} />
+            <Icon className="h-5 w-5" strokeWidth={1.7} />
             <span
                 className={cn(
                     "text-[11px] font-medium tracking-[0.03em]",
@@ -76,10 +76,10 @@ export function MobileBottomNav({
                     <button
                         type="button"
                         onClick={() => setQuickActionsOpen(true)}
-                        className="absolute left-1/2 top-1/2 z-10 inline-flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[var(--shadow-apple)] transition-transform active:scale-[0.97]"
+                        className="absolute left-1/2 top-1/2 z-10 inline-flex h-12 w-12 -translate-x-1/2 -translate-y-[52%] items-center justify-center rounded-full border border-primary/45 bg-primary text-primary-foreground shadow-[0_10px_20px_-10px_color-mix(in_srgb,var(--primary)_70%,transparent),0_4px_12px_-6px_rgba(15,23,42,0.35)] transition-transform active:scale-[0.97]"
                         aria-label="Quick actions"
                     >
-                        <Plus className="h-6 w-6" strokeWidth={2.3} />
+                        <Plus className="h-5 w-5" strokeWidth={2.4} />
                     </button>
 
                     <div className="grid grid-cols-5 gap-1">
