@@ -285,7 +285,21 @@ export function buildClientExplorerRows(tasks: TaskLog[], startIso: string, endI
 }
 
 export function formatHours(minutes: number, precision = 1) {
-  return `${(minutes / 60).toFixed(precision)}h`
+  void precision
+  const totalMinutes = Math.max(0, Math.round(minutes))
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes}m`
+  }
+
+  const hours = Math.floor(totalMinutes / 60)
+  const remainingMinutes = totalMinutes % 60
+
+  if (remainingMinutes === 0) {
+    return `${hours}h`
+  }
+
+  return `${hours}h ${remainingMinutes}m`
 }
 
 export function formatRecencyLabel(lastTaskDate: string | null) {

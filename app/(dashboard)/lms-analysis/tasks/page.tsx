@@ -9,6 +9,7 @@ import { FilterBarDivider, FilterBarGroup, FilterBarRow, FilterBarScroll, Filter
 import { useLmsTasksData } from "@/components/lms-tasks/lms-tasks-provider"
 import { useLmsDateRange } from "@/components/lms-tasks/use-lms-date-range"
 import { LmsTasksEmptyState } from "@/components/lms-tasks/lms-tasks-empty-state"
+import { DurationValue } from "@/components/lms-tasks/duration-value"
 import { filterTasksByRange, formatHours, getExecutantOptions, isInternalClient } from "@/lib/lms-tasks/analytics"
 import { normalizeClientKey, normalizeExecutantKey } from "@/lib/lms-tasks/parsers"
 import { detectLmsDatePresetId, type LmsDatePreset, getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
@@ -641,7 +642,12 @@ export default function LmsAnalysisTasksPage() {
           </div>
           <div className="mt-6 flex items-end justify-between">
             <div>
-              <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{formatHours(totalMinutes)}</p>
+              <DurationValue
+                minutes={totalMinutes}
+                className="text-[32px] leading-none tracking-tight"
+                numberClassName="font-bold text-slate-900"
+                unitClassName="font-bold text-slate-400"
+              />
               <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[var(--brand-primary)]">Within selected filters</p>
             </div>
           </div>
@@ -693,7 +699,7 @@ export default function LmsAnalysisTasksPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-[var(--brand-primary)]">Hours</span>
-                <span className="text-sm font-bold text-slate-900">{formatHours(internalMinutes)}</span>
+                <DurationValue minutes={internalMinutes} className="text-sm" numberClassName="font-bold text-slate-900" unitClassName="font-bold text-slate-500" />
               </div>
             </div>
           </div>
@@ -727,12 +733,14 @@ export default function LmsAnalysisTasksPage() {
                     <TableCell className="font-semibold">{row.name}</TableCell>
                     <TableCell>{row.tasksCount}</TableCell>
                     <TableCell>{row.clientsCount}</TableCell>
-                    <TableCell>{formatHours(row.totalMinutes)}</TableCell>
+                    <TableCell><DurationValue minutes={row.totalMinutes} /></TableCell>
                     <TableCell>
                       <div className="w-[190px] max-w-full space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-[var(--text-primary)]">
-                            {formatHours(row.totalMinutes)} / {formatHours(workingCapacityMinutes)}
+                          <span className="inline-flex items-center gap-1 font-semibold text-[var(--text-primary)]">
+                            <DurationValue minutes={row.totalMinutes} className="text-xs" />
+                            <span>/</span>
+                            <DurationValue minutes={workingCapacityMinutes} className="text-xs" />
                           </span>
                           <span className="font-medium text-[var(--text-secondary)]">{row.utilizationPercent.toFixed(1)}%</span>
                         </div>
@@ -808,9 +816,7 @@ export default function LmsAnalysisTasksPage() {
                 <div className="pointer-events-none relative z-10 flex items-center justify-center">
                   <div className="text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total Hours</p>
-                    <p className="text-4xl font-bold text-[var(--text-primary)]">
-                      {formatHours(taskTypeTotalMinutes)}
-                    </p>
+                    <DurationValue minutes={taskTypeTotalMinutes} className="text-4xl" numberClassName="font-bold text-[var(--text-primary)]" />
                   </div>
                 </div>
               </div>
@@ -825,8 +831,8 @@ export default function LmsAnalysisTasksPage() {
                       </p>
                     </div>
                     <div className="ml-3 text-right">
-                      <p className="whitespace-nowrap text-lg font-bold text-[var(--text-primary)]">
-                        <span>{formatHours(row.minutes)}</span>
+                      <p className="whitespace-nowrap text-lg font-bold text-[var(--text-primary)] inline-flex items-center">
+                        <DurationValue minutes={row.minutes} className="text-lg" numberClassName="font-bold text-[var(--text-primary)]" />
                         <span className="ml-4 text-sm font-semibold text-[var(--text-secondary)]">{row.percent.toFixed(1)}%</span>
                       </p>
                     </div>
@@ -894,7 +900,7 @@ export default function LmsAnalysisTasksPage() {
                 <TableRow key={row.key}>
                   <TableCell className="font-semibold">{row.domain}</TableCell>
                   <TableCell>{row.projectType}</TableCell>
-                  <TableCell>{formatHours(row.minutes)}</TableCell>
+                  <TableCell><DurationValue minutes={row.minutes} /></TableCell>
                   <TableCell>{row.dateLabel}</TableCell>
                   <TableCell>{row.executant}</TableCell>
                 </TableRow>
@@ -916,17 +922,20 @@ export default function LmsAnalysisTasksPage() {
               <div className="flex items-center gap-2">
                 <label className="inline-flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)]">
                   Results
-                  <select
-                    value={taskLogPageSize}
-                    onChange={(event) => setTaskLogPageSize(Number(event.target.value))}
-                    className="h-8 rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-2 text-xs font-semibold text-[var(--text-primary)] outline-none"
-                  >
-                    {TASK_LOGS_PAGE_SIZE_OPTIONS.map((size) => (
-                      <option key={size} value={size}>
-                        {size} / page
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={taskLogPageSize}
+                      onChange={(event) => setTaskLogPageSize(Number(event.target.value))}
+                      className="h-8 appearance-none rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-7 text-xs font-semibold text-[var(--text-primary)] outline-none"
+                    >
+                      {TASK_LOGS_PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size} / page
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50 pointer-events-none" />
+                  </div>
                 </label>
                 <button
                   type="button"

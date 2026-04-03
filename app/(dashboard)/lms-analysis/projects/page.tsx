@@ -3,52 +3,83 @@
 import * as React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { differenceInCalendarMonths, format, isValid, parseISO } from "date-fns"
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { LmsTasksDateRangeFilters } from "@/components/lms-tasks/lms-tasks-date-range-filters"
 import { LmsTasksEmptyState } from "@/components/lms-tasks/lms-tasks-empty-state"
-import { WorkVolumeBadge } from "@/components/lms-tasks/lms-tasks-badges"
+import { DurationValue } from "@/components/lms-tasks/duration-value"
 import { useLmsTasksData } from "@/components/lms-tasks/lms-tasks-provider"
 import { useLmsDateRange } from "@/components/lms-tasks/use-lms-date-range"
-import { buildAllocationLookup, calculateWorkVolumeStatus, filterTasksByRange, formatHours, getExecutantOptions } from "@/lib/lms-tasks/analytics"
-import { listMonthKeysBetween } from "@/lib/lms-tasks/date-utils"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { buildAllocationLookup, filterTasksByRange, getExecutantOptions } from "@/lib/lms-tasks/analytics"
+import { getMonthKeyFromIso, getMonthLabel, listMonthKeysBetween } from "@/lib/lms-tasks/date-utils"
 import { normalizeClientKey, normalizeExecutantKey } from "@/lib/lms-tasks/parsers"
-import type { ServiceStatus, WorkVolumeStatus } from "@/lib/lms-tasks/types"
+import type { ServiceStatus } from "@/lib/lms-tasks/types"
 import { cn } from "@/lib/utils"
 import { detectLmsDatePresetId, getLmsDatePresets } from "@/lib/lms-tasks/date-presets"
 import { FilterBarGroup, FilterBarRow, FilterBarShell, FilterResultsRow } from "@/components/ui/filter-bar"
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronUp, Clock3, Search, Users, Waves, Workflow, X } from "lucide-react"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
 const DEFAULT_EMPLOYEE_NAME = "Marius Ciurariu"
 const PROJECTS_PAGE_SIZE_OPTIONS = [25, 50, 100, 250] as const
 
-const WORK_VOLUME_OPTIONS: WorkVolumeStatus[] = ["No Work", "Low", "Medium", "Optimal", "High", "Extra"]
-type AgeOption = "all" | "0-3" | "3-6" | "6-12" | "12+"
-type ProjectSortKey = "client" | "services" | "team" | "firstTaskDate" | "lastTaskDate" | "myMinutes" | "teamMinutes" | "myTasks" | "avgMonthlyMinutes" | "workVolumeStatus"
+type ProjectWorkVolumeStatus = "No Work" | "Low" | "Good" | "High" | "Extra"
+const WORK_VOLUME_OPTIONS: ProjectWorkVolumeStatus[] = ["No Work", "Low", "Good", "High", "Extra"]
+type AgeOption = "0-3" | "3-6" | "6-12" | "12+"
+const AGE_FILTER_OPTIONS: AgeOption[] = ["0-3", "3-6", "6-12", "12+"]
+type ProjectSortKey = "client" | "services" | "team" | "delegatedPerson" | "firstTaskDate" | "lastTaskDate" | "myMinutes" | "teamMinutes" | "myTasks" | "avgMonthlyMinutes" | "workVolumeStatus"
 type ProjectSortDirection = "asc" | "desc"
 
 type ServiceKey = "seo" | "gads" | "fads" | "tads"
+const SERVICE_FILTER_OPTIONS: Array<{ value: ServiceKey; label: string }> = [
+  { value: "seo", label: "SEO" },
+  { value: "gads", label: "GAds" },
+  { value: "fads", label: "MAds" },
+  { value: "tads", label: "TAds" },
+]
+
+const monthlyHoursChartConfig = {
+  loggedHours: { label: "Logged Hours", color: "hsl(var(--primary))" },
+} satisfies ChartConfig
 
 type ProjectRow = {
+  clientKey: string
   client: string
   team: string[]
+  delegatedPerson: string
   firstTaskDate: string | null
   lastTaskDate: string | null
   myMinutes: number
   teamMinutes: number
   myTasks: number
   avgMonthlyMinutes: number
-  workVolumeStatus: WorkVolumeStatus
+  workVolumeStatus: ProjectWorkVolumeStatus
   services: {
     seo: ServiceStatus
     gads: ServiceStatus
     fads: ServiceStatus
     tads: ServiceStatus
   }
+  delegated: boolean
   isActive: boolean
   ageMonths: number | null
   recencyMonths: number | null
 }
+
+type HoursChartMode = "my" | "team"
 
 function parseMaybeDate(value: string | null | undefined) {
   if (!value) return null
@@ -59,7 +90,7 @@ function parseMaybeDate(value: string | null | undefined) {
 function formatDateLabel(value: string | null) {
   const parsed = parseMaybeDate(value)
   if (!parsed) return "-"
-  return format(parsed, "dd MMM yyyy")
+  return format(parsed, "dd.MM.yyyy")
 }
 
 function getServiceBadgeClass(status: ServiceStatus) {
@@ -69,7 +100,7 @@ function getServiceBadgeClass(status: ServiceStatus) {
   return "border-slate-200 bg-white text-slate-400"
 }
 
-function getBucketByMonths(months: number | null): Exclude<AgeOption, "all"> | "unknown" {
+function getBucketByMonths(months: number | null): AgeOption | "unknown" {
   if (months == null || !Number.isFinite(months)) return "unknown"
   if (months < 3) return "0-3"
   if (months < 6) return "3-6"
@@ -84,18 +115,102 @@ function getMonthsDiff(baseIso: string, targetIso: string | null) {
   return Math.max(0, differenceInCalendarMonths(base, target))
 }
 
-function formatHoursOrMinutes(minutes: number, precision = 1) {
-  if (minutes < 60) return `${Math.round(minutes)}m`
-  return formatHours(minutes, precision)
+function formatShortName(value: string) {
+  const cleaned = value.trim()
+  if (!cleaned) return "Unassigned"
+  const parts = cleaned.split(/\s+/).filter(Boolean)
+  if (parts.length <= 1) return parts[0] || "Unassigned"
+  const first = parts[0]
+  const secondInitial = parts[1]?.[0] ? `${parts[1][0]}.` : ""
+  return `${first} ${secondInitial}`.trim()
 }
 
-const WORK_VOLUME_SORT_ORDER: Record<WorkVolumeStatus, number> = {
+function isInternalClient(client: string) {
+  const normalized = client.toLowerCase()
+  return normalized.includes("[intern]") || normalized.includes("internal")
+}
+
+const WORK_VOLUME_SORT_ORDER: Record<ProjectWorkVolumeStatus, number> = {
   "No Work": 0,
   Low: 1,
-  Medium: 2,
-  Optimal: 3,
-  High: 4,
-  Extra: 5,
+  Good: 2,
+  High: 3,
+  Extra: 4,
+}
+
+function calculateProjectWorkVolumeStatus(avgMonthlyMinutes: number, hasTasks: boolean, assignedToSelected: boolean): ProjectWorkVolumeStatus {
+  if (assignedToSelected && !hasTasks) return "No Work"
+  if (hasTasks && !assignedToSelected) return "Extra"
+  if (avgMonthlyMinutes < 20) return "Low"
+  if (avgMonthlyMinutes <= 40) return "Good"
+  return "High"
+}
+
+type MultiSelectOption<T extends string> = {
+  value: T
+  label: string
+}
+
+function FilterMultiSelectDropdown<T extends string>({
+  label,
+  options,
+  selectedValues,
+  onToggleValue,
+  onClear,
+}: {
+  label: string
+  options: MultiSelectOption<T>[]
+  selectedValues: T[]
+  onToggleValue: (value: T) => void
+  onClear: () => void
+}) {
+  const triggerLabel = selectedValues.length > 0 ? `${label} (${selectedValues.length})` : label
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex h-10 w-full items-center justify-between gap-1 rounded-lg border pl-2.5 pr-2 text-xs font-semibold outline-none",
+            selectedValues.length > 0
+              ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+              : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]"
+          )}
+        >
+          <span className="truncate">{triggerLabel}</span>
+          <ChevronDown className="h-4 w-4 opacity-70" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        <DropdownMenuLabel>{label}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {options.map((option) => (
+          <DropdownMenuCheckboxItem
+            key={option.value}
+            checked={selectedValues.includes(option.value)}
+            onCheckedChange={() => onToggleValue(option.value)}
+            onSelect={(event) => event.preventDefault()}
+          >
+            {option.label}
+          </DropdownMenuCheckboxItem>
+        ))}
+        {selectedValues.length > 0 ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault()
+                onClear()
+              }}
+            >
+              Clear {label.toLowerCase()}
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
 
 export default function LmsAnalysisProjectsPage() {
@@ -140,15 +255,20 @@ export default function LmsAnalysisProjectsPage() {
 
   const [search, setSearch] = React.useState("")
   const [activeOnly, setActiveOnly] = React.useState(false)
-  const [volumeFilter, setVolumeFilter] = React.useState<WorkVolumeStatus | "all">("all")
-  const [ageFilter, setAgeFilter] = React.useState<AgeOption>("all")
-  const [recentFilter, setRecentFilter] = React.useState<AgeOption>("all")
-  const [serviceFilter, setServiceFilter] = React.useState<ServiceKey | "all">("all")
+  const [volumeFilters, setVolumeFilters] = React.useState<ProjectWorkVolumeStatus[]>([])
+  const [ageFilters, setAgeFilters] = React.useState<AgeOption[]>([])
+  const [recentFilters, setRecentFilters] = React.useState<AgeOption[]>([])
+  const [serviceFilters, setServiceFilters] = React.useState<ServiceKey[]>([])
   const [projectsPage, setProjectsPage] = React.useState(1)
   const [projectsPageSize, setProjectsPageSize] = React.useState<number>(50)
   const [projectsSortKey, setProjectsSortKey] = React.useState<ProjectSortKey>("myMinutes")
   const [projectsSortDirection, setProjectsSortDirection] = React.useState<ProjectSortDirection>("desc")
   const [isCalcGuideOpen, setIsCalcGuideOpen] = React.useState(false)
+  const [hoursChartTarget, setHoursChartTarget] = React.useState<{ client: string; clientKey: string; mode: HoursChartMode } | null>(null)
+
+  const toggleFilterValue = React.useCallback(<T extends string>(value: T, setter: React.Dispatch<React.SetStateAction<T[]>>) => {
+    setter((current) => (current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value]))
+  }, [])
 
   const rows = React.useMemo<ProjectRow[]>(() => {
     const selectedEmployeeKey = normalizeExecutantKey(selectedEmployee)
@@ -202,10 +322,7 @@ export default function LmsAnalysisProjectsPage() {
 
       const assignedToSelected =
         allocation?.specialist ? normalizeExecutantKey(allocation.specialist) === selectedEmployeeKey : false
-      const workVolumeStatus =
-        myTasksCount > 0 && allocation?.specialist && !assignedToSelected
-          ? "Extra"
-          : calculateWorkVolumeStatus(avgMonthlyMinutes, myTasksCount > 0, Boolean(allocation))
+      const workVolumeStatus = calculateProjectWorkVolumeStatus(avgMonthlyMinutes, myTasksCount > 0, assignedToSelected)
 
       const services = {
         seo: allocation?.seo ?? "-",
@@ -217,8 +334,10 @@ export default function LmsAnalysisProjectsPage() {
       const isActive = services.seo === "Active" || services.gads === "Active" || services.fads === "Active" || services.tads === "Active"
 
       return {
+        clientKey: key,
         client,
         team: team.slice(0, 4),
+        delegatedPerson: allocation?.specialist || "Unassigned",
         firstTaskDate,
         lastTaskDate,
         myMinutes,
@@ -227,6 +346,7 @@ export default function LmsAnalysisProjectsPage() {
         avgMonthlyMinutes,
         workVolumeStatus,
         services,
+        delegated: assignedToSelected,
         isActive,
         ageMonths: getMonthsDiff(end, firstTaskDate),
         recencyMonths: getMonthsDiff(end, lastTaskDate),
@@ -242,20 +362,31 @@ export default function LmsAnalysisProjectsPage() {
 
   const filteredRows = React.useMemo(() => {
     const needle = search.trim().toLowerCase()
+    const selectedEmployeeKey = normalizeExecutantKey(selectedEmployee)
     return rows.filter((row) => {
       if (needle && !row.client.toLowerCase().includes(needle)) return false
-      if (activeOnly && !row.isActive) return false
-      if (volumeFilter !== "all" && row.workVolumeStatus !== volumeFilter) return false
 
-      if (serviceFilter !== "all") {
-        if (row.services[serviceFilter] !== "Active") return false
+      const matchesSelectedTeamMember = row.team.some(
+        (member) => normalizeExecutantKey(member) === selectedEmployeeKey
+      )
+      if (!matchesSelectedTeamMember) return false
+
+      if (activeOnly && !row.isActive) return false
+      if (volumeFilters.length > 0 && !volumeFilters.includes(row.workVolumeStatus)) return false
+
+      if (serviceFilters.length > 0) {
+        const hasAnySelectedService = serviceFilters.some((service) => row.services[service] === "Active")
+        if (!hasAnySelectedService) return false
       }
 
-      if (ageFilter !== "all" && getBucketByMonths(row.ageMonths) !== ageFilter) return false
-      if (recentFilter !== "all" && getBucketByMonths(row.recencyMonths) !== recentFilter) return false
+      const ageBucket = getBucketByMonths(row.ageMonths)
+      if (ageFilters.length > 0 && (ageBucket === "unknown" || !ageFilters.includes(ageBucket))) return false
+
+      const recentBucket = getBucketByMonths(row.recencyMonths)
+      if (recentFilters.length > 0 && (recentBucket === "unknown" || !recentFilters.includes(recentBucket))) return false
       return true
     })
-  }, [ageFilter, activeOnly, recentFilter, rows, search, serviceFilter, volumeFilter])
+  }, [ageFilters, activeOnly, recentFilters, rows, search, selectedEmployee, serviceFilters, volumeFilters])
 
   const clearFilters = React.useCallback(() => {
     const next = new URLSearchParams(searchParams.toString())
@@ -267,10 +398,10 @@ export default function LmsAnalysisProjectsPage() {
 
     setSearch("")
     setActiveOnly(false)
-    setVolumeFilter("all")
-    setAgeFilter("all")
-    setRecentFilter("all")
-    setServiceFilter("all")
+    setVolumeFilters([])
+    setAgeFilters([])
+    setRecentFilters([])
+    setServiceFilters([])
   }, [pathname, router, searchParams])
 
   const activeFilters = React.useMemo(() => {
@@ -316,28 +447,57 @@ export default function LmsAnalysisProjectsPage() {
     }
 
     if (activeOnly) filters.push({ id: "active", label: "Active: Only", onRemove: () => setActiveOnly(false) })
-    if (volumeFilter !== "all") filters.push({ id: "volume", label: `Volume: ${volumeFilter}`, onRemove: () => setVolumeFilter("all") })
-    if (serviceFilter !== "all") filters.push({ id: "service", label: `Service: ${serviceFilter.toUpperCase()}`, onRemove: () => setServiceFilter("all") })
-    if (ageFilter !== "all") filters.push({ id: "age", label: `Age: ${ageFilter} mo`, onRemove: () => setAgeFilter("all") })
-    if (recentFilter !== "all") filters.push({ id: "recent", label: `Recent: ${recentFilter} mo`, onRemove: () => setRecentFilter("all") })
+
+    for (const volume of volumeFilters) {
+      filters.push({
+        id: `volume-${volume}`,
+        label: `Volume: ${volume}`,
+        onRemove: () => setVolumeFilters((current) => current.filter((entry) => entry !== volume)),
+      })
+    }
+
+    for (const service of serviceFilters) {
+      const serviceLabel = SERVICE_FILTER_OPTIONS.find((option) => option.value === service)?.label ?? service.toUpperCase()
+      filters.push({
+        id: `service-${service}`,
+        label: `Service: ${serviceLabel}`,
+        onRemove: () => setServiceFilters((current) => current.filter((entry) => entry !== service)),
+      })
+    }
+
+    for (const age of ageFilters) {
+      filters.push({
+        id: `age-${age}`,
+        label: `Age: ${age} mo`,
+        onRemove: () => setAgeFilters((current) => current.filter((entry) => entry !== age)),
+      })
+    }
+
+    for (const recent of recentFilters) {
+      filters.push({
+        id: `recent-${recent}`,
+        label: `Recent: ${recent} mo`,
+        onRemove: () => setRecentFilters((current) => current.filter((entry) => entry !== recent)),
+      })
+    }
 
     return filters
   }, [
     activeDatePresetId,
     activeOnly,
-    ageFilter,
+    ageFilters,
     datePresets,
     from,
     pathname,
-    recentFilter,
+    recentFilters,
     router,
     search,
     searchParams,
     selectedEmployee,
-    serviceFilter,
+    serviceFilters,
     setQueryParams,
     to,
-    volumeFilter,
+    volumeFilters,
   ])
 
   const sortedRows = React.useMemo(() => {
@@ -345,6 +505,20 @@ export default function LmsAnalysisProjectsPage() {
     const rowsToSort = [...filteredRows]
 
     rowsToSort.sort((a, b) => {
+      if (serviceFilters.length > 0) {
+        const aAllFourActive =
+          a.services.seo === "Active" &&
+          a.services.gads === "Active" &&
+          a.services.fads === "Active" &&
+          a.services.tads === "Active"
+        const bAllFourActive =
+          b.services.seo === "Active" &&
+          b.services.gads === "Active" &&
+          b.services.fads === "Active" &&
+          b.services.tads === "Active"
+        if (aAllFourActive !== bAllFourActive) return aAllFourActive ? -1 : 1
+      }
+
       let result = 0
 
       if (projectsSortKey === "client") {
@@ -360,6 +534,8 @@ export default function LmsAnalysisProjectsPage() {
         }
       } else if (projectsSortKey === "team") {
         result = (a.team[0] ?? "").localeCompare(b.team[0] ?? "")
+      } else if (projectsSortKey === "delegatedPerson") {
+        result = a.delegatedPerson.localeCompare(b.delegatedPerson)
       } else if (projectsSortKey === "firstTaskDate") {
         result = (a.firstTaskDate ?? "").localeCompare(b.firstTaskDate ?? "")
       } else if (projectsSortKey === "lastTaskDate") {
@@ -381,7 +557,7 @@ export default function LmsAnalysisProjectsPage() {
     })
 
     return rowsToSort
-  }, [filteredRows, projectsSortDirection, projectsSortKey])
+  }, [filteredRows, projectsSortDirection, projectsSortKey, serviceFilters])
 
   const projectsTotalPages = React.useMemo(
     () => Math.max(1, Math.ceil(sortedRows.length / projectsPageSize)),
@@ -393,6 +569,70 @@ export default function LmsAnalysisProjectsPage() {
     return sortedRows.slice(startIndex, startIndex + projectsPageSize)
   }, [projectsPage, projectsPageSize, sortedRows])
 
+  const totalProjectsDelegated = React.useMemo(
+    () => filteredRows.filter((row) => row.delegated && row.isActive).length,
+    [filteredRows]
+  )
+
+  const totalActiveServices = React.useMemo(
+    () =>
+      filteredRows.reduce((sum, row) => {
+        let activeCount = 0
+        if (row.services.seo === "Active") activeCount += 1
+        if (row.services.gads === "Active") activeCount += 1
+        if (row.services.fads === "Active") activeCount += 1
+        if (row.services.tads === "Active") activeCount += 1
+        return sum + activeCount
+      }, 0),
+    [filteredRows]
+  )
+
+  const averageMyMinutesPerProject = React.useMemo(() => {
+    const nonInternalRows = filteredRows.filter((row) => !isInternalClient(row.client))
+    if (nonInternalRows.length === 0) return 0
+    const totalMyMinutes = nonInternalRows.reduce((sum, row) => sum + row.myMinutes, 0)
+    return totalMyMinutes / nonInternalRows.length
+  }, [filteredRows])
+
+  const monthlyHoursChartRows = React.useMemo(() => {
+    if (!hoursChartTarget) return []
+
+    const selectedEmployeeKey = normalizeExecutantKey(selectedEmployee)
+    const monthKeys = listMonthKeysBetween(start, end)
+    const minuteByMonth = new Map<string, number>()
+
+    for (const task of data.tasks) {
+      if (!task.date || task.date < start || task.date > end) continue
+      if (normalizeClientKey(task.client) !== hoursChartTarget.clientKey) continue
+      if (hoursChartTarget.mode === "my" && normalizeExecutantKey(task.executant) !== selectedEmployeeKey) continue
+
+      const monthKey = getMonthKeyFromIso(task.date)
+      minuteByMonth.set(monthKey, (minuteByMonth.get(monthKey) ?? 0) + task.durationMinutes)
+    }
+
+    return monthKeys.map((monthKey) => {
+      const loggedMinutes = minuteByMonth.get(monthKey) ?? 0
+      return {
+        monthKey,
+        monthLabel: getMonthLabel(monthKey),
+        loggedMinutes,
+        loggedHours: Number((loggedMinutes / 60).toFixed(2)),
+      }
+    })
+  }, [data.tasks, end, hoursChartTarget, selectedEmployee, start])
+
+  const hoursChartTitle = hoursChartTarget?.mode === "team" ? "Team Hours Timeline" : "My Hours Timeline"
+  const hoursChartDescription = React.useMemo(() => {
+    if (!hoursChartTarget) return "Month-by-month hours in selected range."
+    const scopeLabel = hoursChartTarget.mode === "team" ? "Team" : selectedEmployee
+    return `${hoursChartTarget.client} · ${scopeLabel} · ${start} to ${end}`
+  }, [end, hoursChartTarget, selectedEmployee, start])
+
+  const monthlyHoursTotalMinutes = React.useMemo(
+    () => monthlyHoursChartRows.reduce((sum, row) => sum + row.loggedMinutes, 0),
+    [monthlyHoursChartRows]
+  )
+
   const handleProjectsSort = React.useCallback((key: ProjectSortKey) => {
     setProjectsPage(1)
     setProjectsSortKey((previousKey) => {
@@ -401,7 +641,11 @@ export default function LmsAnalysisProjectsPage() {
         return previousKey
       }
 
-      setProjectsSortDirection(key === "client" || key === "team" || key === "firstTaskDate" || key === "lastTaskDate" ? "asc" : "desc")
+      setProjectsSortDirection(
+        key === "client" || key === "team" || key === "delegatedPerson" || key === "firstTaskDate" || key === "lastTaskDate"
+          ? "asc"
+          : "desc"
+      )
       return key
     })
   }, [])
@@ -417,7 +661,7 @@ export default function LmsAnalysisProjectsPage() {
 
   React.useEffect(() => {
     setProjectsPage(1)
-  }, [projectsPageSize, search, selectedEmployee, activeOnly, volumeFilter, serviceFilter, ageFilter, recentFilter, from, to, period])
+  }, [projectsPageSize, search, selectedEmployee, activeOnly, volumeFilters, serviceFilters, ageFilters, recentFilters, from, to, period])
 
   React.useEffect(() => {
     if (projectsPage > projectsTotalPages) setProjectsPage(projectsTotalPages)
@@ -446,76 +690,77 @@ export default function LmsAnalysisProjectsPage() {
                     className="h-8 w-full border-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
                   />
                 </div>
-                <select
-                  value={selectedEmployee}
-                  onChange={(event) => setQueryParams({ employee: event.target.value })}
-                  className="h-10 min-w-[130px] flex-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]"
+                <div className="relative flex-1 min-w-[130px]">
+                  <select
+                    value={selectedEmployee}
+                    onChange={(event) => setQueryParams({ employee: event.target.value })}
+                    className="h-10 w-full appearance-none rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] pl-2.5 pr-8 text-xs font-semibold text-[var(--text-secondary)] outline-none"
+                  >
+                    {executantOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                    {!executantOptions.includes(selectedEmployee) ? (
+                      <option value={selectedEmployee}>{selectedEmployee}</option>
+                    ) : null}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50 pointer-events-none" />
+                </div>
+                <label
+                  className={cn(
+                    "inline-flex h-10 min-w-[120px] flex-1 items-center gap-2 rounded-lg border px-2.5 text-xs font-semibold transition-colors",
+                    activeOnly
+                      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                      : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]"
+                  )}
                 >
-                  {executantOptions.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                  {!executantOptions.includes(selectedEmployee) ? (
-                    <option value={selectedEmployee}>{selectedEmployee}</option>
-                  ) : null}
-                </select>
-                <div className="min-w-[130px] flex-1">
+                  <Checkbox
+                    checked={activeOnly}
+                    onCheckedChange={(checked) => setActiveOnly(Boolean(checked))}
+                    className="border-[var(--line-subtle)] data-[state=checked]:border-[var(--brand-primary)] data-[state=checked]:bg-[var(--brand-primary)]"
+                  />
+                  <span className="truncate">Active only</span>
+                </label>
+                <div className="flex-1 min-w-[120px]">
+                  <FilterMultiSelectDropdown
+                    label="Volume"
+                    options={WORK_VOLUME_OPTIONS.map((status) => ({ value: status, label: status }))}
+                    selectedValues={volumeFilters}
+                    onToggleValue={(value) => toggleFilterValue(value, setVolumeFilters)}
+                    onClear={() => setVolumeFilters([])}
+                  />
+                </div>
+                <div className="flex-1 min-w-[110px]">
+                  <FilterMultiSelectDropdown
+                    label="Service"
+                    options={SERVICE_FILTER_OPTIONS}
+                    selectedValues={serviceFilters}
+                    onToggleValue={(value) => toggleFilterValue(value, setServiceFilters)}
+                    onClear={() => setServiceFilters([])}
+                  />
+                </div>
+                <div className="flex-1 min-w-[100px]">
+                  <FilterMultiSelectDropdown
+                    label="Age"
+                    options={AGE_FILTER_OPTIONS.map((value) => ({ value, label: `${value} mo` }))}
+                    selectedValues={ageFilters}
+                    onToggleValue={(value) => toggleFilterValue(value, setAgeFilters)}
+                    onClear={() => setAgeFilters([])}
+                  />
+                </div>
+                <div className="flex-1 min-w-[115px]">
+                  <FilterMultiSelectDropdown
+                    label="Recent"
+                    options={AGE_FILTER_OPTIONS.map((value) => ({ value, label: `${value} mo` }))}
+                    selectedValues={recentFilters}
+                    onToggleValue={(value) => toggleFilterValue(value, setRecentFilters)}
+                    onClear={() => setRecentFilters([])}
+                  />
+                </div>
+                <div className="min-w-[130px] flex-1 md:ml-auto md:max-w-[220px]">
                   <LmsTasksDateRangeFilters />
                 </div>
-                <select
-                  value={activeOnly ? "active" : "all"}
-                  onChange={(event) => setActiveOnly(event.target.value === "active")}
-                  className="h-10 min-w-[120px] flex-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]"
-                >
-                  <option value="all">All Projects</option>
-                  <option value="active">Active Only</option>
-                </select>
-                <select
-                  value={volumeFilter}
-                  onChange={(event) => setVolumeFilter(event.target.value as WorkVolumeStatus | "all")}
-                  className="h-10 min-w-[120px] flex-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]"
-                >
-                  <option value="all">Volume</option>
-                  {WORK_VOLUME_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      Volume: {status}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={serviceFilter}
-                  onChange={(event) => setServiceFilter(event.target.value as ServiceKey | "all")}
-                  className="h-10 min-w-[110px] flex-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]"
-                >
-                  <option value="all">Service</option>
-                  <option value="seo">Service: SEO</option>
-                  <option value="gads">Service: GAds</option>
-                  <option value="fads">Service: FAds</option>
-                  <option value="tads">Service: TAds</option>
-                </select>
-                <select
-                  value={ageFilter}
-                  onChange={(event) => setAgeFilter(event.target.value as AgeOption)}
-                  className="h-10 min-w-[100px] flex-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]"
-                >
-                  <option value="all">Age</option>
-                  <option value="0-3">Age: 0-3 mo</option>
-                  <option value="3-6">Age: 3-6 mo</option>
-                  <option value="6-12">Age: 6-12 mo</option>
-                  <option value="12+">Age: 12+ mo</option>
-                </select>
-                <select
-                  value={recentFilter}
-                  onChange={(event) => setRecentFilter(event.target.value as AgeOption)}
-                  className="h-10 min-w-[115px] flex-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]"
-                >
-                  <option value="all">Recent</option>
-                  <option value="0-3">Recent: 0-3 mo</option>
-                  <option value="3-6">Recent: 3-6 mo</option>
-                  <option value="6-12">Recent: 6-12 mo</option>
-                  <option value="12+">Recent: 12+ mo</option>
-                </select>
               </FilterBarGroup>
           </FilterBarRow>
         </FilterBarShell>
@@ -553,132 +798,216 @@ export default function LmsAnalysisProjectsPage() {
         </FilterResultsRow>
       </div>
 
+      <div className="grid gap-3 md:grid-cols-3">
+        <Card className="rounded-2xl border-[var(--line-subtle)]">
+          <CardHeader className="pb-2">
+            <CardDescription>Total Projects Delegated</CardDescription>
+            <CardTitle className="text-2xl">{totalProjectsDelegated}</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 text-xs text-[var(--text-secondary)]">
+            Active projects assigned to {selectedEmployee}.
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-[var(--line-subtle)]">
+          <CardHeader className="pb-2">
+            <CardDescription>Total Active Services</CardDescription>
+            <CardTitle className="text-2xl">{totalActiveServices}</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 text-xs text-[var(--text-secondary)]">
+            Counts each active service (SE, GA, FB, TT) per filtered project.
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-[var(--line-subtle)]">
+          <CardHeader className="pb-2">
+            <CardDescription>Avg Time / Domain</CardDescription>
+            <CardTitle className="text-2xl">
+              <DurationValue minutes={averageMyMinutesPerProject} />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 text-xs text-[var(--text-secondary)]">
+            Average selected employee time per filtered domain/project.
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="rounded-2xl border-[var(--line-subtle)]">
         <CardHeader>
           <CardTitle>Projects Table</CardTitle>
           <CardDescription>My contribution vs team workload per client.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("client")} className="inline-flex items-center gap-1 text-left">
+                <TableHead className="w-[13%]">
+                  <button type="button" onClick={() => handleProjectsSort("client")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <Workflow className="h-4 w-4" />Client {getSortIcon("client")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("services")} className="inline-flex items-center gap-1 text-left">
+                <TableHead className="w-[10%]">
+                  <button type="button" onClick={() => handleProjectsSort("services")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <Waves className="h-4 w-4" />Services {getSortIcon("services")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("team")} className="inline-flex items-center gap-1 text-left">
+                <TableHead className="w-[12%]">
+                  <button type="button" onClick={() => handleProjectsSort("team")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <Users className="h-4 w-4" />Team {getSortIcon("team")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("firstTaskDate")} className="inline-flex items-center gap-1 text-left">
-                    <CalendarDays className="h-4 w-4" />1st Task {getSortIcon("firstTaskDate")}
+                <TableHead className="w-[7%]">
+                  <button type="button" onClick={() => handleProjectsSort("delegatedPerson")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
+                    Delegated {getSortIcon("delegatedPerson")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("lastTaskDate")} className="inline-flex items-center gap-1 text-left">
-                    <CalendarDays className="h-4 w-4" />Last Task {getSortIcon("lastTaskDate")}
+                <TableHead className="w-[6%]">
+                  <button type="button" onClick={() => handleProjectsSort("firstTaskDate")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
+                    <CalendarDays className="h-4 w-4" />1st {getSortIcon("firstTaskDate")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("myMinutes")} className="inline-flex items-center gap-1 text-left">
-                    <Clock3 className="h-4 w-4" />My Hours {getSortIcon("myMinutes")}
+                <TableHead className="w-[6%]">
+                  <button type="button" onClick={() => handleProjectsSort("lastTaskDate")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
+                    <CalendarDays className="h-4 w-4" />Last {getSortIcon("lastTaskDate")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("teamMinutes")} className="inline-flex items-center gap-1 text-left">
-                    Team Hours {getSortIcon("teamMinutes")}
+                <TableHead className="w-[10%]">
+                  <button type="button" onClick={() => handleProjectsSort("myMinutes")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
+                    <Clock3 className="h-4 w-4" />My Hrs {getSortIcon("myMinutes")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("myTasks")} className="inline-flex items-center gap-1 text-left">
+                <TableHead className="w-[10%]">
+                  <button type="button" onClick={() => handleProjectsSort("teamMinutes")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
+                    Team Hrs {getSortIcon("teamMinutes")}
+                  </button>
+                </TableHead>
+                <TableHead className="w-[6%]">
+                  <button type="button" onClick={() => handleProjectsSort("myTasks")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     My Tasks {getSortIcon("myTasks")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("avgMonthlyMinutes")} className="inline-flex items-center gap-1 text-left">
+                <TableHead className="w-[6%]">
+                  <button type="button" onClick={() => handleProjectsSort("avgMonthlyMinutes")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     Avg Vol {getSortIcon("avgMonthlyMinutes")}
                   </button>
                 </TableHead>
-                <TableHead>
-                  <button type="button" onClick={() => handleProjectsSort("workVolumeStatus")} className="inline-flex items-center gap-1 text-left">
-                    Work Volume {getSortIcon("workVolumeStatus")}
+                <TableHead className="w-[10%]">
+                  <button type="button" onClick={() => handleProjectsSort("workVolumeStatus")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
+                    Volume {getSortIcon("workVolumeStatus")}
                   </button>
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pagedRows.map((row) => (
-                <TableRow key={row.client}>
-                  <TableCell className="font-semibold">{row.client}</TableCell>
+                <TableRow key={row.clientKey}>
+                  <TableCell className="truncate text-sm font-semibold" title={row.client}>{row.client}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <span
-                        className={cn("inline-flex h-7 w-8 items-center justify-center rounded-md border text-[10px] font-black tracking-[0.06em]", getServiceBadgeClass(row.services.seo))}
+                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black tracking-[0.03em]", getServiceBadgeClass(row.services.seo))}
                         title={`SEO: ${row.services.seo}`}
                       >
                         SE
                       </span>
                       <span
-                        className={cn("inline-flex h-7 w-8 items-center justify-center rounded-md border text-[10px] font-black tracking-[0.06em]", getServiceBadgeClass(row.services.gads))}
+                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black tracking-[0.03em]", getServiceBadgeClass(row.services.gads))}
                         title={`GAds: ${row.services.gads}`}
                       >
                         GA
                       </span>
                       <span
-                        className={cn("inline-flex h-7 w-8 items-center justify-center rounded-md border text-[10px] font-black tracking-[0.06em]", getServiceBadgeClass(row.services.fads))}
+                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black tracking-[0.03em]", getServiceBadgeClass(row.services.fads))}
                         title={`FAds: ${row.services.fads}`}
                       >
                         FB
                       </span>
                       <span
-                        className={cn("inline-flex h-7 w-8 items-center justify-center rounded-md border text-[10px] font-black tracking-[0.06em]", getServiceBadgeClass(row.services.tads))}
+                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black tracking-[0.03em]", getServiceBadgeClass(row.services.tads))}
                         title={`TAds: ${row.services.tads}`}
                       >
                         TT
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-[220px]">
+                  <TableCell className="max-w-[240px]">
                     {row.team.length === 0 ? "-" : (
                       <div className="space-y-0.5">
                         {row.team.map((member) => (
                           <p
                             key={`${row.client}-${member}`}
                             className={cn(
-                              "truncate rounded px-1.5 py-0.5 text-xs font-semibold",
+                              "truncate rounded px-1.5 py-0.5 text-sm font-medium",
                               normalizeExecutantKey(member) === normalizeExecutantKey(selectedEmployee)
                                 ? "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
                                 : "text-[var(--text-primary)]"
                             )}
+                            title={member}
                           >
-                            {member}
+                            {formatShortName(member)}
                           </p>
                         ))}
                       </div>
                     )}
                   </TableCell>
+                  <TableCell className="max-w-[120px] truncate" title={row.delegatedPerson}>
+                    <span
+                      className={cn(
+                        "inline-flex rounded px-1 py-0.5 text-sm font-medium",
+                        normalizeExecutantKey(row.delegatedPerson) === normalizeExecutantKey(selectedEmployee)
+                          ? "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                          : "text-[var(--text-primary)]"
+                      )}
+                    >
+                      {formatShortName(row.delegatedPerson)}
+                    </span>
+                  </TableCell>
                   <TableCell>{formatDateLabel(row.firstTaskDate)}</TableCell>
                   <TableCell>{formatDateLabel(row.lastTaskDate)}</TableCell>
-                  <TableCell>{formatHoursOrMinutes(row.myMinutes)}</TableCell>
-                  <TableCell>{formatHoursOrMinutes(row.teamMinutes)}</TableCell>
-                  <TableCell>{row.myTasks}</TableCell>
-                  <TableCell>{formatHoursOrMinutes(row.avgMonthlyMinutes, 2)} /mo</TableCell>
                   <TableCell>
-                    <WorkVolumeBadge status={row.workVolumeStatus} />
+                    <button
+                      type="button"
+                      onClick={() => setHoursChartTarget({ client: row.client, clientKey: row.clientKey, mode: "my" })}
+                      className="inline-flex rounded px-1 py-0.5 transition-colors hover:bg-[var(--bg-surface-soft)]"
+                      title="View monthly breakdown"
+                    >
+                      <DurationValue minutes={row.myMinutes} />
+                    </button>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      type="button"
+                      onClick={() => setHoursChartTarget({ client: row.client, clientKey: row.clientKey, mode: "team" })}
+                      className="inline-flex rounded px-1 py-0.5 transition-colors hover:bg-[var(--bg-surface-soft)]"
+                      title="View team monthly breakdown"
+                    >
+                      <DurationValue minutes={row.teamMinutes} />
+                    </button>
+                  </TableCell>
+                  <TableCell>{row.myTasks}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-1">
+                      <DurationValue minutes={row.avgMonthlyMinutes} />
+                      <span className="text-xs text-[var(--text-secondary)]">/mo</span>
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em]",
+                        row.workVolumeStatus === "No Work" && "border-slate-300 bg-slate-100 text-slate-700",
+                        row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
+                        row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
+                        row.workVolumeStatus === "High" && "border-rose-300 bg-rose-50 text-rose-700",
+                        row.workVolumeStatus === "Extra" && "border-violet-300 bg-violet-50 text-violet-700"
+                      )}
+                    >
+                      {row.workVolumeStatus}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}
               {filteredRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-[var(--text-secondary)]">
+                  <TableCell colSpan={11} className="text-center text-[var(--text-secondary)]">
                     No projects match current filters.
                   </TableCell>
                 </TableRow>
@@ -693,17 +1022,20 @@ export default function LmsAnalysisProjectsPage() {
               <div className="flex items-center gap-2">
                 <label className="inline-flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)]">
                   Results
-                  <select
-                    value={projectsPageSize}
-                    onChange={(event) => setProjectsPageSize(Number(event.target.value))}
-                    className="h-8 rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-2 text-xs font-semibold text-[var(--text-primary)] outline-none"
-                  >
-                    {PROJECTS_PAGE_SIZE_OPTIONS.map((size) => (
-                      <option key={size} value={size}>
-                        {size} / page
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={projectsPageSize}
+                      onChange={(event) => setProjectsPageSize(Number(event.target.value))}
+                      className="h-8 appearance-none rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-7 text-xs font-semibold text-[var(--text-primary)] outline-none"
+                    >
+                      {PROJECTS_PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size} / page
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50 pointer-events-none" />
+                  </div>
                 </label>
                 <button
                   type="button"
@@ -749,10 +1081,10 @@ export default function LmsAnalysisProjectsPage() {
                 Avg Vol is the selected employee monthly average for each client in the selected date range.
               </p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
-                Formula: Avg Vol = My Hours / Months In Range
+                Formula: Avg Vol = My Minutes / Months In Range
               </p>
               <p className="mt-2 text-xs text-[var(--text-muted)]">
-                My Hours = total hours logged by selected employee on that client.
+                My Minutes = total minutes logged by selected employee on that client.
               </p>
             </div>
 
@@ -762,17 +1094,48 @@ export default function LmsAnalysisProjectsPage() {
                 Work Volume is derived from Avg Vol (minutes/month) using business thresholds.
               </p>
               <div className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
-                <p>No Work: avg &lt; 20 min/mo</p>
-                <p>Low: avg &lt; 90 min/mo</p>
-                <p>Medium: avg &lt; 180 min/mo</p>
-                <p>Optimal: avg &lt; 300 min/mo</p>
-                <p>High: avg ≥ 300 min/mo</p>
+                <p>No Work: delegated to selected employee but no time entries by selected employee</p>
+                <p>Low: avg &lt; 20 min/mo</p>
+                <p>Good: avg 20-40 min/mo</p>
+                <p>High: avg &gt; 40 min/mo</p>
                 <p>Extra: has work but client is assigned to another specialist</p>
               </div>
             </div>
           </CardContent>
         ) : null}
       </Card>
+
+      <Dialog open={Boolean(hoursChartTarget)} onOpenChange={(open) => !open && setHoursChartTarget(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{hoursChartTitle}</DialogTitle>
+            <DialogDescription>{hoursChartDescription}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Total In Range</p>
+              <DurationValue minutes={monthlyHoursTotalMinutes} className="text-base" />
+            </div>
+
+            {monthlyHoursChartRows.some((row) => row.loggedMinutes > 0) ? (
+              <ChartContainer config={monthlyHoursChartConfig} className="h-[320px] w-full">
+                <BarChart data={monthlyHoursChartRows}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="monthLabel" tickLine={false} axisLine={false} />
+                  <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `${value}h`} />
+                  <ChartTooltip content={<ChartTooltipContent hideIndicator />} />
+                  <Bar dataKey="loggedHours" fill="var(--color-loggedHours)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <p className="rounded-xl border border-dashed border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
+                No time entries found for this scope in the selected range.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

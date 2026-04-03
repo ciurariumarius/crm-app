@@ -201,11 +201,18 @@ export async function parseAllocationsFile(file: File): Promise<ParseResult<Clie
     }
   }
 
+  const fadsExactIndex = findColumnIndexByTerms(headers, ["Status serviciu FAds"], "exact")
+  const fadsFallbackIndex = findColumnIndexByTerms(
+    headers,
+    ["Status serviciu FAds", "Status serviciu FB", "Status serviciu Facebook", "Status serviciu MAds", "Status FB", "Status MAds", "FAds", "Facebook", "MAds", "Meta Ads"],
+    "partial"
+  )
+
   const indexes = {
     client: clientIndex,
     seo: findColumnIndexByTerms(headers, ["Status serviciu SEO"], "exact"),
     gads: findColumnIndexByTerms(headers, ["Status serviciu GAds"], "exact"),
-    fads: findColumnIndexByTerms(headers, ["Status serviciu FAds"], "exact"),
+    fads: fadsExactIndex >= 0 ? fadsExactIndex : fadsFallbackIndex,
     tads:
       findColumnIndexByTerms(headers, ["Status serviciu TAds"], "exact") >= 0
         ? findColumnIndexByTerms(headers, ["Status serviciu TAds"], "exact")
@@ -214,6 +221,13 @@ export async function parseAllocationsFile(file: File): Promise<ParseResult<Clie
       findColumnIndexByTerms(headers, ["Specialist GTM"], "exact") >= 0
         ? findColumnIndexByTerms(headers, ["Specialist GTM"], "exact")
         : findColumnIndexByTerms(headers, ["Specialist"], "exact"),
+  }
+
+  if (indexes.fads < 0) {
+    issues.push({
+      level: "warning",
+      message: "FAds column was not detected. FAds statuses were set to '-'",
+    })
   }
 
   const records: ClientAllocation[] = []
