@@ -26,6 +26,8 @@ model Tenant {
   auditLogs        AuditLog[]
   projectRollovers ProjectRollover[]
   authSessions     AuthSession[]
+  lmsTaskLogs      LmsTaskLog[]
+  lmsAllocations   LmsAllocation[]
 
   @@map("tenants")
 }
@@ -303,4 +305,48 @@ model ProjectRollover {
   @@unique([tenantId, sourceProjectId, targetYear, targetMonth])
   @@index([tenantId, targetYear, targetMonth])
   @@map("project_rollovers")
+}
+
+model LmsTaskLog {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  syncKey         String    @map("sync_key")
+  sourceId        String?   @map("source_id")
+  taskDate        DateTime? @map("task_date")
+  client          String
+  taskName        String    @map("task_name")
+  executant       String
+  durationMinutes Int       @map("duration_minutes")
+  status          String    @default("-")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, syncKey])
+  @@index([tenantId, taskDate])
+  @@index([tenantId, executant])
+  @@index([tenantId, client])
+  @@map("lms_task_logs")
+}
+
+model LmsAllocation {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  syncKey    String   @map("sync_key")
+  client     String
+  specialist String   @default("Unassigned")
+  seo        String   @default("-")
+  gads       String   @default("-")
+  fads       String   @default("-")
+  tads       String   @default("-")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, syncKey])
+  @@index([tenantId, client])
+  @@index([tenantId, specialist])
+  @@map("lms_allocations")
 }

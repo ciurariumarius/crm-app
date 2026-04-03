@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, User, Briefcase, X, ChevronDown, Check } from "lucide-react"
+import { Search, User, Briefcase, X, ChevronDown, Check, Clock } from "lucide-react"
 import { cn, formatProjectName } from "@/lib/utils"
 import {
     Popover,
@@ -65,6 +65,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
 
     const currentPartnerId = searchParams.get("partnerId") || "all"
     const currentProjectId = searchParams.get("projectId") || "all"
+    const currentTimeRange = searchParams.get("timeRange") || "all"
 
     // Update URL on search
     React.useEffect(() => {
@@ -126,6 +127,21 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
         })
     }
 
+    const timeRangeLabels: Record<string, string> = {
+        "7d": "Last 7 Days",
+        "30d": "Last 30 Days",
+        "this_month": "This Month",
+        "last_month": "Last Month"
+    }
+
+    if (currentTimeRange !== "all" && timeRangeLabels[currentTimeRange]) {
+        activeFilters.push({
+            key: "timeRange",
+            label: timeRangeLabels[currentTimeRange],
+            href: buildHref({ timeRange: "all" })
+        })
+    }
+
     return (
         <div className="space-y-3">
             <FilterBarShell>
@@ -167,6 +183,13 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                         projects={projects}
                         currentProject={currentProjectId}
                         onSelect={(value) => pushWithOverrides({ projectId: value, partnerId: "all" })}
+                    />
+
+                    <FilterBarDivider className="hidden md:block" />
+
+                    <TimeRangeCombobox
+                        currentTimeRange={currentTimeRange}
+                        onSelect={(value) => pushWithOverrides({ timeRange: value })}
                     />
                     </FilterBarGroup>
 
@@ -332,6 +355,77 @@ function ProjectCombobox({
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", currentProject === project.id ? "opacity-100" : "opacity-0")} />
                                     {formatProjectName(project)}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+export function TimeRangeCombobox({
+    currentTimeRange,
+    onSelect,
+}: {
+    currentTimeRange: string
+    onSelect: (value: string) => void
+}) {
+    const [open, setOpen] = React.useState(false)
+    const isActive = currentTimeRange !== "all"
+    
+    const timeRangeLabels: Record<string, string> = {
+        "all": "All Time",
+        "7d": "Last 7 Days",
+        "30d": "Last 30 Days",
+        "this_month": "This Month",
+        "last_month": "Last Month"
+    }
+    
+    const options = [
+        { id: "all", name: "All Time" },
+        { id: "7d", name: "Last 7 Days" },
+        { id: "30d", name: "Last 30 Days" },
+        { id: "this_month", name: "This Month" },
+        { id: "last_month", name: "Last Month" },
+    ]
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
+                        isActive
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                    )}
+                >
+                    <Clock className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <span className="max-w-[150px] truncate">{timeRangeLabels[currentTimeRange] || "All Time"}</span>
+                    <ChevronDown className="h-4 w-4 opacity-70" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[220px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+                <Command className="rounded-xl">
+                    <CommandList>
+                        <CommandEmpty>No range found.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option.id}
+                                    value={option.name}
+                                    onSelect={() => {
+                                        onSelect(option.id)
+                                        setOpen(false)
+                                    }}
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", currentTimeRange === option.id ? "opacity-100" : "opacity-0")} />
+                                    {option.name}
                                 </CommandItem>
                             ))}
                         </CommandGroup>

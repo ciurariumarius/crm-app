@@ -17,10 +17,10 @@ const PAGE_SIZE = 50
 export default async function PaymentsPage({
     searchParams,
 }: {
-    searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string }>
+    searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string; timeRange?: string }>
 }) {
     const session = await requireTenantContext()
-    const { projectId, partnerId, q, page: pageParam } = await searchParams
+    const { projectId, partnerId, q, timeRange, page: pageParam } = await searchParams
     const page = Math.max(1, Number(pageParam) || 1)
 
     const [projects, partners, logsResult] = await Promise.all([
@@ -36,6 +36,7 @@ export default async function PaymentsPage({
             projectId,
             partnerId,
             q,
+            timeRange,
             take: PAGE_SIZE,
             skip: (page - 1) * PAGE_SIZE,
         })
@@ -89,6 +90,7 @@ export default async function PaymentsPage({
         if (projectId) next.set("projectId", projectId)
         if (partnerId) next.set("partnerId", partnerId)
         if (q) next.set("q", q)
+        if (timeRange) next.set("timeRange", timeRange)
         next.set("page", String(targetPage))
         return `/payments?${next.toString()}`
     }

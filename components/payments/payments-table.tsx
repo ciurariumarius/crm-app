@@ -101,13 +101,23 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
             const project = projects.find((projectEntry) => projectEntry.id === projectId)
             // Try to extract fee from log details if possible (manual toggle might not store fee, so we check project)
             const feeMatch = details.match(/fee=([^;]+)/)
-            const fee = feeMatch ? Number(feeMatch[1]) : toProjectFee(project?.currentFee)
+            const amountMatch = details.match(/amount=([^;]+)/)
+            const fee = feeMatch ? Number(feeMatch[1]) : (amountMatch ? Number(amountMatch[1]) : toProjectFee(project?.currentFee))
 
             if (project) {
                 return {
                     projectName: formatProjectName(project),
                     extraProjects: [],
                     totalAmount: fee
+                }
+            } else {
+                // Return something even if project not found, using the captured amount
+                if (amountMatch || feeMatch) {
+                     return {
+                         projectName: "Ad-Hoc Payment",
+                         extraProjects: [],
+                         totalAmount: fee
+                     }
                 }
             }
         }
@@ -117,6 +127,8 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
 
     const getActionLabel = (action: string) => {
         switch (action) {
+            case "PARTNER_AD_HOC_PAYMENT_ADDED":
+                return "Manual Payment"
             case "PROJECT_PAYMENT_TOGGLED":
                 return "Manual Toggle"
             case "SETTLE_PARTNER":

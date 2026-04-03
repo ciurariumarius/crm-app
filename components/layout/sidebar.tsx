@@ -62,6 +62,12 @@ const ppcNav: NavItem[] = [
   { name: "Facebook Ads", href: "/ppc/facebook-ads", icon: UserPlus },
 ]
 
+const lmsAnalysisNav: NavItem[] = [
+  { name: "Tasks", href: "/lms-analysis/tasks", icon: CheckCircle },
+  { name: "Projects", href: "/lms-analysis/projects", icon: Package },
+  { name: "Data", href: "/lms-analysis/data", icon: Database },
+]
+
 function isActivePath(pathname: string, href: string) {
   if (href === "/") return pathname === "/"
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -74,12 +80,15 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
   const [isSidebarFocusExpanded, setIsSidebarFocusExpanded] = useState(false)
   const [databaseOpen, setDatabaseOpen] = useState(false)
   const [ppcOpen, setPpcOpen] = useState(false)
+  const [lmsAnalysisOpen, setLmsAnalysisOpen] = useState(false)
 
   const isDesktopCollapsed = isSidebarCollapsed && !isSidebarFocusExpanded
   const isDatabaseActive = databaseNav.some((item) => isActivePath(pathname, item.href))
   const isPpcActive = ppcNav.some((item) => isActivePath(pathname, item.href))
+  const isLmsAnalysisActive = lmsAnalysisNav.some((item) => isActivePath(pathname, item.href))
   const showDatabaseChildren = databaseOpen
   const showPpcChildren = ppcOpen
+  const showLmsAnalysisChildren = lmsAnalysisOpen || isLmsAnalysisActive
   const displayName = user?.name || user?.username || "Admin"
   const displayRole = "Admin"
   const initials = displayName.substring(0, 2).toUpperCase()
@@ -247,6 +256,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
             <nav className="flex-1 space-y-5 px-3 py-5">
               <div className="space-y-1">{coreNav.map(renderMobileItem)}</div>
               <div className="h-px bg-[var(--line-subtle)]" />
+              {renderMobileGroup("LMS Analysis", LayoutGrid, showLmsAnalysisChildren, isLmsAnalysisActive, () => setLmsAnalysisOpen((prev) => !prev), lmsAnalysisNav)}
               {renderMobileGroup("Database", Database, showDatabaseChildren, isDatabaseActive, () => setDatabaseOpen((prev) => !prev), databaseNav)}
               {renderMobileGroup("PPC", BarChart3, showPpcChildren, isPpcActive, () => setPpcOpen((prev) => !prev), ppcNav)}
             </nav>
@@ -321,6 +331,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
           <nav id="desktop-sidebar-nav" className="mt-4 flex-1 space-y-5">
             <div className="space-y-1">{coreNav.map(renderDesktopItem)}</div>
             <div className="mx-2 h-px bg-[var(--line-subtle)]" />
+            {renderDesktopGroup("LMS Analysis", LayoutGrid, showLmsAnalysisChildren, isLmsAnalysisActive, () => setLmsAnalysisOpen((prev) => !prev), lmsAnalysisNav)}
             {renderDesktopGroup("Database", Database, showDatabaseChildren, isDatabaseActive, () => setDatabaseOpen((prev) => !prev), databaseNav)}
             {renderDesktopGroup("PPC", BarChart3, showPpcChildren, isPpcActive, () => setPpcOpen((prev) => !prev), ppcNav)}
           </nav>

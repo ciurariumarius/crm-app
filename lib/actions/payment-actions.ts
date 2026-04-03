@@ -11,7 +11,7 @@ export async function getProjectPaymentHistory(projectId: string) {
         const logs = await prisma.auditLog.findMany({
             where: {
                 tenantId: session.tenantId,
-                action: { in: ["PROJECT_PAYMENT_TOGGLED", "SETTLE_PARTNER", "SETTLE_PARTNER_VOIDED"] },
+                action: { in: ["PROJECT_PAYMENT_TOGGLED", "SETTLE_PARTNER", "SETTLE_PARTNER_VOIDED", "PARTNER_AD_HOC_PAYMENT_ADDED"] },
                 details: { contains: projectId }
             },
             orderBy: { createdAt: "desc" },
@@ -24,6 +24,7 @@ export async function getProjectPaymentHistory(projectId: string) {
                 let status = "Unknown"
                 if (log.action === "SETTLE_PARTNER") status = "Paid"
                 else if (log.action === "SETTLE_PARTNER_VOIDED") status = "Unpaid (Voided)"
+                else if (log.action === "PARTNER_AD_HOC_PAYMENT_ADDED") status = "Paid (Manual)"
                 else if (log.action === "PROJECT_PAYMENT_TOGGLED") {
                     status = log.details?.includes('to=Paid') ? "Paid" : "Unpaid"
                 }
@@ -95,16 +96,17 @@ export async function getPaymentLogs(params: {
     projectId?: string;
     partnerId?: string;
     q?: string;
+    timeRange?: string;
     take?: number;
     skip?: number;
 }) {
     try {
         const session = await requireTenantContext()
-        const { projectId, partnerId, q, take = 50, skip = 0 } = params
+        const { projectId, partnerId, q, timeRange, take = 50, skip = 0 } = params
 
         const where: Prisma.AuditLogWhereInput = {
             tenantId: session.tenantId,
-            action: { in: ["PROJECT_PAYMENT_TOGGLED", "SETTLE_PARTNER", "SETTLE_PARTNER_VOIDED"] }
+            action: { in: ["PROJECT_PAYMENT_TOGGLED", "SETTLE_PARTNER", "SETTLE_PARTNER_VOIDED", "PARTNER_AD_HOC_PAYMENT_ADDED"] }
         }
 
         const conditions: Prisma.AuditLogWhereInput[] = []
@@ -117,6 +119,32 @@ export async function getPaymentLogs(params: {
             conditions.push({ details: { contains: `projectId=${projectId}` } })
         } else if (partnerId) {
             conditions.push({ details: { contains: `partnerId=${partnerId}` } })
+        }
+
+        if (timeRange) {
+            const now = new Date()
+            let gte: Date | undefined
+            let lte: Date | undefined
+
+            if (timeRange === "7d") {
+                gte = new Date(now.setDate(now.getDate() - 7))
+            } else if (timeRange === "30d") {
+                gte = new Date(now.setDate(now.getDate() - 30))
+            } else if (timeRange === "this_month") {
+                gte = new Date(now.getFullYear(), now.getMonth(), 1)
+            } else if (timeRange === "last_month") {
+                gte = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+                lte = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+            }
+
+            if (gte || lte) {
+                conditions.push({
+                    createdAt: {
+                        ...(gte ? { gte } : {}),
+                        ...(lte ? { lte } : {})
+                    }
+                })
+            }
         }
 
         if (conditions.length > 0) {
@@ -139,6 +167,7 @@ export async function getPaymentLogs(params: {
                 let status = "Unknown"
                 if (log.action === "SETTLE_PARTNER") status = "Paid"
                 else if (log.action === "SETTLE_PARTNER_VOIDED") status = "Unpaid (Voided)"
+                else if (log.action === "PARTNER_AD_HOC_PAYMENT_ADDED") status = "Paid (Manual)"
                 else if (log.action === "PROJECT_PAYMENT_TOGGLED") {
                     status = log.details?.includes('to=Paid') ? "Paid" : "Unpaid"
                 }
