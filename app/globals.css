@@ -387,6 +387,15 @@
     background: rgba(255, 241, 242, 0.82);
   }
 
+  .cockpit-paid-row {
+    box-shadow: inset 4px 0 0 var(--state-success);
+    background: color-mix(in srgb, var(--state-success) 4%, #ffffff);
+  }
+
+  .cockpit-paid-row:hover {
+    background: color-mix(in srgb, var(--state-success) 8%, #ffffff);
+  }
+
   .project-state-active {
     background: rgba(255, 255, 255, 0.92);
   }

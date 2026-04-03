@@ -177,7 +177,8 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                 className={cn(
                                     "group stagger-row-enter premium-card relative flex items-center bg-white rounded-xl p-4 border border-border/60 transition-all cursor-pointer hover:bg-slate-50/50",
                                     isExpanded && "bg-slate-50/30 ring-1 ring-blue-500/10 shadow-md",
-                                    log.status === "Unpaid" && "cockpit-debt-row"
+                                    log.status === "Unpaid" && "cockpit-debt-row",
+                                    log.status === "Paid" && "cockpit-paid-row"
                                 )}
                                 style={{ animationDelay: `${index * 0.05}s` }}
                                 onClick={() => toggleRow(log.id, isExpandable)}
@@ -225,11 +226,8 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                             )}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-[13px] font-bold text-slate-700 leading-none mb-0.5">
+                                            <span className="text-[13px] font-bold text-slate-700 leading-none">
                                                 {getActionLabel(log.action)}
-                                            </span>
-                                            <span className="ui-text-caption text-slate-400">
-                                                Transaction type
                                             </span>
                                         </div>
                                     </div>

@@ -214,11 +214,12 @@ export async function updateProject(projectId: string, data: {
         console.log(`[projects] Updating project ${projectId}`, updateData)
         const validated = UpdateProjectSchema.parse(updateData)
 
-        const { ...restValidated } = validated
+        // serviceIds is handled through relation updates below and must not be passed as a scalar field.
+        const { serviceIds, ...restValidated } = validated
         const prismaUpdateData: Prisma.ProjectUpdateInput = { ...restValidated }
 
-        if (validated.serviceIds) {
-            const uniqueServiceIds = Array.from(new Set(validated.serviceIds))
+        if (serviceIds) {
+            const uniqueServiceIds = Array.from(new Set(serviceIds))
             const projectInfo = await prisma.project.findFirst({
                 where: { id: validatedProjectId, tenantId: session.tenantId },
                 include: { site: true }
