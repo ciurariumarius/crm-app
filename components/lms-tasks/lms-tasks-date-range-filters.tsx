@@ -101,7 +101,7 @@ export function LmsTasksDateRangeFilters() {
           <Button 
             variant="outline" 
             className={cn(
-              "h-10 w-full md:w-auto justify-between rounded-xl px-4 gap-2 font-medium shadow-none",
+              "h-10 min-w-[132px] w-full md:w-auto justify-between rounded-xl px-4 gap-2 text-xs font-semibold shadow-none",
               activePresetId !== "custom" && activePresetId !== "all" 
                 ? "bg-cyan-50/50 text-cyan-800 border-cyan-200 hover:bg-cyan-100/50" 
                 : "bg-white text-slate-700 hover:bg-slate-50 border-slate-200"
@@ -111,8 +111,11 @@ export function LmsTasksDateRangeFilters() {
             <ChevronDown className="h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-0 rounded-[1.25rem] border-slate-200 shadow-xl overflow-hidden pointer-events-auto bg-white">
-          <div className="p-4 flex flex-col gap-4 w-[340px]">
+        <PopoverContent
+          align="start"
+          className="w-[min(96vw,640px)] p-0 rounded-[1.25rem] border-slate-200 shadow-xl overflow-hidden pointer-events-auto bg-white"
+        >
+          <div className="p-4 flex flex-col gap-4 w-full">
             {/* Presets Grid */}
             <div className="grid grid-cols-2 gap-2">
               {presets.map((preset, i) => (
@@ -134,15 +137,22 @@ export function LmsTasksDateRangeFilters() {
 
             <div className="h-px bg-slate-100 -mx-4" />
 
-            <div className="w-full flex justify-center [&_[data-slot=calendar]]:![--cell-size:44px] [&_.rdp-month_grid]:!w-full [&_.rdp-weeks]:!w-full">
+            <div className="w-full [&_[data-slot=calendar]]:![--cell-size:clamp(36px,11vw,46px)] [&_.rdp-month_grid]:!w-full [&_.rdp-weeks]:!w-full">
               <Calendar
                 mode="range"
                 initialFocus
                 selected={selectedRange}
                 onSelect={handleDaySelect}
                 numberOfMonths={1}
-                className="bg-transparent w-full p-0 flex justify-center"
+                className="bg-transparent w-full p-0"
                 classNames={{
+                  root: "w-full",
+                  month: "w-full",
+                  months: "w-full",
+                  month_grid: "w-full table-fixed",
+                  weekdays: "grid w-full grid-cols-7",
+                  week: "grid w-full grid-cols-7 mt-2",
+                  day: "w-full",
                   nav_button: "hover:bg-slate-100",
                   day_selected: "bg-cyan-600 text-white hover:bg-cyan-600 hover:text-white",
                   day_today: "bg-slate-100 text-slate-900 font-bold",

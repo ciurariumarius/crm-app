@@ -16,10 +16,10 @@ import { buildTaskWhereInput, getLocalDayBounds, normalizeTaskFilters } from "@/
 
 export const dynamic = "force-dynamic"
 
-const PAGE_SIZE_OPTIONS = [100, 250, 500] as const
+const PAGE_SIZE_OPTIONS = [50, 100, 250] as const
 const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
 const PAGE_SIZE_VALUES = new Set<number>(PAGE_SIZE_OPTIONS)
-const PAGINATION_THRESHOLD = 200
+const PAGINATION_THRESHOLD = 120
 const SORT_OPTIONS = [
     { label: "Newest", value: "newest" },
     { label: "Oldest", value: "oldest" },

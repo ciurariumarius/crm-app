@@ -32,12 +32,19 @@ export function FilterBarScroll({
 export function FilterBarRow({
     className,
     children,
+    wrap = false,
 }: {
     className?: string
     children: React.ReactNode
+    wrap?: boolean
 }) {
     return (
-        <div className={cn("inline-flex min-w-max items-center gap-4 md:flex md:w-full md:min-w-0 md:items-center md:gap-6", className)}>
+        <div className={cn(
+            wrap
+                ? "flex w-full min-w-0 flex-wrap items-center gap-3 md:gap-6"
+                : "inline-flex min-w-max items-center gap-4 md:flex md:w-full md:min-w-0 md:items-center md:gap-6",
+            className
+        )}>
             {children}
         </div>
     )
@@ -46,11 +53,22 @@ export function FilterBarRow({
 export function FilterBarGroup({
     className,
     children,
+    wrap = false,
 }: {
     className?: string
     children: React.ReactNode
+    wrap?: boolean
 }) {
-    return <div className={cn("inline-flex items-center gap-4 md:gap-5", className)}>{children}</div>
+    return (
+        <div
+            className={cn(
+                wrap ? "flex min-w-0 flex-wrap items-center gap-3 md:gap-5" : "inline-flex items-center gap-4 md:gap-5",
+                className
+            )}
+        >
+            {children}
+        </div>
+    )
 }
 
 export function FilterBarDivider({

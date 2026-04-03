@@ -26,6 +26,7 @@ import {
 import { buildAllocationLookup, filterTasksByRange, getExecutantOptions } from "@/lib/lms-tasks/analytics"
 import { getMonthKeyFromIso, getMonthLabel, listMonthKeysBetween } from "@/lib/lms-tasks/date-utils"
 import { normalizeClientKey, normalizeExecutantKey } from "@/lib/lms-tasks/parsers"
+import { isLmsMobileOptimizedEnabled } from "@/lib/lms-tasks/feature-flags"
 import type { ServiceStatus } from "@/lib/lms-tasks/types"
 import { cn } from "@/lib/utils"
 import { detectLmsDatePresetId, getLmsDatePresets } from "@/lib/lms-tasks/date-presets"
@@ -214,6 +215,7 @@ function FilterMultiSelectDropdown<T extends string>({
 }
 
 export default function LmsAnalysisProjectsPage() {
+  const mobileOptimized = isLmsMobileOptimizedEnabled()
   const { ready, data } = useLmsTasksData()
   const { start, end } = useLmsDateRange()
   const router = useRouter()
@@ -633,22 +635,25 @@ export default function LmsAnalysisProjectsPage() {
     [monthlyHoursChartRows]
   )
 
-  const handleProjectsSort = React.useCallback((key: ProjectSortKey) => {
-    setProjectsPage(1)
-    setProjectsSortKey((previousKey) => {
-      if (previousKey === key) {
-        setProjectsSortDirection((previousDirection) => (previousDirection === "asc" ? "desc" : "asc"))
-        return previousKey
-      }
+  const handleProjectsSort = React.useCallback(
+    (key: ProjectSortKey) => {
+      setProjectsPage(1)
+      setProjectsSortKey((previousKey) => {
+        if (previousKey === key) {
+          setProjectsSortDirection((previousDirection) => (previousDirection === "asc" ? "desc" : "asc"))
+          return previousKey
+        }
 
-      setProjectsSortDirection(
-        key === "client" || key === "team" || key === "delegatedPerson" || key === "firstTaskDate" || key === "lastTaskDate"
-          ? "asc"
-          : "desc"
-      )
-      return key
-    })
-  }, [])
+        setProjectsSortDirection(
+          key === "client" || key === "team" || key === "delegatedPerson" || key === "firstTaskDate" || key === "lastTaskDate"
+            ? "asc"
+            : "desc"
+        )
+        return key
+      })
+    },
+    [setProjectsPage, setProjectsSortDirection, setProjectsSortKey]
+  )
 
   const getSortIcon = React.useCallback(
     (key: ProjectSortKey) => {
@@ -679,14 +684,15 @@ export default function LmsAnalysisProjectsPage() {
     <div className="space-y-5">
       <div className="space-y-3">
         <FilterBarShell className="rounded-2xl border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 shadow-none">
-          <FilterBarRow className="flex w-full min-w-0 flex-wrap items-center gap-2 md:gap-2">
-              <FilterBarGroup className="flex w-full flex-wrap items-center gap-2 md:gap-2">
+          <FilterBarRow wrap className="w-full min-w-0 items-center gap-2 md:gap-2">
+              <FilterBarGroup wrap className="w-full items-center gap-2 md:gap-2">
                 <div className="inline-flex h-10 min-w-[180px] flex-[2_1_240px] items-center gap-2 rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-3">
                   <Search className="h-4 w-4 text-[var(--text-secondary)]" />
                   <input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search client..."
+                    aria-label="Search client"
                     className="h-8 w-full border-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
                   />
                 </div>
@@ -694,6 +700,7 @@ export default function LmsAnalysisProjectsPage() {
                   <select
                     value={selectedEmployee}
                     onChange={(event) => setQueryParams({ employee: event.target.value })}
+                    aria-label="Employee filter"
                     className="h-10 w-full appearance-none rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] pl-2.5 pr-8 text-xs font-semibold text-[var(--text-secondary)] outline-none"
                   >
                     {executantOptions.map((name) => (
@@ -718,6 +725,7 @@ export default function LmsAnalysisProjectsPage() {
                   <Checkbox
                     checked={activeOnly}
                     onCheckedChange={(checked) => setActiveOnly(Boolean(checked))}
+                    aria-label="Show only active projects"
                     className="border-[var(--line-subtle)] data-[state=checked]:border-[var(--brand-primary)] data-[state=checked]:bg-[var(--brand-primary)]"
                   />
                   <span className="truncate">Active only</span>
@@ -836,6 +844,95 @@ export default function LmsAnalysisProjectsPage() {
           <CardDescription>My contribution vs team workload per client.</CardDescription>
         </CardHeader>
         <CardContent>
+          {mobileOptimized ? (
+            <div className="space-y-3 pb-1 md:hidden">
+              {pagedRows.map((row) => (
+                <article key={`mobile-${row.clientKey}`} className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">{row.client}</p>
+                    <Badge
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
+                        row.workVolumeStatus === "No Work" && "border-slate-300 bg-slate-100 text-slate-700",
+                        row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
+                        row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
+                        row.workVolumeStatus === "High" && "border-rose-300 bg-rose-50 text-rose-700",
+                        row.workVolumeStatus === "Extra" && "border-violet-300 bg-violet-50 text-violet-700"
+                      )}
+                    >
+                      {row.workVolumeStatus}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-1">
+                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black", getServiceBadgeClass(row.services.seo))}>SE</span>
+                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black", getServiceBadgeClass(row.services.gads))}>GA</span>
+                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black", getServiceBadgeClass(row.services.fads))}>FB</span>
+                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black", getServiceBadgeClass(row.services.tads))}>TT</span>
+                  </div>
+
+                  <div className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
+                    <p className="line-clamp-1">
+                      Team:{" "}
+                      <span className="font-semibold text-[var(--text-primary)]">
+                        {row.team.map((member) => formatShortName(member)).join(", ") || "-"}
+                      </span>
+                    </p>
+                    <p>
+                      Delegated: <span className="font-semibold text-[var(--text-primary)]">{formatShortName(row.delegatedPerson)}</span>
+                    </p>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-md bg-[var(--bg-surface-soft)] px-2 py-1.5">
+                      <p className="text-[var(--text-muted)]">My Hrs</p>
+                      <button
+                        type="button"
+                        onClick={() => setHoursChartTarget({ client: row.client, clientKey: row.clientKey, mode: "my" })}
+                        className="mt-0.5 inline-flex font-semibold text-[var(--text-primary)]"
+                      >
+                        <DurationValue minutes={row.myMinutes} className="text-sm" />
+                      </button>
+                    </div>
+                    <div className="rounded-md bg-[var(--bg-surface-soft)] px-2 py-1.5">
+                      <p className="text-[var(--text-muted)]">Team Hrs</p>
+                      <button
+                        type="button"
+                        onClick={() => setHoursChartTarget({ client: row.client, clientKey: row.clientKey, mode: "team" })}
+                        className="mt-0.5 inline-flex font-semibold text-[var(--text-primary)]"
+                      >
+                        <DurationValue minutes={row.teamMinutes} className="text-sm" />
+                      </button>
+                    </div>
+                    <div className="rounded-md bg-[var(--bg-surface-soft)] px-2 py-1.5">
+                      <p className="text-[var(--text-muted)]">Tasks</p>
+                      <p className="mt-0.5 font-semibold text-[var(--text-primary)]">{row.myTasks}</p>
+                    </div>
+                    <div className="rounded-md bg-[var(--bg-surface-soft)] px-2 py-1.5">
+                      <p className="text-[var(--text-muted)]">Avg Vol</p>
+                      <p className="mt-0.5 font-semibold text-[var(--text-primary)]">
+                        <DurationValue minutes={row.avgMonthlyMinutes} className="text-sm" />
+                        <span className="ml-1 text-[10px] font-medium text-[var(--text-secondary)]">/mo</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
+                    <span>1st: {formatDateLabel(row.firstTaskDate)}</span>
+                    <span>Last: {formatDateLabel(row.lastTaskDate)}</span>
+                  </div>
+                </article>
+              ))}
+
+              {filteredRows.length === 0 ? (
+                <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                  No projects match current filters.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className={cn(mobileOptimized && "hidden md:block")}>
           <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
@@ -1014,6 +1111,7 @@ export default function LmsAnalysisProjectsPage() {
               ) : null}
             </TableBody>
           </Table>
+          </div>
           {filteredRows.length > 0 ? (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-medium text-[var(--text-secondary)]">
@@ -1026,7 +1124,8 @@ export default function LmsAnalysisProjectsPage() {
                     <select
                       value={projectsPageSize}
                       onChange={(event) => setProjectsPageSize(Number(event.target.value))}
-                      className="h-8 appearance-none rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-7 text-xs font-semibold text-[var(--text-primary)] outline-none"
+                      className="h-9 appearance-none rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-7 text-xs font-semibold text-[var(--text-primary)] outline-none"
+                      aria-label="Rows per page"
                     >
                       {PROJECTS_PAGE_SIZE_OPTIONS.map((size) => (
                         <option key={size} value={size}>
@@ -1034,14 +1133,14 @@ export default function LmsAnalysisProjectsPage() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50 pointer-events-none" />
+                    <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
                   </div>
                 </label>
                 <button
                   type="button"
                   onClick={() => setProjectsPage((current) => Math.max(1, current - 1))}
                   disabled={projectsPage <= 1}
-                  className="inline-flex h-8 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Previous
                 </button>
@@ -1049,7 +1148,7 @@ export default function LmsAnalysisProjectsPage() {
                   type="button"
                   onClick={() => setProjectsPage((current) => Math.min(projectsTotalPages, current + 1))}
                   disabled={projectsPage >= projectsTotalPages}
-                  className="inline-flex h-8 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>

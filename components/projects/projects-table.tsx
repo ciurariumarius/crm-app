@@ -11,9 +11,6 @@ import { Input } from "@/components/ui/input"
 import {
     Trash2,
     Plus,
-    Activity,
-    Zap,
-    RefreshCcw,
     Play
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -198,7 +195,6 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
         const normalizedStatus = project.status
         const isClosed = normalizedStatus === "Closed"
         const isPaused = normalizedStatus === "Paused"
-        const isCompleted = normalizedStatus === "Completed"
         const isActive = normalizedStatus === "Active"
 
         const statusColor = isActive
@@ -309,7 +305,6 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
         const normalizedStatus = project.status
         const isClosed = normalizedStatus === "Closed"
         const isPaused = normalizedStatus === "Paused"
-        const isCompleted = normalizedStatus === "Completed"
         const isActive = normalizedStatus === "Active"
 
         const statusColor = isActive

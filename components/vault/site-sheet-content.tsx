@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { Site } from "@prisma/client"
 import { Copy, ExternalLink, Globe, Pencil, X } from "lucide-react"
@@ -54,11 +54,6 @@ function SiteFaviconTile({
     const candidates = useMemo(() => getFaviconCandidates(domain, faviconUrl), [domain, faviconUrl])
     const activeFaviconUrl = candidates[candidateIndex] || null
     const fallback = getDomainInitials(domain)
-
-    useEffect(() => {
-        setFailed(false)
-        setCandidateIndex(0)
-    }, [domain, faviconUrl])
 
     return (
         <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
@@ -200,7 +195,11 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             />
                         ) : (
                             <div className="group flex w-full items-start gap-3 py-1">
-                                <SiteFaviconTile domain={formData.domainName} faviconUrl={site.faviconUrl} />
+                                <SiteFaviconTile
+                                    key={`${normalizeDomain(formData.domainName)}:${site.faviconUrl || ""}`}
+                                    domain={formData.domainName}
+                                    faviconUrl={site.faviconUrl}
+                                />
                                 <div className="min-w-0 flex-1 pt-1">
                                     <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-2xl">
                                         {formData.domainName}

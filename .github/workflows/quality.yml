@@ -29,5 +29,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Mobile guardrails
+        run: npm run verify:mobile
+
       - name: Build
         run: npm run build

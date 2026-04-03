@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLmsTasksData } from "@/components/lms-tasks/lms-tasks-provider"
+import { isLmsMobileOptimizedEnabled } from "@/lib/lms-tasks/feature-flags"
 import { parseAllocationsFile, parseTasksFile } from "@/lib/lms-tasks/parsers"
 import type { LmsSyncMode, ParseIssue } from "@/lib/lms-tasks/types"
+import { cn } from "@/lib/utils"
 
 type ImportLog = {
   id: string
@@ -99,6 +101,7 @@ function IssuesCard({ title, issues }: { title: string; issues: ParseIssue[] }) 
 }
 
 export default function LmsAnalysisDataPage() {
+  const mobileOptimized = isLmsMobileOptimizedEnabled()
   const { ready, loading, error, data, syncTasksToDatabase, syncAllocationsToDatabase, clearAllData } = useLmsTasksData()
   const [syncMode, setSyncMode] = React.useState<LmsSyncMode>("merge")
   const [tasksFile, setTasksFile] = React.useState<File | null>(null)
@@ -324,26 +327,12 @@ export default function LmsAnalysisDataPage() {
           <CardDescription>Recent imports from this browser for audit and quick troubleshooting.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>Dataset</TableHead>
-                <TableHead>File</TableHead>
-                <TableHead>Mode</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Changes</TableHead>
-                <TableHead>Issues</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          {mobileOptimized ? (
+            <div className="space-y-3 md:hidden">
               {logs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell>{new Date(log.at).toLocaleString()}</TableCell>
-                  <TableCell>{log.dataset}</TableCell>
-                  <TableCell className="max-w-[220px] truncate">{log.fileName}</TableCell>
-                  <TableCell>{log.syncMode}</TableCell>
-                  <TableCell>
+                <article key={`mobile-${log.id}`} className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-medium text-[var(--text-secondary)]">{new Date(log.at).toLocaleString()}</p>
                     <Badge
                       className={
                         log.status === "Success"
@@ -353,24 +342,73 @@ export default function LmsAnalysisDataPage() {
                     >
                       {log.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-[320px] truncate">
-                    in:{log.incoming} · +{log.created} / ~{log.updated} / ={log.unchanged} / -{log.deleted}
-                  </TableCell>
-                  <TableCell>
-                    {log.warningCount} warnings, {log.errorCount} errors
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{log.dataset}</p>
+                  <p className="line-clamp-1 text-xs text-[var(--text-secondary)]">{log.fileName}</p>
+                  <div className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
+                    <p>Mode: <span className="font-semibold text-[var(--text-primary)]">{log.syncMode}</span></p>
+                    <p>Changes: in:{log.incoming} · +{log.created} / ~{log.updated} / ={log.unchanged} / -{log.deleted}</p>
+                    <p>Issues: {log.warningCount} warnings, {log.errorCount} errors</p>
+                  </div>
+                </article>
               ))}
               {logs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-[var(--text-secondary)]">
-                    No import logs yet.
-                  </TableCell>
-                </TableRow>
+                <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                  No import logs yet.
+                </div>
               ) : null}
-            </TableBody>
-          </Table>
+            </div>
+          ) : null}
+
+          <div className={cn(mobileOptimized && "hidden md:block")}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Dataset</TableHead>
+                  <TableHead>File</TableHead>
+                  <TableHead>Mode</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Changes</TableHead>
+                  <TableHead>Issues</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{new Date(log.at).toLocaleString()}</TableCell>
+                    <TableCell>{log.dataset}</TableCell>
+                    <TableCell className="max-w-[220px] truncate">{log.fileName}</TableCell>
+                    <TableCell>{log.syncMode}</TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          log.status === "Success"
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                            : "border-rose-300 bg-rose-50 text-rose-700"
+                        }
+                      >
+                        {log.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[320px] truncate">
+                      in:{log.incoming} · +{log.created} / ~{log.updated} / ={log.unchanged} / -{log.deleted}
+                    </TableCell>
+                    <TableCell>
+                      {log.warningCount} warnings, {log.errorCount} errors
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {logs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-[var(--text-secondary)]">
+                      No import logs yet.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { CalendarDays, Check, Circle, Pause, Plus, Square } from "lucide-react"
+import { CalendarDays, Check, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"

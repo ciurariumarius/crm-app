@@ -14,6 +14,7 @@ import { filterTasksByRange, formatHours, getExecutantOptions, isInternalClient 
 import { normalizeClientKey, normalizeExecutantKey } from "@/lib/lms-tasks/parsers"
 import { detectLmsDatePresetId, type LmsDatePreset, getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
 import { countWorkingDaysInRange } from "@/lib/lms-tasks/date-utils"
+import { isLmsMobileOptimizedEnabled } from "@/lib/lms-tasks/feature-flags"
 import { ArrowDown, ArrowUp, ArrowUpDown, Building2, CalendarClock, Check, ChevronDown, Clock3, ListTodo, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -86,6 +87,7 @@ function getUtilizationTone(percent: number) {
 }
 
 export default function LmsAnalysisTasksPage() {
+  const mobileOptimized = isLmsMobileOptimizedEnabled()
   const { ready, data } = useLmsTasksData()
   const { start, end } = useLmsDateRange()
   const searchParams = useSearchParams()
@@ -426,18 +428,21 @@ export default function LmsAnalysisTasksPage() {
     return sortedLoggedTaskRows.slice(startIndex, startIndex + taskLogPageSize)
   }, [sortedLoggedTaskRows, taskLogPage, taskLogPageSize])
 
-  const toggleTaskLogSort = React.useCallback((key: TaskLogSortKey) => {
-    setTaskLogPage(1)
-    setTaskLogSortKey((previousKey) => {
-      if (previousKey === key) {
-        setTaskLogSortDirection((previousDirection) => (previousDirection === "asc" ? "desc" : "asc"))
-        return previousKey
-      }
+  const toggleTaskLogSort = React.useCallback(
+    (key: TaskLogSortKey) => {
+      setTaskLogPage(1)
+      setTaskLogSortKey((previousKey) => {
+        if (previousKey === key) {
+          setTaskLogSortDirection((previousDirection) => (previousDirection === "asc" ? "desc" : "asc"))
+          return previousKey
+        }
 
-      setTaskLogSortDirection(key === "domain" ? "asc" : "desc")
-      return key
-    })
-  }, [])
+        setTaskLogSortDirection(key === "domain" ? "asc" : "desc")
+        return key
+      })
+    },
+    [setTaskLogPage, setTaskLogSortDirection, setTaskLogSortKey]
+  )
 
   const getSortIcon = React.useCallback(
     (key: TaskLogSortKey) => {
@@ -549,11 +554,11 @@ export default function LmsAnalysisTasksPage() {
       <div className="space-y-3">
         <FilterBarShell className="rounded-2xl border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 shadow-none">
           <FilterBarScroll>
-            <FilterBarRow className="items-center md:gap-4">
-              <FilterBarGroup>
+            <FilterBarRow wrap className="items-center gap-2 md:gap-4">
+              <FilterBarGroup wrap className="w-full gap-2 md:gap-4">
                 <div
                   className={cn(
-                    "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
+                    "inline-flex h-10 min-w-[170px] flex-[2_1_240px] items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                     search.trim()
                       ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
                       : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
@@ -567,7 +572,7 @@ export default function LmsAnalysisTasksPage() {
                     className="h-8 min-w-[180px] border-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
                   />
                 </div>
-                <FilterBarDivider className="md:mx-1" />
+                <FilterBarDivider className="hidden md:block md:mx-1" />
                 <InlineCombobox
                   label={selectedEmployee === "all" ? "Employee" : selectedEmployee}
                   options={employeeOptions}
@@ -577,7 +582,7 @@ export default function LmsAnalysisTasksPage() {
                   emptyLabel="No employee found."
                   isActive={selectedEmployee !== "all"}
                 />
-              <FilterBarDivider className="md:mx-1" />
+              <FilterBarDivider className="hidden md:block md:mx-1" />
                 <InlineCombobox
                   label={selectedDomain === "all" ? "Domain" : selectedDomain}
                   options={domainSelectOptions}
@@ -587,7 +592,7 @@ export default function LmsAnalysisTasksPage() {
                   emptyLabel="No domain found."
                   isActive={selectedDomain !== "all"}
                 />
-                <FilterBarDivider className="md:mx-1" />
+                <FilterBarDivider className="hidden md:block md:mx-1" />
                 <DateFilterCombobox
                   label={dateFilterLabel}
                   presets={datePresets}
@@ -711,58 +716,101 @@ export default function LmsAnalysisTasksPage() {
           <CardTitle>Hours by Employee</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Nr. Tasks</TableHead>
-                <TableHead>Nr. Clients</TableHead>
-                <TableHead>Total Hours</TableHead>
-                <TableHead>Hours vs Capacity</TableHead>
-                <TableHead>Team Share %</TableHead>
-                <TableHead>Internal Work %</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className={cn(mobileOptimized && "hidden md:block")}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Nr. Tasks</TableHead>
+                  <TableHead>Nr. Clients</TableHead>
+                  <TableHead>Total Hours</TableHead>
+                  <TableHead>Hours vs Capacity</TableHead>
+                  <TableHead>Team Share %</TableHead>
+                  <TableHead>Internal Work %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {employeeRows.map((row) => {
+                  const barPercent = Math.min(100, Math.max(0, row.utilizationPercent))
+                  const tone = getUtilizationTone(row.utilizationPercent)
+
+                  return (
+                    <TableRow key={row.name}>
+                      <TableCell className="font-semibold">{row.name}</TableCell>
+                      <TableCell>{row.tasksCount}</TableCell>
+                      <TableCell>{row.clientsCount}</TableCell>
+                      <TableCell><DurationValue minutes={row.totalMinutes} /></TableCell>
+                      <TableCell>
+                        <div className="w-[190px] max-w-full space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="inline-flex items-center gap-1 font-semibold text-[var(--text-primary)]">
+                              <DurationValue minutes={row.totalMinutes} className="text-xs" />
+                              <span>/</span>
+                              <DurationValue minutes={workingCapacityMinutes} className="text-xs" />
+                            </span>
+                            <span className="font-medium text-[var(--text-secondary)]">{row.utilizationPercent.toFixed(1)}%</span>
+                          </div>
+                          <div className={`h-2.5 w-full overflow-hidden rounded-full ${tone.track}`}>
+                            <div className={`h-full rounded-full transition-all ${tone.fill}`} style={{ width: `${barPercent}%` }} />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{row.sharePercent.toFixed(1)}%</TableCell>
+                      <TableCell>{row.internalPercent.toFixed(1)}%</TableCell>
+                    </TableRow>
+                  )
+                })}
+                {employeeRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-[var(--text-secondary)]">
+                      No employee activity for current filters.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+
+          {mobileOptimized ? (
+            <div className="space-y-3 md:hidden">
               {employeeRows.map((row) => {
                 const barPercent = Math.min(100, Math.max(0, row.utilizationPercent))
                 const tone = getUtilizationTone(row.utilizationPercent)
 
                 return (
-                  <TableRow key={row.name}>
-                    <TableCell className="font-semibold">{row.name}</TableCell>
-                    <TableCell>{row.tasksCount}</TableCell>
-                    <TableCell>{row.clientsCount}</TableCell>
-                    <TableCell><DurationValue minutes={row.totalMinutes} /></TableCell>
-                    <TableCell>
-                      <div className="w-[190px] max-w-full space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="inline-flex items-center gap-1 font-semibold text-[var(--text-primary)]">
-                            <DurationValue minutes={row.totalMinutes} className="text-xs" />
-                            <span>/</span>
-                            <DurationValue minutes={workingCapacityMinutes} className="text-xs" />
-                          </span>
-                          <span className="font-medium text-[var(--text-secondary)]">{row.utilizationPercent.toFixed(1)}%</span>
-                        </div>
-                        <div className={`h-2.5 w-full overflow-hidden rounded-full ${tone.track}`}>
-                          <div className={`h-full rounded-full transition-all ${tone.fill}`} style={{ width: `${barPercent}%` }} />
-                        </div>
+                  <article
+                    key={`mobile-${row.name}`}
+                    className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{row.name}</p>
+                      <DurationValue minutes={row.totalMinutes} className="text-sm" />
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)]">
+                      <p>Tasks: <span className="font-semibold text-[var(--text-primary)]">{row.tasksCount}</span></p>
+                      <p>Clients: <span className="font-semibold text-[var(--text-primary)]">{row.clientsCount}</span></p>
+                      <p>Team share: <span className="font-semibold text-[var(--text-primary)]">{row.sharePercent.toFixed(1)}%</span></p>
+                      <p>Internal: <span className="font-semibold text-[var(--text-primary)]">{row.internalPercent.toFixed(1)}%</span></p>
+                    </div>
+                    <div className="mt-3">
+                      <div className="mb-1 flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-[var(--text-secondary)]">Capacity</span>
+                        <span className="font-semibold text-[var(--text-primary)]">{row.utilizationPercent.toFixed(1)}%</span>
                       </div>
-                    </TableCell>
-                    <TableCell>{row.sharePercent.toFixed(1)}%</TableCell>
-                    <TableCell>{row.internalPercent.toFixed(1)}%</TableCell>
-                  </TableRow>
+                      <div className={`h-3 w-full overflow-hidden rounded-full ${tone.track}`}>
+                        <div className={`h-full rounded-full transition-all ${tone.fill}`} style={{ width: `${barPercent}%` }} />
+                      </div>
+                    </div>
+                  </article>
                 )
               })}
               {employeeRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-[var(--text-secondary)]">
-                    No employee activity for current filters.
-                  </TableCell>
-                </TableRow>
+                <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                  No employee activity for current filters.
+                </div>
               ) : null}
-            </TableBody>
-          </Table>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -776,8 +824,8 @@ export default function LmsAnalysisTasksPage() {
               No task type data available for current filters.
             </div>
           ) : (
-            <div className="grid items-center gap-4 md:grid-cols-[360px_minmax(0,1fr)]">
-              <div className="relative flex h-[320px] items-center justify-center">
+            <div className="grid items-center gap-4 md:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="relative flex h-[280px] items-center justify-center md:h-[320px]">
                 <div className="absolute inset-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -823,7 +871,7 @@ export default function LmsAnalysisTasksPage() {
 
               <div className="space-y-2">
                 {(isTaskTypeListExpanded ? taskTypeListRows : taskTypeListRows.slice(0, 6)).map((row) => (
-                  <div key={row.name} className="flex items-center justify-between rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-3 py-2">
+                  <div key={row.name} className="flex items-center justify-between rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-3 py-1.5">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                         <span className="mr-2 inline-block h-3 w-3 rounded-full align-middle" style={{ backgroundColor: row.color }} />
@@ -858,62 +906,90 @@ export default function LmsAnalysisTasksPage() {
           <CardTitle>Actual Tasks Logged</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <button
-                    type="button"
-                    onClick={() => toggleTaskLogSort("domain")}
-                    className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-                  >
-                    <span>Domain</span>
-                    {getSortIcon("domain")}
-                  </button>
-                </TableHead>
-                <TableHead>Project Type</TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    onClick={() => toggleTaskLogSort("minutes")}
-                    className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-                  >
-                    <span>Hours Worked</span>
-                    {getSortIcon("minutes")}
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    onClick={() => toggleTaskLogSort("date")}
-                    className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-                  >
-                    <span>Date Entry</span>
-                    {getSortIcon("date")}
-                  </button>
-                </TableHead>
-                <TableHead>Executant</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pagedLoggedTaskRows.map((row) => (
-                <TableRow key={row.key}>
-                  <TableCell className="font-semibold">{row.domain}</TableCell>
-                  <TableCell>{row.projectType}</TableCell>
-                  <TableCell><DurationValue minutes={row.minutes} /></TableCell>
-                  <TableCell>{row.dateLabel}</TableCell>
-                  <TableCell>{row.executant}</TableCell>
+          <div className={cn(mobileOptimized && "hidden md:block")}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleTaskLogSort("domain")}
+                      className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                      aria-label="Sort by domain"
+                    >
+                      <span>Domain</span>
+                      {getSortIcon("domain")}
+                    </button>
+                  </TableHead>
+                  <TableHead>Project Type</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleTaskLogSort("minutes")}
+                      className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                      aria-label="Sort by hours worked"
+                    >
+                      <span>Hours Worked</span>
+                      {getSortIcon("minutes")}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => toggleTaskLogSort("date")}
+                      className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                      aria-label="Sort by date entry"
+                    >
+                      <span>Date Entry</span>
+                      {getSortIcon("date")}
+                    </button>
+                  </TableHead>
+                  <TableHead>Executant</TableHead>
                 </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagedLoggedTaskRows.map((row) => (
+                  <TableRow key={row.key}>
+                    <TableCell className="font-semibold">{row.domain}</TableCell>
+                    <TableCell>{row.projectType}</TableCell>
+                    <TableCell><DurationValue minutes={row.minutes} /></TableCell>
+                    <TableCell>{row.dateLabel}</TableCell>
+                    <TableCell>{row.executant}</TableCell>
+                  </TableRow>
+                ))}
+                {sortedLoggedTaskRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-[var(--text-secondary)]">
+                      No task entries for current filters.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+
+          {mobileOptimized ? (
+            <div className="space-y-3 md:hidden">
+              {pagedLoggedTaskRows.map((row) => (
+                <article key={`mobile-${row.key}`} className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">{row.domain}</p>
+                    <DurationValue minutes={row.minutes} className="text-sm" />
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-xs text-[var(--text-secondary)]">{row.projectType}</p>
+                  <div className="mt-2 flex items-center justify-between text-xs text-[var(--text-secondary)]">
+                    <span>{row.dateLabel}</span>
+                    <span className="font-semibold text-[var(--text-primary)]">{row.executant}</span>
+                  </div>
+                </article>
               ))}
               {sortedLoggedTaskRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-[var(--text-secondary)]">
-                    No task entries for current filters.
-                  </TableCell>
-                </TableRow>
+                <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                  No task entries for current filters.
+                </div>
               ) : null}
-            </TableBody>
-          </Table>
+            </div>
+          ) : null}
           {sortedLoggedTaskRows.length > 0 ? (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-medium text-[var(--text-secondary)]">
@@ -926,7 +1002,8 @@ export default function LmsAnalysisTasksPage() {
                     <select
                       value={taskLogPageSize}
                       onChange={(event) => setTaskLogPageSize(Number(event.target.value))}
-                      className="h-8 appearance-none rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-7 text-xs font-semibold text-[var(--text-primary)] outline-none"
+                      className="h-9 appearance-none rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-7 text-xs font-semibold text-[var(--text-primary)] outline-none"
+                      aria-label="Rows per page"
                     >
                       {TASK_LOGS_PAGE_SIZE_OPTIONS.map((size) => (
                         <option key={size} value={size}>
@@ -934,14 +1011,14 @@ export default function LmsAnalysisTasksPage() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50 pointer-events-none" />
+                    <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
                   </div>
                 </label>
                 <button
                   type="button"
                   onClick={() => setTaskLogPage((current) => Math.max(1, current - 1))}
                   disabled={taskLogPage <= 1}
-                  className="inline-flex h-8 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Previous
                 </button>
@@ -949,7 +1026,7 @@ export default function LmsAnalysisTasksPage() {
                   type="button"
                   onClick={() => setTaskLogPage((current) => Math.min(taskLogTotalPages, current + 1))}
                   disabled={taskLogPage >= taskLogTotalPages}
-                  className="inline-flex h-8 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -990,7 +1067,7 @@ function DateFilterCombobox({
         <button
           type="button"
           className={cn(
-            "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
+            "inline-flex h-10 min-w-[130px] flex-1 items-center justify-between gap-2 rounded-lg border px-3 text-xs font-medium transition-all md:flex-none",
             activePresetId !== "all"
               ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
               : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
@@ -1000,7 +1077,7 @@ function DateFilterCombobox({
           <ChevronDown className="h-4 w-4 opacity-70" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[360px] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3 shadow-[var(--shadow-apple)]">
+      <PopoverContent align="start" className="w-[min(96vw,640px)] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3 shadow-[var(--shadow-apple)]">
         <div className="flex max-h-[180px] flex-wrap gap-2 overflow-y-auto pr-1">
           {presets.map((preset, index) => (
             <button
@@ -1036,7 +1113,7 @@ function DateFilterCombobox({
             }
           }}
           numberOfMonths={1}
-          className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-1"
+          className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-1 [&_[data-slot=calendar]]:![--cell-size:clamp(34px,10vw,44px)]"
           classNames={{
             root: "w-full p-2",
             months: "relative w-full",
@@ -1099,7 +1176,7 @@ function InlineCombobox({
         <button
           type="button"
           className={cn(
-            "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
+            "inline-flex h-10 min-w-[130px] flex-1 items-center justify-between gap-2 rounded-lg border px-3 text-xs font-medium transition-all md:flex-none",
             isActive
               ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
               : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
