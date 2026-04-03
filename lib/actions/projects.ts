@@ -21,8 +21,8 @@ function revalidateProjectPaths(projectId?: string, sitePartnerId?: string, site
 }
 
 const CreateProjectSchema = z.object({
-    siteId: z.string().uuid(),
-    serviceIds: z.array(z.string().uuid()).min(1, "At least one service must be selected"),
+    siteId: z.string().trim().min(1, "Invalid site id"),
+    serviceIds: z.array(z.string().trim().min(1, "Invalid service id")).min(1, "At least one service must be selected"),
     name: z.string().optional(),
     currentFee: z.number().optional().nullable(),
     status: z.enum(PROJECT_STATUS_VALUES).optional(),
@@ -37,10 +37,10 @@ const UpdateProjectSchema = z.object({
     paidAt: z.union([z.date(), z.string(), z.null()]).optional(),
     createdAt: z.union([z.date(), z.string()]).optional(),
     currentFee: z.number().nullable().optional(),
-    serviceIds: z.array(z.string().uuid()).optional(),
+    serviceIds: z.array(z.string().trim().min(1, "Invalid service id")).optional(),
 })
 
-const ProjectIdSchema = z.string().uuid()
+const ProjectIdSchema = z.string().trim().min(1, "Invalid project id")
 const ProjectIdsSchema = z.array(ProjectIdSchema).max(200)
 const PaymentStatusSchema = z.enum(["Paid", "Unpaid"])
 
@@ -55,9 +55,10 @@ export async function createProject(data: {
     try {
         const session = await requireTenantContext()
         const validated = CreateProjectSchema.parse(data)
+        const uniqueServiceIds = Array.from(new Set(validated.serviceIds))
 
         const services = await prisma.service.findMany({
-            where: { id: { in: validated.serviceIds }, tenantId: session.tenantId },
+            where: { id: { in: uniqueServiceIds }, tenantId: session.tenantId },
         })
 
         if (services.length === 0) {
@@ -68,7 +69,7 @@ export async function createProject(data: {
             })
             return { success: false, error: "No services found" }
         }
-        if (services.length !== validated.serviceIds.length) {
+        if (services.length !== uniqueServiceIds.length) {
             await logSessionAuditEvent(session, {
                 action: "PROJECT_CREATE_FAILED",
                 success: false,
@@ -101,7 +102,7 @@ export async function createProject(data: {
                     siteId: validated.siteId,
                     name: projectName,
                     services: {
-                        connect: validated.serviceIds.map(id => ({ id }))
+                        connect: uniqueServiceIds.map(id => ({ id }))
                     },
                     currentFee: validated.currentFee,
                     status: validated.status || "Active",
@@ -217,15 +218,16 @@ export async function updateProject(projectId: string, data: {
         const prismaUpdateData: Prisma.ProjectUpdateInput = { ...restValidated }
 
         if (validated.serviceIds) {
+            const uniqueServiceIds = Array.from(new Set(validated.serviceIds))
             const projectInfo = await prisma.project.findFirst({
                 where: { id: validatedProjectId, tenantId: session.tenantId },
                 include: { site: true }
             })
 
             const newServices = await prisma.service.findMany({
-                where: { id: { in: validated.serviceIds }, tenantId: session.tenantId }
+                where: { id: { in: uniqueServiceIds }, tenantId: session.tenantId }
             })
-            if (newServices.length !== validated.serviceIds.length) {
+            if (newServices.length !== uniqueServiceIds.length) {
                 await logSessionAuditEvent(session, {
                     action: "PROJECT_UPDATE_FAILED",
                     success: false,
@@ -243,7 +245,7 @@ export async function updateProject(projectId: string, data: {
             }
 
             prismaUpdateData.services = {
-                set: validated.serviceIds.map(id => ({ id }))
+                set: uniqueServiceIds.map(id => ({ id }))
             }
         }
 
