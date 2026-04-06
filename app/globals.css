@@ -256,6 +256,10 @@
     scrollbar-color: color-mix(in srgb, var(--line-subtle) 78%, #94a3b8) transparent;
   }
 
+  .ui-scrollbar-inset {
+    scrollbar-gutter: stable both-edges;
+  }
+
   .ui-scrollbar::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -263,6 +267,10 @@
 
   .ui-scrollbar::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  .ui-scrollbar-inset::-webkit-scrollbar-track {
+    margin-block: 10px;
   }
 
   .ui-scrollbar::-webkit-scrollbar-thumb {
