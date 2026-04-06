@@ -125,16 +125,6 @@ export function AddPartnerPaymentDialog({
         }
     }
 
-    // Attempt to auto-match typed name with project
-    useEffect(() => {
-        if (!paymentName || projectId) return
-        const match = partnerProjects.find(p => p.name.toLowerCase() === paymentName.toLowerCase().trim())
-        if (match) {
-            setProjectId(match.id)
-            setPaymentName(match.name)
-        }
-    }, [paymentName, partnerProjects, projectId])
-
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             {!hideTrigger ? (
@@ -210,7 +200,7 @@ export function AddPartnerPaymentDialog({
                                                     }}
                                                 >
                                                     <Plus className="mr-2 h-4 w-4" />
-                                                    Create "{searchValue.trim()}"
+                                                    Create &quot;{searchValue.trim()}&quot;
                                                 </Button>
                                             ) : (
                                                 <div className="px-4 py-3 text-sm text-muted-foreground text-center">
@@ -223,7 +213,7 @@ export function AddPartnerPaymentDialog({
                                                 <CommandItem
                                                     key={project.id}
                                                     value={project.name}
-                                                    onSelect={(currentValue) => {
+                                                    onSelect={() => {
                                                         setProjectId(project.id)
                                                         setPaymentName(project.name)
                                                         setComboboxOpen(false)
@@ -250,7 +240,7 @@ export function AddPartnerPaymentDialog({
                                                     }}
                                                 >
                                                     <Plus className="mr-2 h-4 w-4" />
-                                                    Create "{searchValue.trim()}"
+                                                    Create &quot;{searchValue.trim()}&quot;
                                                 </Button>
                                             )}
                                         </CommandGroup>

@@ -7,7 +7,7 @@ import { settlePartnerDebt, settleProject } from "@/lib/actions/settlement"
 import { formatCurrency, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, Check } from "lucide-react"
+import { CheckCircle2, ChevronDown, Loader2, Check } from "lucide-react"
 
 type UnpaidProject = {
     id: string
@@ -36,11 +36,6 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
     React.useEffect(() => {
         setItems(partners)
     }, [partners])
-
-    const totalUnpaid = React.useMemo(
-        () => items.reduce((sum, partner) => sum + partner.totalUnpaid, 0),
-        [items]
-    )
 
     const handleMarkAllPaid = async (partnerId: string) => {
         setSettlingId(partnerId)
