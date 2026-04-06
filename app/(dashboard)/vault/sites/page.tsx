@@ -80,12 +80,16 @@ export default async function SitesPage({
     }
 
     return (
-        <div className="flex flex-col gap-8 pb-8">
-            <DashboardPageHeader
-                title="Domains"
-                actions={<CreateSiteDialog partners={partners} />}
-                showMobile
-            />
+        <div className="flex flex-col gap-8 pb-8 sm:gap-10">
+            <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+                <DashboardPageHeader
+                    title="Domains"
+                    eyebrow="Vault Workspace"
+                    subtitle="Manage your domain inventory, partner ownership, and connected project footprint."
+                    actions={<CreateSiteDialog partners={partners} />}
+                    showMobile
+                />
+            </div>
 
             <DomainsFilters 
                 partners={partners} 
@@ -100,7 +104,7 @@ export default async function SitesPage({
                 />
                 
                 {/* Pagination Footer */}
-                <div className="flex items-center justify-between px-6 py-4">
+                <div className="flex items-center justify-between rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-6 sm:py-4">
                     <p className="ui-overline">
                         Page {page} of {totalPages || 1} · {totalSites} Total Domains
                     </p>

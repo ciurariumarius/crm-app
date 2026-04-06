@@ -5,7 +5,7 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-[13px] font-semibold transition-all duration-150 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_28%,transparent)]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-[13px] font-semibold transition-all duration-150 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_28%,transparent)]",
   {
     variants: {
       variant: {
@@ -14,11 +14,11 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-white shadow-[var(--shadow-apple)] hover:brightness-[1.02] focus-visible:ring-[color:color-mix(in_srgb,var(--destructive)_28%,transparent)]",
         outline:
-          "border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]",
+          "border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] text-[var(--text-secondary)] shadow-[0_2px_8px_rgba(15,23,42,0.03)] hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))]",
         secondary:
-          "border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]",
+          "border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(248,250,252,0.82),rgba(241,245,249,0.58))] text-[var(--text-secondary)] shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))]",
         ghost:
-          "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]",
+          "text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_88%,white)] hover:text-[var(--text-primary)]",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

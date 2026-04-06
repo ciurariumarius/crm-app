@@ -421,8 +421,7 @@ export default async function HomePage() {
                                 <MobileMenuTrigger />
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace Overview</p>
-                                <h1 className="mt-1 ui-text-title text-slate-900">Overview</h1>
+                                <h1 className="ui-text-title text-slate-900">Overview</h1>
                                 <p className="mt-1 text-[13px] font-medium text-slate-500">
                                     {overviewSubtitle}
                                 </p>
@@ -439,8 +438,7 @@ export default async function HomePage() {
 
                     <div className="hidden grid-cols-[minmax(0,1fr)_minmax(320px,520px)_auto] items-center gap-5 md:grid lg:gap-6">
                         <div className="min-w-0">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace Overview</p>
-                            <h1 className="mt-1 ui-text-title text-slate-900">Overview</h1>
+                            <h1 className="ui-text-title text-slate-900">Overview</h1>
                             <p className="mt-1 text-sm font-medium text-slate-500">
                                 {overviewSubtitle}
                             </p>

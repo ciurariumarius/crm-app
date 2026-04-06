@@ -116,25 +116,25 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                 <div className="overflow-hidden rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
                     <div className="overflow-x-auto hidescrollbar">
                         <table className="w-full min-w-[820px] text-left">
-                            <thead className="bg-slate-50/50 border-b border-slate-100">
+                            <thead className="border-b border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.82),rgba(241,245,249,0.56))]">
                                 <tr>
-                                    <th className="px-6 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-400">Partner</th>
-                                    <th className="px-6 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-400">Projects</th>
-                                    <th className="px-6 py-2.5 text-right text-[10px] font-black uppercase tracking-wider text-slate-400">Total unpaid</th>
-                                    <th className="px-6 py-2.5 text-right text-[10px] font-black uppercase tracking-wider text-slate-400">Action</th>
+                                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Partner</th>
+                                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Projects</th>
+                                    <th className="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-slate-400">Total unpaid</th>
+                                    <th className="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-slate-400">Action</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-slate-100/80">
                                 {items.map((partner) => {
                                     const isExpanded = expandedId === partner.id
                                     const isSettling = settlingId === partner.id
                                     return (
                                         <React.Fragment key={partner.id}>
                                             <tr className={cn(
-                                                "align-middle transition-colors hover:bg-slate-50/30",
-                                                isExpanded && "bg-slate-50/20"
+                                                "align-middle transition-colors hover:bg-slate-50/35",
+                                                isExpanded && "bg-slate-50/25"
                                             )}>
-                                                <td className="px-6 py-3">
+                                                <td className="px-5 py-3.5">
                                                     <button
                                                         type="button"
                                                         onClick={() => setExpandedId((current) => (current === partner.id ? null : partner.id))}
@@ -149,18 +149,18 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                                         <span className="text-sm font-bold text-slate-900">{partner.name}</span>
                                                     </button>
                                                 </td>
-                                                <td className="px-6 py-3 text-xs font-bold text-slate-500">
+                                                <td className="px-5 py-3.5 text-xs font-bold text-slate-500">
                                                     {partner.unpaidProjects.length} unpaid project{partner.unpaidProjects.length === 1 ? "" : "s"}
                                                 </td>
-                                                <td className="px-6 py-3 text-right">
+                                                <td className="px-5 py-3.5 text-right">
                                                     <span className="font-mono text-sm font-black text-rose-600">{formatCurrency(partner.totalUnpaid)}</span>
                                                 </td>
-                                                <td className="px-6 py-3 text-right">
+                                                <td className="px-5 py-3.5 text-right">
                                                     <Button
                                                         type="button"
                                                         size="sm"
                                                         variant="secondary"
-                                                        className="h-7 rounded-lg border-emerald-100 bg-emerald-50 px-2 text-[11px] font-black uppercase text-emerald-600 hover:bg-emerald-100"
+                                                        className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
                                                         onClick={() => handleMarkAllPaid(partner.id)}
                                                         disabled={isSettling}
                                                     >
@@ -176,8 +176,8 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
 
                                             {isExpanded ? (
                                                 <tr>
-                                                    <td colSpan={4} className="bg-slate-50/30 px-6 py-4">
-                                                        <div className="flex flex-col gap-3 max-w-2xl ml-7">
+                                                    <td colSpan={4} className="bg-[linear-gradient(180deg,rgba(248,250,252,0.8),rgba(241,245,249,0.48))] px-5 py-4">
+                                                        <div className="ml-7 flex max-w-2xl flex-col gap-3">
                                                             <div className="flex items-center justify-between">
                                                                 <span className="ui-overline text-slate-400">Breakdown</span>
                                                                 <Link
@@ -193,7 +193,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                                                     return (
                                                                         <div
                                                                             key={project.id}
-                                                                            className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                                                                            className="flex items-center justify-between rounded-[16px] border border-slate-200/80 bg-white/92 px-4 py-2.5 shadow-[0_2px_8px_rgba(15,23,42,0.025)]"
                                                                         >
                                                                             <span className="text-[13px] font-bold text-slate-700 truncate">{project.name}</span>
                                                                             <div className="flex items-center gap-6">
@@ -204,7 +204,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                                                                     type="button"
                                                                                     size="sm"
                                                                                     variant="secondary"
-                                                                                    className="h-8 rounded-lg border-emerald-100 bg-emerald-50 px-3 text-[10px] font-black uppercase text-emerald-600 hover:bg-emerald-100"
+                                                                                    className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
                                                                                     onClick={() => handleMarkProjectPaid(partner.id, project.id, project.amount)}
                                                                                     disabled={isSettlingProj}
                                                                                 >

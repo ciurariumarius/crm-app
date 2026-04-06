@@ -35,19 +35,19 @@ export function DashboardPageHeader({
     return (
         <>
             {showMobile ? (
-                <div className="md:hidden flex flex-col gap-3">
+                <div className="flex flex-col gap-3 md:hidden">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
                             <MobileMenuTrigger />
                             <div className="min-w-0">
                                 {eyebrow ? (
-                                    <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                    <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400/90">
                                         {eyebrow}
                                     </p>
                                 ) : null}
-                                <h1 className="ui-text-title text-slate-900">{title}</h1>
+                                <h1 className="ui-text-title tracking-tight text-slate-900">{title}</h1>
                                 {subtitle ? (
-                                    <p className="mt-1 text-[13px] font-medium text-slate-500">
+                                    <p className="mt-1 max-w-xl text-[13px] font-medium leading-5 text-slate-500">
                                         {subtitle}
                                     </p>
                                 ) : null}
@@ -59,19 +59,19 @@ export function DashboardPageHeader({
                 </div>
             ) : null}
 
-            <div className={["hidden md:flex flex-col lg:flex-row lg:items-center gap-4", className].filter(Boolean).join(" ")}>
+            <div className={["hidden gap-4 md:flex md:flex-col lg:flex-row lg:items-center", className].filter(Boolean).join(" ")}>
                 <div className="min-w-[220px]">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-start gap-3">
                         <MobileMenuTrigger />
-                        <div className="min-w-0">
+                        <div className="min-w-0 pt-0.5">
                             {eyebrow ? (
-                                <p className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400/90">
                                     {eyebrow}
                                 </p>
                             ) : null}
-                            <h1 className="ui-text-title text-slate-900">{title}</h1>
+                            <h1 className="ui-text-title tracking-tight text-slate-900">{title}</h1>
                             {subtitle ? (
-                                <p className="mt-1 text-sm font-medium text-slate-500">
+                                <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-500">
                                     {subtitle}
                                 </p>
                             ) : null}

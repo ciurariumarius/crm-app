@@ -154,7 +154,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
     return (
         <div className="overflow-x-auto pb-4 hidescrollbar">
             {/* Header */}
-            <div className="md:min-w-[1200px] mb-3 rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 py-3 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)]">
+            <div className="mb-3 hidden rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 py-3 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:block md:min-w-[1200px]">
                 <div className="grid w-full items-center gap-x-4 md:grid-cols-[340px_1fr_120px_150px_120px]">
                     <div className="ui-overline">Project / Partner</div>
                     <div className="ui-overline pl-4">Transaction action</div>
@@ -165,7 +165,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
             </div>
 
             {/* Body */}
-            <div className="md:min-w-[1200px] flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2.5 md:min-w-[1200px]">
                 {logs.map((log, index) => {
                     const { projectName, extraProjects, totalAmount } = parseDetails(log.details)
                     const isExpandable = extraProjects.length > 0
@@ -175,7 +175,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                         <Fragment key={log.id}>
                             <div
                                 className={cn(
-                                    "group stagger-row-enter relative flex items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-3 transition-all shadow-[0_4px_14px_rgba(15,23,42,0.03)] cursor-pointer hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))]",
+                                    "group stagger-row-enter relative flex items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-4 py-3 transition-all shadow-[0_4px_14px_rgba(15,23,42,0.03)] cursor-pointer hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:px-5",
                                     isExpanded && "border-blue-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(239,246,255,0.8))] ring-1 ring-blue-500/10",
                                     log.status === "Unpaid" && "shadow-[0_4px_16px_rgba(244,63,94,0.05)]",
                                     log.status === "Paid" && "shadow-[0_4px_16px_rgba(16,185,129,0.05)]"
@@ -192,7 +192,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     }
                                 }}
                             >
-                                <div className="grid w-full items-center gap-x-4 md:grid-cols-[340px_1fr_120px_150px_120px]">
+                                <div className="grid w-full gap-y-3 md:grid-cols-[340px_1fr_120px_150px_120px] md:items-center md:gap-x-4 md:gap-y-0">
                                     {/* 1. Project */}
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2.5">
@@ -214,7 +214,8 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     </div>
 
                                     {/* 2. Action */}
-                                    <div className="flex items-center gap-2.5 pl-4">
+                                    <div className="flex items-center gap-2.5 md:pl-4">
+                                        <span className="ui-overline min-w-[72px] md:hidden">Action</span>
                                         <div className={cn(
                                             "flex h-8 w-8 items-center justify-center rounded-xl transition-all",
                                             log.action === "SETTLE_PARTNER_VOIDED" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
@@ -231,7 +232,8 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     </div>
 
                                     {/* 3. Total */}
-                                    <div className="text-right">
+                                    <div className="flex items-center justify-between gap-3 text-right md:block">
+                                        <span className="ui-overline md:hidden">Amount</span>
                                         <span className={cn(
                                             "font-mono text-sm font-black tracking-tight",
                                             log.status === "Unpaid" ? "text-rose-600" : "text-slate-900"
@@ -241,14 +243,16 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     </div>
 
                                     {/* 4. Status */}
-                                    <div className="flex justify-center">
+                                    <div className="flex items-center justify-between gap-3 md:justify-center">
+                                        <span className="ui-overline md:hidden">Status</span>
                                         <StatusChip tone={log.status === "Paid" ? "paid" : "unpaid"} size="sm" className="min-w-[86px] justify-center">
                                             {log.status === "Unpaid" ? "Unpaid" : log.status}
                                         </StatusChip>
                                     </div>
 
                                     {/* 5. Date */}
-                                    <div className="text-right">
+                                    <div className="flex items-center justify-between gap-3 text-right md:block">
+                                        <span className="ui-overline md:hidden">Date</span>
                                         <span className="text-[12px] font-bold text-slate-500 tabular-nums">
                                             {formatRelativeDate(log.date)}
                                         </span>
@@ -259,7 +263,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                             {/* Expanded Content (Settlements) */}
                             {isExpanded && (extraProjects.length > 0) && (
                                 <div className="mb-2 flex animate-in slide-in-from-top-2 fade-in duration-300">
-                                    <div className="ml-10 mr-2 flex-1 rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(247,250,252,0.96),rgba(239,246,255,0.82))] p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)]">
+                                    <div className="mr-1 flex-1 rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(247,250,252,0.96),rgba(239,246,255,0.82))] p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:ml-10 md:mr-2">
                                         <div className="rounded-[16px] bg-white/80 p-4">
                                             <div className="mb-3 flex items-center gap-2">
                                                 <History className="h-3.5 w-3.5 text-blue-500" />

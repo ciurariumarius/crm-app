@@ -112,47 +112,47 @@ export default async function PaymentsPage({
             </div>
 
             {/* KPI Section */}
-            <section>
-                <div className="flex flex-col overflow-hidden rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)] lg:flex-row">
-                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
-                        <div className="flex items-start justify-between">
-                            <p className="ui-overline text-slate-400">Total Unpaid Balance</p>
-                            <Banknote className="h-8 w-8 text-rose-50 absolute top-4 right-4" />
-                        </div>
-                        <div className="mt-6 flex items-end">
-                            <div className="flex flex-col">
-                                <p className="text-[10px] font-black uppercase tracking-wider text-rose-500">Immediate Action</p>
-                                <p className="mt-1 text-[32px] font-bold leading-none tracking-tight text-rose-600">
-                                    {formatCurrency(totalUnpaidAmount)}
-                                </p>
-                            </div>
+            <section className="grid gap-4 md:grid-cols-3">
+                <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                    <div className="flex items-start justify-between gap-3">
+                        <p className="ui-overline text-slate-400">Unpaid</p>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50/80 text-rose-400 shadow-[0_4px_10px_rgba(244,63,94,0.06)]">
+                            <Banknote className="h-4.5 w-4.5" />
                         </div>
                     </div>
+                    <div className="mt-5">
+                        <p className="text-[30px] font-bold leading-none tracking-tight text-rose-600 sm:text-[34px]">
+                            {formatCurrency(totalUnpaidAmount)}
+                        </p>
+                        <p className="mt-2 text-sm font-medium text-slate-500">Outstanding receivables that still need settlement.</p>
+                    </div>
+                </article>
 
-                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
-                        <div className="flex items-start justify-between">
-                            <p className="ui-overline text-slate-400">Partner Debtors</p>
-                            <Users className="h-8 w-8 text-slate-50 absolute top-4 right-4" />
-                        </div>
-                        <div className="mt-6 flex items-end">
-                            <div>
-                                <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{partnersWithDebt}</p>
-                                <p className="mt-1 text-[10px] italic text-slate-400">Unique partners with unpaid projects</p>
-                            </div>
+                <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                    <div className="flex items-start justify-between gap-3">
+                        <p className="ui-overline text-slate-400">Partners</p>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200/90 bg-white/90 text-slate-400 shadow-[0_4px_10px_rgba(15,23,42,0.03)]">
+                            <Users className="h-4.5 w-4.5" />
                         </div>
                     </div>
+                    <div className="mt-5">
+                        <p className="text-[30px] font-bold leading-none tracking-tight text-slate-900 sm:text-[34px]">{partnersWithDebt}</p>
+                        <p className="mt-2 text-sm font-medium text-slate-500">Partners currently carrying unpaid project balances.</p>
+                    </div>
+                </article>
 
-                    <div className="flex-1 relative p-6 lg:p-8">
-                        <div className="flex items-start justify-between">
-                            <p className="ui-overline text-slate-400">Transaction Events</p>
-                            <History className="h-8 w-8 text-slate-50 absolute top-4 right-4" />
-                        </div>
-                        <div className="mt-6">
-                            <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{totalLogs}</p>
-                            <p className="mt-1 text-[10px] italic text-slate-400">Total recorded status changes</p>
+                <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                    <div className="flex items-start justify-between gap-3">
+                        <p className="ui-overline text-slate-400">Events</p>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200/90 bg-white/90 text-slate-400 shadow-[0_4px_10px_rgba(15,23,42,0.03)]">
+                            <History className="h-4.5 w-4.5" />
                         </div>
                     </div>
-                </div>
+                    <div className="mt-5">
+                        <p className="text-[30px] font-bold leading-none tracking-tight text-slate-900 sm:text-[34px]">{totalLogs}</p>
+                        <p className="mt-2 text-sm font-medium text-slate-500">Recorded payment updates, manual entries, and settlements.</p>
+                    </div>
+                </article>
             </section>
 
             <div className="flex flex-col gap-8 sm:gap-10">

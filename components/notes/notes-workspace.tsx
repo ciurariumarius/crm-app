@@ -329,7 +329,7 @@ export function NotesWorkspace({
                 role="button"
                 tabIndex={0}
                 className={cn(
-                  "w-full rounded-[18px] border px-3.5 py-2.5 text-left transition-colors shadow-[0_2px_10px_rgba(15,23,42,0.02)]",
+                  "w-full rounded-[18px] border px-3.5 py-2.5 text-left transition-colors shadow-[0_2px_10px_rgba(15,23,42,0.02)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_30%,white)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
                   selected
                     ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_45%,white)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--brand-cyan)_12%,white),color-mix(in_srgb,var(--brand-cyan)_7%,white))]"
                     : "border-slate-200/70 bg-white/80 hover:border-[var(--line-subtle)] hover:bg-[var(--bg-surface-soft)]"
@@ -352,7 +352,7 @@ export function NotesWorkspace({
                         event.stopPropagation()
                         void handlePinToggle(note)
                       }}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,white)]"
                       aria-label={note.pinned ? "Unpin note" : "Pin note"}
                     >
                       {note.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -364,7 +364,7 @@ export function NotesWorkspace({
                         event.stopPropagation()
                         void handleArchiveToggle(note)
                       }}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,white)]"
                       aria-label={note.archived ? "Restore note" : "Archive note"}
                     >
                       {note.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
@@ -376,7 +376,7 @@ export function NotesWorkspace({
                         event.stopPropagation()
                         void handleDelete(note)
                       }}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50 hover:text-rose-700"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
                       aria-label="Delete note"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

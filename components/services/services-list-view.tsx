@@ -66,7 +66,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
 
     return (
         <div className="space-y-6">
-            <FilterBarShell>
+            <FilterBarShell className="rounded-[24px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.035)] sm:px-5 sm:py-4">
                 <FilterBarRow className="w-full min-w-0 justify-between">
                     <div className="flex items-center gap-2">
                         <LayoutGrid className="h-4 w-4 text-slate-500" />
@@ -122,8 +122,8 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                 }
                             }}
                         >
-                            <Card className="hover:bg-white transition-all relative group h-full border-slate-200 shadow-sm hover:shadow-md rounded-2xl overflow-hidden premium-card">
-                                <CardHeader className="pb-3 bg-slate-50/50">
+                            <Card className="premium-card relative h-full overflow-hidden rounded-[24px] border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] transition-all shadow-[0_6px_18px_rgba(15,23,42,0.03)] hover:bg-white hover:shadow-md">
+                                <CardHeader className="border-b border-slate-100/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.82),rgba(241,245,249,0.42))] pb-3">
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-2">
                                             {service.isRecurring ? (
