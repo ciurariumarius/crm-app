@@ -933,7 +933,7 @@ export function RichTextEditor({
                                         key={`${src}-${index}`}
                                         type="button"
                                         onClick={() => openImageViewerAtIndex(index)}
-                                        className="group relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-blue-300"
+                                        className="group relative h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-blue-300"
                                         title={`Open screenshot ${index + 1}`}
                                         aria-label={`Open screenshot ${index + 1}`}
                                     >

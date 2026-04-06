@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import { format, formatDistanceToNow } from "date-fns"
-import { Archive, ArchiveRestore, FilePlus2, NotebookPen, Pin, PinOff, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, FilePlus2, FolderKanban, ListTodo, NotebookPen, Pin, PinOff, Sparkles, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { createNote, deleteNote, setNoteArchived, setNotePinned, updateNote, type NoteRecord } from "@/lib/actions/notes"
+import { updateProject } from "@/lib/actions/projects"
+import { updateTask } from "@/lib/actions/tasks"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -48,6 +50,42 @@ function getNotePreview(note: NoteRecord) {
   if (!compact) return "No content yet"
   if (compact.length <= 80) return compact
   return `${compact.slice(0, 80)}...`
+}
+
+const PROJECT_REQUIREMENTS_TEMPLATE = [
+  "<h2>Requirements</h2>",
+  "<ul>",
+  "<li><strong>Goal:</strong> </li>",
+  "<li><strong>Deliverables:</strong> </li>",
+  "<li><strong>Tracking scope (GTM / GA4 / Pixel):</strong> </li>",
+  "<li><strong>Constraints:</strong> </li>",
+  "</ul>",
+  "<h3>Implementation Notes</h3>",
+  "<p></p>",
+  "<h3>Screenshots</h3>",
+  "<p></p>",
+].join("")
+
+const TASK_NOTES_TEMPLATE = [
+  "<h2>Context</h2>",
+  "<p></p>",
+  "<h2>Checklist</h2>",
+  "<ul>",
+  "<li></li>",
+  "</ul>",
+  "<h2>Screenshots</h2>",
+  "<p></p>",
+].join("")
+
+function toContentText(content: string) {
+  return content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function getNoteSourceType(note: NoteRecord | null | undefined) {
+  if (!note) return "note" as const
+  if (note.sourceType === "project" || note.id.startsWith("project:")) return "project" as const
+  if (note.sourceType === "task" || note.id.startsWith("task:")) return "task" as const
+  return "note" as const
 }
 
 function normalizeNoteContentForEditor(content: string) {
@@ -108,6 +146,22 @@ export function NotesWorkspace({
     () => notes.find((item) => item.id === selectedNoteId) ?? null,
     [notes, selectedNoteId]
   )
+  const selectedNoteSourceType = React.useMemo(() => getNoteSourceType(selectedNote), [selectedNote])
+  const selectedNoteIsLinked = selectedNoteSourceType !== "note"
+  const editorUploadContextId = React.useMemo(() => {
+    if (!selectedNote) return undefined
+    if (selectedNoteSourceType === "project") {
+      return selectedNote.sourceId || selectedNote.id.replace(/^project:/, "")
+    }
+    if (selectedNoteSourceType === "task") {
+      return (
+        selectedNote.sourceProjectId ||
+        selectedNote.sourceId ||
+        selectedNote.id.replace(/^task:/, "")
+      )
+    }
+    return selectedNote.id
+  }, [selectedNote, selectedNoteSourceType])
 
   React.useEffect(() => {
     if (!selectedNote) {
@@ -135,7 +189,8 @@ export function NotesWorkspace({
       if (!needle) return true
       return (
         note.title.toLowerCase().includes(needle) ||
-        note.contentText.toLowerCase().includes(needle)
+        note.contentText.toLowerCase().includes(needle) ||
+        (note.sourceLabel || "").toLowerCase().includes(needle)
       )
     })
   }, [notes, search, showArchived])
@@ -143,10 +198,77 @@ export function NotesWorkspace({
   const persistNote = React.useCallback(
     async (noteId: string, titleValue: string, contentValue: string) => {
       const existingNote = notes.find((item) => item.id === noteId) ?? null
+      if (!existingNote) return false
+      const sourceType = getNoteSourceType(existingNote)
       const normalizedTitle = normalizeTitle(titleValue, existingNote?.createdAt)
       const snapshot = lastSyncedRef.current
       if (snapshot.id === noteId && snapshot.title === normalizedTitle && snapshot.content === contentValue) {
         return true
+      }
+
+      if (sourceType === "project") {
+        const projectId = existingNote.sourceId || existingNote.id.replace(/^project:/, "")
+        const result = await updateProject(projectId, { description: contentValue })
+        if (!result.success) {
+          toast.error(result.error || "Failed to save project note")
+          return false
+        }
+        const nowIso = new Date().toISOString()
+        setNotes((current) =>
+          sortNotes(
+            current.map((item) =>
+              item.id === existingNote.id
+                ? {
+                    ...item,
+                    content: contentValue,
+                    contentText: toContentText(contentValue),
+                    updatedAt: nowIso,
+                  }
+                : item
+            )
+          )
+        )
+        lastSyncedRef.current = {
+          id: existingNote.id,
+          title: existingNote.title,
+          content: contentValue,
+        }
+        return true
+      }
+
+      if (sourceType === "task") {
+        const taskId = existingNote.sourceId || existingNote.id.replace(/^task:/, "")
+        const result = await updateTask(taskId, { description: contentValue })
+        if (!result.success) {
+          toast.error(result.error || "Failed to save task note")
+          return false
+        }
+        const nowIso = new Date().toISOString()
+        setNotes((current) =>
+          sortNotes(
+            current.map((item) =>
+              item.id === existingNote.id
+                ? {
+                    ...item,
+                    content: contentValue,
+                    contentText: toContentText(contentValue),
+                    updatedAt: nowIso,
+                  }
+                : item
+            )
+          )
+        )
+        lastSyncedRef.current = {
+          id: existingNote.id,
+          title: existingNote.title,
+          content: contentValue,
+        }
+        return true
+      }
+
+      if (storageUnavailable) {
+        toast.error("Notes storage is not ready yet")
+        return false
       }
 
       const result = await updateNote(noteId, {
@@ -167,11 +289,15 @@ export function NotesWorkspace({
       }
       return true
     },
-    [notes]
+    [notes, storageUnavailable]
   )
 
   const handleCreateNote = React.useCallback(
     async (prefill?: { title?: string; content?: string }) => {
+      if (storageUnavailable) {
+        toast.error("Notes storage is not ready yet")
+        return null
+      }
       setIsCreating(true)
       try {
         const defaultTitle = getDefaultNoteTitle()
@@ -193,14 +319,13 @@ export function NotesWorkspace({
         setIsCreating(false)
       }
     },
-    []
+    [storageUnavailable]
   )
 
   React.useEffect(() => {
-    if (storageUnavailable) return
     if (bootstrappedRef.current) return
     bootstrappedRef.current = true
-    if (notes.length === 0) {
+    if (notes.length === 0 && !storageUnavailable) {
       void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })
     } else if (!selectedNoteId) {
       const firstActive = notes.find((note) => !note.archived) ?? notes[0]
@@ -209,8 +334,8 @@ export function NotesWorkspace({
   }, [handleCreateNote, notes, selectedNoteId, storageUnavailable])
 
   React.useEffect(() => {
-    if (storageUnavailable) return
     if (!selectedNoteId) return
+    if (selectedNoteSourceType === "note" && storageUnavailable) return
     const normalizedTitle = normalizeTitle(titleDraft, selectedNote?.createdAt)
     const currentSnapshot = lastSyncedRef.current
     if (
@@ -229,12 +354,12 @@ export function NotesWorkspace({
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [contentDraft, persistNote, selectedNote?.createdAt, selectedNoteId, storageUnavailable, titleDraft])
+  }, [contentDraft, persistNote, selectedNote?.createdAt, selectedNoteId, selectedNoteSourceType, storageUnavailable, titleDraft])
 
   React.useEffect(() => {
-    if (storageUnavailable) return
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
+        if (storageUnavailable) return
         event.preventDefault()
         void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })
       }
@@ -267,6 +392,7 @@ export function NotesWorkspace({
 
   const handleArchiveToggle = React.useCallback(
     async (note: NoteRecord) => {
+      if (getNoteSourceType(note) !== "note") return
       const nextArchived = !note.archived
       const result = await setNoteArchived(note.id, nextArchived)
       if (!result.success || !result.data) {
@@ -286,6 +412,7 @@ export function NotesWorkspace({
   )
 
   const handlePinToggle = React.useCallback(async (note: NoteRecord) => {
+    if (getNoteSourceType(note) !== "note") return
     const result = await setNotePinned(note.id, !note.pinned)
     if (!result.success || !result.data) {
       toast.error(result.error || "Failed to update note")
@@ -296,6 +423,7 @@ export function NotesWorkspace({
 
   const handleDelete = React.useCallback(
     async (note: NoteRecord) => {
+      if (getNoteSourceType(note) !== "note") return
       const confirmed = window.confirm(`Delete note "${getNoteDisplayTitle(note)}"?`)
       if (!confirmed) return
 
@@ -314,6 +442,16 @@ export function NotesWorkspace({
     [notes, selectedNoteId, showArchived]
   )
 
+  const appendTemplate = React.useCallback(() => {
+    if (selectedNoteSourceType === "project") {
+      setContentDraft((current) => (current.trim() ? `${current}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}` : PROJECT_REQUIREMENTS_TEMPLATE))
+      return
+    }
+    if (selectedNoteSourceType === "task") {
+      setContentDraft((current) => (current.trim() ? `${current}<p></p>${TASK_NOTES_TEMPLATE}` : TASK_NOTES_TEMPLATE))
+    }
+  }, [selectedNoteSourceType])
+
   const renderNotesList = React.useCallback(
     (isMobile = false) => (
       <div className={cn("flex flex-col", isMobile ? "h-full" : "h-[calc(100vh-245px)] min-h-[420px]")}>
@@ -325,6 +463,8 @@ export function NotesWorkspace({
         <div className={cn("flex-1 space-y-1 overflow-y-auto", isMobile ? "p-2" : "p-2")}>
           {visibleNotes.map((note) => {
             const selected = note.id === selectedNoteId
+            const sourceType = getNoteSourceType(note)
+            const isLinked = sourceType !== "note"
             return (
               <div
                 key={note.id}
@@ -352,51 +492,60 @@ export function NotesWorkspace({
                   <p className="line-clamp-1 text-[13px] font-medium leading-5 text-[var(--text-primary)]">
                     {getNoteDisplayTitle(note)}
                   </p>
-                  {note.pinned ? <Pin className="mt-0.5 h-3.5 w-3.5 text-amber-500" /> : null}
+                  {isLinked ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                      {sourceType === "project" ? <FolderKanban className="h-3 w-3" /> : <ListTodo className="h-3 w-3" />}
+                      {sourceType}
+                    </span>
+                  ) : note.pinned ? (
+                    <Pin className="mt-0.5 h-3.5 w-3.5 text-amber-500" />
+                  ) : null}
                 </div>
                 <p className="mt-0.5 line-clamp-2 text-[11px] leading-[1.3rem] text-[var(--text-secondary)]">{getNotePreview(note)}</p>
                 <div className="mt-1.5 flex items-center justify-between gap-2">
                   <p className="text-[10px] font-medium text-[var(--text-muted)]">
                     {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
                   </p>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        void handlePinToggle(note)
-                      }}
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,white)]"
-                      aria-label={note.pinned ? "Unpin note" : "Pin note"}
-                    >
-                      {note.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        void handleArchiveToggle(note)
-                      }}
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,white)]"
-                      aria-label={note.archived ? "Restore note" : "Archive note"}
-                    >
-                      {note.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        void handleDelete(note)
-                      }}
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-md text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
-                      aria-label="Delete note"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  {!isLinked ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          void handlePinToggle(note)
+                        }}
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,white)]"
+                        aria-label={note.pinned ? "Unpin note" : "Pin note"}
+                      >
+                        {note.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          void handleArchiveToggle(note)
+                        }}
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,white)]"
+                        aria-label={note.archived ? "Restore note" : "Archive note"}
+                      >
+                        {note.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          void handleDelete(note)
+                        }}
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-md text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
+                        aria-label="Delete note"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             )
@@ -431,7 +580,7 @@ export function NotesWorkspace({
                 variant={showArchived ? "default" : "outline"}
                 className="h-10 rounded-xl"
                 onClick={() => setShowArchived((current) => !current)}
-                disabled={storageUnavailable}
+                disabled={false}
               >
                 {showArchived ? "Archived" : "Active"}
               </Button>
@@ -496,20 +645,36 @@ export function NotesWorkspace({
                 </div>
               </div>
 
-              {storageUnavailable ? (
-                <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-                  <p className="text-base font-semibold text-[var(--text-primary)]">Notes storage is not ready</p>
-                  <p className="max-w-[680px] text-sm text-[var(--text-secondary)]">
-                    Run <code>npx prisma generate</code> and <code>npx prisma migrate deploy</code>, then restart the app.
-                  </p>
-                </div>
-              ) : selectedNote ? (
+              {selectedNote ? (
                 <div className="space-y-2 p-3 sm:p-3.5 md:p-4">
+                  {selectedNoteIsLinked ? (
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-600">
+                        {selectedNoteSourceType === "project" ? <FolderKanban className="h-3.5 w-3.5" /> : <ListTodo className="h-3.5 w-3.5" />}
+                        {selectedNoteSourceType === "project" ? "Project note" : "Task note"}
+                        {selectedNote.sourceLabel ? <span className="text-slate-400">• {selectedNote.sourceLabel}</span> : null}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 rounded-lg px-2 text-[11px] text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        onClick={appendTemplate}
+                      >
+                        <Sparkles className="mr-1 h-3.5 w-3.5" />
+                        Template
+                      </Button>
+                    </div>
+                  ) : null}
                   <Input
                     value={titleDraft}
                     onChange={(event) => setTitleDraft(event.target.value)}
+                    readOnly={selectedNoteIsLinked}
                     placeholder={getDefaultNoteTitle(selectedNote.createdAt)}
-                    className="h-9 rounded-lg !border-0 !bg-transparent px-1 text-[15px] font-medium shadow-none hover:!border-transparent hover:!bg-transparent focus-visible:!border-transparent focus-visible:ring-0"
+                    className={cn(
+                      "h-9 rounded-lg !border-0 !bg-transparent px-1 text-[15px] font-medium shadow-none hover:!border-transparent hover:!bg-transparent focus-visible:!border-transparent focus-visible:ring-0",
+                      selectedNoteIsLinked && "cursor-default text-slate-700"
+                    )}
                   />
                   <RichTextEditor
                     value={contentDraft}
@@ -517,8 +682,9 @@ export function NotesWorkspace({
                     placeholder="Write here..."
                     variant="plain"
                     mode="panel"
+                    uploadProjectId={editorUploadContextId}
                     toolbarVisibility="always"
-                    toolbarPreset="minimal"
+                    toolbarPreset={selectedNoteIsLinked ? "full" : "minimal"}
                     panelStyle="borderless"
                     className="rounded-[12px] border-0 bg-transparent shadow-none [&_.ProseMirror]:text-[13px] [&_.ProseMirror]:leading-6"
                     minHeightClassName="min-h-[54vh] sm:min-h-[58vh] md:min-h-[60vh]"

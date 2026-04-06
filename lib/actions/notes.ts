@@ -21,6 +21,7 @@ export type NoteRecord = {
   updatedAt: string
   sourceType?: "note" | "project" | "task"
   sourceId?: string
+  sourceProjectId?: string
   sourceLabel?: string
 }
 

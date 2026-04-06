@@ -71,6 +71,7 @@ export default async function NotesPage({
         updatedAt: true,
         project: {
           select: {
+            id: true,
             name: true,
             site: { select: { domainName: true } },
           },
@@ -137,6 +138,7 @@ export default async function NotesPage({
         updatedAt: task.updatedAt.toISOString(),
         sourceType: "task",
         sourceId: task.id,
+        sourceProjectId: task.project?.id || undefined,
         sourceLabel: domainName,
       }
     })
