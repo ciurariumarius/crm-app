@@ -453,13 +453,13 @@ export function NotesWorkspace({
 
   const renderNotesList = React.useCallback(
     (isMobile = false) => (
-      <div className={cn("flex flex-col", isMobile ? "h-full" : "h-[calc(100vh-245px)] min-h-[420px]")}>
+      <div className={cn("flex min-h-0 flex-col", isMobile ? "h-full" : "h-full")}>
         <div className="border-b border-slate-100/90 bg-transparent px-2.5 py-2">
           <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
             {showArchived ? "Archived notes" : "Active notes"} · {visibleNotes.length}
           </p>
         </div>
-        <div className={cn("flex-1 space-y-1 overflow-y-auto", isMobile ? "p-2" : "p-2")}>
+        <div className={cn("ui-scrollbar flex-1 space-y-1 overflow-y-auto", isMobile ? "p-2" : "p-2")}>
           {visibleNotes.map((note) => {
             const selected = note.id === selectedNoteId
             const sourceType = getNoteSourceType(note)
@@ -619,8 +619,8 @@ export function NotesWorkspace({
 
       <Card className="overflow-hidden rounded-[16px] border border-slate-200/70 bg-white shadow-[0_2px_6px_rgba(15,23,42,0.025)]">
         <CardContent className="p-0">
-          <div className="grid md:grid-cols-[252px_minmax(0,1fr)]">
-            <aside className="hidden border-r border-slate-100/90 bg-white md:block">
+          <div className="grid md:min-h-[calc(100dvh-230px)] md:grid-cols-[252px_minmax(0,1fr)]">
+            <aside className="hidden min-h-0 border-r border-slate-100/90 bg-white md:block">
               {renderNotesList(false)}
             </aside>
 

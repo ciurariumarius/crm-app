@@ -4,24 +4,15 @@ import { requireTenantContext } from "@/lib/tenant"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { PaymentsTable } from "@/components/payments/payments-table"
 import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
+import { PaymentsFiltersClient } from "@/components/payments/payments-filters-client"
+import { PaymentsAddPaymentAction } from "@/components/payments/payments-add-payment-action"
 import { ChevronLeft, ChevronRight, Banknote, Users, History } from "lucide-react"
 import Link from "next/link"
-import dynamicImport from "next/dynamic"
 import { buttonLinkClassName } from "@/components/ui/button-link"
 import { formatCurrency, formatProjectName, serialize, cn } from "@/lib/utils"
 
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
-
-const PaymentsFilters = dynamicImport(
-    () => import("@/components/payments/payments-filters").then((module) => module.PaymentsFilters),
-    { ssr: false }
-)
-
-const AddPartnerPaymentDialog = dynamicImport(
-    () => import("@/components/payments/add-partner-payment-dialog").then((module) => module.AddPartnerPaymentDialog),
-    { ssr: false }
-)
 
 export default async function PaymentsPage({
     searchParams,
@@ -112,13 +103,11 @@ export default async function PaymentsPage({
             <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Payments"
-                    actions={<AddPartnerPaymentDialog partners={partners} />}
+                    actions={<PaymentsAddPaymentAction partners={partners} />}
                     mobileActions={
-                        <AddPartnerPaymentDialog
+                        <PaymentsAddPaymentAction
                             partners={partners}
-                            label="Add"
-                            showLabelOnMobile
-                            className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
+                            mobile
                         />
                     }
                     showMobile
@@ -182,7 +171,7 @@ export default async function PaymentsPage({
                         </div>
                     </div>
 
-                <PaymentsFilters
+                <PaymentsFiltersClient
                     partners={partners}
                     projects={serializedProjects}
                     totalLogs={totalLogs}
