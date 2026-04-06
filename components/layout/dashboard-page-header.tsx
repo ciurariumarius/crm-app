@@ -3,6 +3,8 @@ import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 
 type DashboardPageHeaderProps = {
     title: string
+    subtitle?: string
+    eyebrow?: string
     search?: React.ReactNode
     actions?: React.ReactNode
     className?: string
@@ -13,6 +15,8 @@ type DashboardPageHeaderProps = {
 
 export function DashboardPageHeader({
     title,
+    subtitle,
+    eyebrow,
     search,
     actions,
     className,
@@ -35,7 +39,19 @@ export function DashboardPageHeader({
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
                             <MobileMenuTrigger />
-                            <h1 className="ui-text-title text-slate-900">{title}</h1>
+                            <div className="min-w-0">
+                                {eyebrow ? (
+                                    <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                        {eyebrow}
+                                    </p>
+                                ) : null}
+                                <h1 className="ui-text-title text-slate-900">{title}</h1>
+                                {subtitle ? (
+                                    <p className="mt-1 text-[13px] font-medium text-slate-500">
+                                        {subtitle}
+                                    </p>
+                                ) : null}
+                            </div>
                         </div>
                         {resolvedMobileActions}
                     </div>
@@ -47,7 +63,19 @@ export function DashboardPageHeader({
                 <div className="min-w-[220px]">
                     <div className="flex items-center gap-3">
                         <MobileMenuTrigger />
-                        <h1 className="ui-text-title text-slate-900">{title}</h1>
+                        <div className="min-w-0">
+                            {eyebrow ? (
+                                <p className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                    {eyebrow}
+                                </p>
+                            ) : null}
+                            <h1 className="ui-text-title text-slate-900">{title}</h1>
+                            {subtitle ? (
+                                <p className="mt-1 text-sm font-medium text-slate-500">
+                                    {subtitle}
+                                </p>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
 

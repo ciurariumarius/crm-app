@@ -79,6 +79,7 @@ export default async function ProjectsPage({
     }>
 }) {
     const session = await requireTenantContext()
+    const projectsSubtitle = "Track delivery, fees, and project health across your active portfolio."
     const params = await searchParams
     const normalizedFilters = normalizeProjectFilters({
         q: params.q,
@@ -199,46 +200,50 @@ export default async function ProjectsPage({
             hourlyRate={user?.hourlyRate ? Number(user.hourlyRate) : 0}
         >
             <ProjectsSearchProvider initialSearch={q || ""}>
-                <div className="space-y-6">
-                    <div className="flex flex-col gap-4">
-                    <DashboardPageHeader
-                        title="Projects"
-                        showMobile
-                        search={<ProjectsSearchInput />}
-                        mobileSearch={<ProjectsSearchInput />}
-                        mobileActions={(
-                            <CreateProjectButton
-                                variant="full"
-                                label="Add Project"
-                                showLabelOnMobile
-                                className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !text-white"
-                                partners={partnersForClient}
-                                services={servicesForClient}
+                <div className="space-y-5 sm:space-y-6">
+                    <div className="flex flex-col gap-3.5 sm:gap-4">
+                        <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+                            <DashboardPageHeader
+                                title="Projects"
+                                eyebrow="Portfolio Workspace"
+                                subtitle={projectsSubtitle}
+                                showMobile
+                                search={<ProjectsSearchInput />}
+                                mobileSearch={<ProjectsSearchInput />}
+                                mobileActions={(
+                                    <CreateProjectButton
+                                        variant="full"
+                                        label="Add Project"
+                                        showLabelOnMobile
+                                        className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !text-white"
+                                        partners={partnersForClient}
+                                        services={servicesForClient}
+                                    />
+                                )}
+                                actions={(
+                                    <CreateProjectButton
+                                        variant="full"
+                                        label="Add Project"
+                                        partners={partnersForClient}
+                                        services={servicesForClient}
+                                    />
+                                )}
                             />
-                        )}
-                        actions={(
-                            <CreateProjectButton
-                                variant="full"
-                                label="Add Project"
-                                partners={partnersForClient}
-                                services={servicesForClient}
-                            />
-                        )}
-                    />
-                    <ProjectsFiltersToolbar
-                        partners={partnersList}
-                        currentStatus={queryStatus}
-                        currentPayment={payment}
-                        currentRecurring={recurring}
-                        currentPeriod={period}
-                        currentFrom={fromParam || ""}
-                        currentTo={toParam || ""}
-                        currentSort={sort}
-                        currentView={layout}
-                        currentPartnerId={partnerId || "all"}
-                        totalProjects={totalProjects}
-                    />
-                </div>
+                        </div>
+                        <ProjectsFiltersToolbar
+                            partners={partnersList}
+                            currentStatus={queryStatus}
+                            currentPayment={payment}
+                            currentRecurring={recurring}
+                            currentPeriod={period}
+                            currentFrom={fromParam || ""}
+                            currentTo={toParam || ""}
+                            currentSort={sort}
+                            currentView={layout}
+                            currentPartnerId={partnerId || "all"}
+                            totalProjects={totalProjects}
+                        />
+                    </div>
 
                 <ProjectsBoardRows
                     projects={projectsForClient}

@@ -64,6 +64,7 @@ export default async function TasksPage({
     }>
 }) {
     const session = await requireTenantContext()
+    const tasksSubtitle = "Stay on top of active work, urgency, and delivery focus across your task queue."
     const params = await searchParams
     const normalizedFilters = normalizeTaskFilters({
         q: params.q,
@@ -255,7 +256,7 @@ export default async function TasksPage({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <Link
                 href={buildTasksHref({ q: null, status: "All", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md"
+                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
             >
                 <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100 shadow-inner">
@@ -270,7 +271,7 @@ export default async function TasksPage({
 
             <Link
                 href={buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md"
+                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
             >
                 <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
@@ -285,7 +286,7 @@ export default async function TasksPage({
 
             <Link
                 href={buildTasksHref({ q: null, status: "Active", urgency: "Urgent", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md"
+                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
             >
                 <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 border border-rose-100 shadow-inner">
@@ -300,7 +301,7 @@ export default async function TasksPage({
 
             <Link
                 href={buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: "1", dueToday: null, projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md"
+                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
             >
                 <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-100 shadow-inner">
@@ -315,7 +316,7 @@ export default async function TasksPage({
 
             <Link
                 href={buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: "1", projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md"
+                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
             >
                 <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-inner">
@@ -350,22 +351,26 @@ export default async function TasksPage({
 
     return (
         <TasksSearchProvider initialSearch={q || ""}>
-            <div className="flex flex-col gap-4">
-                <DashboardPageHeader
-                    title="Tasks"
-                    showMobile
-                    search={<TasksSearchInput />}
-                    mobileSearch={<TasksSearchInput />}
-                    mobileActions={
-                        <CreateTaskButton
-                            projects={activeProjects}
-                            label="Add Task"
-                            showLabelOnMobile
-                            className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !text-white"
-                        />
-                    }
-                    actions={<CreateTaskButton projects={activeProjects} />}
-                />
+            <div className="flex flex-col gap-3.5 sm:gap-4">
+                <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+                    <DashboardPageHeader
+                        title="Tasks"
+                        eyebrow="Delivery Workspace"
+                        subtitle={tasksSubtitle}
+                        showMobile
+                        search={<TasksSearchInput />}
+                        mobileSearch={<TasksSearchInput />}
+                        mobileActions={
+                            <CreateTaskButton
+                                projects={activeProjects}
+                                label="Add Task"
+                                showLabelOnMobile
+                                className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !text-white"
+                            />
+                        }
+                        actions={<CreateTaskButton projects={activeProjects} />}
+                    />
+                </div>
 
                 <TasksToolbar
                     projects={projectsList}
@@ -401,11 +406,15 @@ export default async function TasksPage({
                         perPage,
                     }}
                 />
-                <div className="mt-10 border-t border-slate-200/70 pt-7">
+                <div className="mt-8 rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:mt-10 sm:p-5">
+                    <div className="mb-3 sm:mb-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Task Snapshot</p>
+                        <p className="mt-1 text-sm font-medium text-slate-500">Quick totals for active delivery pressure and due work.</p>
+                    </div>
                     {renderTasksSummaryRow()}
                 </div>
 
-                <div className="mt-5 border-t border-slate-200/70 pt-5">
+                <div className="mt-4 border-t border-slate-200/70 pt-4 sm:mt-5 sm:pt-5">
                     {renderPaginationBar()}
                 </div>
             </div>

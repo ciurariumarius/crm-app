@@ -20,6 +20,7 @@ export default async function PaymentsPage({
     searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string; timeRange?: string }>
 }) {
     const session = await requireTenantContext()
+    const paymentsSubtitle = "Track outstanding balances, payment events, and partner settlements in one place."
     const { projectId, partnerId, q, timeRange, page: pageParam } = await searchParams
     const page = Math.max(1, Number(pageParam) || 1)
 
@@ -99,16 +100,20 @@ export default async function PaymentsPage({
     }
 
     return (
-        <div className="flex flex-col gap-10 pb-10">
-            <DashboardPageHeader
-                title="Payments"
-                actions={<AddPartnerPaymentDialog partners={partners} />}
-                showMobile
-            />
+        <div className="flex flex-col gap-8 pb-10 sm:gap-10">
+            <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+                <DashboardPageHeader
+                    title="Payments"
+                    eyebrow="Finance Workspace"
+                    subtitle={paymentsSubtitle}
+                    actions={<AddPartnerPaymentDialog partners={partners} />}
+                    showMobile
+                />
+            </div>
 
             {/* KPI Section */}
             <section>
-                <div className="flex flex-col lg:flex-row overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                <div className="flex flex-col overflow-hidden rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)] lg:flex-row">
                     <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
                         <div className="flex items-start justify-between">
                             <p className="ui-overline text-slate-400">Total Unpaid Balance</p>
@@ -150,12 +155,17 @@ export default async function PaymentsPage({
                 </div>
             </section>
 
-            <div className="flex flex-col gap-10">
+            <div className="flex flex-col gap-8 sm:gap-10">
                 <UnpaidByPartnerChart partners={unpaidByPartner} />
 
                 <div className="flex flex-col gap-6">
                     <div className="flex items-center justify-between px-2">
-                        <h2 className="ui-text-title-sm text-slate-900">Transaction History</h2>
+                        <div className="flex flex-col">
+                            <h2 className="ui-text-title-sm text-slate-900">Transaction History</h2>
+                            <p className="text-[11px] font-medium text-slate-400">
+                                Review payment changes, manual entries, and settlement events.
+                            </p>
+                        </div>
                     </div>
 
                 <PaymentsFilters
@@ -171,7 +181,7 @@ export default async function PaymentsPage({
                     />
 
                     {/* Pagination Footer */}
-                    <div className="flex items-center justify-between px-6 py-4">
+                    <div className="flex items-center justify-between rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-6 sm:py-4">
                         <div className="ui-overline flex items-center gap-2">
                             <span className="text-slate-400">Showing</span>
                             <span className="font-bold text-slate-900">Page {page} of {totalPages}</span>

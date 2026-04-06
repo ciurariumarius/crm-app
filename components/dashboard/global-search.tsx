@@ -114,12 +114,12 @@ export function GlobalSearch({ mobileMode = "icon" }: GlobalSearchProps) {
             {/* Desktop Search Trigger - Redesigned to match screenshot */}
             <button
                 onClick={() => setOpen(true)}
-                className="hidden md:flex items-center gap-3 w-full max-w-[500px] px-6 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all text-slate-400 group shadow-sm mx-auto"
+                className="mx-auto hidden w-full max-w-[500px] items-center gap-3 rounded-full border border-slate-200/90 bg-white/95 px-6 py-3 text-slate-400 shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-slate-300 hover:bg-slate-50 md:flex"
             >
                 <Search className="h-4 w-4 text-slate-400" />
                 <span className="text-[13px] text-slate-500 font-medium">Search projects, tasks or partners...</span>
                 <div className="ml-auto flex items-center gap-1">
-                    <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-400 opacity-100 group-hover:bg-slate-100">
+                    <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-400">
                         <span className="text-xs">⌘</span>K
                     </kbd>
                 </div>

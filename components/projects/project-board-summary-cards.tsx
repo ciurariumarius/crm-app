@@ -23,15 +23,15 @@ function SummaryCard({
     toneClass: string
 }) {
     return (
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-card/80 p-3 shadow-sm backdrop-blur-md transition-all hover:shadow-md">
-            <div className="flex items-center gap-2">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg border shadow-inner ${toneClass}`}>
+        <div className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
+            <div className="flex items-center gap-2.5">
+                <div className={`flex h-8 w-8 items-center justify-center rounded-xl border shadow-inner ${toneClass}`}>
                     {icon}
                 </div>
-                <p className="flex items-baseline gap-1.5 leading-none">
-                    <span className="text-lg font-bold tracking-tight text-foreground">{value}</span>
-                    <span className="ui-text-label text-muted-foreground">{label}</span>
-                </p>
+                <div className="min-w-0">
+                    <p className="text-lg font-bold leading-none tracking-tight text-foreground">{value}</p>
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</p>
+                </div>
             </div>
         </div>
     )
@@ -45,7 +45,7 @@ export function ProjectBoardSummaryCards({
     totalDurationLabel,
 }: ProjectBoardSummaryCardsProps) {
     return (
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
             <SummaryCard
                 icon={<Layers className="h-4 w-4" />}
                 value={totalCount}
@@ -79,4 +79,3 @@ export function ProjectBoardSummaryCards({
         </div>
     )
 }
-

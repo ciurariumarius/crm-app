@@ -304,12 +304,12 @@ export function NotesWorkspace({
   const renderNotesList = React.useCallback(
     (isMobile = false) => (
       <div className={cn("flex flex-col", isMobile ? "h-full" : "h-[calc(100vh-260px)] min-h-[420px]")}>
-        <div className="border-b border-[var(--line-subtle)] px-3 py-2">
+        <div className="border-b border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_78%,white)] px-3 py-2.5">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             {showArchived ? "Archived notes" : "Active notes"} · {visibleNotes.length}
           </p>
         </div>
-        <div className="flex-1 space-y-1 overflow-y-auto p-2">
+        <div className={cn("flex-1 space-y-1.5 overflow-y-auto", isMobile ? "p-2.5" : "p-2.5")}>
           {visibleNotes.map((note) => {
             const selected = note.id === selectedNoteId
             return (
@@ -329,10 +329,10 @@ export function NotesWorkspace({
                 role="button"
                 tabIndex={0}
                 className={cn(
-                  "w-full rounded-xl border px-3 py-2 text-left transition-colors",
+                  "w-full rounded-[18px] border px-3.5 py-2.5 text-left transition-colors shadow-[0_2px_10px_rgba(15,23,42,0.02)]",
                   selected
-                    ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_45%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)]"
-                    : "border-transparent hover:border-[var(--line-subtle)] hover:bg-[var(--bg-surface-soft)]"
+                    ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_45%,white)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--brand-cyan)_12%,white),color-mix(in_srgb,var(--brand-cyan)_7%,white))]"
+                    : "border-slate-200/70 bg-white/80 hover:border-[var(--line-subtle)] hover:bg-[var(--bg-surface-soft)]"
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -388,7 +388,7 @@ export function NotesWorkspace({
           })}
 
           {visibleNotes.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[var(--line-subtle)] p-6 text-center">
+            <div className="rounded-[18px] border border-dashed border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(248,250,252,0.88))] p-6 text-center">
               <p className="text-sm font-medium text-[var(--text-secondary)]">No notes in this view.</p>
             </div>
           ) : null}
@@ -400,76 +400,80 @@ export function NotesWorkspace({
 
   return (
     <div className="space-y-4">
-      <DashboardPageHeader
-        title="Notes"
-        showMobile
-        search={
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-3">
-              <Search className="h-4 w-4 text-[var(--text-secondary)]" />
-              <input
-                ref={searchRef}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search notes..."
-                className="h-8 w-full border-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
-              />
+      <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+        <DashboardPageHeader
+          title="Notes"
+          eyebrow="Personal Workspace"
+          subtitle="Capture ideas, meeting notes, and quick thoughts without leaving the app."
+          showMobile
+          search={
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-full border border-[var(--line-subtle)] bg-white/95 px-3 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+                <Search className="h-4 w-4 text-[var(--text-secondary)]" />
+                <input
+                  ref={searchRef}
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search notes..."
+                  className="h-8 w-full border-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
+                />
+              </div>
+              <Button
+                type="button"
+                variant={showArchived ? "default" : "outline"}
+                className="h-10 rounded-xl"
+                onClick={() => setShowArchived((current) => !current)}
+                disabled={storageUnavailable}
+              >
+                {showArchived ? "Archived" : "Active"}
+              </Button>
             </div>
+          }
+          actions={
             <Button
               type="button"
-              variant={showArchived ? "default" : "outline"}
               className="h-10 rounded-xl"
-              onClick={() => setShowArchived((current) => !current)}
-              disabled={storageUnavailable}
+              onClick={() => void handleCreateNote({ title: "", content: "" })}
+              disabled={isCreating || storageUnavailable}
             >
-              {showArchived ? "Archived" : "Active"}
+              <FilePlus2 className="mr-2 h-4 w-4" />
+              New note
             </Button>
-          </div>
-        }
-        actions={
-          <Button
-            type="button"
-            className="h-10 rounded-xl"
-            onClick={() => void handleCreateNote({ title: "", content: "" })}
-            disabled={isCreating || storageUnavailable}
-          >
-            <FilePlus2 className="mr-2 h-4 w-4" />
-            New note
-          </Button>
-        }
-        mobileActions={
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 rounded-xl"
-            onClick={() => void handleCreateNote({ title: "", content: "" })}
-            disabled={isCreating || storageUnavailable}
-          >
-            <FilePlus2 className="mr-1.5 h-4 w-4" />
-            New
-          </Button>
-        }
-      />
+          }
+          mobileActions={
+            <Button
+              type="button"
+              size="sm"
+              className="h-9 rounded-xl"
+              onClick={() => void handleCreateNote({ title: "", content: "" })}
+              disabled={isCreating || storageUnavailable}
+            >
+              <FilePlus2 className="mr-1.5 h-4 w-4" />
+              New
+            </Button>
+          }
+        />
+      </div>
 
-      <Card className="overflow-hidden rounded-2xl border-[var(--line-subtle)]">
+      <Card className="overflow-hidden rounded-[24px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
         <CardContent className="p-0">
-          <div className="grid md:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="grid md:grid-cols-[300px_minmax(0,1fr)]">
             <aside className="hidden border-r border-[var(--line-subtle)] bg-[var(--bg-surface)] md:block">
               {renderNotesList(false)}
             </aside>
 
             <section className="min-w-0 bg-white">
-              <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-4 py-3">
+              <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-2.5 sm:px-4 sm:py-3">
                 <div className="inline-flex items-center gap-2 md:hidden">
                   <Sheet open={isMobileListOpen} onOpenChange={setIsMobileListOpen}>
                     <SheetTrigger asChild>
-                      <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg">
+                      <Button type="button" variant="outline" size="sm" className="h-8 rounded-xl">
                         <NotebookPen className="mr-1.5 h-4 w-4" />
                         Notes ({visibleNotes.length})
                       </Button>
                     </SheetTrigger>
-                    <SheetContent side="left" className="w-[88vw] border-r border-[var(--line-subtle)] p-0 sm:max-w-md">
-                      <SheetHeader className="border-b border-[var(--line-subtle)] px-4 py-3">
+                    <SheetContent side="left" className="w-[86vw] border-r border-[var(--line-subtle)] p-0 sm:max-w-md">
+                      <SheetHeader className="border-b border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_78%,white)] px-4 py-3">
                         <SheetTitle>Notes</SheetTitle>
                       </SheetHeader>
                       {renderNotesList(true)}
@@ -490,24 +494,27 @@ export function NotesWorkspace({
                   </p>
                 </div>
               ) : selectedNote ? (
-                <div className="space-y-3 p-4 md:p-5">
+                <div className="space-y-2.5 p-3.5 sm:p-4 md:p-5">
                   <Input
                     value={titleDraft}
                     onChange={(event) => setTitleDraft(event.target.value)}
                     placeholder="Untitled"
-                    className="h-11 rounded-xl border-[var(--line-subtle)] bg-[var(--bg-surface)] text-base font-semibold"
+                    className="h-10 rounded-xl border-[var(--line-subtle)] bg-[var(--bg-surface)] text-base font-semibold sm:h-11"
                   />
                   <Textarea
                     value={contentDraft}
                     onChange={(event) => setContentDraft(event.target.value)}
                     placeholder="Write your note here..."
-                    className="min-h-[60vh] rounded-xl border-[var(--line-subtle)] bg-[var(--bg-surface)] p-4 text-sm leading-6"
+                    className="min-h-[54vh] rounded-[20px] border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3.5 text-sm leading-6 sm:min-h-[58vh] sm:p-4 md:min-h-[60vh]"
                   />
                 </div>
               ) : (
                 <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                    <NotebookPen className="h-5 w-5 text-slate-400" />
+                  </div>
                   <p className="text-base font-semibold text-[var(--text-primary)]">No note selected</p>
-                  <p className="text-sm text-[var(--text-secondary)]">Create a new note and start writing instantly.</p>
+                  <p className="max-w-md text-sm leading-6 text-[var(--text-secondary)]">Create a new note and start writing instantly.</p>
                   <Button
                     type="button"
                     className="h-10 rounded-xl"

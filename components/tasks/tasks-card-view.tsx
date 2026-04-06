@@ -371,7 +371,7 @@ export function TasksCardView({
     }, [normalizedSearch, remoteTasks, searchSourceTasks])
 
     const renderGridView = () => (
-        <div className={cn("grid gap-4", colsClass)}>
+        <div className={cn("grid gap-3.5 sm:gap-4", colsClass)}>
             {visibleTasks.map((task) => (
                 <TaskGridCard
                     key={task.id}
@@ -390,7 +390,7 @@ export function TasksCardView({
             ))}
 
             <div
-                className="group self-start cursor-pointer rounded-2xl border border-dashed border-slate-200 bg-slate-50/30 px-4 py-6 text-center transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-sm"
+                className="group self-start cursor-pointer rounded-[22px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.78),rgba(241,245,249,0.55))] px-4 py-6 text-center transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
                 onClick={() => setCreateTaskOpen(true)}
             >
                 <div className="flex h-full flex-col items-center justify-center">
@@ -406,9 +406,9 @@ export function TasksCardView({
     )
 
     const renderListView = () => (
-        <div className="flex flex-col gap-3">
-            <div className="hidden lg:grid grid-cols-[auto_1fr_auto_auto_auto] gap-6 text-xs font-semibold text-muted-foreground px-8 py-2 border-b border-border/40 pb-3">
-                <div className="flex items-center gap-6 w-16">
+        <div className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+            <div className="mb-3 hidden grid-cols-[auto_1fr_auto_auto_auto] gap-6 border-b border-slate-200/70 px-5 pb-3 pt-1 text-xs font-semibold text-muted-foreground lg:grid">
+                <div className="flex w-16 items-center gap-6">
                     <span className="w-8 text-center">PRI</span>
                 </div>
                 <div>TASK / PROJECT / DESCRIPTION</div>
@@ -434,13 +434,13 @@ export function TasksCardView({
                         <div
                             key={task.id}
                             className={cn(
-                                "group flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 bg-card rounded-xl p-6 lg:px-8 shadow-sm hover:shadow-md border border-border/60 hover:border-border/80 transition-all duration-300 cursor-pointer relative overflow-hidden",
+                                "group relative flex cursor-pointer flex-col gap-4 overflow-hidden rounded-[20px] border border-slate-200/80 bg-white/92 p-5 shadow-[0_2px_10px_rgba(15,23,42,0.02)] transition-all duration-300 hover:border-slate-300 hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)] lg:flex-row lg:items-center lg:gap-6 lg:px-6",
                                 selectedIds.includes(task.id) && "border-primary ring-2 ring-primary/20 bg-primary/5"
                             )}
                             onClick={() => setSelectedTask(task)}
                         >
                             {/* Mobile only elements implicitly stacked, Desktop uses precise widths */}
-                            <div className="flex items-center gap-6 lg:w-16 shrink-0">
+                            <div className="flex shrink-0 items-center gap-6 lg:w-16">
                                 <div className="w-8 flex justify-center" title={task.urgency || undefined}>
                                     {getUrgencyIcon(task.urgency || "Normal")}
                                 </div>
@@ -462,14 +462,14 @@ export function TasksCardView({
                                 )}
                             </div>
 
-                            <div className="flex items-center justify-between lg:justify-end gap-6 lg:w-auto shrink-0 mt-4 lg:mt-0">
-                                <div className="w-auto lg:w-24 flex lg:justify-center shrink-0">
+                            <div className="mt-3 flex shrink-0 items-center justify-between gap-5 lg:mt-0 lg:w-auto lg:justify-end lg:gap-6">
+                                <div className="flex w-auto shrink-0 lg:w-24 lg:justify-center">
                                     <div className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold", getStatusStyle(task.status || "Active"))}>
                                         {task.status || "Active"}
                                     </div>
                                 </div>
 
-                                <div className="w-auto lg:w-32 flex lg:justify-center shrink-0">
+                                <div className="flex w-auto shrink-0 lg:w-32 lg:justify-center">
                                     {task.deadline ? (
                                         <div className={cn(
                                             "flex items-center gap-1.5 text-xs font-semibold tracking-tight uppercase",
@@ -483,7 +483,7 @@ export function TasksCardView({
                                     )}
                                 </div>
 
-                                <div className="w-auto lg:w-48 flex items-center justify-end gap-4 shrink-0" onClick={e => e.stopPropagation()}>
+                                <div className="flex w-auto shrink-0 items-center justify-end gap-3.5 lg:w-48" onClick={e => e.stopPropagation()}>
                                     <div className="flex flex-col items-end">
                                         <div className="text-sm font-bold tracking-tighter flex items-baseline gap-1">
                                             <span className={activeHighlight}>{timeString}</span>
@@ -493,7 +493,7 @@ export function TasksCardView({
                                         </div>
                                         <div className="text-xs font-medium text-muted-foreground mt-0.5">Spent / Est</div>
                                     </div>
-                                    <div className="flex items-center gap-1.5 bg-muted/30 rounded-xl p-1 border border-border/40">
+                                    <div className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/90 p-1">
                                         <button
                                             className={cn(
                                                 "h-7 w-7 rounded-lg flex items-center justify-center transition-all",
@@ -539,10 +539,10 @@ export function TasksCardView({
     )
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             {/* Bulk Actions Bar */}
             {selectedIds.length > 0 && (
-                <div className="flex items-center justify-between p-2 pl-4 bg-primary/5 border border-primary/20 rounded-2xl animate-in fade-in zoom-in duration-300 backdrop-blur-md">
+                <div className="animate-in fade-in zoom-in flex items-center justify-between rounded-[20px] border border-primary/20 bg-[color:color-mix(in_srgb,var(--primary)_6%,white)] p-2 pl-4 duration-300 backdrop-blur-md">
                     <div className="flex items-center gap-6">
                         <span className="text-xs font-semibold text-primary">
                             {selectedIds.length} Selected
@@ -592,15 +592,34 @@ export function TasksCardView({
             )}
 
             {visibleTasks.length === 0 ? (
-                <div className="col-span-full h-64 flex flex-col items-center justify-center border border-dashed border-border rounded-3xl bg-muted/30">
-                    <Clock className="h-8 w-8 text-muted-foreground/20 mb-4" strokeWidth={1} />
-                    <p className="text-sm text-muted-foreground/60 font-medium">
+                <div className="col-span-full flex h-64 flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.7),rgba(241,245,249,0.45))] px-5 text-center">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                        <Clock className="h-5 w-5 text-slate-400" strokeWidth={1.6} />
+                    </div>
+                    <p className="mt-4 text-sm font-semibold tracking-tight text-slate-900">
                         {tasks.length === 0
-                            ? "No tasks yet. Add your first task to get started."
+                            ? "No tasks yet"
                             : normalizedSearch
-                              ? "No tasks match this search."
-                              : "No tasks match the current filters."}
+                              ? "No matching tasks"
+                              : "No tasks for these filters"}
                     </p>
+                    <p className="mt-1 max-w-md text-sm font-medium leading-6 text-slate-500">
+                        {tasks.length === 0
+                            ? "Create your first task to start tracking delivery and time across projects."
+                            : normalizedSearch
+                              ? "Try a different search term or relax your filters to bring tasks back into view."
+                              : "Adjust the current filters to broaden the task list."}
+                    </p>
+                    {tasks.length === 0 ? (
+                        <Button
+                            type="button"
+                            onClick={() => setCreateTaskOpen(true)}
+                            className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Add first task
+                        </Button>
+                    ) : null}
                 </div>
             ) : (
                 view === "list" ? renderListView() : renderGridView()

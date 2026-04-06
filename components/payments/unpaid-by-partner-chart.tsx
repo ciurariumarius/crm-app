@@ -108,11 +108,12 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
             </div>
 
             {items.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-emerald-100 bg-emerald-50/30 px-4 py-6 text-center">
-                    <p className="text-xs font-semibold text-emerald-600">All partner balances are currently settled.</p>
+                <div className="rounded-[24px] border border-dashed border-emerald-100 bg-[linear-gradient(180deg,rgba(236,253,245,0.75),rgba(220,252,231,0.48))] px-4 py-8 text-center">
+                    <p className="text-sm font-semibold text-emerald-700">All partner balances are currently settled.</p>
+                    <p className="mt-1 text-sm font-medium text-emerald-600/80">New unpaid projects will appear here automatically.</p>
                 </div>
             ) : (
-                <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                <div className="overflow-hidden rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
                     <div className="overflow-x-auto hidescrollbar">
                         <table className="w-full min-w-[820px] text-left">
                             <thead className="bg-slate-50/50 border-b border-slate-100">

@@ -58,11 +58,11 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     </button>
                 </div>
             ) : (
-                <div className="flex items-center rounded-[16px] border border-slate-100 bg-white p-1 shadow-sm">
+                <div className="flex items-center rounded-[18px] border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
                     <button
                         type="button"
                         onClick={() => setCreateTaskOpen(true)}
-                        className="inline-flex h-[34px] items-center gap-2 rounded-xl bg-primary px-4 text-[13px] font-bold text-primary-foreground shadow-sm transition-colors hover:brightness-95"
+                        className="inline-flex h-[36px] items-center gap-2 rounded-[13px] bg-primary px-4 text-[13px] font-bold text-primary-foreground shadow-sm transition-colors hover:brightness-95"
                     >
                         <CirclePlus className="h-4 w-4" />
                         Add Task
@@ -73,7 +73,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     <button
                         type="button"
                         onClick={() => setCreateProjectOpen(true)}
-                        className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-slate-50"
+                        className="inline-flex h-[36px] items-center gap-2 rounded-[13px] px-3.5 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-slate-50"
                     >
                         <FolderPlus className="h-4 w-4 stroke-[2.5px]" />
                         Add Project
@@ -82,7 +82,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     <button
                         type="button"
                         onClick={() => setCreatePaymentOpen(true)}
-                        className="inline-flex h-[34px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-slate-50"
+                        className="inline-flex h-[36px] items-center gap-2 rounded-[13px] px-3.5 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-slate-50"
                     >
                         <WalletCards className="h-4 w-4 stroke-[2.5px]" />
                         Add Payment

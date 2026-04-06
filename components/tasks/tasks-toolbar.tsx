@@ -148,8 +148,8 @@ export function TasksToolbar({
     if (currentSort !== "newest" && selectedSort) activeFilters.push({ key: "sort", label: `Sort: ${selectedSort.label}`, href: buildHref({ sort: "newest" }) })
 
     return (
-        <div className="space-y-3">
-            <FilterBarShell className="rounded-2xl border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 shadow-none">
+        <div className="space-y-2.5 sm:space-y-3">
+            <FilterBarShell className="rounded-[24px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.035)] sm:px-5 sm:py-4">
                 <FilterBarScroll>
                     <FilterBarRow className="items-center md:gap-4">
                         <FilterBarGroup>
@@ -255,7 +255,7 @@ export function TasksToolbar({
                 </FilterBarScroll>
             </FilterBarShell>
 
-            <FilterResultsRow className="justify-between gap-4 pt-1">
+            <FilterResultsRow className="justify-between gap-3 rounded-[18px] border border-slate-200/80 bg-white/80 px-3 py-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.025)] sm:gap-4 sm:px-4 sm:py-3">
                 <div className="flex flex-wrap items-center gap-3">
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{resultsLabel}</p>
                     {activeFilters.length > 0 && <span className="text-[var(--line-subtle)]">|</span>}

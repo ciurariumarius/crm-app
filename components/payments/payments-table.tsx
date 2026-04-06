@@ -154,7 +154,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
     return (
         <div className="overflow-x-auto pb-4 hidescrollbar">
             {/* Header */}
-            <div className="md:min-w-[1200px] px-6 mb-2 text-slate-500">
+            <div className="md:min-w-[1200px] mb-3 rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 py-3 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)]">
                 <div className="grid w-full items-center gap-x-4 md:grid-cols-[340px_1fr_120px_150px_120px]">
                     <div className="ui-overline">Project / Partner</div>
                     <div className="ui-overline pl-4">Transaction action</div>
@@ -165,7 +165,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
             </div>
 
             {/* Body */}
-            <div className="md:min-w-[1200px] flex flex-col gap-2">
+            <div className="md:min-w-[1200px] flex flex-col gap-2.5">
                 {logs.map((log, index) => {
                     const { projectName, extraProjects, totalAmount } = parseDetails(log.details)
                     const isExpandable = extraProjects.length > 0
@@ -175,10 +175,10 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                         <Fragment key={log.id}>
                             <div
                                 className={cn(
-                                    "group stagger-row-enter relative flex items-center bg-white rounded-xl py-2.5 px-6 transition-all cursor-pointer hover:bg-slate-50/50",
-                                    isExpanded && "bg-slate-50/30 ring-1 ring-blue-500/10",
-                                    log.status === "Unpaid" && "shadow-[0_2px_8px_rgba(244,63,94,0.05)]",
-                                    log.status === "Paid" && "shadow-[0_2px_8px_rgba(16,185,129,0.05)]"
+                                    "group stagger-row-enter relative flex items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-3 transition-all shadow-[0_4px_14px_rgba(15,23,42,0.03)] cursor-pointer hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))]",
+                                    isExpanded && "border-blue-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(239,246,255,0.8))] ring-1 ring-blue-500/10",
+                                    log.status === "Unpaid" && "shadow-[0_4px_16px_rgba(244,63,94,0.05)]",
+                                    log.status === "Paid" && "shadow-[0_4px_16px_rgba(16,185,129,0.05)]"
                                 )}
                                 style={{ animationDelay: `${index * 0.05}s` }}
                                 onClick={() => toggleRow(log.id, isExpandable)}
@@ -258,16 +258,16 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
 
                             {/* Expanded Content (Settlements) */}
                             {isExpanded && (extraProjects.length > 0) && (
-                                <div className="mt-1 mb-4 flex animate-in slide-in-from-top-2 fade-in duration-300">
-                                    <div className="ml-12 mr-4 flex-1 rounded-2xl bg-blue-50/20 p-1 shadow-inner">
-                                        <div className="rounded-[14px] bg-white/60 p-4">
-                                            <div className="flex items-center gap-2 mb-4">
+                                <div className="mb-2 flex animate-in slide-in-from-top-2 fade-in duration-300">
+                                    <div className="ml-10 mr-2 flex-1 rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(247,250,252,0.96),rgba(239,246,255,0.82))] p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)]">
+                                        <div className="rounded-[16px] bg-white/80 p-4">
+                                            <div className="mb-3 flex items-center gap-2">
                                                 <History className="h-3.5 w-3.5 text-blue-500" />
                                                 <span className="ui-overline text-blue-700">Settlement breakdown</span>
                                             </div>
                                             <div className="space-y-2">
                                                 {extraProjects.map((projectEntry) => (
-                                                    <div key={projectEntry.id} className="flex items-center justify-between py-2 px-4 rounded-xl bg-white/80 hover:bg-white transition-colors">
+                                                    <div key={projectEntry.id} className="flex items-center justify-between rounded-[14px] border border-slate-200/70 bg-white/90 px-4 py-2.5 transition-colors hover:bg-white">
                                                         <span className="text-sm font-bold text-slate-700">{projectEntry.name}</span>
                                                         <span className="font-mono text-xs font-black text-slate-900 pl-4">
                                                             {formatCurrency(projectEntry.fee)}

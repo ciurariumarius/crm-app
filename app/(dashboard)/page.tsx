@@ -35,6 +35,7 @@ type HomeProject = {
 
 export default async function HomePage() {
     const session = await requireTenantContext()
+    const overviewSubtitle = "Track revenue, delivery pressure, and active work at a glance."
     const now = new Date()
     const nowMs = now.getTime()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -407,53 +408,62 @@ export default async function HomePage() {
     const homeDialogServices = serialize(allServicesRaw)
     const unpaidProjectsHref = "/projects?status=All&payment=Unpaid"
     const thisMonthProjectsHref = "/projects?status=All&period=this_month"
-    const kpiCardClassName = "relative h-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_2px_4px_rgba(0,0,0,0.02)] sm:p-5 lg:p-6"
-    const kpiIconClassName = "absolute right-4 top-4 h-5 w-5 text-slate-200 sm:right-5 sm:top-5 sm:h-5.5 sm:w-5.5"
+    const kpiCardClassName = "relative h-full rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6"
+    const kpiIconClassName = "absolute right-4 top-4 h-4.5 w-4.5 text-slate-200/80 sm:right-5 sm:top-5 sm:h-5 sm:w-5"
 
     return (
-        <div className="flex flex-col gap-6 pb-8 sm:gap-8 sm:pb-10 lg:gap-10">
-            <section className="space-y-5 sm:space-y-6">
-                <div className="space-y-3 md:hidden">
-                    <div className="flex items-start gap-3">
-                        <div className="pt-1">
-                            <MobileMenuTrigger />
+        <div className="flex flex-col gap-7 pb-8 sm:gap-10 sm:pb-10 lg:gap-12">
+            <section className="space-y-3.5 sm:space-y-5">
+                <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+                    <div className="space-y-3 md:hidden">
+                        <div className="flex items-start gap-3">
+                            <div className="pt-1">
+                                <MobileMenuTrigger />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace Overview</p>
+                                <h1 className="mt-1 ui-text-title text-slate-900">Overview</h1>
+                                <p className="mt-1 text-[13px] font-medium text-slate-500">
+                                    {overviewSubtitle}
+                                </p>
+                            </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                            <h1 className="ui-text-title text-slate-900">Overview</h1>
-                            <p className="mt-1 text-[13px] font-medium text-slate-500">
-                                Snapshot of revenue, projects, and active work.
-                            </p>
-                        </div>
-                    </div>
-                    <GlobalSearch mobileMode="full" />
-                    <HomeHeaderActions
-                        partners={homeDialogPartners}
-                        services={homeDialogServices}
-                        projects={homeDialogProjects}
-                        mobile
-                    />
-                </div>
-
-                <div className="hidden items-start justify-between gap-4 md:flex">
-                    <h1 className="ui-text-title text-slate-900">Overview</h1>
-                    <div className="flex-1 min-w-[280px] px-2">
-                        <GlobalSearch />
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                        <GlobalSearch mobileMode="full" />
                         <HomeHeaderActions
                             partners={homeDialogPartners}
                             services={homeDialogServices}
                             projects={homeDialogProjects}
+                            mobile
                         />
+                    </div>
+
+                    <div className="hidden grid-cols-[minmax(0,1fr)_minmax(320px,520px)_auto] items-center gap-5 md:grid lg:gap-6">
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace Overview</p>
+                            <h1 className="mt-1 ui-text-title text-slate-900">Overview</h1>
+                            <p className="mt-1 text-sm font-medium text-slate-500">
+                                {overviewSubtitle}
+                            </p>
+                        </div>
+                        <div className="min-w-[280px] px-1">
+                            <GlobalSearch />
+                        </div>
+                        <div className="flex items-center justify-end gap-2 shrink-0">
+                            <HomeHeaderActions
+                                partners={homeDialogPartners}
+                                services={homeDialogServices}
+                                projects={homeDialogProjects}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                <div className="pt-2 sm:pt-3 lg:pt-4">
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 xl:gap-5">
+                <div className="pt-2.5 sm:pt-4">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4 xl:gap-5">
                     {/* This Month Revenue Card */}
                     <div className={kpiCardClassName}>
                         <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">This Month</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400 sm:text-[11px]">This Month</p>
                             <Banknote className={kpiIconClassName} />
                             <Link
                                 href={thisMonthProjectsHref}
@@ -463,7 +473,7 @@ export default async function HomePage() {
                                 <p className="text-[24px] font-bold leading-none tracking-tight text-slate-900 group-hover:text-[var(--primary)] sm:text-[32px]">
                                     {formatCurrency(monthRevenue)}
                                 </p>
-                                <p className="mt-1.5 text-[10px] font-medium text-slate-500 sm:mt-2 sm:text-[11px]">Current billed revenue</p>
+                                <p className="mt-1.5 text-[10px] font-medium text-slate-400 sm:mt-2 sm:text-[11px]">Current billed revenue</p>
                             </Link>
                         </div>
                     </div>
@@ -471,7 +481,7 @@ export default async function HomePage() {
                     {/* Unpaid Revenue Card */}
                     <div className={kpiCardClassName}>
                         <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">Unpaid</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400 sm:text-[11px]">Unpaid</p>
                             <Banknote className={kpiIconClassName} />
                             <Link
                                 href={unpaidProjectsHref}
@@ -481,7 +491,7 @@ export default async function HomePage() {
                                 <p className="text-[24px] font-bold leading-none tracking-tight text-rose-600 group-hover:text-rose-500 sm:text-[32px]">
                                     {formatCurrency(unpaidRevenue)}
                                 </p>
-                                <p className="mt-1.5 text-[10px] font-medium text-slate-500 sm:mt-2 sm:text-[11px]">Outstanding receivables</p>
+                                <p className="mt-1.5 text-[10px] font-medium text-slate-400 sm:mt-2 sm:text-[11px]">Outstanding receivables</p>
                             </Link>
                         </div>
                     </div>
@@ -489,23 +499,23 @@ export default async function HomePage() {
                     {/* Active Projects Card */}
                     <div className={kpiCardClassName}>
                         <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">Projects</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400 sm:text-[11px]">Projects</p>
                             <FolderPlus className={kpiIconClassName} />
                             <div className="mt-auto grid grid-cols-[1fr_auto_1fr] items-end gap-3 pt-3 sm:gap-4 sm:pt-4">
                                 <div className="min-w-0 text-center">
                                     <p className="text-[28px] font-bold leading-none tracking-tight text-violet-600 sm:text-[32px]">
                                         {activeRecurringProjectsCount}
                                     </p>
-                                    <p className="mt-1 text-[10px] font-medium text-slate-500 sm:mt-1.5 sm:text-[11px]">
+                                    <p className="mt-1 text-[10px] font-medium text-slate-400 sm:mt-1.5 sm:text-[11px]">
                                         Recurring
                                     </p>
                                 </div>
-                                <div className="h-8 w-px shrink-0 bg-slate-100 sm:h-9" />
+                                <div className="h-8 w-px shrink-0 bg-slate-100/90 sm:h-9" />
                                 <div className="min-w-0 text-center">
                                     <p className="text-[28px] font-bold leading-none tracking-tight text-emerald-600 sm:text-[32px]">
                                         {activeOneTimeProjectsCount}
                                     </p>
-                                    <p className="mt-1 text-[10px] font-medium text-slate-500 sm:mt-1.5 sm:text-[11px]">
+                                    <p className="mt-1 text-[10px] font-medium text-slate-400 sm:mt-1.5 sm:text-[11px]">
                                         One-time
                                     </p>
                                 </div>
@@ -516,23 +526,23 @@ export default async function HomePage() {
                     {/* Work Card */}
                     <div className={kpiCardClassName}>
                         <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">Work</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400 sm:text-[11px]">Work</p>
                             <Timer className={kpiIconClassName} />
                             <div className="mt-auto grid grid-cols-[1fr_auto_1fr] items-end gap-3 pt-3 sm:gap-4 sm:pt-4">
                                 <div className="min-w-0 text-center">
                                     <p className="text-[28px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px]">
                                         {monthHours.toFixed(1)}
                                     </p>
-                                    <p className="mt-1 text-[10px] font-medium text-slate-500 sm:mt-1.5 sm:text-[11px]">
+                                    <p className="mt-1 text-[10px] font-medium text-slate-400 sm:mt-1.5 sm:text-[11px]">
                                         Hours
                                     </p>
                                 </div>
-                                <div className="h-8 w-px shrink-0 bg-slate-100 sm:h-9" />
+                                <div className="h-8 w-px shrink-0 bg-slate-100/90 sm:h-9" />
                                 <div className="min-w-0 text-center">
                                     <p className="text-[28px] font-bold leading-none tracking-tight text-blue-600 sm:text-[32px]">
                                         {completedTasksCount}
                                     </p>
-                                    <p className="mt-1 text-[10px] font-medium text-slate-500 sm:mt-1.5 sm:text-[11px]">
+                                    <p className="mt-1 text-[10px] font-medium text-slate-400 sm:mt-1.5 sm:text-[11px]">
                                         Tasks
                                     </p>
                                 </div>
@@ -543,7 +553,7 @@ export default async function HomePage() {
                 </div>
             </section>
 
-            <section className="space-y-6 pt-2 sm:space-y-8 sm:pt-3 lg:space-y-10 lg:pt-4">
+            <section className="space-y-8 sm:space-y-10">
                 <HomeTaskColumns
                     urgentTasks={serialize(urgentTasksRaw)}
                     overdueTasks={serialize(overdueTasksRaw)}

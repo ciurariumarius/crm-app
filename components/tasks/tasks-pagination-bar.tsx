@@ -50,7 +50,7 @@ export function TasksPaginationBar({
     }
 
     return (
-        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
+        <div className="flex items-center justify-between rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-4 py-3 text-sm shadow-[0_4px_14px_rgba(15,23,42,0.03)]">
             <span className="text-muted-foreground">
                 {searchContext?.isSearching && hasSearchTerm
                     ? "Searching..."

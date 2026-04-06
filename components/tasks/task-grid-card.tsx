@@ -140,8 +140,8 @@ export function TaskGridCard({
         return (
             <div
                 className={cn(
-                    "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[var(--shadow-apple)] transition-all duration-200 sm:p-4",
-                    "hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]",
+                    "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[22px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all duration-200 sm:p-4",
+                    "hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)]",
                     isRunning && "border-blue-200 bg-blue-50/20",
                     isSelected && "border-primary/30 bg-primary/[0.02]",
                     className
@@ -241,7 +241,7 @@ export function TaskGridCard({
                     {task.name || "Untitled task"}
                 </h4>
 
-                <div className="mt-1.5 min-w-0 sm:mt-2">
+                <div className="mt-1 min-w-0 sm:mt-1.5">
                     <div className="flex min-w-0 items-center gap-1.5 text-slate-400">
                         {isRecurring
                             ? <RefreshCcw className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />

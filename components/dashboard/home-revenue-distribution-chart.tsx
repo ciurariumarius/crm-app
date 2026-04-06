@@ -288,7 +288,7 @@ function RevenueDateFilter({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-xs font-semibold transition-all sm:min-w-[148px] sm:w-auto",
+                        "inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all sm:h-10 sm:text-xs sm:min-w-[148px] sm:w-auto",
                         activePresetId !== "all"
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
                             : "border-slate-200 bg-slate-100/60 text-slate-700 hover:bg-slate-100"
@@ -301,7 +301,7 @@ function RevenueDateFilter({
             <PopoverContent
                 align="start"
                 collisionPadding={16}
-                className="w-[min(calc(100vw-2rem),404px)] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-apple)]"
+                className="w-[min(calc(100vw-2rem),392px)] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-apple)]"
             >
                 <div className="flex max-h-[156px] flex-wrap gap-2 overflow-y-auto pr-1">
                     {presets.map((preset, index) => (
@@ -487,9 +487,12 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
 
     if (rows.length === 0) {
         return (
-            <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-6 shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
                 <p className="ui-text-section text-slate-900">Revenue Analysis</p>
-                <p className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                <p className="mt-2 max-w-xl text-sm font-medium text-slate-500">
+                    Break down billed revenue by partner, domain, project, or revenue type.
+                </p>
+                <p className="mt-4 rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(241,245,249,0.48))] px-4 py-8 text-center text-sm text-slate-500">
                     No revenue data available for this period.
                 </p>
             </section>
@@ -497,14 +500,32 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
     }
 
     return (
-        <section className="rounded-[24px] border border-slate-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] sm:p-6 lg:p-8">
-            <div className="mb-6 flex flex-col gap-4 sm:mb-8 lg:mb-10 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+        <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-6 lg:p-8">
+            <div className="mb-4 flex flex-col gap-2.5 sm:mb-6 sm:gap-4 lg:mb-8 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
                         <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">Revenue Analysis</h3>
                     </div>
-                    {/* Period Selector */}
+                    <p className="max-w-2xl text-sm font-medium leading-6 text-slate-500">
+                        Break down billed revenue by partner, domain, project, or revenue type to see where the portfolio is concentrated.
+                    </p>
+                    <div className="hidden flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 sm:flex">
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+                            {totalCount} visible {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`}
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+                            {dateLabel}
+                        </span>
+                    </div>
+                    <div className="sm:hidden">
+                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-semibold text-slate-500">
+                            {totalCount} {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`} in view
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex w-full flex-col gap-2 lg:w-auto lg:min-w-[360px] lg:gap-3">
                     <RevenueDateFilter
                         label={dateLabel}
                         presets={presets}
@@ -519,29 +540,28 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                             setCustomRange(range)
                         }}
                     />
-                </div>
 
-                {/* Mode Switcher */}
-                <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-slate-100/60 p-1 sm:flex sm:flex-wrap sm:items-center">
-                    {MODE_OPTIONS.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setMode(option.value)}
-                            className={cn(
-                                "rounded-full px-4 py-2 text-[11px] font-bold tracking-tight transition-all sm:px-5 sm:py-1.5",
-                                mode === option.value
-                                    ? "bg-white text-blue-600 shadow-sm"
-                                    : "text-slate-500 hover:text-slate-700"
-                            )}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
+                    <div className="grid grid-cols-2 gap-1 rounded-[16px] border border-slate-200 bg-slate-50 p-1 sm:flex sm:flex-wrap sm:items-center">
+                        {MODE_OPTIONS.map((option) => (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setMode(option.value)}
+                                className={cn(
+                                    "rounded-full px-3 py-1.5 text-[10px] font-bold tracking-tight transition-all sm:px-5 sm:py-1.5 sm:text-[11px]",
+                                    mode === option.value
+                                        ? "bg-white text-blue-600 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-700"
+                                )}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            <div className="grid items-start gap-5 sm:gap-6 lg:grid-cols-[minmax(280px,400px)_1fr] lg:gap-10">
+            <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-[minmax(280px,400px)_1fr] lg:gap-10">
                 <div className="relative flex h-[260px] items-center justify-center sm:h-[300px] lg:h-[340px]">
                     <div className="absolute inset-0 z-0 outline-none">
                         <ResponsiveContainer width="100%" height="100%" className="outline-none">
@@ -612,6 +632,8 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                             const dotColor = COLORS[index]
                             const isHighlighted = activeSegment === entry.key
 
+                            const metaText = getEntryMeta(originalEntry || entry, isOther)
+
                             return (
                                 <button
                                     key={entry.key}
@@ -622,26 +644,36 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                     disabled={!canOpen}
                                     className={cn(
                                         "flex w-full min-w-0 flex-col items-start gap-2.5 rounded-[16px] px-4 py-3 text-left transition-all sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4",
-                                        isHighlighted ? "relative z-10 scale-[1.02] bg-white shadow-lg ring-2 ring-blue-500" : "border border-transparent bg-[#F8F9FB]",
-                                        canOpen && !isHighlighted ? "group cursor-pointer hover:bg-[#F1F3F7]" : !canOpen && !isHighlighted ? "cursor-default" : ""
+                                        isHighlighted ? "relative z-10 scale-[1.02] border border-blue-100 bg-white shadow-lg ring-2 ring-blue-500/70" : "border border-slate-200/80 bg-slate-50/70",
+                                        canOpen && !isHighlighted ? "group cursor-pointer hover:border-slate-200 hover:bg-slate-50" : !canOpen && !isHighlighted ? "cursor-default" : ""
                                     )}
                                 >
-                                    <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:gap-4">
+                                    <div className="flex w-full min-w-0 items-start gap-3 sm:w-auto sm:items-center sm:gap-4">
                                         <span
-                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full sm:mt-0"
                                             style={{ backgroundColor: dotColor }}
                                         />
                                         <div className="flex min-w-0 flex-col">
-                                            <p className="truncate text-[12px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[13px]">
-                                                {entry.label}
-                                            </p>
-                                            <p className="text-[9px] font-bold text-slate-400 sm:text-[10px]">
-                                                {getEntryMeta(originalEntry || entry, isOther)}
+                                            <div className="flex min-w-0 items-start justify-between gap-3 sm:block">
+                                                <p className="truncate text-[12px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[13px]">
+                                                    {entry.label}
+                                                </p>
+                                                <div className="shrink-0 text-right sm:hidden">
+                                                    <p className="text-[12px] font-bold text-slate-900">
+                                                        {formatCurrency(entry.revenue)}
+                                                    </p>
+                                                    <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                                                        {share.toFixed(1)}%
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <p className="mt-1 truncate text-[9px] font-bold text-slate-400 sm:mt-0 sm:text-[10px]">
+                                                {metaText}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
+                                    <div className="hidden w-full min-w-0 items-center justify-between gap-3 sm:flex sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
                                         <p className="text-[13px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[14px]">
                                             {formatCurrency(entry.revenue)}
                                         </p>

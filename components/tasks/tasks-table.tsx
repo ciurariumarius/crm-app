@@ -217,8 +217,18 @@ export function TasksTable({ tasks }: TasksTableProps) {
                         ))}
                         {tasks.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground font-medium italic opacity-50">
-                                    No tasks found matching your criteria.
+                                <TableCell colSpan={6} className="h-32 text-center">
+                                    <div className="mx-auto flex max-w-md flex-col items-center justify-center px-4">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                                            <Clock className="h-4 w-4 text-slate-400" />
+                                        </div>
+                                        <p className="mt-3 text-sm font-semibold tracking-tight text-slate-900">
+                                            No matching tasks
+                                        </p>
+                                        <p className="mt-1 text-sm font-medium text-slate-500">
+                                            Try a different search term or adjust the current filters.
+                                        </p>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         )}

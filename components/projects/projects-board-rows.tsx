@@ -172,6 +172,26 @@ function ProjectMetaPill({
     )
 }
 
+function EmptyProjectsState({
+    title,
+    description,
+}: {
+    title: string
+    description: string
+}) {
+    return (
+        <div className="rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.74),rgba(241,245,249,0.48))] px-5 py-9 text-center">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                <Building2 className="h-5 w-5 text-slate-400" />
+            </div>
+            <p className="mt-4 text-sm font-semibold tracking-tight text-slate-900">{title}</p>
+            <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-slate-500">
+                {description}
+            </p>
+        </div>
+    )
+}
+
 type BoardProject = {
     id: string
     name?: string | null
@@ -650,10 +670,10 @@ export function ProjectsBoardRows({
     }
 
     return (
-        <div className="space-y-7 overflow-x-auto pb-0 hidescrollbar">
-            <div className="md:min-w-[1280px] space-y-7">
-                <section className="space-y-3">
-                    <div className="flex items-center gap-3">
+        <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
+            <div className="space-y-6 md:min-w-[1280px]">
+                <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+                    <div className="mb-3 flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-emerald-500" />
                         <h2 className="text-lg font-semibold tracking-tight text-slate-900">One-time Projects</h2>
                     </div>
@@ -667,11 +687,14 @@ export function ProjectsBoardRows({
 
                     <div className="space-y-2">
                         {oneTimeProjects.length === 0 && (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
-                                {normalizedSearch
-                                    ? "No one-time projects match this search."
-                                    : "No one-time projects match current filters."}
-                            </div>
+                            <EmptyProjectsState
+                                title={normalizedSearch ? "No one-time projects found" : "No one-time projects in this view"}
+                                description={
+                                    normalizedSearch
+                                        ? "Try a different search term or broaden your filters to bring one-time projects back into view."
+                                        : "Adjust your filters or add a new one-time project to start tracking it here."
+                                }
+                            />
                         )}
                         {oneTimeProjects.map((project) => {
                             const projectStatus = getDisplayStatus(project)
@@ -685,7 +708,7 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project)}
-                                        className="w-full rounded-xl border border-border/60 bg-white px-4 py-3 text-left md:hidden"
+                                        className="w-full rounded-2xl border border-slate-200/80 bg-white/92 px-4 py-3 text-left shadow-[0_2px_8px_rgba(15,23,42,0.02)] md:hidden"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
@@ -729,7 +752,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-white px-6 py-2.5", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-2 rounded-[18px] border border-slate-200/80 bg-white/92 px-5 py-2.5 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -923,19 +946,29 @@ export function ProjectsBoardRows({
                     </div>
                 </section>
 
-                <section className="space-y-3">
-                    <div className="flex items-center gap-3">
+                <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+                    <div className="mb-3 flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-violet-500" />
                         <h2 className="text-lg font-semibold tracking-tight text-slate-900">Monthly Projects</h2>
                     </div>
 
+                    <ProjectBoardHeaderRow
+                        gridColumnsClassName={LIST_GRID_COLUMNS}
+                        sortBy={sortBy}
+                        sortDirection={sortDirection}
+                        onSort={setSort}
+                    />
+
                     <div className="space-y-2">
                         {monthlyProjects.length === 0 && (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-slate-500">
-                                {normalizedSearch
-                                    ? "No monthly projects match this search."
-                                    : "No monthly projects match current filters."}
-                            </div>
+                            <EmptyProjectsState
+                                title={normalizedSearch ? "No monthly projects found" : "No monthly projects in this view"}
+                                description={
+                                    normalizedSearch
+                                        ? "Try a broader search or remove some filters to surface recurring work again."
+                                        : "Adjust your filters or add a recurring project to keep this section populated."
+                                }
+                            />
                         )}
                         {monthlyProjects.map((project) => {
                             const projectStatus = getDisplayStatus(project)
@@ -949,7 +982,7 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project)}
-                                        className="w-full rounded-xl border border-border/60 bg-white px-4 py-3 text-left md:hidden"
+                                        className="w-full rounded-2xl border border-slate-200/80 bg-white/92 px-4 py-3 text-left shadow-[0_2px_8px_rgba(15,23,42,0.02)] md:hidden"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
@@ -996,7 +1029,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full text-left md:grid gap-x-2 items-center rounded-xl border border-border/60 bg-white px-6 py-2.5", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-2 rounded-[18px] border border-slate-200/80 bg-white/92 px-5 py-2.5 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -1195,13 +1228,13 @@ export function ProjectsBoardRows({
 
                 {/* Global Shadow Row - Before Overview */}
                 {layout === "list" && (
-                    <div className="pt-2 overflow-x-auto hidescrollbar text-slate-900">
+                    <div className="overflow-x-auto pt-1 text-slate-900 hidescrollbar">
                         <div className="md:min-w-[1280px]">
                             <button
                                 type="button"
                                 onClick={() => setCreateProjectOpen(true)}
                                 className={cn(
-                                    "w-full text-left grid gap-x-2 items-center rounded-xl border border-dashed border-slate-200 bg-slate-50/30 px-6 py-4 transition-all hover:bg-blue-50/40 hover:border-blue-300 group/shadow",
+                                    "grid w-full items-center gap-x-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/40 px-5 py-3.5 text-left transition-all hover:border-blue-300 hover:bg-blue-50/40 group/shadow",
                                     LIST_GRID_COLUMNS
                                 )}
                             >
