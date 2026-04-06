@@ -448,7 +448,8 @@ export default async function HomePage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 xl:gap-5">
+                <div className="pt-2 sm:pt-3 lg:pt-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 xl:gap-5">
                     {/* This Month Revenue Card */}
                     <div className={kpiCardClassName}>
                         <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
@@ -537,6 +538,7 @@ export default async function HomePage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </section>
