@@ -38,10 +38,19 @@ function NavLink({
         <Link
             href={href}
             className={cn(
-                "inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl transition-all",
-                active ? "text-[var(--primary)]" : "text-slate-400 hover:text-slate-600"
+                "relative inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl border transition-all",
+                active
+                    ? "border-[color:color-mix(in_srgb,var(--primary)_24%,white)] bg-[color:color-mix(in_srgb,var(--primary)_12%,white)] text-[var(--primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
+                    : "border-transparent text-slate-400 hover:border-slate-200/80 hover:bg-slate-50/70 hover:text-slate-600"
             )}
+            aria-current={active ? "page" : undefined}
         >
+            {active ? (
+                <span
+                    aria-hidden="true"
+                    className="absolute left-1/2 top-1 h-1 w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]/70"
+                />
+            ) : null}
             <Icon className="h-5 w-5" strokeWidth={1.7} />
             <span
                 className={cn(
@@ -61,6 +70,10 @@ export function MobileBottomNav({
     quickActionProjects,
 }: MobileBottomNavProps) {
     const pathname = usePathname()
+    const homeActive = isActivePath(pathname, "/")
+    const tasksActive = isActivePath(pathname, "/tasks")
+    const projectsActive = isActivePath(pathname, "/projects")
+    const menuActive = !homeActive && !tasksActive && !projectsActive
     const { setIsMobileMenuOpen } = useHeader()
     const [quickActionsOpen, setQuickActionsOpen] = React.useState(false)
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
@@ -83,18 +96,37 @@ export function MobileBottomNav({
                     </button>
 
                     <div className="grid grid-cols-5 gap-1">
-                        <NavLink href="/" label="Home" icon={Home} active={isActivePath(pathname, "/")} />
-                        <NavLink href="/tasks" label="Tasks" icon={CheckCircle2} active={isActivePath(pathname, "/tasks")} />
+                        <NavLink href="/" label="Home" icon={Home} active={homeActive} />
+                        <NavLink href="/tasks" label="Tasks" icon={CheckCircle2} active={tasksActive} />
                         <div aria-hidden="true" />
-                        <NavLink href="/projects" label="Projects" icon={Briefcase} active={isActivePath(pathname, "/projects")} />
+                        <NavLink href="/projects" label="Projects" icon={Briefcase} active={projectsActive} />
                         <button
                             type="button"
                             onClick={() => setIsMobileMenuOpen(true)}
-                            className="inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl text-slate-500 transition-colors hover:text-slate-700"
+                            className={cn(
+                                "relative inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl border transition-all",
+                                menuActive
+                                    ? "border-[color:color-mix(in_srgb,var(--primary)_24%,white)] bg-[color:color-mix(in_srgb,var(--primary)_12%,white)] text-[var(--primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
+                                    : "border-transparent text-slate-500 hover:border-slate-200/80 hover:bg-slate-50/70 hover:text-slate-700"
+                            )}
                             aria-label="Open menu"
+                            aria-current={menuActive ? "page" : undefined}
                         >
+                            {menuActive ? (
+                                <span
+                                    aria-hidden="true"
+                                    className="absolute left-1/2 top-1 h-1 w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]/70"
+                                />
+                            ) : null}
                             <Menu className="h-5 w-5" strokeWidth={1.7} />
-                            <span className="text-[11px] font-medium tracking-[0.03em] text-slate-500">Menu</span>
+                            <span
+                                className={cn(
+                                    "text-[11px] font-medium tracking-[0.03em]",
+                                    menuActive ? "text-[var(--primary)]" : "text-slate-500"
+                                )}
+                            >
+                                Menu
+                            </span>
                         </button>
                     </div>
                 </div>

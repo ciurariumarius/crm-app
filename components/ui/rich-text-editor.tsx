@@ -71,6 +71,7 @@ interface RichTextEditorProps {
     toolbarActions?: React.ReactNode
     className?: string
     mode?: "panel" | "document"
+    panelStyle?: "default" | "borderless"
 }
 
 type UploadState = {
@@ -125,6 +126,7 @@ export function RichTextEditor({
     toolbarActions,
     className,
     mode = "panel",
+    panelStyle = "default",
 }: RichTextEditorProps) {
     const [isFocused, setIsFocused] = React.useState(false)
     const [uploadState, setUploadState] = React.useState<UploadState | null>(null)
@@ -623,6 +625,7 @@ export function RichTextEditor({
     const currentViewerSrc = viewer.sources[viewer.index] || ""
     const showToolbar = toolbarVisibility === "always" || isFocused
     const isMinimalToolbar = toolbarPreset === "minimal"
+    const isBorderlessPanel = variant === "plain" && mode === "panel" && panelStyle === "borderless"
 
     return (
         <>
@@ -633,7 +636,9 @@ export function RichTextEditor({
                         "border border-input bg-transparent focus-within:ring-1 focus-within:ring-ring",
                     variant === "plain" &&
                         mode === "panel" &&
-                        "border border-slate-200 bg-white shadow-[0_1px_2px_0_rgba(15,23,42,0.04),0_8px_24px_-20px_rgba(15,23,42,0.35)]",
+                        (isBorderlessPanel
+                            ? "border-0 bg-transparent shadow-none"
+                            : "border border-slate-200 bg-white shadow-[0_1px_2px_0_rgba(15,23,42,0.04),0_8px_24px_-20px_rgba(15,23,42,0.35)]"),
                     variant === "plain" &&
                         mode === "document" &&
                         "border border-transparent bg-transparent shadow-none",
@@ -648,11 +653,14 @@ export function RichTextEditor({
                             event.preventDefault()
                         }}
                         className={cn(
-                            "flex items-center gap-1.5 p-1.5",
+                            "flex items-center",
+                            isMinimalToolbar ? "gap-1 px-1.5 py-1" : "gap-1.5 p-1.5",
                             variant === "default" && "border-b bg-muted/20",
                             variant === "plain" &&
                                 mode === "panel" &&
-                                "border-b border-slate-200 bg-white/95",
+                                (isBorderlessPanel
+                                    ? "border-b-0 bg-transparent px-0 py-0.5"
+                                    : "border-b border-slate-200 bg-white/95"),
                             variant === "plain" &&
                                 mode === "document" &&
                                 "mx-4 md:mx-auto mt-4 mb-6 w-full md:w-[calc(100%-2rem)] max-w-4xl rounded-xl border border-slate-200/80 bg-white/92 px-3 pt-2 pb-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm"
@@ -706,38 +714,41 @@ export function RichTextEditor({
                                     ? editor.chain().focus().setBold().run()
                                     : editor.chain().focus().unsetBold().run()
                             }
-                            className="h-8 w-8 p-0"
+                            className={cn("p-0", isMinimalToolbar ? "h-7 w-7" : "h-8 w-8")}
                             aria-label="Bold"
                         >
-                            <Bold className="h-4 w-4" />
+                            <Bold className={isMinimalToolbar ? "h-3.5 w-3.5" : "h-4 w-4"} />
                         </Toggle>
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("bulletList")}
                             onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
-                            className="h-8 w-8 p-0"
+                            className={cn("p-0", isMinimalToolbar ? "h-7 w-7" : "h-8 w-8")}
                             aria-label="Bullet list"
                         >
-                            <List className="h-4 w-4" />
+                            <List className={isMinimalToolbar ? "h-3.5 w-3.5" : "h-4 w-4"} />
                         </Toggle>
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("codeBlock")}
                             onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
-                            className="h-8 w-8 p-0"
+                            className={cn("p-0", isMinimalToolbar ? "h-7 w-7" : "h-8 w-8")}
                             aria-label="Code snippet"
                             title="Code snippet"
                         >
-                            <Code2 className="h-4 w-4" />
+                            <Code2 className={isMinimalToolbar ? "h-3.5 w-3.5" : "h-4 w-4"} />
                         </Toggle>
                         <button
                             type="button"
                             onClick={() => imageInputRef.current?.click()}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                            className={cn(
+                                "inline-flex items-center justify-center rounded-md border border-transparent text-slate-600 transition hover:bg-slate-100 hover:text-slate-900",
+                                isMinimalToolbar ? "h-7 w-7" : "h-8 w-8"
+                            )}
                             aria-label="Upload image"
                             title="Upload image"
                         >
-                            <ImagePlus className="h-4 w-4" />
+                            <ImagePlus className={isMinimalToolbar ? "h-3.5 w-3.5" : "h-4 w-4"} />
                         </button>
                         {!isMinimalToolbar ? (
                             <>
@@ -887,7 +898,9 @@ export function RichTextEditor({
                     ref={editorViewportRef}
                     className={cn(
                         "relative min-h-[150px] flex-1 overflow-y-auto p-4",
-                        variant === "plain" && mode === "panel" && "bg-white p-5",
+                        variant === "plain" &&
+                            mode === "panel" &&
+                            (isBorderlessPanel ? "bg-transparent px-0 py-2" : "bg-white p-5"),
                         variant === "plain" && mode === "document" && "bg-transparent px-0 py-2",
                         minHeightClassName
                     )}
@@ -901,6 +914,7 @@ export function RichTextEditor({
                     <div
                         className={cn(
                             "border-t border-slate-200/80 bg-slate-50/70 px-4 py-3",
+                            isBorderlessPanel && "border-t-0 bg-transparent px-0 py-2",
                             mode === "document" &&
                                 "border-slate-200/70 bg-transparent px-0 py-3"
                         )}

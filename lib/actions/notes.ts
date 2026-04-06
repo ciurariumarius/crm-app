@@ -19,6 +19,9 @@ export type NoteRecord = {
   pinned: boolean
   createdAt: string
   updatedAt: string
+  sourceType?: "note" | "project" | "task"
+  sourceId?: string
+  sourceLabel?: string
 }
 
 type NoteEntity = {
