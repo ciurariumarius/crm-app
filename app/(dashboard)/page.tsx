@@ -3,7 +3,7 @@ import { format } from "date-fns"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
-import { FolderPlus, BadgeCheck, Timer, Banknote } from "lucide-react"
+import { FolderPlus, Timer, Banknote } from "lucide-react"
 import { GlobalSearch } from "@/components/dashboard/global-search"
 import { HomeHeaderActions } from "@/components/dashboard/home-header-actions"
 import {
@@ -47,10 +47,9 @@ export default async function HomePage() {
         user,
         allServicesRaw,
         partnersForDialogsRaw,
-        activeProjectsCount,
         activeRecurringProjectsCount,
         activeOneTimeProjectsCount,
-        activeTasksCount,
+        completedTasksCount,
         monthRevenueAggregate,
         unpaidRevenueAggregate,
         monthTimeAggregate,
@@ -81,9 +80,6 @@ export default async function HomePage() {
             orderBy: { name: "asc" },
         }),
         prisma.project.count({
-            where: { tenantId: session.tenantId, status: "Active" },
-        }),
-        prisma.project.count({
             where: {
                 tenantId: session.tenantId,
                 status: "Active",
@@ -100,7 +96,7 @@ export default async function HomePage() {
         prisma.task.count({
             where: {
                 tenantId: session.tenantId,
-                status: { in: ["Active", "Paused"] },
+                status: "Completed",
             },
         }),
         prisma.project.aggregate({
@@ -355,8 +351,6 @@ export default async function HomePage() {
         return sum + elapsed
     }, 0)
     const monthHours = (monthHoursFromCompletedLogs + runningMonthSeconds) / 3600
-    const urgentTasksCount = urgentTasksRaw.length
-    const overdueTasksCount = overdueTasksRaw.length
     const monthHoursByProject = new Map(
         monthTimeByProjectRaw.map((entry) => [
             entry.projectId,
@@ -413,16 +407,31 @@ export default async function HomePage() {
     const homeDialogServices = serialize(allServicesRaw)
     const unpaidProjectsHref = "/projects?status=All&payment=Unpaid"
     const thisMonthProjectsHref = "/projects?status=All&period=this_month"
+    const kpiCardClassName = "relative h-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_2px_4px_rgba(0,0,0,0.02)] sm:p-5 lg:p-6"
+    const kpiIconClassName = "absolute right-4 top-4 h-5 w-5 text-slate-200 sm:right-5 sm:top-5 sm:h-5.5 sm:w-5.5"
 
     return (
-        <div className="flex flex-col gap-10 pb-10">
-            <section className="space-y-6">
-                <div className="flex items-start justify-between gap-4 md:hidden">
+        <div className="flex flex-col gap-6 pb-8 sm:gap-8 sm:pb-10 lg:gap-10">
+            <section className="space-y-5 sm:space-y-6">
+                <div className="space-y-3 md:hidden">
                     <div className="flex items-start gap-3">
-                        <MobileMenuTrigger />
-                        <h1 className="ui-text-title text-slate-900">Overview</h1>
+                        <div className="pt-1">
+                            <MobileMenuTrigger />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <h1 className="ui-text-title text-slate-900">Overview</h1>
+                            <p className="mt-1 text-[13px] font-medium text-slate-500">
+                                Snapshot of revenue, projects, and active work.
+                            </p>
+                        </div>
                     </div>
-                    <GlobalSearch />
+                    <GlobalSearch mobileMode="full" />
+                    <HomeHeaderActions
+                        partners={homeDialogPartners}
+                        services={homeDialogServices}
+                        projects={homeDialogProjects}
+                        mobile
+                    />
                 </div>
 
                 <div className="hidden items-start justify-between gap-4 md:flex">
@@ -439,104 +448,100 @@ export default async function HomePage() {
                     </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
-                    {/* Revenue Card */}
-                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
-                        <div className="flex items-start justify-between">
-                            <p className="ui-overline text-slate-400">Revenue</p>
-                            <Banknote className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 xl:gap-5">
+                    {/* This Month Revenue Card */}
+                    <div className={kpiCardClassName}>
+                        <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">This Month</p>
+                            <Banknote className={kpiIconClassName} />
+                            <Link
+                                href={thisMonthProjectsHref}
+                                className="group mt-auto inline-flex flex-col rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-container)_35%,transparent)]"
+                                aria-label="View this month projects"
+                            >
+                                <p className="text-[24px] font-bold leading-none tracking-tight text-slate-900 group-hover:text-[var(--primary)] sm:text-[32px]">
+                                    {formatCurrency(monthRevenue)}
+                                </p>
+                                <p className="mt-1.5 text-[10px] font-medium text-slate-500 sm:mt-2 sm:text-[11px]">Current billed revenue</p>
+                            </Link>
                         </div>
-                        <div className="mt-6 flex items-end justify-between">
-                            <div>
-                                <Link
-                                    href={unpaidProjectsHref}
-                                    className="group inline-flex flex-col rounded-md transition-colors hover:bg-rose-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
-                                    aria-label="View unpaid projects"
-                                >
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-rose-500">Unpaid</p>
-                                    <p className="mt-1 text-[24px] font-bold leading-none tracking-tight text-rose-600 group-hover:underline">
-                                        {formatCurrency(unpaidRevenue)}
-                                    </p>
-                                </Link>
-                            </div>
-                            <div className="text-right">
-                                <Link
-                                    href={thisMonthProjectsHref}
-                                    className="group inline-flex flex-col items-end rounded-md transition-colors hover:bg-[color:color-mix(in_srgb,var(--primary-container)_14%,white)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-container)_35%,transparent)]"
-                                    aria-label="View this month projects"
-                                >
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-[var(--primary)]">This month</p>
-                                    <div className="mt-1 flex items-center justify-end gap-2">
-                                        <p className="text-sm font-bold text-slate-800 group-hover:underline">{formatCurrency(monthRevenue)}</p>
-                                    </div>
-                                </Link>
-                            </div>
+                    </div>
+
+                    {/* Unpaid Revenue Card */}
+                    <div className={kpiCardClassName}>
+                        <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">Unpaid</p>
+                            <Banknote className={kpiIconClassName} />
+                            <Link
+                                href={unpaidProjectsHref}
+                                className="group mt-auto inline-flex flex-col rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
+                                aria-label="View unpaid projects"
+                            >
+                                <p className="text-[24px] font-bold leading-none tracking-tight text-rose-600 group-hover:text-rose-500 sm:text-[32px]">
+                                    {formatCurrency(unpaidRevenue)}
+                                </p>
+                                <p className="mt-1.5 text-[10px] font-medium text-slate-500 sm:mt-2 sm:text-[11px]">Outstanding receivables</p>
+                            </Link>
                         </div>
                     </div>
 
                     {/* Active Projects Card */}
-                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
-                        <div className="flex items-start justify-between">
-                            <p className="ui-overline text-slate-400">Active projects</p>
-                            <FolderPlus className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
-                        </div>
-                        <div className="mt-6 flex items-end gap-6">
-                            <div className="min-w-[60px]">
-                                <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{activeProjectsCount}</p>
-                                <p className="mt-1 text-[10px] italic text-slate-400">Total</p>
-                            </div>
-                            <div className="flex-1 space-y-2 border-l border-slate-100 pl-4">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-violet-500">Recurring</span>
-                                    <span className="text-sm font-bold text-slate-900">{activeRecurringProjectsCount}</span>
+                    <div className={kpiCardClassName}>
+                        <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">Projects</p>
+                            <FolderPlus className={kpiIconClassName} />
+                            <div className="mt-auto grid grid-cols-[1fr_auto_1fr] items-end gap-3 pt-3 sm:gap-4 sm:pt-4">
+                                <div className="min-w-0 text-center">
+                                    <p className="text-[28px] font-bold leading-none tracking-tight text-violet-600 sm:text-[32px]">
+                                        {activeRecurringProjectsCount}
+                                    </p>
+                                    <p className="mt-1 text-[10px] font-medium text-slate-500 sm:mt-1.5 sm:text-[11px]">
+                                        Recurring
+                                    </p>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500">One-time</span>
-                                    <span className="text-sm font-bold text-slate-900">{activeOneTimeProjectsCount}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Tasks Card */}
-                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
-                        <div className="flex items-start justify-between">
-                            <p className="ui-overline text-slate-400">Tasks overview</p>
-                            <BadgeCheck className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
-                        </div>
-                        <div className="mt-6 flex items-end gap-6">
-                            <div className="min-w-[60px]">
-                                <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{activeTasksCount}</p>
-                                <p className="mt-1 text-[10px] italic text-slate-400">Total</p>
-                            </div>
-                            <div className="flex-1 space-y-2 border-l border-slate-100 pl-4">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-500">Overdue</span>
-                                    <span className="text-sm font-bold text-slate-900">{overdueTasksCount}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500">Urgent</span>
-                                    <span className="text-sm font-bold text-slate-900">{urgentTasksCount}</span>
+                                <div className="h-8 w-px shrink-0 bg-slate-100 sm:h-9" />
+                                <div className="min-w-0 text-center">
+                                    <p className="text-[28px] font-bold leading-none tracking-tight text-emerald-600 sm:text-[32px]">
+                                        {activeOneTimeProjectsCount}
+                                    </p>
+                                    <p className="mt-1 text-[10px] font-medium text-slate-500 sm:mt-1.5 sm:text-[11px]">
+                                        One-time
+                                    </p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Hours Card */}
-                    <div className="flex-1 relative p-6 lg:p-8">
-                        <div className="flex items-start justify-between">
-                            <p className="ui-overline text-slate-400">Hours worked</p>
-                            <Timer className="h-8 w-8 text-slate-100 absolute top-4 right-4" />
-                        </div>
-                        <div className="mt-6">
-                            <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{monthHours.toFixed(1)}</p>
-                            <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-emerald-500">This month</p>
+                    {/* Work Card */}
+                    <div className={kpiCardClassName}>
+                        <div className="flex min-h-[102px] flex-col sm:min-h-[124px]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">Work</p>
+                            <Timer className={kpiIconClassName} />
+                            <div className="mt-auto grid grid-cols-[1fr_auto_1fr] items-end gap-3 pt-3 sm:gap-4 sm:pt-4">
+                                <div className="min-w-0 text-center">
+                                    <p className="text-[28px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px]">
+                                        {monthHours.toFixed(1)}
+                                    </p>
+                                    <p className="mt-1 text-[10px] font-medium text-slate-500 sm:mt-1.5 sm:text-[11px]">
+                                        Hours
+                                    </p>
+                                </div>
+                                <div className="h-8 w-px shrink-0 bg-slate-100 sm:h-9" />
+                                <div className="min-w-0 text-center">
+                                    <p className="text-[28px] font-bold leading-none tracking-tight text-blue-600 sm:text-[32px]">
+                                        {completedTasksCount}
+                                    </p>
+                                    <p className="mt-1 text-[10px] font-medium text-slate-500 sm:mt-1.5 sm:text-[11px]">
+                                        Tasks
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section className="space-y-10 pt-4">
+            <section className="space-y-6 pt-2 sm:space-y-8 sm:pt-3 lg:space-y-10 lg:pt-4">
                 <HomeTaskColumns
                     urgentTasks={serialize(urgentTasksRaw)}
                     overdueTasks={serialize(overdueTasksRaw)}

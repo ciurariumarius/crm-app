@@ -288,7 +288,7 @@ function RevenueDateFilter({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-10 min-w-[148px] items-center justify-between gap-2 rounded-xl border px-3 text-xs font-semibold transition-all",
+                        "inline-flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-xs font-semibold transition-all sm:min-w-[148px] sm:w-auto",
                         activePresetId !== "all"
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
                             : "border-slate-200 bg-slate-100/60 text-slate-700 hover:bg-slate-100"
@@ -497,9 +497,9 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
     }
 
     return (
-        <section className="rounded-[24px] border border-slate-100 bg-white p-8 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
-            <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-5">
+        <section className="rounded-[24px] border border-slate-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] sm:p-6 lg:p-8">
+            <div className="mb-6 flex flex-col gap-4 sm:mb-8 lg:mb-10 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
                     <div className="flex items-center gap-2">
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
                         <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">Revenue Analysis</h3>
@@ -522,14 +522,14 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                 </div>
 
                 {/* Mode Switcher */}
-                <div className="flex items-center gap-1 rounded-full bg-slate-100/60 p-1">
+                <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-slate-100/60 p-1 sm:flex sm:flex-wrap sm:items-center">
                     {MODE_OPTIONS.map((option) => (
                         <button
                             key={option.value}
                             type="button"
                             onClick={() => setMode(option.value)}
                             className={cn(
-                                "rounded-full px-5 py-1.5 text-[11px] font-bold transition-all tracking-tight",
+                                "rounded-full px-4 py-2 text-[11px] font-bold tracking-tight transition-all sm:px-5 sm:py-1.5",
                                 mode === option.value
                                     ? "bg-white text-blue-600 shadow-sm"
                                     : "text-slate-500 hover:text-slate-700"
@@ -541,8 +541,8 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                 </div>
             </div>
 
-            <div className="grid gap-12 lg:grid-cols-[400px_1fr] items-center">
-                <div className="relative flex items-center justify-center h-[340px]">
+            <div className="grid items-start gap-5 sm:gap-6 lg:grid-cols-[minmax(280px,400px)_1fr] lg:gap-10">
+                <div className="relative flex h-[260px] items-center justify-center sm:h-[300px] lg:h-[340px]">
                     <div className="absolute inset-0 z-0 outline-none">
                         <ResponsiveContainer width="100%" height="100%" className="outline-none">
                             <PieChart style={{ outline: 'none' }}>
@@ -552,8 +552,8 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                     nameKey="label"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={105}
-                                    outerRadius={145}
+                                    innerRadius="62%"
+                                    outerRadius="86%"
                                     startAngle={90}
                                     endAngle={-270}
                                     stroke="white"
@@ -586,15 +586,15 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     </div>
                     {/* Central Label */}
                     <div className="relative z-10 flex flex-col items-center justify-center pt-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Total Revenue</p>
-                        <p className="mt-1 text-[36px] font-bold text-slate-900 leading-none tracking-tight">
-                            {formatCurrency(totalRevenue).replace(/[\s\u00A0]*RON/i, "")} <span className="text-[14px] text-slate-400 font-bold ml-1">RON</span>
+                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500 sm:text-[10px]">Total Revenue</p>
+                        <p className="mt-1 text-[28px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px] lg:text-[36px]">
+                            {formatCurrency(totalRevenue).replace(/[\s\u00A0]*RON/i, "")} <span className="ml-1 text-[11px] font-bold text-slate-400 sm:text-[12px] lg:text-[14px]">RON</span>
                         </p>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-4">
-                    <div className="flex flex-col justify-center gap-3">
+                <div className="flex flex-col gap-3 sm:gap-4">
+                    <div className="flex flex-col justify-center gap-2.5 sm:gap-3">
                         {(isListExpanded ? chartData : chartData.slice(0, 4)).map((entry, index) => {
                             const isOther = entry.key === "__other__"
                             const share = totalRevenue > 0 ? (entry.revenue / totalRevenue) * 100 : 0
@@ -621,31 +621,31 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                     }}
                                     disabled={!canOpen}
                                     className={cn(
-                                        "flex items-center justify-between gap-4 rounded-[16px] px-5 py-4 text-left transition-all",
+                                        "flex w-full min-w-0 flex-col items-start gap-2.5 rounded-[16px] px-4 py-3 text-left transition-all sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4",
                                         isHighlighted ? "relative z-10 scale-[1.02] bg-white shadow-lg ring-2 ring-blue-500" : "border border-transparent bg-[#F8F9FB]",
                                         canOpen && !isHighlighted ? "group cursor-pointer hover:bg-[#F1F3F7]" : !canOpen && !isHighlighted ? "cursor-default" : ""
                                     )}
                                 >
-                                    <div className="flex min-w-0 items-center gap-4">
+                                    <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:gap-4">
                                         <span
                                             className="h-2.5 w-2.5 shrink-0 rounded-full"
                                             style={{ backgroundColor: dotColor }}
                                         />
                                         <div className="flex min-w-0 flex-col">
-                                            <p className="truncate text-[13px] font-bold text-slate-900 transition-colors group-hover:text-blue-600">
+                                            <p className="truncate text-[12px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[13px]">
                                                 {entry.label}
                                             </p>
-                                            <p className="text-[10px] font-bold text-slate-400">
+                                            <p className="text-[9px] font-bold text-slate-400 sm:text-[10px]">
                                                 {getEntryMeta(originalEntry || entry, isOther)}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div className="flex shrink-0 flex-col items-end">
-                                        <p className="text-[14px] font-bold text-slate-900 transition-colors group-hover:text-blue-600">
+                                    <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
+                                        <p className="text-[13px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[14px]">
                                             {formatCurrency(entry.revenue)}
                                         </p>
-                                        <div className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                                        <div className="mt-0.5 text-[10px] font-semibold text-slate-400 sm:text-[11px]">
                                             {share.toFixed(1)}%
                                         </div>
                                     </div>
@@ -656,7 +656,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     {chartData.length > 4 && (
                         <button
                             onClick={() => setIsListExpanded(!isListExpanded)}
-                            className="text-[12px] font-bold text-slate-500 hover:text-slate-800 transition-colors w-full text-center py-2.5 rounded-xl hover:bg-slate-50/80 border border-transparent hover:border-slate-200/60"
+                            className="w-full rounded-xl border border-transparent py-2 text-center text-[11px] font-bold text-slate-500 transition-colors hover:border-slate-200/60 hover:bg-slate-50/80 hover:text-slate-800 sm:py-2.5 sm:text-[12px]"
                         >
                             {isListExpanded ? "Show less" : `View all ${totalCount} ${mode === "type" ? "types" : `${mode}s`}`}
                         </button>

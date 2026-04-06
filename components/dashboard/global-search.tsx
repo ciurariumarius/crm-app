@@ -54,7 +54,11 @@ type GlobalSearchResults = {
     partners: SearchPartner[]
 }
 
-export function GlobalSearch() {
+interface GlobalSearchProps {
+    mobileMode?: "icon" | "full"
+}
+
+export function GlobalSearch({ mobileMode = "icon" }: GlobalSearchProps) {
     const [open, setOpen] = React.useState(false)
     const [query, setQuery] = React.useState("")
     const [results, setResults] = React.useState<GlobalSearchResults>({
@@ -122,12 +126,24 @@ export function GlobalSearch() {
             </button>
 
             {/* Mobile Search Trigger */}
-            <button
-                onClick={() => setOpen(true)}
-                className="md:hidden flex items-center justify-center p-2 rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm"
-            >
-                <Search className="h-5 w-5" />
-            </button>
+            {mobileMode === "full" ? (
+                <button
+                    onClick={() => setOpen(true)}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 md:hidden"
+                >
+                    <Search className="h-4 w-4 shrink-0 text-slate-400" />
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-500">
+                        Search projects, tasks or partners...
+                    </span>
+                </button>
+            ) : (
+                <button
+                    onClick={() => setOpen(true)}
+                    className="flex items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-500 shadow-sm md:hidden"
+                >
+                    <Search className="h-5 w-5" />
+                </button>
+            )}
 
             <CommandDialog
                 open={open}

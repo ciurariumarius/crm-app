@@ -140,7 +140,7 @@ export function TaskGridCard({
         return (
             <div
                 className={cn(
-                    "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-[var(--shadow-apple)] transition-all duration-200",
+                    "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[var(--shadow-apple)] transition-all duration-200 sm:p-4",
                     "hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]",
                     isRunning && "border-blue-200 bg-blue-50/20",
                     isSelected && "border-primary/30 bg-primary/[0.02]",
@@ -148,13 +148,13 @@ export function TaskGridCard({
                 )}
                 onClick={() => onOpen(task.id)}
             >
-                <div onClick={(e) => e.stopPropagation()} className="absolute right-3 top-3 z-10">
+                <div onClick={(e) => e.stopPropagation()} className="absolute right-2.5 top-2.5 z-10 sm:right-3 sm:top-3">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                                className="h-7 w-7 rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
                             >
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
@@ -226,7 +226,7 @@ export function TaskGridCard({
                 </div>
 
                 {hasTopLabels ? (
-                    <div className="mb-2 flex items-center gap-2 pr-8">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5 pr-8 sm:gap-2">
                         <PriorityBadge urgency={task.urgency || "Normal"} compact />
                         <DeadlineBadge deadline={task.deadline} compact />
                     </div>
@@ -234,20 +234,20 @@ export function TaskGridCard({
 
                 <h4
                     className={cn(
-                        "line-clamp-2 text-[16px] font-bold leading-[1.3] tracking-tight text-slate-900",
+                        "line-clamp-2 pr-7 text-[15px] font-bold leading-[1.28] tracking-tight text-slate-900 sm:pr-8 sm:text-[16px]",
                         task.status === "Completed" && "line-through opacity-40"
                     )}
                 >
                     {task.name || "Untitled task"}
                 </h4>
 
-                <div className="mt-2 min-w-0">
+                <div className="mt-1.5 min-w-0 sm:mt-2">
                     <div className="flex min-w-0 items-center gap-1.5 text-slate-400">
                         {isRecurring
-                            ? <RefreshCcw className="h-2.5 w-2.5 shrink-0" />
-                            : <Circle className="h-2.5 w-2.5 shrink-0" />
+                            ? <RefreshCcw className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
+                            : <Circle className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
                         }
-                        <p className="min-w-0 truncate text-[12px] font-medium text-slate-500">
+                        <p className="min-w-0 truncate text-[11px] font-medium text-slate-500 sm:text-[12px]">
                             {projectFullName}
                         </p>
                     </div>
@@ -275,8 +275,8 @@ export function TaskGridCard({
                 <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-3xl bg-blue-500 animate-pulse" />
             )}
 
-            <div className={cn("flex flex-col", compact ? "gap-2.5 p-4" : "gap-3 p-4")}>
-                <div onClick={(e) => e.stopPropagation()} className="absolute right-3 top-3 z-10">
+            <div className={cn("flex flex-col", compact ? "gap-2.5 p-3.5 sm:p-4" : "gap-3 p-4")}>
+                <div onClick={(e) => e.stopPropagation()} className="absolute right-2.5 top-2.5 z-10 sm:right-3 sm:top-3">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
@@ -354,15 +354,15 @@ export function TaskGridCard({
                 </div>
 
                 {hasTopLabels ? (
-                    <div className="flex items-center gap-2 pr-8">
+                    <div className="flex flex-wrap items-center gap-1.5 pr-8 sm:gap-2">
                         <PriorityBadge urgency={task.urgency || "Normal"} compact={compact} />
                         <DeadlineBadge deadline={task.deadline} compact={compact} />
                     </div>
                 ) : null}
 
                 <h4 className={cn(
-                    "line-clamp-2 flex-1 font-bold leading-tight text-slate-900",
-                    compact ? "min-h-[2.15rem] pt-0 text-[15px]" : "min-h-[2.5rem] pt-0.5 text-[16px]",
+                    "line-clamp-2 flex-1 pr-7 font-bold leading-tight text-slate-900 sm:pr-8",
+                    compact ? "min-h-[2rem] pt-0 text-[14px] sm:min-h-[2.15rem] sm:text-[15px]" : "min-h-[2.5rem] pt-0.5 text-[16px]",
                     task.status === "Completed" && "line-through opacity-40"
                 )}>
                     {task.name || "Untitled task"}
@@ -373,10 +373,10 @@ export function TaskGridCard({
                     <div className="min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
                             {isRecurring
-                                ? <RefreshCcw className="h-3 w-3 text-slate-400 shrink-0" />
-                                : <Circle className="h-3 w-3 text-slate-400 shrink-0" />
+                                ? <RefreshCcw className="h-2.5 w-2.5 shrink-0 text-slate-400 sm:h-3 sm:w-3" />
+                                : <Circle className="h-2.5 w-2.5 shrink-0 text-slate-400 sm:h-3 sm:w-3" />
                             }
-                            <p className="min-w-0 truncate text-[11px] font-medium text-slate-400">{projectDomain}</p>
+                            <p className="min-w-0 truncate text-[10px] font-medium text-slate-400 sm:text-[11px]">{projectDomain}</p>
                         </div>
                     </div>
                 ) : (

@@ -182,36 +182,32 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
     }, [])
 
     return (
-        <div className="space-y-10 w-full mb-8">
+        <div className="mb-6 w-full space-y-5 sm:mb-8 sm:space-y-8 lg:space-y-10">
             <section className="w-full">
-                <div className="mb-8 flex items-end justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-5">
-                        <div className="flex items-center gap-2.5">
-                            <span className="mt-1.5 h-2 w-2 rounded-full bg-rose-500" />
-                            <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{urgentState.length}</p>
-                            <p className="text-[11px] font-black uppercase tracking-[0.09em] text-rose-600">Urgent tasks</p>
+                <div className="mb-5 flex flex-col gap-4 sm:mb-8 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-5">
+                        <div className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50/50 px-2 py-3 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+                            <span className="mt-0.5 h-2 w-2 rounded-full bg-rose-500" />
+                            <p className="text-[22px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px]">{urgentState.length}</p>
+                            <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-rose-600 sm:text-[11px]">Urgent</p>
                         </div>
 
-                        <div className="hidden h-10 w-px bg-slate-200 sm:block" />
-
-                        <div className="flex items-center gap-2.5">
-                            <span className="mt-1.5 h-2 w-2 rounded-full bg-orange-500" />
-                            <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{overdueState.length}</p>
-                            <p className="text-[11px] font-black uppercase tracking-[0.09em] text-orange-600">Overdue tasks</p>
+                        <div className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-orange-100 bg-orange-50/50 px-2 py-3 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:before:mr-5 sm:before:block sm:before:h-10 sm:before:w-px sm:before:bg-slate-200 sm:before:content-['']">
+                            <span className="mt-0.5 h-2 w-2 rounded-full bg-orange-500" />
+                            <p className="text-[22px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px]">{overdueState.length}</p>
+                            <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-orange-600 sm:text-[11px]">Overdue</p>
                         </div>
 
-                        <div className="hidden h-10 w-px bg-slate-200 sm:block" />
-
-                        <div className="flex items-center gap-2.5">
-                            <span className="mt-1.5 h-2 w-2 rounded-full bg-slate-500" />
-                            <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{normalOnlyOrdered.length}</p>
-                            <p className="text-[11px] font-black uppercase tracking-[0.09em] text-slate-600">Normal tasks</p>
+                        <div className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-2 py-3 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:before:mr-5 sm:before:block sm:before:h-10 sm:before:w-px sm:before:bg-slate-200 sm:before:content-['']">
+                            <span className="mt-0.5 h-2 w-2 rounded-full bg-slate-500" />
+                            <p className="text-[22px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px]">{normalOnlyOrdered.length}</p>
+                            <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-slate-600 sm:text-[11px]">Normal</p>
                         </div>
                     </div>
 
                     <Link
                         href="/tasks?status=Active&urgency=Urgent&overdue=1"
-                        className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-blue-100/80 bg-blue-50 px-4 text-[11px] font-bold uppercase tracking-[0.08em] text-blue-600 transition-colors hover:bg-blue-100"
+                        className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-blue-100/80 bg-blue-50 px-4 text-[11px] font-bold uppercase tracking-[0.08em] text-blue-600 transition-colors hover:bg-blue-100 sm:w-auto"
                     >
                         View all <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
@@ -222,7 +218,7 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
                         No active tasks.
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                         {visibleTasks.map((task) => (
                             <TaskGridCard
                                 key={task.id}
