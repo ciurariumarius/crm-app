@@ -16,13 +16,23 @@ import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Plus } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface CreateTimeLogDialogProps {
     projects: { id: string; siteName: string }[]
     tasks: { id: string; name: string; projectId: string }[]
+    className?: string
+    label?: string
+    showLabelOnMobile?: boolean
 }
 
-export function CreateTimeLogDialog({ projects, tasks }: CreateTimeLogDialogProps) {
+export function CreateTimeLogDialog({
+    projects,
+    tasks,
+    className,
+    label = "Log Time",
+    showLabelOnMobile = false,
+}: CreateTimeLogDialogProps) {
     const [open, setOpen] = useState(false)
     const [hours, setHours] = useState("")
     const [description, setDescription] = useState("")
@@ -80,11 +90,11 @@ export function CreateTimeLogDialog({ projects, tasks }: CreateTimeLogDialogProp
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button
-                    className="header-action-button"
                     title="Add new log time"
+                    className={cn("header-action-button", className)}
                 >
                     <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
-                    <span className="header-action-label">Log Time</span>
+                    <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>{label}</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

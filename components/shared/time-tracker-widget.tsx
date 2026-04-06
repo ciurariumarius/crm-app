@@ -35,6 +35,8 @@ export function TimeTrackerWidget({
     onStopAction,
     isStopDisabled
 }: TimeTrackerWidgetProps) {
+    const primaryActionLabel = isRunning ? "Pause" : isPaused ? "Resume" : "Start"
+
     return (
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <div className="flex items-center justify-between gap-4">
@@ -73,10 +75,10 @@ export function TimeTrackerWidget({
                         type="button"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrimaryAction(); }}
                         className={cn(
-                            "h-9 rounded-full px-4 text-[13px] font-bold transition-all active:scale-[0.98]",
+                            "h-9 rounded-full px-4 text-[13px] font-bold shadow-sm transition-all active:scale-[0.98]",
                             isRunning
-                                ? "bg-amber-100/50 text-amber-600 hover:bg-amber-100"
-                                : "bg-blue-100/50 text-blue-600 hover:bg-blue-100"
+                                ? "bg-amber-500 text-white hover:bg-amber-600"
+                                : "bg-[var(--brand-cyan)] text-white hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_88%,black)]"
                         )}
                     >
                         {isRunning ? (
@@ -84,7 +86,7 @@ export function TimeTrackerWidget({
                         ) : (
                             <Play className="mr-1.5 h-3.5 w-3.5 fill-current" />
                         )}
-                        {isRunning ? "Pause" : "Start"}
+                        {primaryActionLabel}
                     </Button>
 
                     <Button
@@ -92,7 +94,7 @@ export function TimeTrackerWidget({
                         size="icon"
                         disabled={isStopDisabled}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onStopAction(); }}
-                        className="h-9 w-9 shrink-0 rounded-xl bg-slate-100/50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                        className="h-9 w-9 shrink-0 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                     >
                         <Square className="h-3.5 w-3.5 fill-current" />
                     </Button>

@@ -1,5 +1,7 @@
 "use client"
 
+import * as React from "react"
+import { usePathname } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { GlobalTimer } from "@/components/layout/global-timer"
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
@@ -27,11 +29,20 @@ export function ShellFrame({
     children,
 }: ShellFrameProps) {
     const { isSidebarCollapsed } = useHeader()
+    const pathname = usePathname()
+    const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
+
+    React.useEffect(() => {
+        const container = scrollContainerRef.current
+        if (!container) return
+        container.scrollTo({ top: 0, left: 0 })
+    }, [pathname])
 
     return (
         <div className="flex min-h-dvh overflow-hidden bg-[var(--background)]">
             <Sidebar user={user} />
             <div
+                ref={scrollContainerRef}
                 className={cn(
                     "flex-1 flex flex-col min-w-0 min-h-dvh overflow-y-auto transition-all duration-300 relative",
                     isSidebarCollapsed ? "md:pl-[92px]" : "md:pl-[236px]"

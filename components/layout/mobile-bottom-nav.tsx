@@ -76,10 +76,10 @@ export function MobileBottomNav({
                     <button
                         type="button"
                         onClick={() => setQuickActionsOpen(true)}
-                        className="absolute left-1/2 top-1/2 z-10 inline-flex h-12 w-12 -translate-x-1/2 -translate-y-[52%] items-center justify-center rounded-full border border-primary/45 bg-primary text-primary-foreground shadow-[0_10px_20px_-10px_color-mix(in_srgb,var(--primary)_70%,transparent),0_4px_12px_-6px_rgba(15,23,42,0.35)] transition-transform active:scale-[0.97]"
+                        className="absolute left-1/2 top-1/2 z-10 inline-flex h-9 w-9 -translate-x-1/2 -translate-y-[52%] items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[0_10px_20px_-10px_color-mix(in_srgb,var(--primary)_70%,transparent),0_4px_12px_-6px_rgba(15,23,42,0.35)] transition-transform active:scale-[0.97]"
                         aria-label="Quick actions"
                     >
-                        <Plus className="h-5 w-5" strokeWidth={2.4} />
+                        <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
                     </button>
 
                     <div className="grid grid-cols-5 gap-1">

@@ -71,7 +71,7 @@ export function ProjectsSearchInput() {
                 placeholder="Search projects..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="h-11 w-full rounded-[8px] border border-slate-300 bg-white pl-11 pr-4 text-[14px] font-medium shadow-none outline-none transition focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] focus-visible:ring-offset-0 focus-visible:border-[var(--brand-cyan)] placeholder:text-slate-400 placeholder:font-medium text-slate-900"
+                className="h-11 w-full rounded-[28px] border border-slate-200/90 bg-white/95 pl-11 pr-4 text-[14px] font-medium text-slate-900 shadow-[0_6px_18px_rgba(15,23,42,0.04)] outline-none transition placeholder:font-medium placeholder:text-slate-400 focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] focus-visible:ring-offset-0"
             />
         </div>
     )

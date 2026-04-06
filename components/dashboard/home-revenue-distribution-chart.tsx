@@ -557,7 +557,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
             </div>
 
             <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-[minmax(280px,400px)_1fr] lg:gap-10">
-                <div className="relative flex h-[260px] items-center justify-center sm:h-[300px] lg:h-[340px]">
+                <div className="relative mx-auto flex aspect-square w-full max-w-[250px] items-center justify-center sm:h-[300px] sm:max-w-[320px] lg:h-[340px] lg:max-w-none">
                     <div className="absolute inset-0 z-0 outline-none">
                         <ResponsiveContainer width="100%" height="100%" className="outline-none">
                             <PieChart style={{ outline: 'none' }}>
@@ -600,7 +600,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                         </ResponsiveContainer>
                     </div>
                     {/* Central Label */}
-                    <div className="relative z-10 flex flex-col items-center justify-center pt-2">
+                    <div className="relative z-10 flex flex-col items-center justify-center">
                         <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500 sm:text-[10px]">Total Revenue</p>
                         <p className="mt-1 text-[28px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px] lg:text-[36px]">
                             {formatCurrency(totalRevenue).replace(/[\s\u00A0]*RON/i, "")} <span className="ml-1 text-[11px] font-bold text-slate-400 sm:text-[12px] lg:text-[14px]">RON</span>
@@ -638,32 +638,30 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                     }}
                                     disabled={!canOpen}
                                     className={cn(
-                                        "flex w-full min-w-0 flex-col items-start gap-2.5 rounded-[16px] px-4 py-3 text-left transition-all sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4",
+                                        "flex w-full min-w-0 overflow-hidden flex-col items-start gap-2.5 rounded-[16px] px-4 py-3 text-left transition-all sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4",
                                         isHighlighted ? "relative z-10 scale-[1.02] border border-blue-100 bg-white shadow-lg ring-2 ring-blue-500/70" : "border border-slate-200/80 bg-slate-50/70",
                                         canOpen && !isHighlighted ? "group cursor-pointer hover:border-slate-200 hover:bg-slate-50" : !canOpen && !isHighlighted ? "cursor-default" : ""
                                     )}
                                 >
-                                    <div className="flex w-full min-w-0 items-start gap-3 sm:w-auto sm:items-center sm:gap-4">
+                                    <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:flex sm:w-auto sm:items-center sm:gap-4">
                                         <span
-                                            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full sm:mt-0"
+                                            className="col-start-1 row-span-2 mt-1 h-2.5 w-2.5 shrink-0 rounded-full sm:mt-0"
                                             style={{ backgroundColor: dotColor }}
                                         />
-                                        <div className="flex min-w-0 flex-col">
-                                            <div className="flex min-w-0 items-start justify-between gap-3 sm:block">
-                                                <p className="truncate text-[12px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[13px]">
+                                        <div className="col-start-2 min-w-0">
+                                            <p className="truncate text-[12px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[13px]">
                                                     {entry.label}
-                                                </p>
-                                                <div className="shrink-0 text-right sm:hidden">
-                                                    <p className="text-[12px] font-bold text-slate-900">
-                                                        {formatCurrency(entry.revenue)}
-                                                    </p>
-                                                    <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-                                                        {share.toFixed(1)}%
-                                                    </p>
-                                                </div>
-                                            </div>
+                                            </p>
                                             <p className="mt-1 truncate text-[9px] font-bold text-slate-400 sm:mt-0 sm:text-[10px]">
                                                 {metaText}
+                                            </p>
+                                        </div>
+                                        <div className="col-start-3 row-span-2 shrink-0 text-right sm:hidden">
+                                            <p className="text-[12px] font-bold text-slate-900">
+                                                {formatCurrency(entry.revenue)}
+                                            </p>
+                                            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                                                {share.toFixed(1)}%
                                             </p>
                                         </div>
                                     </div>

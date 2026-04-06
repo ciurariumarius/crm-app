@@ -6,6 +6,7 @@ import { z } from "zod"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { revalidatePath } from "next/cache"
+import { format } from "date-fns"
 
 export type NoteRecord = {
   id: string
@@ -73,9 +74,17 @@ const ListNotesSchema = z.object({
   limit: z.number().int().min(1).max(500).optional(),
 })
 
-function normalizeNoteTitle(value: string | null | undefined) {
+function getDefaultNoteTitle(dateLike: Date = new Date()) {
+  return format(dateLike, "dd.MM.yyyy")
+}
+
+function normalizeNoteTitle(value: string | null | undefined, dateLike: Date = new Date()) {
   const title = (value || "").trim()
-  return title.length > 0 ? title : "Untitled"
+  if (!title) return getDefaultNoteTitle(dateLike)
+  if (title.toLowerCase() === "untitled" || title.toLowerCase() === "untitled note") {
+    return getDefaultNoteTitle(dateLike)
+  }
+  return title
 }
 
 function toNoteContentText(content: string) {
@@ -145,7 +154,7 @@ export async function createNote(input?: { title?: string; content?: string; pin
       return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR }
     }
     const validated = CreateNoteSchema.parse(input || {})
-    const title = normalizeNoteTitle(validated.title)
+    const title = normalizeNoteTitle(validated.title, new Date())
     const content = validated.content || ""
     const contentText = toNoteContentText(content)
 
@@ -188,8 +197,8 @@ export async function updateNote(
 
     const existing = (await noteDelegate.findFirst({
       where: { id: validatedNoteId, tenantId: session.tenantId },
-      select: { id: true, content: true },
-    })) as { id: string; content: string } | null
+      select: { id: true, content: true, createdAt: true },
+    })) as { id: string; content: string; createdAt: Date } | null
     if (!existing) {
       return { success: false, error: "Note not found" }
     }
@@ -202,7 +211,7 @@ export async function updateNote(
       archived?: boolean
     } = {}
 
-    if (validated.title !== undefined) updateData.title = normalizeNoteTitle(validated.title)
+    if (validated.title !== undefined) updateData.title = normalizeNoteTitle(validated.title, existing.createdAt)
     if (validated.content !== undefined) {
       updateData.content = validated.content
       updateData.contentText = toNoteContentText(validated.content)

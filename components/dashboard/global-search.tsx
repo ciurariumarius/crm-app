@@ -114,7 +114,7 @@ export function GlobalSearch({ mobileMode = "icon" }: GlobalSearchProps) {
             {/* Desktop Search Trigger - Redesigned to match screenshot */}
             <button
                 onClick={() => setOpen(true)}
-                className="mx-auto hidden w-full max-w-[500px] items-center gap-3 rounded-[28px] border border-slate-200/90 bg-white/95 px-6 py-3 text-slate-400 shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-slate-300 hover:bg-slate-50 md:flex"
+                className="mx-auto hidden w-full max-w-[560px] items-center gap-3 rounded-[28px] border border-slate-200/90 bg-white/95 px-6 py-3 text-slate-400 shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-slate-300 hover:bg-slate-50 md:flex"
             >
                 <Search className="h-4 w-4 text-slate-400" />
                 <span className="text-[13px] text-slate-500 font-medium">Search projects, tasks or partners...</span>

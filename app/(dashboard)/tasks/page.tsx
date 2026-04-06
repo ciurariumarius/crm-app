@@ -360,9 +360,9 @@ export default async function TasksPage({
                         mobileActions={
                             <CreateTaskButton
                                 projects={activeProjects}
-                                label="Add Task"
+                                label="Quick Add"
                                 showLabelOnMobile
-                                className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !text-white"
+                                className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
                             />
                         }
                         actions={<CreateTaskButton projects={activeProjects} />}

@@ -210,9 +210,9 @@ export default async function ProjectsPage({
                                 mobileActions={(
                                     <CreateProjectButton
                                         variant="full"
-                                        label="Add Project"
+                                        label="Quick Add"
                                         showLabelOnMobile
-                                        className="!h-12 !w-auto !min-w-[148px] !rounded-2xl !px-4 !gap-2 !text-white"
+                                        className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
                                         partners={partnersForClient}
                                         services={servicesForClient}
                                     />

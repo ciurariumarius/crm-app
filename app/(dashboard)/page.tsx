@@ -407,7 +407,7 @@ export default async function HomePage() {
             <section className="space-y-3.5 sm:space-y-5">
                 <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                     <div className="space-y-3 md:hidden">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2.5">
                             <div className="shrink-0">
                                 <MobileMenuTrigger />
                             </div>
@@ -424,11 +424,11 @@ export default async function HomePage() {
                         />
                     </div>
 
-                    <div className="hidden grid-cols-[minmax(0,1fr)_minmax(320px,520px)_auto] items-center gap-5 md:grid lg:gap-6">
+                    <div className="hidden grid-cols-[minmax(0,1fr)_minmax(360px,560px)_auto] items-center gap-4 md:grid lg:gap-6">
                         <div className="min-w-0">
                             <h1 className="ui-text-title text-slate-900">Overview</h1>
                         </div>
-                        <div className="min-w-[280px] px-1">
+                        <div className="min-w-[320px] px-1.5 lg:px-1">
                             <GlobalSearch />
                         </div>
                         <div className="flex items-center justify-end gap-2 shrink-0">

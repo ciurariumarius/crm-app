@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { formatDistanceToNow } from "date-fns"
+import { format, formatDistanceToNow } from "date-fns"
 import { Archive, ArchiveRestore, FilePlus2, NotebookPen, Pin, PinOff, Search, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { createNote, deleteNote, setNoteArchived, setNotePinned, updateNote, type NoteRecord } from "@/lib/actions/notes"
@@ -9,7 +9,7 @@ import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
@@ -19,19 +19,53 @@ type NotesWorkspaceProps = {
   storageUnavailable?: boolean
 }
 
-type SaveState = "idle" | "typing" | "saving" | "saved" | "error"
+function getDefaultNoteTitle(dateLike: Date | string = new Date()) {
+  return format(new Date(dateLike), "dd.MM.yyyy")
+}
 
-function normalizeTitle(value: string) {
+function getMeaningfulTitle(value: string) {
   const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : "Untitled"
+  if (!trimmed) return ""
+  if (trimmed.toLowerCase() === "untitled" || trimmed.toLowerCase() === "untitled note") return ""
+  return trimmed
+}
+
+function normalizeTitle(value: string, dateLike?: Date | string) {
+  const meaningful = getMeaningfulTitle(value)
+  return meaningful.length > 0 ? meaningful : getDefaultNoteTitle(dateLike)
+}
+
+function getNoteDisplayTitle(note: Pick<NoteRecord, "title" | "createdAt">) {
+  return normalizeTitle(note.title, note.createdAt)
 }
 
 function getNotePreview(note: NoteRecord) {
-  const source = note.contentText || note.content || ""
+  const source = note.contentText?.trim()
+    ? note.contentText
+    : (note.content || "").replace(/<[^>]*>/g, " ")
   const compact = source.replace(/\s+/g, " ").trim()
   if (!compact) return "No content yet"
   if (compact.length <= 80) return compact
   return `${compact.slice(0, 80)}...`
+}
+
+function normalizeNoteContentForEditor(content: string) {
+  const raw = (content || "").trim()
+  if (!raw) return ""
+  if (/<[a-z][\s\S]*>/i.test(raw)) return raw
+
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+
+  return raw
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`)
+    .join("")
 }
 
 function sortNotes(items: NoteRecord[]) {
@@ -44,22 +78,6 @@ function sortNotes(items: NoteRecord[]) {
 function upsertNote(items: NoteRecord[], next: NoteRecord) {
   const withoutCurrent = items.filter((item) => item.id !== next.id)
   return sortNotes([next, ...withoutCurrent])
-}
-
-function saveStateLabel(state: SaveState) {
-  if (state === "typing") return "Typing..."
-  if (state === "saving") return "Saving..."
-  if (state === "saved") return "Saved"
-  if (state === "error") return "Save failed"
-  return "Ready"
-}
-
-function saveStateClass(state: SaveState) {
-  if (state === "saving") return "text-blue-600"
-  if (state === "saved") return "text-emerald-600"
-  if (state === "typing") return "text-amber-600"
-  if (state === "error") return "text-rose-600"
-  return "text-slate-500"
 }
 
 export function NotesWorkspace({
@@ -75,7 +93,6 @@ export function NotesWorkspace({
   const [showArchived, setShowArchived] = React.useState(false)
   const [isMobileListOpen, setIsMobileListOpen] = React.useState(false)
   const [isCreating, setIsCreating] = React.useState(false)
-  const [saveState, setSaveState] = React.useState<SaveState>("idle")
 
   const searchRef = React.useRef<HTMLInputElement | null>(null)
   const lastSyncedRef = React.useRef<{ id: string | null; title: string; content: string }>({
@@ -96,18 +113,18 @@ export function NotesWorkspace({
       setTitleDraft("")
       setContentDraft("")
       lastSyncedRef.current = { id: null, title: "", content: "" }
-      setSaveState("idle")
       return
     }
 
-    setTitleDraft(selectedNote.title || "Untitled")
-    setContentDraft(selectedNote.content || "")
+    const displayTitle = getNoteDisplayTitle(selectedNote)
+    const normalizedContent = normalizeNoteContentForEditor(selectedNote.content || "")
+    setTitleDraft(displayTitle)
+    setContentDraft(normalizedContent)
     lastSyncedRef.current = {
       id: selectedNote.id,
-      title: selectedNote.title || "Untitled",
-      content: selectedNote.content || "",
+      title: displayTitle,
+      content: normalizedContent,
     }
-    setSaveState("idle")
   }, [selectedNote])
 
   const visibleNotes = React.useMemo(() => {
@@ -123,25 +140,21 @@ export function NotesWorkspace({
   }, [notes, search, showArchived])
 
   const persistNote = React.useCallback(
-    async (noteId: string, titleValue: string, contentValue: string, silent = false) => {
-      const normalizedTitle = normalizeTitle(titleValue)
+    async (noteId: string, titleValue: string, contentValue: string) => {
+      const existingNote = notes.find((item) => item.id === noteId) ?? null
+      const normalizedTitle = normalizeTitle(titleValue, existingNote?.createdAt)
       const snapshot = lastSyncedRef.current
       if (snapshot.id === noteId && snapshot.title === normalizedTitle && snapshot.content === contentValue) {
-        if (!silent) setSaveState("saved")
         return true
       }
 
-      if (!silent) setSaveState("saving")
       const result = await updateNote(noteId, {
         title: normalizedTitle,
         content: contentValue,
       })
 
       if (!result.success || !result.data) {
-        if (!silent) {
-          setSaveState("error")
-          toast.error(result.error || "Failed to save note")
-        }
+        toast.error(result.error || "Failed to save note")
         return false
       }
 
@@ -151,18 +164,18 @@ export function NotesWorkspace({
         title: result.data.title,
         content: result.data.content,
       }
-      if (!silent) setSaveState("saved")
       return true
     },
-    []
+    [notes]
   )
 
   const handleCreateNote = React.useCallback(
     async (prefill?: { title?: string; content?: string }) => {
       setIsCreating(true)
       try {
+        const defaultTitle = getDefaultNoteTitle()
         const result = await createNote({
-          title: normalizeTitle(prefill?.title || ""),
+          title: normalizeTitle(prefill?.title || "", defaultTitle),
           content: prefill?.content || "",
         })
         if (!result.success || !result.data) {
@@ -187,7 +200,7 @@ export function NotesWorkspace({
     if (bootstrappedRef.current) return
     bootstrappedRef.current = true
     if (notes.length === 0) {
-      void handleCreateNote({ title: "", content: "" })
+      void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })
     } else if (!selectedNoteId) {
       const firstActive = notes.find((note) => !note.archived) ?? notes[0]
       if (firstActive) setSelectedNoteId(firstActive.id)
@@ -197,7 +210,7 @@ export function NotesWorkspace({
   React.useEffect(() => {
     if (storageUnavailable) return
     if (!selectedNoteId) return
-    const normalizedTitle = normalizeTitle(titleDraft)
+    const normalizedTitle = normalizeTitle(titleDraft, selectedNote?.createdAt)
     const currentSnapshot = lastSyncedRef.current
     if (
       currentSnapshot.id === selectedNoteId &&
@@ -207,7 +220,6 @@ export function NotesWorkspace({
       return
     }
 
-    setSaveState("typing")
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
       void persistNote(selectedNoteId, normalizedTitle, contentDraft)
@@ -216,14 +228,14 @@ export function NotesWorkspace({
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [contentDraft, persistNote, selectedNoteId, titleDraft, storageUnavailable])
+  }, [contentDraft, persistNote, selectedNote?.createdAt, selectedNoteId, storageUnavailable, titleDraft])
 
   React.useEffect(() => {
     if (storageUnavailable) return
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
         event.preventDefault()
-        void handleCreateNote({ title: "", content: "" })
+        void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         if (!selectedNoteId) return
@@ -283,7 +295,7 @@ export function NotesWorkspace({
 
   const handleDelete = React.useCallback(
     async (note: NoteRecord) => {
-      const confirmed = window.confirm(`Delete note "${note.title}"?`)
+      const confirmed = window.confirm(`Delete note "${getNoteDisplayTitle(note)}"?`)
       if (!confirmed) return
 
       const result = await deleteNote(note.id)
@@ -303,8 +315,8 @@ export function NotesWorkspace({
 
   const renderNotesList = React.useCallback(
     (isMobile = false) => (
-      <div className={cn("flex flex-col", isMobile ? "h-full" : "h-[calc(100vh-260px)] min-h-[420px]")}>
-        <div className="border-b border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_78%,white)] px-3 py-2.5">
+      <div className={cn("flex flex-col", isMobile ? "h-full" : "h-[calc(100vh-250px)] min-h-[420px]")}>
+        <div className="border-b border-[var(--line-subtle)] bg-slate-50/70 px-3 py-2.5">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             {showArchived ? "Archived notes" : "Active notes"} · {visibleNotes.length}
           </p>
@@ -329,14 +341,16 @@ export function NotesWorkspace({
                 role="button"
                 tabIndex={0}
                 className={cn(
-                  "w-full rounded-[18px] border px-3.5 py-2.5 text-left transition-colors shadow-[0_2px_10px_rgba(15,23,42,0.02)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_30%,white)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+                  "w-full rounded-[14px] border px-3.5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_30%,white)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
                   selected
-                    ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_45%,white)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--brand-cyan)_12%,white),color-mix(in_srgb,var(--brand-cyan)_7%,white))]"
-                    : "border-slate-200/70 bg-white/80 hover:border-[var(--line-subtle)] hover:bg-[var(--bg-surface-soft)]"
+                    ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_42%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_10%,white)]"
+                    : "border-slate-200 bg-white hover:border-[var(--line-subtle)] hover:bg-slate-50/70"
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">{note.title}</p>
+                  <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">
+                    {getNoteDisplayTitle(note)}
+                  </p>
                   {note.pinned ? <Pin className="mt-0.5 h-3.5 w-3.5 text-amber-500" /> : null}
                 </div>
                 <p className="mt-1 line-clamp-2 text-xs text-[var(--text-secondary)]">{getNotePreview(note)}</p>
@@ -388,7 +402,7 @@ export function NotesWorkspace({
           })}
 
           {visibleNotes.length === 0 ? (
-            <div className="rounded-[18px] border border-dashed border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(248,250,252,0.88))] p-6 text-center">
+            <div className="rounded-[14px] border border-dashed border-[var(--line-subtle)] bg-slate-50/60 p-6 text-center">
               <p className="text-sm font-medium text-[var(--text-secondary)]">No notes in this view.</p>
             </div>
           ) : null}
@@ -399,70 +413,68 @@ export function NotesWorkspace({
   )
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
-        <DashboardPageHeader
-          title="Notes"
-          showMobile
-          search={
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-full border border-[var(--line-subtle)] bg-white/95 px-3 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
-                <Search className="h-4 w-4 text-[var(--text-secondary)]" />
-                <input
-                  ref={searchRef}
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search notes..."
-                  className="h-8 w-full border-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
-                />
-              </div>
-              <Button
-                type="button"
-                variant={showArchived ? "default" : "outline"}
-                className="h-10 rounded-xl"
-                onClick={() => setShowArchived((current) => !current)}
-                disabled={storageUnavailable}
-              >
-                {showArchived ? "Archived" : "Active"}
-              </Button>
+    <div className="space-y-2.5">
+      <DashboardPageHeader
+        title="Notes"
+        showMobile
+        className="gap-2 lg:gap-3"
+        search={
+          <div className="flex items-center gap-2">
+            <div className="flex h-11 min-w-[220px] flex-1 items-center gap-2 rounded-[28px] border border-slate-200/90 bg-white/95 px-4 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+              <Search className="h-4 w-4 text-[var(--text-secondary)]" />
+              <input
+                ref={searchRef}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search notes..."
+                className="h-8 w-full border-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
+              />
             </div>
-          }
-          actions={
             <Button
               type="button"
+              variant={showArchived ? "default" : "outline"}
               className="h-10 rounded-xl"
-              onClick={() => void handleCreateNote({ title: "", content: "" })}
-              disabled={isCreating || storageUnavailable}
+              onClick={() => setShowArchived((current) => !current)}
+              disabled={storageUnavailable}
             >
-              <FilePlus2 className="mr-2 h-4 w-4" />
-              New note
+              {showArchived ? "Archived" : "Active"}
             </Button>
-          }
-          mobileActions={
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 rounded-xl"
-              onClick={() => void handleCreateNote({ title: "", content: "" })}
-              disabled={isCreating || storageUnavailable}
-            >
-              <FilePlus2 className="mr-1.5 h-4 w-4" />
-              New
-            </Button>
-          }
-        />
-      </div>
+          </div>
+        }
+        actions={
+          <Button
+            type="button"
+            className="header-action-button"
+            onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
+            disabled={isCreating || storageUnavailable}
+          >
+            <FilePlus2 className="h-5 w-5 md:mr-1.5 md:h-4 md:w-4" />
+            <span className="header-action-label">New Note</span>
+          </Button>
+        }
+        mobileActions={
+          <Button
+            type="button"
+            className="header-action-button !h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5"
+            onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
+            disabled={isCreating || storageUnavailable}
+          >
+            <FilePlus2 className="h-5 w-5 md:h-4 md:w-4" />
+            <span className="inline text-sm font-semibold">Quick Add</span>
+          </Button>
+        }
+      />
 
-      <Card className="overflow-hidden rounded-[24px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
+      <Card className="overflow-hidden rounded-[20px] border-[var(--line-subtle)] bg-white shadow-[0_2px_10px_rgba(15,23,42,0.03)]">
         <CardContent className="p-0">
           <div className="grid md:grid-cols-[300px_minmax(0,1fr)]">
-            <aside className="hidden border-r border-[var(--line-subtle)] bg-[var(--bg-surface)] md:block">
+            <aside className="hidden border-r border-[var(--line-subtle)] bg-white md:block">
               {renderNotesList(false)}
             </aside>
 
             <section className="min-w-0 bg-white">
-              <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-2.5 sm:px-4 sm:py-3">
-                <div className="inline-flex items-center gap-2 md:hidden">
+              <div className="border-b border-[var(--line-subtle)] px-3.5 py-2.5 sm:px-4 sm:py-3 md:hidden">
+                <div className="inline-flex items-center gap-2">
                   <Sheet open={isMobileListOpen} onOpenChange={setIsMobileListOpen}>
                     <SheetTrigger asChild>
                       <Button type="button" variant="outline" size="sm" className="h-8 rounded-xl">
@@ -478,10 +490,6 @@ export function NotesWorkspace({
                     </SheetContent>
                   </Sheet>
                 </div>
-
-                <p className={cn("text-xs font-semibold uppercase tracking-[0.08em]", saveStateClass(saveState))}>
-                  {saveStateLabel(saveState)}
-                </p>
               </div>
 
               {storageUnavailable ? (
@@ -492,36 +500,58 @@ export function NotesWorkspace({
                   </p>
                 </div>
               ) : selectedNote ? (
-                <div className="space-y-2.5 p-3.5 sm:p-4 md:p-5">
+                <div className="space-y-3 p-3.5 sm:p-4 md:p-5">
                   <Input
                     value={titleDraft}
                     onChange={(event) => setTitleDraft(event.target.value)}
-                    placeholder="Untitled"
+                    placeholder={getDefaultNoteTitle(selectedNote.createdAt)}
                     className="h-10 rounded-xl border-[var(--line-subtle)] bg-[var(--bg-surface)] text-base font-semibold sm:h-11"
                   />
-                  <Textarea
+                  <RichTextEditor
                     value={contentDraft}
-                    onChange={(event) => setContentDraft(event.target.value)}
-                    placeholder="Write your note here..."
-                    className="min-h-[54vh] rounded-[20px] border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3.5 text-sm leading-6 sm:min-h-[58vh] sm:p-4 md:min-h-[60vh]"
+                    onChange={setContentDraft}
+                    placeholder="Write here..."
+                    variant="plain"
+                    mode="panel"
+                    toolbarVisibility="always"
+                    toolbarPreset="minimal"
+                    className="rounded-[16px] border border-[var(--line-subtle)] bg-white shadow-none"
+                    minHeightClassName="min-h-[54vh] sm:min-h-[58vh] md:min-h-[60vh]"
                   />
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-[10px] font-medium text-[var(--text-muted)]">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span>Created {format(new Date(selectedNote.createdAt), "dd.MM.yyyy")}</span>
+                      <span className="text-slate-300">•</span>
+                      <span>Updated {formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</span>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
-                    <NotebookPen className="h-5 w-5 text-slate-400" />
+                <div className="p-3.5 sm:p-4 md:p-5">
+                  <div className="flex min-h-[280px] items-start justify-start rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-slate-50/60 p-5 sm:p-6">
+                    <div className="max-w-md space-y-2.5">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                        <NotebookPen className="h-5 w-5 text-slate-400" />
+                      </div>
+                      <div className="space-y-1.5 text-left">
+                        <p className="text-base font-semibold text-[var(--text-primary)]">Start a fresh note</p>
+                        <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                          New notes open with today&apos;s date as the title, so you can begin writing right away.
+                        </p>
+                      </div>
+                      <div className="pt-1">
+                        <Button
+                          type="button"
+                          className="h-10 rounded-xl"
+                          onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
+                          disabled={isCreating}
+                        >
+                          <FilePlus2 className="mr-1.5 h-4 w-4" />
+                          New note for today
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-base font-semibold text-[var(--text-primary)]">No note selected</p>
-                  <p className="max-w-md text-sm leading-6 text-[var(--text-secondary)]">Create a new note and start writing instantly.</p>
-                  <Button
-                    type="button"
-                    className="h-10 rounded-xl"
-                    onClick={() => void handleCreateNote({ title: "", content: "" })}
-                    disabled={isCreating}
-                  >
-                    <FilePlus2 className="mr-2 h-4 w-4" />
-                    Create note
-                  </Button>
                 </div>
               )}
             </section>

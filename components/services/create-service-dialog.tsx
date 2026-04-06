@@ -18,8 +18,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-export function CreateServiceDialog() {
+export function CreateServiceDialog({
+    className,
+    label = "New Service",
+    showLabelOnMobile = false,
+}: {
+    className?: string
+    label?: string
+    showLabelOnMobile?: boolean
+} = {}) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
@@ -56,11 +65,11 @@ export function CreateServiceDialog() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button
-                    className="header-action-button"
+                    className={cn("header-action-button", className)}
                     title="New Service"
                 >
                     <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
-                    <span className="header-action-label">New Service</span>
+                    <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>{label}</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

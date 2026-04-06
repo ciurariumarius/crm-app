@@ -43,7 +43,7 @@ function formatDuration(totalSeconds: number) {
     return `${hours}h ${minutes}m`
 }
 
-const LIST_GRID_COLUMNS = "grid-cols-[minmax(300px,2.7fr)_72px_90px_78px_95px_60px_78px_120px_116px]"
+const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,2.7fr)_88px_96px_92px_116px_72px_88px_136px_120px]"
 
 function toTimestamp(value: Date | string | null | undefined) {
     if (!value) return null
@@ -752,7 +752,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full items-center gap-x-2 rounded-[18px] border border-slate-200/80 bg-white/92 px-5 py-2.5 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-slate-200/80 bg-white/92 px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -1029,7 +1029,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full items-center gap-x-2 rounded-[18px] border border-slate-200/80 bg-white/92 px-5 py-2.5 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-slate-200/80 bg-white/92 px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">

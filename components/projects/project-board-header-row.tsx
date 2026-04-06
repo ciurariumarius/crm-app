@@ -21,12 +21,12 @@ export function ProjectBoardHeaderRow({
     onSort,
 }: ProjectBoardHeaderRowProps) {
     return (
-        <div className={cn("hidden md:grid items-center px-5 gap-x-2", gridColumnsClassName)}>
+        <div className={cn("hidden md:grid items-center px-6 pb-2 gap-x-4", gridColumnsClassName)}>
             <button
                 type="button"
                 onClick={() => onSort("name")}
                 className={cn(
-                    "ui-overline inline-flex items-center gap-1 text-left text-[10px]",
+                    "ui-overline inline-flex items-center gap-1.5 text-left text-[10px]",
                     sortBy === "name" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
                 )}
                 title={`Sort by name (${sortBy === "name" ? (sortDirection === "desc" ? "Z-A" : "A-Z") : "A-Z"})`}
@@ -41,7 +41,7 @@ export function ProjectBoardHeaderRow({
                 type="button"
                 onClick={() => onSort("amount")}
                 className={cn(
-                    "ui-overline inline-flex items-center justify-end gap-1 text-right text-[10px]",
+                    "ui-overline inline-flex items-center justify-end gap-1.5 text-right text-[10px]",
                     sortBy === "amount" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
                 )}
                 title={`Sort by amount (${sortBy === "amount" && sortDirection === "desc" ? "high to low" : "low to high"})`}
@@ -54,7 +54,7 @@ export function ProjectBoardHeaderRow({
                 type="button"
                 onClick={() => onSort("time")}
                 className={cn(
-                    "ui-overline inline-flex items-center justify-center gap-1 text-center text-[10px]",
+                    "ui-overline inline-flex items-center justify-center gap-1.5 text-center text-[10px]",
                     sortBy === "time" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
                 )}
                 title={`Sort by time (${sortBy === "time" && sortDirection === "desc" ? "most to least" : "least to most"})`}
@@ -67,7 +67,7 @@ export function ProjectBoardHeaderRow({
                 type="button"
                 onClick={() => onSort("createdAt")}
                 className={cn(
-                    "ui-overline inline-flex items-center justify-end gap-1 text-right text-[10px]",
+                    "ui-overline inline-flex items-center justify-end gap-1.5 text-right text-[10px]",
                     sortBy === "createdAt" ? "text-slate-700" : "text-slate-500 hover:text-slate-700"
                 )}
                 title={`Sort by created date (${sortBy === "createdAt" && sortDirection === "desc" ? "newest first" : "oldest first"})`}

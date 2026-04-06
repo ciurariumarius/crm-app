@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { createSite } from "@/lib/actions/sites"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
+import { cn } from "@/lib/utils"
 import {
     Select,
     SelectContent,
@@ -26,10 +27,16 @@ import {
 
 export function CreateSiteDialog({
     partnerId: initialPartnerId,
-    partners
+    partners,
+    className,
+    label = "Add Site",
+    showLabelOnMobile = false,
 }: {
     partnerId?: string
     partners?: { id: string; name: string }[]
+    className?: string
+    label?: string
+    showLabelOnMobile?: boolean
 }) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -62,11 +69,11 @@ export function CreateSiteDialog({
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button
-                    className="header-action-button"
+                    className={cn("header-action-button", className)}
                     title="Add Site"
                 >
                     <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
-                    <span className="header-action-label">Add Site</span>
+                    <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>{label}</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

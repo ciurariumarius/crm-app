@@ -228,8 +228,8 @@
   }
 
   .header-action-button {
-    @apply h-11 w-11 md:min-w-[156px] md:px-6 rounded-[10px] bg-primary text-primary-foreground hover:brightness-95 transition-all duration-200 active:scale-[0.98] font-semibold text-sm inline-flex items-center justify-center gap-2 shrink-0;
-    box-shadow: var(--shadow-apple);
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-[18px] bg-primary px-3 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:brightness-95 active:scale-[0.98] md:min-w-[148px] md:px-5;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
   }
 
   .header-action-icon {
@@ -238,6 +238,17 @@
 
   .header-action-label {
     @apply hidden md:inline text-sm font-semibold;
+  }
+
+  .hidescrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hidescrollbar::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   .kpi-primary {

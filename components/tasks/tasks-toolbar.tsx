@@ -151,8 +151,8 @@ export function TasksToolbar({
         <div className="relative -mx-1 sm:mx-0">
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-white via-white/90 to-transparent sm:hidden" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-white via-white/90 to-transparent sm:hidden" />
-          <div className="overflow-x-auto px-1 pb-0.5 hidescrollbar snap-x snap-mandatory scroll-px-3 touch-pan-x overscroll-x-contain">
-          <div className="inline-flex min-w-max items-center gap-2">
+          <div className="overflow-x-auto px-1 pb-0.5 hidescrollbar snap-x snap-mandatory scroll-px-3 touch-pan-x overscroll-x-contain md:overflow-visible md:px-0">
+          <div className="inline-flex min-w-max items-center gap-2 md:flex md:w-full md:min-w-0 md:items-center md:gap-3 lg:gap-4">
             <div className="inline-flex h-9 shrink-0 snap-start items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
               {STATUS_OPTIONS.map((option) => (
                 <Link
@@ -205,7 +205,7 @@ export function TasksToolbar({
               ) : null}
             </Link>
 
-            <div className="shrink-0 snap-start">
+            <div className="shrink-0 snap-start md:min-w-[160px] md:flex-1">
               <ProjectCombobox
                 projects={projects}
                 currentProject={currentProject}
@@ -217,7 +217,7 @@ export function TasksToolbar({
               />
             </div>
 
-            <div className="shrink-0 snap-start">
+            <div className="shrink-0 snap-start md:min-w-[150px] md:flex-1">
               <PartnerCombobox
                 partners={partners}
                 currentPartner={currentPartner}
@@ -229,14 +229,14 @@ export function TasksToolbar({
               />
             </div>
 
-            <div className="shrink-0 snap-start">
+            <div className="shrink-0 snap-start md:ml-auto">
               <SortCombobox currentSort={currentSort} onSelect={(value) => pushWithOverrides({ sort: value })} />
             </div>
             <div className="shrink-0 snap-start">
               <ColumnsToggle currentCols={currentCols} onSelect={(value) => pushWithOverrides({ cols: String(value) })} />
             </div>
           </div>
-        </div>
+          </div>
         </div>
       </FilterBarShell>
 
@@ -355,9 +355,9 @@ function ProjectCombobox({
   const selectedProject = projects.find((project) => project.id === currentProject)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className={triggerClassName(isActive)}>
+        <button type="button" className={triggerClassName(isActive, "w-full justify-between md:min-w-0")}>
           <span className="max-w-[140px] truncate">{selectedProject?.name || "Project"}</span>
           <ChevronDown className="h-4 w-4 opacity-70" />
         </button>
@@ -415,9 +415,9 @@ function PartnerCombobox({
   const selectedPartner = partners.find((partner) => partner.id === currentPartner)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className={triggerClassName(isActive)}>
+        <button type="button" className={triggerClassName(isActive, "w-full justify-between md:min-w-0")}>
           <span className="max-w-[140px] truncate">{selectedPartner?.name || "Partner"}</span>
           <ChevronDown className="h-4 w-4 opacity-70" />
         </button>

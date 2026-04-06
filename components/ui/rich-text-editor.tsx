@@ -19,6 +19,7 @@ import {
     Code2,
     Copy,
     Download,
+    ImagePlus,
     List,
     Table as TableIcon,
     Minus,
@@ -66,6 +67,7 @@ interface RichTextEditorProps {
     minHeightClassName?: string
     uploadProjectId?: string
     toolbarVisibility?: "focus" | "always"
+    toolbarPreset?: "full" | "minimal"
     toolbarActions?: React.ReactNode
     className?: string
     mode?: "panel" | "document"
@@ -119,6 +121,7 @@ export function RichTextEditor({
     minHeightClassName,
     uploadProjectId,
     toolbarVisibility = "focus",
+    toolbarPreset = "full",
     toolbarActions,
     className,
     mode = "panel",
@@ -130,6 +133,7 @@ export function RichTextEditor({
     const [codeCopyState, setCodeCopyState] = React.useState<"idle" | "copied" | "error">("idle")
     const editorRef = React.useRef<TiptapEditor | null>(null)
     const editorViewportRef = React.useRef<HTMLDivElement | null>(null)
+    const imageInputRef = React.useRef<HTMLInputElement | null>(null)
     const lastEditorHtmlRef = React.useRef(value)
     const [codeCopyAnchor, setCodeCopyAnchor] = React.useState<{ top: number; left: number } | null>(null)
     const [activeCodeBlockElement, setActiveCodeBlockElement] = React.useState<HTMLElement | null>(null)
@@ -258,6 +262,17 @@ export function RichTextEditor({
             }
         },
         [insertImageSource, uploadImageFile]
+    )
+
+    const handleToolbarImageUpload = React.useCallback(
+        (event: React.ChangeEvent<HTMLInputElement>) => {
+            const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"))
+            if (files.length > 0) {
+                void uploadAndInsertFiles(files)
+            }
+            event.currentTarget.value = ""
+        },
+        [uploadAndInsertFiles]
     )
 
     const openImageViewer = React.useCallback(
@@ -607,6 +622,7 @@ export function RichTextEditor({
 
     const currentViewerSrc = viewer.sources[viewer.index] || ""
     const showToolbar = toolbarVisibility === "always" || isFocused
+    const isMinimalToolbar = toolbarPreset === "minimal"
 
     return (
         <>
@@ -642,42 +658,46 @@ export function RichTextEditor({
                                 "mx-4 md:mx-auto mt-4 mb-6 w-full md:w-[calc(100%-2rem)] max-w-4xl rounded-xl border border-slate-200/80 bg-white/92 px-3 pt-2 pb-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm"
                         )}
                     >
-                        <Toggle
-                            size="sm"
-                            pressed={editor.isActive("paragraph")}
-                            onPressedChange={() => editor.chain().focus().setParagraph().run()}
-                            className="h-8 px-3 text-xs font-semibold"
-                            aria-label="Paragraph"
-                        >
-                            P
-                        </Toggle>
-                        <Toggle
-                            size="sm"
-                            pressed={editor.isActive("heading", { level: 1 })}
-                            onPressedChange={(pressed) =>
-                                pressed
-                                    ? editor.chain().focus().setHeading({ level: 1 }).run()
-                                    : editor.chain().focus().setParagraph().run()
-                            }
-                            className="h-8 px-3 text-xs font-semibold"
-                            aria-label="Heading 1"
-                        >
-                            H1
-                        </Toggle>
-                        <Toggle
-                            size="sm"
-                            pressed={editor.isActive("heading", { level: 2 })}
-                            onPressedChange={(pressed) =>
-                                pressed
-                                    ? editor.chain().focus().setHeading({ level: 2 }).run()
-                                    : editor.chain().focus().setParagraph().run()
-                            }
-                            className="h-8 px-3 text-xs font-semibold"
-                            aria-label="Heading 2"
-                        >
-                            H2
-                        </Toggle>
-                        <div className="mx-1 h-4 w-px bg-border/50" />
+                        {!isMinimalToolbar ? (
+                            <>
+                                <Toggle
+                                    size="sm"
+                                    pressed={editor.isActive("paragraph")}
+                                    onPressedChange={() => editor.chain().focus().setParagraph().run()}
+                                    className="h-8 px-3 text-xs font-semibold"
+                                    aria-label="Paragraph"
+                                >
+                                    P
+                                </Toggle>
+                                <Toggle
+                                    size="sm"
+                                    pressed={editor.isActive("heading", { level: 1 })}
+                                    onPressedChange={(pressed) =>
+                                        pressed
+                                            ? editor.chain().focus().setHeading({ level: 1 }).run()
+                                            : editor.chain().focus().setParagraph().run()
+                                    }
+                                    className="h-8 px-3 text-xs font-semibold"
+                                    aria-label="Heading 1"
+                                >
+                                    H1
+                                </Toggle>
+                                <Toggle
+                                    size="sm"
+                                    pressed={editor.isActive("heading", { level: 2 })}
+                                    onPressedChange={(pressed) =>
+                                        pressed
+                                            ? editor.chain().focus().setHeading({ level: 2 }).run()
+                                            : editor.chain().focus().setParagraph().run()
+                                    }
+                                    className="h-8 px-3 text-xs font-semibold"
+                                    aria-label="Heading 2"
+                                >
+                                    H2
+                                </Toggle>
+                                <div className="mx-1 h-4 w-px bg-border/50" />
+                            </>
+                        ) : null}
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("bold")}
@@ -710,22 +730,35 @@ export function RichTextEditor({
                         >
                             <Code2 className="h-4 w-4" />
                         </Toggle>
-                        <div className="mx-1 h-4 w-px bg-border/50" />
                         <button
                             type="button"
-                            onClick={() =>
-                                editor
-                                    .chain()
-                                    .focus()
-                                    .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-                                    .run()
-                            }
+                            onClick={() => imageInputRef.current?.click()}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-                            aria-label="Insert table"
-                            title="Insert table"
+                            aria-label="Upload image"
+                            title="Upload image"
                         >
-                            <TableIcon className="h-4 w-4" />
+                            <ImagePlus className="h-4 w-4" />
                         </button>
+                        {!isMinimalToolbar ? (
+                            <>
+                                <div className="mx-1 h-4 w-px bg-border/50" />
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        editor
+                                            .chain()
+                                            .focus()
+                                            .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                                            .run()
+                                    }
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                                    aria-label="Insert table"
+                                    title="Insert table"
+                                >
+                                    <TableIcon className="h-4 w-4" />
+                                </button>
+                            </>
+                        ) : null}
                         {toolbarActions && (
                             <div className="ml-auto flex items-center gap-1">
                                 {toolbarActions}
@@ -733,6 +766,14 @@ export function RichTextEditor({
                         )}
                     </div>
                 )}
+                <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleToolbarImageUpload}
+                />
 
                 {editor && (
                     <BubbleMenu

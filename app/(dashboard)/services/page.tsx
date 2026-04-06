@@ -26,6 +26,13 @@ export default async function ServicesPage() {
                 <DashboardPageHeader
                     title="Services"
                     actions={<CreateServiceDialog />}
+                    mobileActions={
+                        <CreateServiceDialog
+                            label="Quick Add"
+                            showLabelOnMobile
+                            className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
+                        />
+                    }
                     showMobile
                 />
             </div>

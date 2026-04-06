@@ -20,6 +20,9 @@ type AddPartnerPaymentDialogProps = {
     onOpenChange?: (open: boolean) => void
     trigger?: ReactNode
     hideTrigger?: boolean
+    className?: string
+    label?: string
+    showLabelOnMobile?: boolean
 }
 
 export function AddPartnerPaymentDialog({
@@ -27,7 +30,10 @@ export function AddPartnerPaymentDialog({
     open,
     onOpenChange,
     trigger,
-    hideTrigger = false
+    hideTrigger = false,
+    className,
+    label = "Add Payment",
+    showLabelOnMobile = false,
 }: AddPartnerPaymentDialogProps) {
     const router = useRouter()
     const [internalOpen, setInternalOpen] = useState(false)
@@ -130,9 +136,9 @@ export function AddPartnerPaymentDialog({
             {!hideTrigger ? (
                 <DialogTrigger asChild>
                     {trigger || (
-                        <Button variant="default" className="h-9 gap-2 shadow-sm rounded-lg font-semibold bg-emerald-600 text-white hover:bg-emerald-700">
-                            <Plus className="h-4 w-4" />
-                            Add Payment
+                        <Button variant="default" className={cn("header-action-button", className)}>
+                            <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
+                            <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>{label}</span>
                         </Button>
                     )}
                 </DialogTrigger>
