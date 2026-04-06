@@ -20,13 +20,14 @@ import { ChevronDown } from "lucide-react"
 import { detectLmsDatePresetId, getLmsDatePresets, type LmsDatePreset } from "@/lib/lms-tasks/date-presets"
 import type { DateRange } from "react-day-picker"
 
-type RevenueMode = "partner" | "domain" | "project"
+type RevenueMode = "partner" | "domain" | "project" | "type"
 
 export type RevenueAnalysisEntry = {
     key: string
     label: string
     revenue: number
     hoursThisMonth?: number
+    projectCount?: number
     openProjectId?: string
     openPartnerId?: string
     openSiteId?: string
@@ -38,12 +39,14 @@ export type RevenuePeriodDataset = {
   partner: RevenueAnalysisEntry[]
   domain: RevenueAnalysisEntry[]
   project: RevenueAnalysisEntry[]
+  type: RevenueAnalysisEntry[]
 }
 
 export type RevenueSourceProject = {
   id: string
   currentFee: number
   createdAt: string
+  revenueType: "recurring" | "one-time"
   hoursThisMonth?: number
   label: string
   site: {
@@ -77,6 +80,7 @@ const MODE_OPTIONS: Array<{ label: string; value: RevenueMode }> = [
     { label: "Partner", value: "partner" },
     { label: "Domain", value: "domain" },
     { label: "Project", value: "project" },
+    { label: "Type", value: "type" },
 ]
 
 type PieLabelProps = {
@@ -135,11 +139,19 @@ function isProjectIncludedInRange(project: RevenueSourceProject, range?: DateRan
     const createdAt = new Date(project.createdAt)
     if (Number.isNaN(createdAt.getTime())) return false
 
+    const effectiveStart = range?.from ? new Date(range.from) : undefined
     const effectiveEnd = range?.to ?? range?.from
     if (!effectiveEnd) return true
 
+    if (effectiveStart) effectiveStart.setHours(0, 0, 0, 0)
     const inclusiveEnd = new Date(effectiveEnd)
     inclusiveEnd.setHours(23, 59, 59, 999)
+
+    if (project.revenueType === "recurring") {
+        return createdAt <= inclusiveEnd
+    }
+
+    if (effectiveStart && createdAt < effectiveStart) return false
     return createdAt <= inclusiveEnd
 }
 
@@ -153,6 +165,7 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
     const partner = new Map<string, RevenueAnalysisEntry>()
     const domain = new Map<string, RevenueAnalysisEntry>()
     const project = new Map<string, RevenueAnalysisEntry>()
+    const type = new Map<string, RevenueAnalysisEntry>()
     let totalRevenue = 0
 
     for (const sourceProject of projects) {
@@ -171,19 +184,27 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
             key: partnerId,
             label: partnerLabel,
             revenue: 0,
+            hoursThisMonth: 0,
+            projectCount: 0,
             openPartnerId: sourceProject.site?.partner?.id,
         }
         partnerEntry.revenue += fee
+        partnerEntry.hoursThisMonth = (partnerEntry.hoursThisMonth || 0) + (sourceProject.hoursThisMonth || 0)
+        partnerEntry.projectCount = (partnerEntry.projectCount || 0) + 1
         partner.set(partnerId, partnerEntry)
 
         const domainEntry = domain.get(domainId) || {
             key: String(domainId),
             label: domainLabel,
             revenue: 0,
+            hoursThisMonth: 0,
+            projectCount: 0,
             openSiteId: sourceProject.site?.id || undefined,
             openPartnerId: sourceProject.site?.partner?.id || undefined,
         }
         domainEntry.revenue += fee
+        domainEntry.hoursThisMonth = (domainEntry.hoursThisMonth || 0) + (sourceProject.hoursThisMonth || 0)
+        domainEntry.projectCount = (domainEntry.projectCount || 0) + 1
         domain.set(String(domainId), domainEntry)
 
         const projectEntry = project.get(sourceProject.id) || {
@@ -191,6 +212,7 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
             label: sourceProject.label,
             revenue: 0,
             hoursThisMonth: sourceProject.hoursThisMonth || 0,
+            projectCount: 1,
             openProjectId: sourceProject.id,
             openSiteId: sourceProject.site?.id || undefined,
             openPartnerId: sourceProject.site?.partner?.id || undefined,
@@ -198,6 +220,19 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
         }
         projectEntry.revenue += fee
         project.set(sourceProject.id, projectEntry)
+
+        const typeKey = sourceProject.revenueType
+        const typeEntry = type.get(typeKey) || {
+            key: typeKey,
+            label: typeKey === "recurring" ? "Recurring" : "One-Time",
+            revenue: 0,
+            hoursThisMonth: 0,
+            projectCount: 0,
+        }
+        typeEntry.revenue += fee
+        typeEntry.hoursThisMonth = (typeEntry.hoursThisMonth || 0) + (sourceProject.hoursThisMonth || 0)
+        typeEntry.projectCount = (typeEntry.projectCount || 0) + 1
+        type.set(typeKey, typeEntry)
     }
 
     return {
@@ -205,7 +240,15 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
         partner: toSortedRows(partner),
         domain: toSortedRows(domain),
         project: toSortedRows(project),
+        type: toSortedRows(type),
     }
+}
+
+function getEntryMeta(entry: RevenueAnalysisEntry, isOther: boolean) {
+    if (isOther) return "Multiple small items"
+    const hoursLabel = `${formatHours(entry.hoursThisMonth)} this month`
+    if ((entry.projectCount || 0) > 1) return `${entry.projectCount} projects • ${hoursLabel}`
+    return hoursLabel
 }
 
 function reduceForChart(data: RevenueAnalysisEntry[], max = 8) {
@@ -258,9 +301,9 @@ function RevenueDateFilter({
             <PopoverContent
                 align="start"
                 collisionPadding={16}
-                className="w-[min(calc(100vw-2rem),440px)] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-2 shadow-[var(--shadow-apple)]"
+                className="w-[min(calc(100vw-2rem),404px)] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-apple)]"
             >
-                <div className="flex max-h-[124px] flex-wrap gap-1.5 overflow-y-auto pr-1">
+                <div className="flex max-h-[156px] flex-wrap gap-2 overflow-y-auto pr-1">
                     {presets.map((preset, index) => (
                         <button
                             key={preset.id}
@@ -270,7 +313,7 @@ function RevenueDateFilter({
                                 setOpen(false)
                             }}
                             className={cn(
-                                "inline-flex h-7 items-center justify-center rounded-md border px-2 text-[11px] font-medium transition-colors",
+                                "inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-[11px] font-semibold transition-colors",
                                 index === 0 ? "w-full" : "w-[calc(50%-4px)]",
                                 activePresetId === preset.id
                                     ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
@@ -282,7 +325,7 @@ function RevenueDateFilter({
                     ))}
                 </div>
 
-                <div className="my-2 h-px bg-[var(--line-subtle)]" />
+                <div className="my-1.5 h-px bg-[var(--line-subtle)]" />
 
                 <Calendar
                     mode="range"
@@ -295,36 +338,36 @@ function RevenueDateFilter({
                         }
                     }}
                     numberOfMonths={1}
-                    className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-0.5 text-sm [&_[data-slot=calendar]]:![--cell-size:clamp(24px,6vw,30px)]"
+                    className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-0.5 text-sm [&_[data-slot=calendar]]:![--cell-size:clamp(18px,4.2vw,22px)]"
                     classNames={{
-                        root: "w-full p-1",
+                        root: "w-full p-0.5",
                         months: "relative w-full",
                         month: "w-full",
                         month_grid: "w-full table-fixed border-collapse",
                         weekdays: "grid w-full grid-cols-7",
-                        weekday: "text-center text-[11px] font-medium text-[var(--text-secondary)]",
+                        weekday: "text-center text-[9px] font-medium text-[var(--text-secondary)]",
                         weeks: "w-full",
-                        week: "mt-1 grid w-full grid-cols-7",
+                        week: "mt-0 grid w-full grid-cols-7",
                         day: "w-full",
                         nav: "absolute inset-x-0 top-1 flex w-full items-center justify-between px-1",
-                        month_caption: "flex h-7 w-full items-center justify-center px-8 text-sm",
-                        button_previous: "h-6 w-6",
-                        button_next: "h-6 w-6",
+                        month_caption: "flex h-5 w-full items-center justify-center px-6 text-[12px]",
+                        button_previous: "h-4.5 w-4.5",
+                        button_next: "h-4.5 w-4.5",
                     }}
                 />
 
-                <div className="mt-2 flex items-center justify-between">
+                <div className="mt-1.5 flex items-center justify-between">
                     <button
                         type="button"
                         onClick={() => {
                             onSelectPreset("all")
                             setOpen(false)
                         }}
-                        className="text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        className="text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     >
                         Clear range
                     </button>
-                    <span className="text-[10px] font-medium text-[var(--text-secondary)]">
+                    <span className="text-[9px] font-medium text-[var(--text-secondary)]">
                         Pick start and end date
                     </span>
                 </div>
@@ -423,6 +466,8 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
             setSelectedPartnerId(entry.openPartnerId)
             return
         }
+
+        if (mode === "type") return
 
         if (!entry.openSiteId) return
         setIsOpeningEntity(true)
@@ -552,65 +597,68 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     <div className="flex flex-col justify-center gap-3">
                         {(isListExpanded ? chartData : chartData.slice(0, 4)).map((entry, index) => {
                             const isOther = entry.key === "__other__"
-                        const share = totalRevenue > 0 ? (entry.revenue / totalRevenue) * 100 : 0
-                        
-                        // We cast back because our entry from reduceForChart might not align perfectly with active dataset
-                        const originalEntry = isOther ? null : rows.find(r => r.key === entry.key)
-                        const canOpen = !isOther && (
-                            mode === "project" ? Boolean(originalEntry?.openProjectId) :
-                            mode === "partner" ? Boolean(originalEntry?.openPartnerId) :
-                            Boolean(originalEntry?.openSiteId)
-                        )
-                        const dotColor = COLORS[index]
-                        const isHighlighted = activeSegment === entry.key
-                        
-                        return (
-                            <button
-                                key={entry.key}
-                                type="button"
-                                onClick={() => {
-                                    if (canOpen && originalEntry) void openRowEntity(originalEntry)
-                                }}
-                                disabled={!canOpen}
-                                className={cn(
-                                    "flex items-center justify-between gap-4 rounded-[16px] px-5 py-4 text-left transition-all",
-                                    isHighlighted ? "bg-white ring-2 ring-blue-500 shadow-lg scale-[1.02] z-10 relative" : "bg-[#F8F9FB] border border-transparent",
-                                    canOpen && !isHighlighted ? "group cursor-pointer hover:bg-[#F1F3F7]" : !canOpen && !isHighlighted ? "cursor-default" : ""
-                                )}
-                            >
-                                <div className="flex items-center gap-4 min-w-0">
-                                    <span
-                                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                        style={{ backgroundColor: dotColor }}
-                                    />
-                                    <div className="flex flex-col min-w-0">
-                                        <p className="truncate text-[13px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                                            {entry.label}
-                                        </p>
-                                        <p className="text-[10px] font-bold text-slate-400">
-                                            {isOther ? "Multiple small items" : originalEntry?.hoursThisMonth ? `${formatHours(originalEntry.hoursThisMonth)} this month` : "0.0h this month"}
-                                        </p>
-                                    </div>
-                                </div>
+                            const share = totalRevenue > 0 ? (entry.revenue / totalRevenue) * 100 : 0
 
-                                <div className="flex flex-col items-end shrink-0">
-                                    <p className="text-[14px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                                        {formatCurrency(entry.revenue)}
-                                    </p>
-                                    <div className="mt-0.5 text-[11px] font-semibold text-slate-400">
-                                        {share.toFixed(1)}%
+                            const originalEntry = isOther ? null : rows.find((row) => row.key === entry.key)
+                            const canOpen = !isOther && (
+                                mode === "project"
+                                    ? Boolean(originalEntry?.openProjectId)
+                                    : mode === "partner"
+                                      ? Boolean(originalEntry?.openPartnerId)
+                                      : mode === "domain"
+                                        ? Boolean(originalEntry?.openSiteId)
+                                        : false
+                            )
+                            const dotColor = COLORS[index]
+                            const isHighlighted = activeSegment === entry.key
+
+                            return (
+                                <button
+                                    key={entry.key}
+                                    type="button"
+                                    onClick={() => {
+                                        if (canOpen && originalEntry) void openRowEntity(originalEntry)
+                                    }}
+                                    disabled={!canOpen}
+                                    className={cn(
+                                        "flex items-center justify-between gap-4 rounded-[16px] px-5 py-4 text-left transition-all",
+                                        isHighlighted ? "relative z-10 scale-[1.02] bg-white shadow-lg ring-2 ring-blue-500" : "border border-transparent bg-[#F8F9FB]",
+                                        canOpen && !isHighlighted ? "group cursor-pointer hover:bg-[#F1F3F7]" : !canOpen && !isHighlighted ? "cursor-default" : ""
+                                    )}
+                                >
+                                    <div className="flex min-w-0 items-center gap-4">
+                                        <span
+                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                            style={{ backgroundColor: dotColor }}
+                                        />
+                                        <div className="flex min-w-0 flex-col">
+                                            <p className="truncate text-[13px] font-bold text-slate-900 transition-colors group-hover:text-blue-600">
+                                                {entry.label}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-400">
+                                                {getEntryMeta(originalEntry || entry, isOther)}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                            </button>
-                        )
-                    })}
+
+                                    <div className="flex shrink-0 flex-col items-end">
+                                        <p className="text-[14px] font-bold text-slate-900 transition-colors group-hover:text-blue-600">
+                                            {formatCurrency(entry.revenue)}
+                                        </p>
+                                        <div className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                                            {share.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                </button>
+                            )
+                        })}
                     </div>
                     {chartData.length > 4 && (
                         <button
                             onClick={() => setIsListExpanded(!isListExpanded)}
                             className="text-[12px] font-bold text-slate-500 hover:text-slate-800 transition-colors w-full text-center py-2.5 rounded-xl hover:bg-slate-50/80 border border-transparent hover:border-slate-200/60"
                         >
-                            {isListExpanded ? "Show less" : `View all ${totalCount} ${mode}s`}
+                            {isListExpanded ? "Show less" : `View all ${totalCount} ${mode === "type" ? "types" : `${mode}s`}`}
                         </button>
                     )}
                 </div>

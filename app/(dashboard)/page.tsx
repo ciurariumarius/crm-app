@@ -365,17 +365,15 @@ export default async function HomePage() {
     )
 
     const allProjects = projectsRaw as HomeProject[]
-    const recurringProjects = allProjects.filter((project) =>
-        project.services.some((service) => service.isRecurring)
-    )
 
     const revenueSourceProjects = serialize(
-        recurringProjects
+        allProjects
             .filter((project) => Number(project.currentFee || 0) > 0)
             .map((project) => ({
                 id: project.id,
                 currentFee: Number(project.currentFee || 0),
                 createdAt: project.createdAt.toISOString(),
+                revenueType: project.services.some((service) => service.isRecurring) ? "recurring" : "one-time",
                 hoursThisMonth: monthHoursByProject.get(project.id) || 0,
                 label: formatProjectName(project),
                 site: project.site
