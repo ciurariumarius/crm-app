@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { CalendarDays, Check, Plus } from "lucide-react"
+import { Banknote, Building2, CalendarDays, Check, Circle, Clock3, ListTodo, Plus, RefreshCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
@@ -142,6 +142,32 @@ function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
         <div className="flex items-center justify-start gap-1.5" title={dateTimeLabel}>
             <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
             <span className="text-[11px] font-medium text-slate-500">{dateLabel}</span>
+        </div>
+    )
+}
+
+function ProjectMetaPill({
+    icon,
+    label,
+    value,
+    className,
+}: {
+    icon: React.ReactNode
+    label: string
+    value: React.ReactNode
+    className?: string
+}) {
+    return (
+        <div
+            title={typeof value === "string" ? `${label}: ${value}` : label}
+            aria-label={label}
+            className={cn(
+                "inline-flex h-8 max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-2.5 text-[12px] font-semibold text-slate-700 shadow-sm",
+                className
+            )}
+        >
+            <span className="shrink-0 text-slate-400">{icon}</span>
+            <span className="truncate">{value}</span>
         </div>
     )
 }
@@ -534,72 +560,87 @@ export function ProjectsBoardRows({
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {orderedProjects.map((project) => {
-                    const projectStatus = normalizeProjectStatus(project.status)
+                    const projectStatus = getDisplayStatus(project)
+                    const projectPayment = getDisplayPayment(project)
                     const overAllocated = isTimeOverAllocated(project)
                     const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
                     const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
+                    const createdDate = formatDateTimeParts(project.createdAt)
 
                     return (
                         <button
                             key={project.id}
                             type="button"
                             onClick={() => openDetails(project)}
-                            className={cn("text-left rounded-xl border border-border/60 bg-card p-5 premium-card", getProjectToneClass(projectStatus))}
+                            className={cn(
+                                "text-left rounded-2xl border border-border/60 bg-card p-4 premium-card transition-all hover:border-slate-300",
+                                getProjectToneClass(projectStatus)
+                            )}
                         >
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className={cn("text-lg font-bold tracking-tight truncate", getProjectTitleClass(projectStatus))}>{project.site.domainName}</p>
-                                    <div className={cn("mt-1 flex items-center gap-2 text-sm", getProjectMetaClass(projectStatus))}>
-                                        <p className="truncate">{project.serviceLabel}</p>
+                            <div className="flex items-start gap-3">
+                                <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className={cn("truncate text-[17px] font-bold tracking-tight", getProjectTitleClass(projectStatus))}>
+                                                {project.site.domainName}
+                                            </p>
+                                            <p className={cn("mt-0.5 truncate text-sm", getProjectMetaClass(projectStatus))}>
+                                                {project.serviceLabel}
+                                            </p>
+                                        </div>
+                                        <div className="flex shrink-0 flex-col items-end gap-1.5">
+                                            <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs" className="min-w-[78px]">
+                                                {projectStatus}
+                                            </StatusChip>
+                                            <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs" className="min-w-[78px]">
+                                                {projectPayment}
+                                            </StatusChip>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                        <StatusChip
+                                            tone={project.isRecurring ? "recurring" : "oneTime"}
+                                            size="xs"
+                                            className="min-w-[92px]"
+                                            icon={project.isRecurring ? <RefreshCcw className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5 fill-current" />}
+                                        >
+                                            {project.isRecurring ? "Recurring" : "One-Time"}
+                                        </StatusChip>
                                     </div>
                                 </div>
-                                <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                                    <StatusChip tone={statusToneFromLabel(projectStatus)} size="sm">
-                                        {projectStatus}
-                                    </StatusChip>
-                                </div>
                             </div>
 
-                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                                <div>
-                                    <p className="text-slate-400 text-xs font-medium mb-1">Type</p>
-                                    <StatusChip tone={project.isRecurring ? "recurring" : "oneTime"} size="sm">
-                                        {project.isRecurring ? "Recurring" : "One-Time"}
-                                    </StatusChip>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs font-medium mb-1">Payment</p>
-                                    <StatusChip tone={project.paymentStatus === "Paid" ? "paid" : "unpaid"} size="sm">
-                                        {project.paymentStatus}
-                                    </StatusChip>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs font-medium">Amount</p>
-                                    <p className="font-semibold text-slate-800">{currencyFormatter.format(project.amount)} RON</p>
-                                </div>
-                                <div>
-                                    <p className="text-slate-400 text-xs font-medium">Time</p>
-                                    <p
-                                        className={cn(
-                                            "font-semibold",
-                                            overAllocated
-                                                ? "inline-flex items-center rounded-md border border-rose-300 bg-rose-100 px-2 py-0.5 text-rose-800 shadow-sm"
-                                                : "text-slate-700"
-                                        )}
-                                    >
-                                        {formatDuration(project.secondsLogged)}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="mt-4">
-                                <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-1">
-                                    <span>Tasks</span>
-                                    <span>{project.completedTasks}/{totalTasks}</span>
-                                </div>
-                                <div className="h-1.5 rounded-full bg-slate-100">
-                                    <div className="h-full rounded-full bg-blue-600" style={{ width: `${progress}%` }} />
-                                </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <ProjectMetaPill
+                                    icon={<Banknote className="h-3.5 w-3.5" />}
+                                    label="Amount"
+                                    value={`${currencyFormatter.format(getDisplayAmount(project))} RON`}
+                                />
+                                <ProjectMetaPill
+                                    icon={<Clock3 className="h-3.5 w-3.5" />}
+                                    label="Time logged"
+                                    value={formatDuration(project.secondsLogged)}
+                                    className={cn(
+                                        overAllocated && "border-rose-300 bg-rose-50 text-rose-800"
+                                    )}
+                                />
+                                <ProjectMetaPill
+                                    icon={<ListTodo className="h-3.5 w-3.5" />}
+                                    label="Tasks"
+                                    value={`${project.completedTasks}/${totalTasks} (${Math.round(progress)}%)`}
+                                />
+                                <ProjectMetaPill
+                                    icon={<Building2 className="h-3.5 w-3.5" />}
+                                    label="Partner"
+                                    value={project.site.partner.name}
+                                />
+                                <ProjectMetaPill
+                                    icon={<CalendarDays className="h-3.5 w-3.5" />}
+                                    label="Created"
+                                    value={createdDate.dateLabel}
+                                />
                             </div>
                         </button>
                     )

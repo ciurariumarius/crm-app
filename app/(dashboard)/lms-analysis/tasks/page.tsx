@@ -1077,8 +1077,12 @@ function DateFilterCombobox({
           <ChevronDown className="h-4 w-4 opacity-70" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[min(96vw,640px)] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3 shadow-[var(--shadow-apple)]">
-        <div className="flex max-h-[180px] flex-wrap gap-2 overflow-y-auto pr-1">
+      <PopoverContent
+        align="start"
+        collisionPadding={16}
+        className="w-[min(calc(100vw-2rem),440px)] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-2 shadow-[var(--shadow-apple)]"
+      >
+        <div className="flex max-h-[124px] flex-wrap gap-1.5 overflow-y-auto pr-1">
           {presets.map((preset, index) => (
             <button
               key={preset.id}
@@ -1088,7 +1092,7 @@ function DateFilterCombobox({
                 setOpen(false)
               }}
               className={cn(
-                "inline-flex h-8 items-center justify-center rounded-md border px-2 text-xs font-medium transition-colors",
+                "inline-flex h-7 items-center justify-center rounded-md border px-2 text-[11px] font-medium transition-colors",
                 index === 0 ? "w-full" : "w-[calc(50%-4px)]",
                 activePresetId === preset.id
                   ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
@@ -1113,36 +1117,36 @@ function DateFilterCombobox({
             }
           }}
           numberOfMonths={1}
-          className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-1 [&_[data-slot=calendar]]:![--cell-size:clamp(34px,10vw,44px)]"
+          className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-0.5 text-sm [&_[data-slot=calendar]]:![--cell-size:clamp(24px,6vw,30px)]"
           classNames={{
-            root: "w-full p-2",
+            root: "w-full p-1",
             months: "relative w-full",
             month: "w-full",
             month_grid: "w-full table-fixed border-collapse",
             weekdays: "grid w-full grid-cols-7",
-            weekday: "text-center",
+            weekday: "text-center text-[11px] font-medium text-[var(--text-secondary)]",
             weeks: "w-full",
-            week: "grid w-full grid-cols-7 mt-2",
+            week: "mt-1 grid w-full grid-cols-7",
             day: "w-full",
             nav: "absolute inset-x-0 top-1 flex w-full items-center justify-between px-1",
-            month_caption: "flex h-9 w-full items-center justify-center px-10",
-            button_previous: "h-8 w-8",
-            button_next: "h-8 w-8",
+            month_caption: "flex h-7 w-full items-center justify-center px-8 text-sm",
+            button_previous: "h-6 w-6",
+            button_next: "h-6 w-6",
           }}
         />
 
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-2 flex items-center justify-between">
           <button
             type="button"
             onClick={() => {
               onSelectPreset("all")
               setOpen(false)
             }}
-            className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             Clear range
           </button>
-          <span className="text-[11px] font-medium text-[var(--text-secondary)]">
+          <span className="text-[10px] font-medium text-[var(--text-secondary)]">
             Pick start and end date
           </span>
         </div>

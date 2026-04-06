@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { format } from "date-fns"
 import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts"
 import { cn, formatCurrency } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -13,8 +14,12 @@ import { getSiteById } from "@/lib/actions/sites"
 import { toast } from "sonner"
 import type { ProjectWithDetails } from "@/types"
 import type { Service, Site } from "@prisma/client"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { ChevronDown } from "lucide-react"
+import { detectLmsDatePresetId, getLmsDatePresets, type LmsDatePreset } from "@/lib/lms-tasks/date-presets"
+import type { DateRange } from "react-day-picker"
 
-export type RevenuePeriodKey = "all_time" | "this_month" | "last_month" | "this_quarter" | "this_year"
 type RevenueMode = "partner" | "domain" | "project"
 
 export type RevenueAnalysisEntry = {
@@ -29,14 +34,28 @@ export type RevenueAnalysisEntry = {
 }
 
 export type RevenuePeriodDataset = {
-    totalRevenue: number
-    partner: RevenueAnalysisEntry[]
-    domain: RevenueAnalysisEntry[]
-    project: RevenueAnalysisEntry[]
+  totalRevenue: number
+  partner: RevenueAnalysisEntry[]
+  domain: RevenueAnalysisEntry[]
+  project: RevenueAnalysisEntry[]
+}
+
+export type RevenueSourceProject = {
+  id: string
+  currentFee: number
+  createdAt: string
+  hoursThisMonth?: number
+  label: string
+  site: {
+    id?: string | null
+    domainName?: string | null
+    partner?: { id: string; name: string } | null
+  } | null
+  services: Array<{ serviceName?: string | null; isRecurring?: boolean | null }>
 }
 
 type HomeRevenueDistributionChartProps = {
-    periodData: Record<RevenuePeriodKey, RevenuePeriodDataset>
+    sourceProjects: RevenueSourceProject[]
     allServices: Service[]
     hourlyRate?: number
 }
@@ -52,14 +71,6 @@ const COLORS = [
     "#ec4899", // Pink
     "#06b6d4", // Cyan
     "#64748b", // Slate
-]
-
-const PERIOD_OPTIONS: Array<{ label: string; value: RevenuePeriodKey }> = [
-    { label: "All time", value: "all_time" },
-    { label: "This month", value: "this_month" },
-    { label: "Last month", value: "last_month" },
-    { label: "This quarter", value: "this_quarter" },
-    { label: "This year", value: "this_year" },
 ]
 
 const MODE_OPTIONS: Array<{ label: string; value: RevenueMode }> = [
@@ -105,6 +116,98 @@ function formatHours(value: number | undefined) {
     return `${(value || 0).toFixed(1)}h`
 }
 
+function presetDateToUtc(value: string | null) {
+    if (!value) return undefined
+    return new Date(`${value}T12:00:00Z`)
+}
+
+function toIsoDate(value: Date) {
+    return format(value, "yyyy-MM-dd")
+}
+
+function normalizeDomainLabel(value: string | null | undefined) {
+    const normalized = (value || "").trim()
+    return normalized || "Unknown Domain"
+}
+
+function isProjectIncludedInRange(project: RevenueSourceProject, range?: DateRange) {
+    if (!range?.from && !range?.to) return true
+    const createdAt = new Date(project.createdAt)
+    if (Number.isNaN(createdAt.getTime())) return false
+
+    const effectiveEnd = range?.to ?? range?.from
+    if (!effectiveEnd) return true
+
+    const inclusiveEnd = new Date(effectiveEnd)
+    inclusiveEnd.setHours(23, 59, 59, 999)
+    return createdAt <= inclusiveEnd
+}
+
+function toSortedRows(map: Map<string, RevenueAnalysisEntry>) {
+    return Array.from(map.values())
+        .filter((entry) => entry.revenue > 0)
+        .sort((a, b) => b.revenue - a.revenue)
+}
+
+function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange): RevenuePeriodDataset {
+    const partner = new Map<string, RevenueAnalysisEntry>()
+    const domain = new Map<string, RevenueAnalysisEntry>()
+    const project = new Map<string, RevenueAnalysisEntry>()
+    let totalRevenue = 0
+
+    for (const sourceProject of projects) {
+        if (!isProjectIncludedInRange(sourceProject, range)) continue
+        const fee = Number(sourceProject.currentFee || 0)
+        if (fee <= 0) continue
+
+        totalRevenue += fee
+
+        const partnerId = sourceProject.site?.partner?.id || sourceProject.site?.partner?.name || "unknown-partner"
+        const partnerLabel = sourceProject.site?.partner?.name || "Unknown Partner"
+        const domainId = sourceProject.site?.id || normalizeDomainLabel(sourceProject.site?.domainName)
+        const domainLabel = normalizeDomainLabel(sourceProject.site?.domainName)
+
+        const partnerEntry = partner.get(partnerId) || {
+            key: partnerId,
+            label: partnerLabel,
+            revenue: 0,
+            openPartnerId: sourceProject.site?.partner?.id,
+        }
+        partnerEntry.revenue += fee
+        partner.set(partnerId, partnerEntry)
+
+        const domainEntry = domain.get(domainId) || {
+            key: String(domainId),
+            label: domainLabel,
+            revenue: 0,
+            openSiteId: sourceProject.site?.id || undefined,
+            openPartnerId: sourceProject.site?.partner?.id || undefined,
+        }
+        domainEntry.revenue += fee
+        domain.set(String(domainId), domainEntry)
+
+        const projectEntry = project.get(sourceProject.id) || {
+            key: sourceProject.id,
+            label: sourceProject.label,
+            revenue: 0,
+            hoursThisMonth: sourceProject.hoursThisMonth || 0,
+            openProjectId: sourceProject.id,
+            openSiteId: sourceProject.site?.id || undefined,
+            openPartnerId: sourceProject.site?.partner?.id || undefined,
+            latestCreatedAtMs: new Date(sourceProject.createdAt).getTime(),
+        }
+        projectEntry.revenue += fee
+        project.set(sourceProject.id, projectEntry)
+    }
+
+    return {
+        totalRevenue,
+        partner: toSortedRows(partner),
+        domain: toSortedRows(domain),
+        project: toSortedRows(project),
+    }
+}
+
 function reduceForChart(data: RevenueAnalysisEntry[], max = 8) {
     const sorted = [...data].filter((entry) => entry.revenue > 0).sort((a, b) => b.revenue - a.revenue)
     if (sorted.length <= max) return sorted
@@ -114,8 +217,126 @@ function reduceForChart(data: RevenueAnalysisEntry[], max = 8) {
     return [...kept, { key: "__other__", label: "Other", revenue: otherTotal }]
 }
 
-export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRate = 0 }: HomeRevenueDistributionChartProps) {
-    const [period, setPeriod] = React.useState<RevenuePeriodKey>("all_time")
+function RevenueDateFilter({
+    label,
+    presets,
+    activePresetId,
+    selectedRange,
+    onSelectPreset,
+    onSelectRange,
+}: {
+    label: string
+    presets: LmsDatePreset[]
+    activePresetId: string
+    selectedRange: DateRange | undefined
+    onSelectPreset: (presetId: string) => void
+    onSelectRange: (range: DateRange) => void
+}) {
+    const [open, setOpen] = React.useState(false)
+    const [range, setRange] = React.useState<DateRange | undefined>(selectedRange)
+
+    React.useEffect(() => {
+        setRange(selectedRange)
+    }, [selectedRange])
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className={cn(
+                        "inline-flex h-10 min-w-[148px] items-center justify-between gap-2 rounded-xl border px-3 text-xs font-semibold transition-all",
+                        activePresetId !== "all"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            : "border-slate-200 bg-slate-100/60 text-slate-700 hover:bg-slate-100"
+                    )}
+                >
+                    <span className="max-w-[180px] truncate">{label}</span>
+                    <ChevronDown className="h-4 w-4 opacity-70" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent
+                align="start"
+                collisionPadding={16}
+                className="w-[min(calc(100vw-2rem),440px)] rounded-[16px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-2 shadow-[var(--shadow-apple)]"
+            >
+                <div className="flex max-h-[124px] flex-wrap gap-1.5 overflow-y-auto pr-1">
+                    {presets.map((preset, index) => (
+                        <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => {
+                                onSelectPreset(preset.id)
+                                setOpen(false)
+                            }}
+                            className={cn(
+                                "inline-flex h-7 items-center justify-center rounded-md border px-2 text-[11px] font-medium transition-colors",
+                                index === 0 ? "w-full" : "w-[calc(50%-4px)]",
+                                activePresetId === preset.id
+                                    ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                                    : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                            )}
+                        >
+                            {preset.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="my-2 h-px bg-[var(--line-subtle)]" />
+
+                <Calendar
+                    mode="range"
+                    selected={range}
+                    onSelect={(nextRange) => {
+                        setRange(nextRange)
+                        if (nextRange?.from && nextRange?.to) {
+                            onSelectRange(nextRange)
+                            setOpen(false)
+                        }
+                    }}
+                    numberOfMonths={1}
+                    className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-0.5 text-sm [&_[data-slot=calendar]]:![--cell-size:clamp(24px,6vw,30px)]"
+                    classNames={{
+                        root: "w-full p-1",
+                        months: "relative w-full",
+                        month: "w-full",
+                        month_grid: "w-full table-fixed border-collapse",
+                        weekdays: "grid w-full grid-cols-7",
+                        weekday: "text-center text-[11px] font-medium text-[var(--text-secondary)]",
+                        weeks: "w-full",
+                        week: "mt-1 grid w-full grid-cols-7",
+                        day: "w-full",
+                        nav: "absolute inset-x-0 top-1 flex w-full items-center justify-between px-1",
+                        month_caption: "flex h-7 w-full items-center justify-center px-8 text-sm",
+                        button_previous: "h-6 w-6",
+                        button_next: "h-6 w-6",
+                    }}
+                />
+
+                <div className="mt-2 flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onSelectPreset("all")
+                            setOpen(false)
+                        }}
+                        className="text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    >
+                        Clear range
+                    </button>
+                    <span className="text-[10px] font-medium text-[var(--text-secondary)]">
+                        Pick start and end date
+                    </span>
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+export function HomeRevenueDistributionChart({ sourceProjects, allServices, hourlyRate = 0 }: HomeRevenueDistributionChartProps) {
+    const presets = React.useMemo(() => getLmsDatePresets(), [])
+    const [period, setPeriod] = React.useState<string>("all")
+    const [customRange, setCustomRange] = React.useState<DateRange | undefined>(undefined)
     const [mode, setMode] = React.useState<RevenueMode>("project")
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
     const [selectedSite, setSelectedSite] = React.useState<(Site & { partner?: { id: string; name: string } }) | null>(null)
@@ -142,7 +363,36 @@ export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRa
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
-    const activeDataset = periodData[period]
+    const activePresetId = React.useMemo(() => {
+        if (customRange?.from || customRange?.to) {
+            const from = customRange?.from ? toIsoDate(customRange.from) : null
+            const to = customRange?.to ? toIsoDate(customRange.to) : null
+            return detectLmsDatePresetId(from, to, "custom")
+        }
+        return period
+    }, [customRange, period])
+
+    const selectedRange = React.useMemo(() => {
+        if (customRange?.from || customRange?.to) return customRange
+        const preset = presets.find((item) => item.id === period)
+        if (!preset) return undefined
+        const from = presetDateToUtc(preset.from)
+        const to = presetDateToUtc(preset.to)
+        if (!from && !to) return undefined
+        return { from, to }
+    }, [customRange, period, presets])
+
+    const dateLabel = React.useMemo(() => {
+        if (activePresetId === "custom") {
+            return `${selectedRange?.from ? format(selectedRange.from, "dd MMM yyyy") : "..."} - ${selectedRange?.to ? format(selectedRange.to, "dd MMM yyyy") : "..."}`
+        }
+        return presets.find((item) => item.id === activePresetId)?.label || "All Time"
+    }, [activePresetId, presets, selectedRange])
+
+    const activeDataset = React.useMemo(
+        () => buildRevenueDataset(sourceProjects, selectedRange),
+        [selectedRange, sourceProjects]
+    )
     const source = activeDataset[mode]
     const rows = React.useMemo(() => [...source].sort((a, b) => b.revenue - a.revenue), [source])
     const chartData = React.useMemo(() => reduceForChart(rows), [rows])
@@ -210,20 +460,20 @@ export function HomeRevenueDistributionChart({ periodData, allServices, hourlyRa
                         <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">Revenue Analysis</h3>
                     </div>
                     {/* Period Selector */}
-                    <div className="flex items-center gap-1.5 rounded-full bg-slate-100/60 px-3 py-1.5 text-xs font-bold tracking-tight text-slate-600">
-                        <span>Date:</span>
-                        <select
-                            value={period}
-                            onChange={(event) => setPeriod(event.target.value as RevenuePeriodKey)}
-                            className="bg-transparent font-bold outline-none cursor-pointer tracking-tight"
-                        >
-                            {PERIOD_OPTIONS.map((option) => (
-                                <option key={option.value} value={option.value} className="bg-white text-slate-900">
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <RevenueDateFilter
+                        label={dateLabel}
+                        presets={presets}
+                        activePresetId={activePresetId}
+                        selectedRange={selectedRange}
+                        onSelectPreset={(presetId) => {
+                            setPeriod(presetId)
+                            setCustomRange(undefined)
+                        }}
+                        onSelectRange={(range) => {
+                            setPeriod("custom")
+                            setCustomRange(range)
+                        }}
+                    />
                 </div>
 
                 {/* Mode Switcher */}

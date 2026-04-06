@@ -73,6 +73,7 @@ export default async function ProjectsPage({
         from?: string
         to?: string
         sort?: string
+        view?: string
         perPage?: string
         page?: string
     }>
@@ -101,7 +102,8 @@ export default async function ProjectsPage({
     const sort = SORT_VALUES.has(sortRaw as (typeof sortOptions)[number]["value"]) ? sortRaw : DEFAULT_SORT
     const perPageRaw = Number(params.perPage)
     const perPage = PAGE_SIZE_VALUES.has(perPageRaw) ? perPageRaw : DEFAULT_PAGE_SIZE
-    const layout = "list"
+    const viewRaw = params.view
+    const layout: "grid" | "list" = viewRaw === "grid" ? "grid" : "list"
     const requestedPage = Math.max(1, Number(params.page) || 1)
 
     const projectWhere = buildProjectWhereInput({
@@ -232,6 +234,7 @@ export default async function ProjectsPage({
                         currentFrom={fromParam || ""}
                         currentTo={toParam || ""}
                         currentSort={sort}
+                        currentView={layout}
                         currentPartnerId={partnerId || "all"}
                         totalProjects={totalProjects}
                     />
@@ -239,7 +242,7 @@ export default async function ProjectsPage({
 
                 <ProjectsBoardRows
                     projects={projectsForClient}
-                    layout={layout as "grid" | "list"}
+                    layout={layout}
                     partners={partnersForClient}
                     services={servicesForClient}
                     hourlyRate={user?.hourlyRate ? Number(user.hourlyRate) : 0}

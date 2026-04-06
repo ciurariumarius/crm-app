@@ -124,6 +124,7 @@ export function ProjectsFiltersToolbar({
     currentFrom,
     currentTo,
     currentSort,
+    currentView,
     currentPartnerId,
     totalProjects,
 }: {
@@ -135,6 +136,7 @@ export function ProjectsFiltersToolbar({
     currentFrom: string
     currentTo: string
     currentSort: string
+    currentView: "grid" | "list"
     currentPartnerId: string
     totalProjects: number
 }) {
@@ -154,6 +156,7 @@ export function ProjectsFiltersToolbar({
             const isDefaultPartner = key === "partnerId" && value === "all"
             const isDefaultFrom = key === "from" && !value
             const isDefaultTo = key === "to" && !value
+            const isDefaultView = key === "view" && (value === "list" || !value)
 
             if (
                 value === null ||
@@ -164,7 +167,8 @@ export function ProjectsFiltersToolbar({
                 isDefaultSort ||
                 isDefaultPartner ||
                 isDefaultFrom ||
-                isDefaultTo
+                isDefaultTo ||
+                isDefaultView
             ) {
                 params.delete(key)
             } else {
@@ -336,17 +340,31 @@ export function ProjectsFiltersToolbar({
                 <div className="hidden items-center gap-2 md:flex">
                     <button
                         type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
+                        onClick={() => pushWithOverrides({ view: "grid" })}
+                        className={cn(
+                            "inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors",
+                            currentView === "grid"
+                                ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
+                                : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                        )}
                         title="Board view"
                         aria-label="Board view"
+                        aria-pressed={currentView === "grid"}
                     >
                         <LayoutGrid className="h-4 w-4" />
                     </button>
                     <button
                         type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                        onClick={() => pushWithOverrides({ view: "list" })}
+                        className={cn(
+                            "inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors",
+                            currentView === "list"
+                                ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
+                                : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
+                        )}
                         title="Table view"
                         aria-label="Table view"
+                        aria-pressed={currentView === "list"}
                     >
                         <Table2 className="h-4 w-4" />
                     </button>

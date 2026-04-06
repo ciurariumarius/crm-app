@@ -8,14 +8,12 @@ import { GlobalSearch } from "@/components/dashboard/global-search"
 import { HomeHeaderActions } from "@/components/dashboard/home-header-actions"
 import {
     HomeRevenueDistributionChart,
-    type RevenueAnalysisEntry,
-    type RevenuePeriodDataset,
-    type RevenuePeriodKey,
+    type RevenueSourceProject,
 } from "@/components/dashboard/home-revenue-distribution-chart"
 import { HomeTaskColumns } from "@/components/dashboard/home-task-columns"
 import {
     formatCurrency,
-    formatProjectServiceList,
+    formatProjectName,
     serialize,
 } from "@/lib/utils"
 
@@ -33,74 +31,6 @@ type HomeProject = {
         partner: { id: string; name: string } | null
     } | null
     services: Array<{ serviceName: string | null; isRecurring: boolean }>
-}
-
-type RecurringFamilyMeta = {
-    key: string
-    label: string
-    partnerName: string
-    domainName: string
-}
-
-function normalizeDomainName(value: string | null | undefined) {
-    const normalized = (value || "").trim()
-    return normalized || "Unknown Domain"
-}
-
-function normalizeServiceKey(
-    services: Array<{ serviceName: string | null; isRecurring: boolean }>
-) {
-    const serviceNames = services
-        .map((service) => (service.serviceName || "").trim().toLowerCase())
-        .filter(Boolean)
-        .sort()
-    return serviceNames.join("|")
-}
-
-function getQuarterStart(date: Date) {
-    const quarter = Math.floor(date.getMonth() / 3)
-    return new Date(date.getFullYear(), quarter * 3, 1)
-}
-
-function getPeriodRanges(now: Date): Record<RevenuePeriodKey, { start?: Date; end?: Date }> {
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const thisQuarterStart = getQuarterStart(now)
-    const nextQuarterStart = new Date(thisQuarterStart.getFullYear(), thisQuarterStart.getMonth() + 3, 1)
-    const thisYearStart = new Date(now.getFullYear(), 0, 1)
-    const nextYearStart = new Date(now.getFullYear() + 1, 0, 1)
-
-    return {
-        all_time: {},
-        this_month: { start: thisMonthStart },
-        last_month: { start: lastMonthStart, end: thisMonthStart },
-        this_quarter: { start: thisQuarterStart, end: nextQuarterStart },
-        this_year: { start: thisYearStart, end: nextYearStart },
-    }
-}
-
-function isInRange(date: Date, range: { start?: Date; end?: Date }) {
-    if (range.start && date < range.start) return false
-    if (range.end && date >= range.end) return false
-    return true
-}
-
-function toSortedRows(map: Map<string, RevenueAnalysisEntry>) {
-    return Array.from(map.values())
-        .filter((entry) => entry.revenue > 0)
-        .sort((a, b) => b.revenue - a.revenue)
-}
-
-function resolveRecurringFamily(project: HomeProject): RecurringFamilyMeta {
-    const domainName = normalizeDomainName(project.site?.domainName)
-    const serviceKey = normalizeServiceKey(project.services)
-    const serviceList = formatProjectServiceList(project.services, "No Service")
-    return {
-        key: `recurring:${domainName}:${serviceKey}`,
-        label: `${domainName} - ${serviceList}`,
-        partnerName: project.site?.partner?.name || "Unknown Partner",
-        domainName,
-    }
 }
 
 export default async function HomePage() {
@@ -439,103 +369,32 @@ export default async function HomePage() {
         project.services.some((service) => service.isRecurring)
     )
 
-    const allTimeHoursByFamily = new Map<string, number>()
-    for (const project of recurringProjects) {
-        const family = resolveRecurringFamily(project)
-        allTimeHoursByFamily.set(
-            family.key,
-            (allTimeHoursByFamily.get(family.key) || 0) + (monthHoursByProject.get(project.id) || 0)
-        )
-    }
-
-    const periodRanges = getPeriodRanges(now)
-    const periodMaps: Record<
-        RevenuePeriodKey,
-        {
-            totalRevenue: number
-            partner: Map<string, RevenueAnalysisEntry>
-            domain: Map<string, RevenueAnalysisEntry>
-            project: Map<string, RevenueAnalysisEntry>
-        }
-    > = {
-        all_time: { totalRevenue: 0, partner: new Map(), domain: new Map(), project: new Map() },
-        this_month: { totalRevenue: 0, partner: new Map(), domain: new Map(), project: new Map() },
-        last_month: { totalRevenue: 0, partner: new Map(), domain: new Map(), project: new Map() },
-        this_quarter: { totalRevenue: 0, partner: new Map(), domain: new Map(), project: new Map() },
-        this_year: { totalRevenue: 0, partner: new Map(), domain: new Map(), project: new Map() },
-    }
-
-    for (const project of recurringProjects) {
-        const fee = Number(project.currentFee || 0)
-        if (fee <= 0) continue
-
-        const createdAt = new Date(project.createdAt)
-        const family = resolveRecurringFamily(project)
-
-        for (const periodKey of Object.keys(periodMaps) as RevenuePeriodKey[]) {
-            const range = periodRanges[periodKey]
-            if (!isInRange(createdAt, range)) continue
-
-            const bucket = periodMaps[periodKey]
-            bucket.totalRevenue += fee
-
-            const partnerId = project.site?.partner?.id || family.partnerName
-            const partnerName = family.partnerName
-            const domainId = project.site?.id || family.domainName
-            const domainName = family.domainName
-
-            const partnerEntry = bucket.partner.get(partnerId) || {
-                key: partnerId,
-                label: partnerName,
-                revenue: 0,
-                openPartnerId: project.site?.partner?.id,
-            }
-            partnerEntry.revenue += fee
-            bucket.partner.set(partnerId, partnerEntry)
-
-            const domainEntry = bucket.domain.get(domainId) || {
-                key: domainId,
-                label: domainName,
-                revenue: 0,
-                openSiteId: project.site?.id,
-                openPartnerId: project.site?.partner?.id,
-            }
-            domainEntry.revenue += fee
-            bucket.domain.set(domainId, domainEntry)
-
-            const projectEntry = bucket.project.get(family.key) || {
-                key: family.key,
-                label: family.label,
-                revenue: 0,
-                hoursThisMonth: allTimeHoursByFamily.get(family.key) || 0,
-                openProjectId: project.id,
-                openSiteId: project.site?.id,
-                openPartnerId: project.site?.partner?.id,
-                latestCreatedAtMs: createdAt.getTime(),
-            }
-            projectEntry.revenue += fee
-            if ((projectEntry.latestCreatedAtMs || 0) < createdAt.getTime()) {
-                projectEntry.openProjectId = project.id
-                projectEntry.openSiteId = project.site?.id
-                projectEntry.openPartnerId = project.site?.partner?.id
-                projectEntry.latestCreatedAtMs = createdAt.getTime()
-            }
-            bucket.project.set(family.key, projectEntry)
-        }
-    }
-
-    const periodData = (Object.keys(periodMaps) as RevenuePeriodKey[]).reduce(
-        (acc, periodKey) => {
-            const bucket = periodMaps[periodKey]
-            acc[periodKey] = {
-                totalRevenue: bucket.totalRevenue,
-                partner: toSortedRows(bucket.partner),
-                domain: toSortedRows(bucket.domain),
-                project: toSortedRows(bucket.project),
-            }
-            return acc
-        },
-        {} as Record<RevenuePeriodKey, RevenuePeriodDataset>
+    const revenueSourceProjects = serialize(
+        recurringProjects
+            .filter((project) => Number(project.currentFee || 0) > 0)
+            .map((project) => ({
+                id: project.id,
+                currentFee: Number(project.currentFee || 0),
+                createdAt: project.createdAt.toISOString(),
+                hoursThisMonth: monthHoursByProject.get(project.id) || 0,
+                label: formatProjectName(project),
+                site: project.site
+                    ? {
+                        id: project.site.id,
+                        domainName: project.site.domainName,
+                        partner: project.site.partner
+                            ? {
+                                id: project.site.partner.id,
+                                name: project.site.partner.name,
+                            }
+                            : null,
+                    }
+                    : null,
+                services: project.services.map((service) => ({
+                    serviceName: service.serviceName,
+                    isRecurring: service.isRecurring,
+                })),
+            })) as RevenueSourceProject[]
     )
 
     const hourlyRate = Number(user?.hourlyRate || 0)
@@ -690,7 +549,7 @@ export default async function HomePage() {
             </section>
 
             <HomeRevenueDistributionChart
-                periodData={periodData}
+                sourceProjects={revenueSourceProjects}
                 allServices={serialize(allServicesRaw)}
                 hourlyRate={hourlyRate}
             />
