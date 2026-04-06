@@ -171,26 +171,26 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                     <FilterBarDivider className="hidden md:block" />
 
                     <FilterBarGroup className="gap-4 md:gap-4">
-                    <PartnerCombobox
-                        partners={partners}
-                        currentPartner={currentPartnerId}
-                        onSelect={(value) => pushWithOverrides({ partnerId: value, projectId: "all" })}
-                    />
+                        <PartnerCombobox
+                            partners={partners}
+                            currentPartner={currentPartnerId}
+                            onSelect={(value) => pushWithOverrides({ partnerId: value, projectId: "all" })}
+                        />
 
-                    <FilterBarDivider className="hidden md:block" />
+                        <FilterBarDivider className="hidden md:block" />
 
-                    <ProjectCombobox
-                        projects={projects}
-                        currentProject={currentProjectId}
-                        onSelect={(value) => pushWithOverrides({ projectId: value, partnerId: "all" })}
-                    />
+                        <ProjectCombobox
+                            projects={projects}
+                            currentProject={currentProjectId}
+                            onSelect={(value) => pushWithOverrides({ projectId: value, partnerId: "all" })}
+                        />
 
-                    <FilterBarDivider className="hidden md:block" />
+                        <FilterBarDivider className="hidden md:block" />
 
-                    <TimeRangeCombobox
-                        currentTimeRange={currentTimeRange}
-                        onSelect={(value) => pushWithOverrides({ timeRange: value })}
-                    />
+                        <TimeRangeCombobox
+                            currentTimeRange={currentTimeRange}
+                            onSelect={(value) => pushWithOverrides({ timeRange: value })}
+                        />
                     </FilterBarGroup>
 
                     {activeFilters.length > 0 && (
@@ -214,7 +214,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                     <Link
                         key={filter.key}
                         href={filter.href}
-                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "gap-1 text-[12px]" })}
+                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "h-8 gap-1 text-[12px]" })}
                     >
                         <span>{filter.label}</span>
                         <X className="h-3 w-3 text-slate-400" />

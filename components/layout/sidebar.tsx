@@ -17,6 +17,7 @@ import {
   Globe,
   LayoutGrid,
   LogOut,
+  NotebookPen,
   Package,
   Settings,
   UserPlus,
@@ -47,6 +48,7 @@ const coreNav: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutGrid },
   { name: "Projects", href: "/projects", icon: Package },
   { name: "Tasks", href: "/tasks", icon: CheckCircle },
+  { name: "Notes", href: "/notes", icon: NotebookPen },
   { name: "Payments", href: "/payments", icon: CreditCard },
 ]
 

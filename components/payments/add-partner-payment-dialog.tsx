@@ -1,16 +1,18 @@
 "use client"
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Loader2, Plus } from "lucide-react"
+import { Loader2, Plus, Check, ChevronsUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { addPartnerAdHocPayment, getPartnerProjectsForPayment } from "@/lib/actions/partners"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 type AddPartnerPaymentDialogProps = {
     partners: { id: string; name: string }[]
@@ -33,10 +35,11 @@ export function AddPartnerPaymentDialog({
     const [projectId, setProjectId] = useState("")
     const [paymentName, setPaymentName] = useState("")
     const [paymentAmount, setPaymentAmount] = useState("")
-    const [paymentDesc, setPaymentDesc] = useState("")
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isLoadingProjects, setIsLoadingProjects] = useState(false)
     const [partnerProjects, setPartnerProjects] = useState<Array<{ id: string; name: string; amount: number; paymentStatus: string }>>([])
+    const [comboboxOpen, setComboboxOpen] = useState(false)
+    const [searchValue, setSearchValue] = useState("")
     const isOpen = open !== undefined ? open : internalOpen
     const setIsOpen = (nextOpen: boolean) => {
         if (open === undefined) {
@@ -89,7 +92,7 @@ export function AddPartnerPaymentDialog({
 
         const trimmedName = paymentName.trim()
         if (!projectId && !trimmedName) {
-            toast.error("Please select a project or provide a payment name")
+            toast.error("Please select a project or provide a project name")
             return
         }
         
@@ -103,9 +106,8 @@ export function AddPartnerPaymentDialog({
         const result = await addPartnerAdHocPayment({
             partnerId,
             projectId: projectId || undefined,
-            name: trimmedName || undefined,
+            name: !projectId ? trimmedName : undefined,
             amount: amountNum,
-            description: paymentDesc.trim() || undefined
         })
         setIsSubmitting(false)
 
@@ -117,12 +119,21 @@ export function AddPartnerPaymentDialog({
             setPartnerProjects([])
             setPaymentName("")
             setPaymentAmount("")
-            setPaymentDesc("")
             router.refresh()
         } else {
             toast.error(result.error || "Failed to add payment")
         }
     }
+
+    // Attempt to auto-match typed name with project
+    useEffect(() => {
+        if (!paymentName || projectId) return
+        const match = partnerProjects.find(p => p.name.toLowerCase() === paymentName.toLowerCase().trim())
+        if (match) {
+            setProjectId(match.id)
+            setPaymentName(match.name)
+        }
+    }, [paymentName, partnerProjects, projectId])
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -136,14 +147,14 @@ export function AddPartnerPaymentDialog({
                     )}
                 </DialogTrigger>
             ) : null}
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Add Payment to Partner</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="space-y-2">
                         <Label htmlFor="partner">Partner</Label>
-                        <Select value={partnerId} onValueChange={setPartnerId} required>
+                        <Select value={partnerId} onValueChange={(val) => { setPartnerId(val); setProjectId(""); setPaymentName(""); }} required>
                             <SelectTrigger id="partner">
                                 <SelectValue placeholder="Select a partner" />
                             </SelectTrigger>
@@ -154,60 +165,111 @@ export function AddPartnerPaymentDialog({
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="project">Project (Optional)</Label>
-                        <Select
-                            value={projectId || "__none__"}
-                            onValueChange={(value) => {
-                                const nextProjectId = value === "__none__" ? "" : value
-                                setProjectId(nextProjectId)
-                                if (!nextProjectId) return
-                                const selected = partnerProjects.find((project) => project.id === nextProjectId)
-                                if (selected && !paymentName.trim()) {
-                                    setPaymentName(selected.name)
-                                }
-                            }}
-                            disabled={!partnerId || isLoadingProjects}
-                        >
-                            <SelectTrigger id="project">
-                                <SelectValue
-                                    placeholder={
-                                        !partnerId
+                    
+                    <div className="space-y-2 relative flex flex-col">
+                        <Label htmlFor="projectInput">Project Name</Label>
+                        <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="projectInput"
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={comboboxOpen}
+                                    className="w-full justify-between font-normal text-left h-10 px-3 py-2"
+                                    disabled={!partnerId || isLoadingProjects}
+                                >
+                                    <span className="truncate">
+                                        {!partnerId
                                             ? "Select a partner first"
                                             : isLoadingProjects
-                                                ? "Loading projects..."
-                                                : "Optional: choose a project"
-                                    }
-                                />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="__none__">No project (ad-hoc payment)</SelectItem>
-                                {partnerProjects.map((project) => (
-                                    <SelectItem key={project.id} value={project.id}>
-                                        {project.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                                            ? "Loading projects..."
+                                            : projectId
+                                                ? partnerProjects.find((p) => p.id === projectId)?.name
+                                                : paymentName || "Select existing project or type new..."}
+                                    </span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                                <Command>
+                                    <CommandInput 
+                                        placeholder="Search or type new project..." 
+                                        value={searchValue} 
+                                        onValueChange={setSearchValue} 
+                                    />
+                                    <CommandList>
+                                        <CommandEmpty className="p-0">
+                                            {searchValue.trim() ? (
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full justify-start rounded-none px-4 py-3 text-sm font-normal text-blue-600"
+                                                    onClick={() => {
+                                                        setProjectId("")
+                                                        setPaymentName(searchValue.trim())
+                                                        setComboboxOpen(false)
+                                                    }}
+                                                >
+                                                    <Plus className="mr-2 h-4 w-4" />
+                                                    Create "{searchValue.trim()}"
+                                                </Button>
+                                            ) : (
+                                                <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                                                    No projects found.
+                                                </div>
+                                            )}
+                                        </CommandEmpty>
+                                        <CommandGroup>
+                                            {partnerProjects.map((project) => (
+                                                <CommandItem
+                                                    key={project.id}
+                                                    value={project.name}
+                                                    onSelect={(currentValue) => {
+                                                        setProjectId(project.id)
+                                                        setPaymentName(project.name)
+                                                        setComboboxOpen(false)
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            projectId === project.id ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {project.name}
+                                                </CommandItem>
+                                            ))}
+                                            {searchValue.trim() && !partnerProjects.some(p => p.name.toLowerCase() === searchValue.trim().toLowerCase()) && (
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full justify-start rounded-none px-2 py-1.5 text-sm font-normal text-blue-600"
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        setProjectId("")
+                                                        setPaymentName(searchValue.trim())
+                                                        setComboboxOpen(false)
+                                                    }}
+                                                >
+                                                    <Plus className="mr-2 h-4 w-4" />
+                                                    Create "{searchValue.trim()}"
+                                                </Button>
+                                            )}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        
                         {selectedProject ? (
-                            <p className="text-xs text-muted-foreground">
-                                Selected: {selectedProject.paymentStatus} • {selectedProject.amount} RON
+                            <p className="text-xs text-emerald-600 font-medium mt-1">
+                                ✓ Existing project selected ({selectedProject.paymentStatus} • {selectedProject.amount} RON)
                             </p>
-                        ) : (
-                            <p className="text-xs text-muted-foreground">
-                                You can leave this empty and add a custom payment name.
+                        ) : paymentName.trim() ? (
+                            <p className="text-xs text-blue-600 font-medium mt-1">
+                                + Will create a new project
                             </p>
-                        )}
+                        ) : null}
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Payment Name {projectId ? "(Optional)" : ""}</Label>
-                        <Input
-                            id="name"
-                            placeholder={projectId ? "Optional override name" : "e.g. Domain Renewals"}
-                            value={paymentName}
-                            onChange={(e) => setPaymentName(e.target.value)}
-                        />
-                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="amount">Amount (RON)</Label>
                         <Input
@@ -221,16 +283,7 @@ export function AddPartnerPaymentDialog({
                             required
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="desc">Description (Optional)</Label>
-                        <Textarea
-                            id="desc"
-                            placeholder="Optional details..."
-                            className="h-20"
-                            value={paymentDesc}
-                            onChange={(e) => setPaymentDesc(e.target.value)}
-                        />
-                    </div>
+                    
                     <DialogFooter className="pt-4">
                         <Button
                             type="button"
@@ -240,7 +293,7 @@ export function AddPartnerPaymentDialog({
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting || (!projectId && !paymentName.trim())}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Save Payment
                         </Button>

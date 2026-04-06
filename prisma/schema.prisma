@@ -28,6 +28,7 @@ model Tenant {
   authSessions     AuthSession[]
   lmsTaskLogs      LmsTaskLog[]
   lmsAllocations   LmsAllocation[]
+  notes            Note[]
 
   @@map("tenants")
 }
@@ -229,6 +230,7 @@ model User {
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   authSessions AuthSession[]
   timeLogs     TimeLog[]
+  notes        Note[]
 
   @@index([tenantId])
   @@map("users")
@@ -267,6 +269,29 @@ model AuthSession {
   @@index([tenantId, maxSessionExpiresAt])
   @@index([userId])
   @@map("auth_sessions")
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  userId      String   @map("user_id")
+  title       String   @default("Untitled")
+  content     String   @default("")
+  contentText String   @default("") @map("content_text")
+  archived    Boolean  @default(false)
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([tenantId, archived, updatedAt])
+  @@index([tenantId, pinned, updatedAt])
+  @@map("notes")
 }
 
 model AuditLog {

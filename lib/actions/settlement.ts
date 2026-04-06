@@ -138,3 +138,59 @@ export async function voidSettlement(auditLogId: string) {
         return { success: false, error: "Failed to void settlement" }
     }
 }
+
+export async function settleProject(projectId: string) {
+    try {
+        const session = await requireTenantContext()
+        if (!session) return { success: false, error: "Unauthorized" }
+
+        const project = await prisma.project.findFirst({
+            where: { id: projectId, tenantId: session.tenantId },
+            include: { site: { include: { partner: true } } }
+        })
+
+        if (!project) return { success: false, error: "Project not found" }
+        if (project.paymentStatus === "Paid") return { success: true }
+
+        const amount = Number(project.currentFee) || 0
+        const partnerName = project.site.partner.name
+        const partnerId = project.site.partnerId
+
+        await prisma.project.update({
+            where: { id: projectId },
+            data: {
+                paymentStatus: "Paid",
+                paidAt: new Date()
+            }
+        })
+
+        // Log the action
+        await logAuditEvent({
+            action: "SETTLE_PARTNER",
+            success: true,
+            tenantId: session.tenantId,
+            actorUserId: session.userId,
+            details: JSON.stringify({
+                partnerId,
+                partnerName,
+                totalAmount: amount,
+                projectCount: 1,
+                projects: [{
+                    id: project.id,
+                    name: project.name,
+                    fee: project.currentFee
+                }]
+            })
+        })
+
+        revalidatePath("/")
+        revalidatePath("/projects")
+        revalidatePath("/partners")
+        revalidatePath("/vault")
+        revalidatePath(`/partners/${partnerId}`)
+        return { success: true, amount }
+    } catch (error) {
+        console.error("[settleProject] failed", error)
+        return { success: false, error: "Failed to settle project" }
+    }
+}

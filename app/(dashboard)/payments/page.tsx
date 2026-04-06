@@ -6,10 +6,10 @@ import { PaymentsTable } from "@/components/payments/payments-table"
 import { PaymentsFilters } from "@/components/payments/payments-filters"
 import { AddPartnerPaymentDialog } from "@/components/payments/add-partner-payment-dialog"
 import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Banknote, Users, History } from "lucide-react"
 import Link from "next/link"
 import { buttonLinkClassName } from "@/components/ui/button-link"
-import { formatProjectName, serialize } from "@/lib/utils"
+import { formatCurrency, formatProjectName, serialize, cn } from "@/lib/utils"
 
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
@@ -78,6 +78,9 @@ export default async function PaymentsPage({
         }))
         .sort((a, b) => b.totalUnpaid - a.totalUnpaid)
 
+    const totalUnpaidAmount = unpaidByPartner.reduce((sum, p) => sum + p.totalUnpaid, 0)
+    const partnersWithDebt = unpaidByPartner.length
+
     const serializedProjects = serialize(projects)
     const serializedLogs = serialize(logs)
     const totalLogs = logsResult.success ? logsResult.total ?? logs.length : 0
@@ -96,15 +99,64 @@ export default async function PaymentsPage({
     }
 
     return (
-        <div className="flex flex-col gap-8 pb-8">
+        <div className="flex flex-col gap-10 pb-10">
             <DashboardPageHeader
                 title="Payments"
                 actions={<AddPartnerPaymentDialog partners={partners} />}
                 showMobile
             />
 
-            <div className="flex flex-col gap-6">
+            {/* KPI Section */}
+            <section>
+                <div className="flex flex-col lg:flex-row overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
+                        <div className="flex items-start justify-between">
+                            <p className="ui-overline text-slate-400">Total Unpaid Balance</p>
+                            <Banknote className="h-8 w-8 text-rose-50 absolute top-4 right-4" />
+                        </div>
+                        <div className="mt-6 flex items-end">
+                            <div className="flex flex-col">
+                                <p className="text-[10px] font-black uppercase tracking-wider text-rose-500">Immediate Action</p>
+                                <p className="mt-1 text-[32px] font-bold leading-none tracking-tight text-rose-600">
+                                    {formatCurrency(totalUnpaidAmount)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 relative p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
+                        <div className="flex items-start justify-between">
+                            <p className="ui-overline text-slate-400">Partner Debtors</p>
+                            <Users className="h-8 w-8 text-slate-50 absolute top-4 right-4" />
+                        </div>
+                        <div className="mt-6 flex items-end">
+                            <div>
+                                <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{partnersWithDebt}</p>
+                                <p className="mt-1 text-[10px] italic text-slate-400">Unique partners with unpaid projects</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 relative p-6 lg:p-8">
+                        <div className="flex items-start justify-between">
+                            <p className="ui-overline text-slate-400">Transaction Events</p>
+                            <History className="h-8 w-8 text-slate-50 absolute top-4 right-4" />
+                        </div>
+                        <div className="mt-6">
+                            <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{totalLogs}</p>
+                            <p className="mt-1 text-[10px] italic text-slate-400">Total recorded status changes</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div className="flex flex-col gap-10">
                 <UnpaidByPartnerChart partners={unpaidByPartner} />
+
+                <div className="flex flex-col gap-6">
+                    <div className="flex items-center justify-between px-2">
+                        <h2 className="ui-text-title-sm text-slate-900">Transaction History</h2>
+                    </div>
 
                 <PaymentsFilters
                     partners={partners}
@@ -112,48 +164,51 @@ export default async function PaymentsPage({
                     totalLogs={totalLogs}
                 />
 
-            <div className="flex flex-col">
+                <div className="space-y-6">
                     <PaymentsTable
                         logs={serializedLogs}
                         projects={serializedProjects}
                     />
 
-                    <div className="flex items-center justify-between px-6 py-8">
+                    {/* Pagination Footer */}
+                    <div className="flex items-center justify-between px-6 py-4">
                         <div className="ui-overline flex items-center gap-2">
-                            <span>Page {page} of {totalPages}</span>
+                            <span className="text-slate-400">Showing</span>
+                            <span className="font-bold text-slate-900">Page {page} of {totalPages}</span>
                             <span className="h-1 w-1 rounded-full bg-slate-300" />
-                            <span>{totalLogs} events</span>
+                            <span className="font-bold text-slate-900">{totalLogs} events</span>
                         </div>
                         <div className="flex items-center gap-2">
                             {prevPage ? (
                                 <Link
                                     href={buildPageHref(prevPage)}
-                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" })}
+                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption hover:bg-slate-50 hover:text-blue-600" })}
                                 >
-                                    <ChevronLeft className="mr-1.5 h-4 w-4" />
+                                    <ChevronLeft className="mr-2 h-4 w-4" />
                                     Previous
                                 </Link>
                             ) : (
-                                <span className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption opacity-40" })}>
-                                    <ChevronLeft className="mr-1.5 h-4 w-4" />
+                                <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" }), "opacity-40 cursor-not-allowed")}>
+                                    <ChevronLeft className="mr-2 h-4 w-4" />
                                     Previous
                                 </span>
                             )}
                             {nextPage ? (
                                 <Link
                                     href={buildPageHref(nextPage)}
-                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" })}
+                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption hover:bg-slate-50 hover:text-blue-600" })}
                                 >
                                     Next
-                                    <ChevronRight className="ml-1.5 h-4 w-4" />
+                                    <ChevronRight className="ml-2 h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption opacity-40" })}>
+                                <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" }), "opacity-40 cursor-not-allowed")}>
                                     Next
-                                    <ChevronRight className="ml-1.5 h-4 w-4" />
+                                    <ChevronRight className="ml-2 h-4 w-4" />
                                 </span>
                             )}
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

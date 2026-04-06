@@ -20,6 +20,14 @@ export function DashboardPageHeader({
     mobileSearch,
     mobileActions,
 }: DashboardPageHeaderProps) {
+    const duplicateNode = (node: React.ReactNode) => {
+        if (!React.isValidElement(node)) return node
+        return React.cloneElement(node)
+    }
+
+    const resolvedMobileActions = mobileActions ?? duplicateNode(actions)
+    const resolvedMobileSearch = mobileSearch ?? duplicateNode(search)
+
     return (
         <>
             {showMobile ? (
@@ -29,9 +37,9 @@ export function DashboardPageHeader({
                             <MobileMenuTrigger />
                             <h1 className="ui-text-title text-slate-900">{title}</h1>
                         </div>
-                        {mobileActions ?? actions}
+                        {resolvedMobileActions}
                     </div>
-                    {mobileSearch ?? search}
+                    {resolvedMobileSearch}
                 </div>
             ) : null}
 

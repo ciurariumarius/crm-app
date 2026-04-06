@@ -146,7 +146,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                 title="No payment events found"
                 description="Payment status changes and settlements will appear here."
                 icon={<History className="h-5 w-5" />}
-                className="mx-4 my-8"
+                className="mx-4 my-10"
             />
         )
     }
@@ -154,18 +154,18 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
     return (
         <div className="overflow-x-auto pb-4 hidescrollbar">
             {/* Header */}
-            <div className="md:min-w-[1240px] px-6 py-3 border-b border-slate-100/50 flex items-center">
-                <div className="grid w-full items-center gap-x-6 md:grid-cols-[380px_320px_150px_160px_130px]">
-                    <div className="ui-overline text-slate-500">Project / partner</div>
-                    <div className="ui-overline text-slate-500">Transaction action</div>
-                    <div className="ui-overline text-right text-slate-500">Total amount</div>
-                    <div className="ui-overline text-right text-slate-500">Payment status</div>
-                    <div className="ui-overline text-right text-slate-500">Event date</div>
+            <div className="md:min-w-[1200px] px-6 mb-2 text-slate-500">
+                <div className="grid w-full items-center gap-x-4 md:grid-cols-[340px_1fr_120px_150px_120px]">
+                    <div className="ui-overline">Project / Partner</div>
+                    <div className="ui-overline pl-4">Transaction action</div>
+                    <div className="ui-overline text-right">Amount</div>
+                    <div className="ui-overline text-center">Status</div>
+                    <div className="ui-overline text-right">Date</div>
                 </div>
             </div>
 
             {/* Body */}
-            <div className="md:min-w-[1240px] flex flex-col gap-2 p-4">
+            <div className="md:min-w-[1200px] flex flex-col gap-2">
                 {logs.map((log, index) => {
                     const { projectName, extraProjects, totalAmount } = parseDetails(log.details)
                     const isExpandable = extraProjects.length > 0
@@ -175,10 +175,10 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                         <Fragment key={log.id}>
                             <div
                                 className={cn(
-                                    "group stagger-row-enter premium-card relative flex items-center bg-white rounded-xl p-4 border border-border/60 transition-all cursor-pointer hover:bg-slate-50/50",
-                                    isExpanded && "bg-slate-50/30 ring-1 ring-blue-500/10 shadow-md",
-                                    log.status === "Unpaid" && "cockpit-debt-row",
-                                    log.status === "Paid" && "cockpit-paid-row"
+                                    "group stagger-row-enter relative flex items-center bg-white rounded-xl py-2.5 px-6 transition-all cursor-pointer hover:bg-slate-50/50",
+                                    isExpanded && "bg-slate-50/30 ring-1 ring-blue-500/10",
+                                    log.status === "Unpaid" && "shadow-[0_2px_8px_rgba(244,63,94,0.05)]",
+                                    log.status === "Paid" && "shadow-[0_2px_8px_rgba(16,185,129,0.05)]"
                                 )}
                                 style={{ animationDelay: `${index * 0.05}s` }}
                                 onClick={() => toggleRow(log.id, isExpandable)}
@@ -192,21 +192,21 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     }
                                 }}
                             >
-                                <div className="grid w-full items-center gap-x-6 md:grid-cols-[380px_320px_150px_160px_130px]">
+                                <div className="grid w-full items-center gap-x-4 md:grid-cols-[340px_1fr_120px_150px_120px]">
                                     {/* 1. Project */}
-                                    <div className="min-w-0 pr-4">
+                                    <div className="min-w-0">
                                         <div className="flex items-center gap-2.5">
                                             {isExpandable && (
                                                 <div className={cn(
-                                                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition-all",
-                                                    isExpanded ? "bg-blue-50 border-blue-200 text-blue-600 rotate-90" : "bg-slate-50 border-slate-200 text-slate-400 group-hover:text-blue-500 group-hover:border-blue-100"
+                                                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-all",
+                                                    isExpanded ? "bg-blue-50 text-blue-600 rotate-90" : "bg-slate-50 text-slate-400 group-hover:text-blue-500"
                                                 )}>
                                                     <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
                                                 </div>
                                             )}
                                             <span className={cn(
                                                 "text-sm font-bold tracking-tight text-slate-900 line-clamp-1",
-                                                isExpandable && "group-hover:text-blue-600 transition-colors"
+                                                isExpandable && "group-hover:text-primary transition-colors"
                                             )}>
                                                 {projectName}
                                             </span>
@@ -214,7 +214,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     </div>
 
                                     {/* 2. Action */}
-                                    <div className="flex items-center gap-2.5">
+                                    <div className="flex items-center gap-2.5 pl-4">
                                         <div className={cn(
                                             "flex h-8 w-8 items-center justify-center rounded-xl transition-all",
                                             log.action === "SETTLE_PARTNER_VOIDED" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
@@ -225,24 +225,25 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                                 <CreditCard className="h-4 w-4" />
                                             )}
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[13px] font-bold text-slate-700 leading-none">
-                                                {getActionLabel(log.action)}
-                                            </span>
-                                        </div>
+                                        <span className="text-[13px] font-bold text-slate-700">
+                                            {getActionLabel(log.action)}
+                                        </span>
                                     </div>
 
                                     {/* 3. Total */}
                                     <div className="text-right">
-                                        <span className="font-mono text-sm font-black tracking-tight text-slate-900 pr-1">
+                                        <span className={cn(
+                                            "font-mono text-sm font-black tracking-tight",
+                                            log.status === "Unpaid" ? "text-rose-600" : "text-slate-900"
+                                        )}>
                                             {formatCurrency(totalAmount)}
                                         </span>
                                     </div>
 
                                     {/* 4. Status */}
-                                    <div className="flex justify-end pr-4">
+                                    <div className="flex justify-center">
                                         <StatusChip tone={log.status === "Paid" ? "paid" : "unpaid"} size="sm" className="min-w-[86px] justify-center">
-                                            {log.status}
+                                            {log.status === "Unpaid" ? "Unpaid" : log.status}
                                         </StatusChip>
                                     </div>
 
@@ -256,19 +257,21 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                             </div>
 
                             {/* Expanded Content (Settlements) */}
-                            {isExpanded && (
+                            {isExpanded && (extraProjects.length > 0) && (
                                 <div className="mt-1 mb-4 flex animate-in slide-in-from-top-2 fade-in duration-300">
-                                    <div className="ml-12 mr-4 flex-1 rounded-2xl border border-blue-100 bg-blue-50/20 p-1 shadow-inner">
-                                        <div className="rounded-[14px] bg-white/60 p-4 border border-blue-50/50">
+                                    <div className="ml-12 mr-4 flex-1 rounded-2xl bg-blue-50/20 p-1 shadow-inner">
+                                        <div className="rounded-[14px] bg-white/60 p-4">
                                             <div className="flex items-center gap-2 mb-4">
                                                 <History className="h-3.5 w-3.5 text-blue-500" />
                                                 <span className="ui-overline text-blue-700">Settlement breakdown</span>
                                             </div>
                                             <div className="space-y-2">
                                                 {extraProjects.map((projectEntry) => (
-                                                    <div key={projectEntry.id} className="flex items-center justify-between py-2 px-4 rounded-xl bg-white/80 border border-slate-100/50 hover:border-blue-100 transition-colors">
+                                                    <div key={projectEntry.id} className="flex items-center justify-between py-2 px-4 rounded-xl bg-white/80 hover:bg-white transition-colors">
                                                         <span className="text-sm font-bold text-slate-700">{projectEntry.name}</span>
-                                                        <span className="font-mono text-xs font-bold text-slate-500">{formatCurrency(projectEntry.fee)}</span>
+                                                        <span className="font-mono text-xs font-black text-slate-900 pl-4">
+                                                            {formatCurrency(projectEntry.fee)}
+                                                        </span>
                                                     </div>
                                                 ))}
                                             </div>
