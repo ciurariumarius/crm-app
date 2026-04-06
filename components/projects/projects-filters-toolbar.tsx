@@ -81,7 +81,7 @@ function parseMaybeDate(value: string | null | undefined) {
 
 function triggerClassName(isActive: boolean, extraClassName?: string) {
   return cn(
-    "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+    "inline-flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-[10px] font-semibold transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
     isActive
       ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] text-[var(--brand-primary)]"
       : "border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] text-[var(--text-secondary)] hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))]",
@@ -200,16 +200,16 @@ export function ProjectsFiltersToolbar({
 
   return (
     <div className="space-y-2.5 sm:space-y-3">
-      <FilterBarShell className="rounded-[24px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-2.5 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.035)] sm:px-4 sm:py-3">
-        <div className="-mx-1 overflow-x-auto px-1 pb-1 hidescrollbar">
-          <div className="inline-flex min-w-max items-center gap-2">
-            <div className="inline-flex h-9 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
+      <FilterBarShell className="rounded-[22px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-2 py-2 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:px-3 sm:py-2.5">
+        <div className="-mx-1 overflow-x-auto px-1 pb-0.5 hidescrollbar">
+          <div className="inline-flex min-w-max items-center gap-1.5">
+            <div className="inline-flex h-8 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
               {STATUS_OPTIONS.map((option) => (
                 <Link
                   key={option.value}
                   href={buildHref({ status: option.value })}
                   className={cn(
-                    "inline-flex h-7 items-center gap-2 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-6 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentStatus === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -219,13 +219,13 @@ export function ProjectsFiltersToolbar({
               ))}
             </div>
 
-            <div className="inline-flex h-9 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
+            <div className="inline-flex h-8 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
               {PAYMENT_OPTIONS.map((option) => (
                 <Link
                   key={option.value}
                   href={buildHref({ payment: option.value })}
                   className={cn(
-                    "inline-flex h-7 items-center gap-2 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-6 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentPayment === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -257,12 +257,12 @@ export function ProjectsFiltersToolbar({
 
             <SortCombobox currentSort={currentSort} onSelect={(value) => pushWithOverrides({ sort: value })} />
 
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => pushWithOverrides({ view: "grid" })}
                 className={cn(
-                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+                  "inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
                   currentView === "grid"
                     ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
                     : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
@@ -271,13 +271,13 @@ export function ProjectsFiltersToolbar({
                 aria-label="Board view"
                 aria-pressed={currentView === "grid"}
               >
-                <LayoutGrid className="h-4 w-4" />
+                <LayoutGrid className="h-3.5 w-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => pushWithOverrides({ view: "list" })}
                 className={cn(
-                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+                  "inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
                   currentView === "list"
                     ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
                     : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
@@ -286,63 +286,34 @@ export function ProjectsFiltersToolbar({
                 aria-label="Table view"
                 aria-pressed={currentView === "list"}
               >
-                <Table2 className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 md:hidden">
-              <button
-                type="button"
-                onClick={() => pushWithOverrides({ view: "grid" })}
-                className={cn(
-                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
-                  currentView === "grid"
-                    ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
-                    : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
-                )}
-                title="Board view"
-                aria-label="Board view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => pushWithOverrides({ view: "list" })}
-                className={cn(
-                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
-                  currentView === "list"
-                    ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
-                    : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
-                )}
-                title="Table view"
-                aria-label="Table view"
-              >
-                <Table2 className="h-4 w-4" />
+                <Table2 className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
         </div>
       </FilterBarShell>
 
-      <FilterResultsRow className="justify-between gap-3 rounded-[18px] border border-slate-200/80 bg-white/80 px-3 py-2 shadow-[0_4px_12px_rgba(15,23,42,0.025)] sm:gap-4 sm:px-4 sm:py-2.5">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">{resultsLabel}</p>
-          {activeFilters.map((filter) => (
-            <Link
-              key={filter.key}
-              href={filter.href}
-              className="inline-flex h-6 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2.5 text-[10px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
-            >
-              <span>{filter.label}</span>
-              <span className="text-[var(--brand-primary)]/70">×</span>
-            </Link>
-          ))}
+      <FilterResultsRow className="justify-between gap-2 rounded-[16px] border border-slate-200/70 bg-white/75 px-2.5 py-1.5 shadow-[0_4px_10px_rgba(15,23,42,0.02)] sm:px-3 sm:py-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-primary)] sm:text-xs">{resultsLabel}</p>
+          <div className="-mx-0.5 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-0.5 hidescrollbar">
+            {activeFilters.map((filter) => (
+              <Link
+                key={filter.key}
+                href={filter.href}
+                className="inline-flex h-5.5 shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
+              >
+                <span>{filter.label}</span>
+                <span className="text-[var(--brand-primary)]/70">×</span>
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {activeFilters.length > 0 ? (
             <Link
               href={clearAllHref}
-              className="inline-flex h-7 items-center rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800"
+              className="inline-flex h-6 items-center rounded-full px-2 text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800 sm:text-[10px]"
             >
               Clear all
             </Link>
@@ -366,7 +337,7 @@ function SortCombobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" title="Sort projects" aria-label="Sort projects" className={triggerClassName(isActive, "h-9 w-9 justify-center px-0")}>
+        <button type="button" title="Sort projects" aria-label="Sort projects" className={triggerClassName(isActive, "h-8 w-8 justify-center px-0")}>
           <SlidersHorizontal className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
         </button>
       </PopoverTrigger>
@@ -447,7 +418,7 @@ function PeriodCombobox({
           <ChevronDown className="h-4 w-4 opacity-70" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[320px] p-3">
+      <PopoverContent align="start" className="w-[300px] p-2.5">
         <div className="grid grid-cols-2 gap-2">
           {PERIOD_OPTIONS.map((option) => (
             <button
@@ -458,7 +429,7 @@ function PeriodCombobox({
                 setOpen(false)
               }}
               className={cn(
-                "inline-flex h-8 items-center justify-center rounded-md border px-2 text-xs font-medium transition-colors",
+                "inline-flex h-7 items-center justify-center rounded-md border px-2 text-[10px] font-medium transition-colors",
                 currentPeriod === option.value && !currentFrom && !currentTo
                   ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
                   : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
@@ -485,18 +456,18 @@ function PeriodCombobox({
           className="rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)]"
         />
 
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-2.5 flex items-center justify-between">
           <button
             type="button"
             onClick={() => {
               onSelectPreset("all_time")
               setOpen(false)
             }}
-            className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             Clear range
           </button>
-          <span className="text-[11px] font-medium text-[var(--text-secondary)]">Pick start and end date</span>
+          <span className="text-[10px] font-medium text-[var(--text-secondary)]">Pick start and end date</span>
         </div>
       </PopoverContent>
     </Popover>
