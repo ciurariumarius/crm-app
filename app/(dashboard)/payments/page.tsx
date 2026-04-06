@@ -20,7 +20,6 @@ export default async function PaymentsPage({
     searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string; timeRange?: string }>
 }) {
     const session = await requireTenantContext()
-    const paymentsSubtitle = "Track outstanding balances, payment events, and partner settlements in one place."
     const { projectId, partnerId, q, timeRange, page: pageParam } = await searchParams
     const page = Math.max(1, Number(pageParam) || 1)
 
@@ -104,8 +103,6 @@ export default async function PaymentsPage({
             <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Payments"
-                    eyebrow="Finance Workspace"
-                    subtitle={paymentsSubtitle}
                     actions={<AddPartnerPaymentDialog partners={partners} />}
                     showMobile
                 />

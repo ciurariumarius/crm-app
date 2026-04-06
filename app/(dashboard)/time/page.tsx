@@ -92,8 +92,6 @@ export default async function TimePage({
             <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Time Logs"
-                    eyebrow="Time Workspace"
-                    subtitle="Review tracked sessions, active timers, and logged work across your delivery history."
                     showMobile
                     actions={(
                         <CreateTimeLogDialog

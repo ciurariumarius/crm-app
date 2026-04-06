@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { format } from "date-fns"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
@@ -35,12 +34,10 @@ type HomeProject = {
 
 export default async function HomePage() {
     const session = await requireTenantContext()
-    const overviewSubtitle = "Track revenue, delivery pressure, and active work at a glance."
     const now = new Date()
     const nowMs = now.getTime()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-    const currentMonthLabel = format(now, "MMMM yyyy")
     const todayStart = new Date(now)
     todayStart.setHours(0, 0, 0, 0)
 
@@ -103,13 +100,7 @@ export default async function HomePage() {
         prisma.project.aggregate({
             where: {
                 tenantId: session.tenantId,
-                OR: [
-                    { createdAt: { gte: monthStart, lt: nextMonthStart } },
-                    {
-                        services: { some: { isRecurring: true } },
-                        name: { contains: currentMonthLabel },
-                    },
-                ],
+                createdAt: { gte: monthStart, lt: nextMonthStart },
             },
             _sum: { currentFee: true },
         }),
@@ -416,15 +407,12 @@ export default async function HomePage() {
             <section className="space-y-3.5 sm:space-y-5">
                 <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                     <div className="space-y-3 md:hidden">
-                        <div className="flex items-start gap-3">
-                            <div className="pt-1">
+                        <div className="flex items-center gap-3">
+                            <div className="shrink-0">
                                 <MobileMenuTrigger />
                             </div>
                             <div className="min-w-0 flex-1">
                                 <h1 className="ui-text-title text-slate-900">Overview</h1>
-                                <p className="mt-1 text-[13px] font-medium text-slate-500">
-                                    {overviewSubtitle}
-                                </p>
                             </div>
                         </div>
                         <GlobalSearch mobileMode="full" />
@@ -439,9 +427,6 @@ export default async function HomePage() {
                     <div className="hidden grid-cols-[minmax(0,1fr)_minmax(320px,520px)_auto] items-center gap-5 md:grid lg:gap-6">
                         <div className="min-w-0">
                             <h1 className="ui-text-title text-slate-900">Overview</h1>
-                            <p className="mt-1 text-sm font-medium text-slate-500">
-                                {overviewSubtitle}
-                            </p>
                         </div>
                         <div className="min-w-[280px] px-1">
                             <GlobalSearch />

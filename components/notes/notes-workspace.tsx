@@ -403,8 +403,6 @@ export function NotesWorkspace({
       <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
         <DashboardPageHeader
           title="Notes"
-          eyebrow="Personal Workspace"
-          subtitle="Capture ideas, meeting notes, and quick thoughts without leaving the app."
           showMobile
           search={
             <div className="flex items-center gap-2">

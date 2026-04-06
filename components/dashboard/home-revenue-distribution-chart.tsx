@@ -141,18 +141,13 @@ function isProjectIncludedInRange(project: RevenueSourceProject, range?: DateRan
 
     const effectiveStart = range?.from ? new Date(range.from) : undefined
     const effectiveEnd = range?.to ?? range?.from
-    if (!effectiveEnd) return true
 
     if (effectiveStart) effectiveStart.setHours(0, 0, 0, 0)
-    const inclusiveEnd = new Date(effectiveEnd)
-    inclusiveEnd.setHours(23, 59, 59, 999)
-
-    if (project.revenueType === "recurring") {
-        return createdAt <= inclusiveEnd
-    }
+    if (effectiveEnd) effectiveEnd.setHours(23, 59, 59, 999)
 
     if (effectiveStart && createdAt < effectiveStart) return false
-    return createdAt <= inclusiveEnd
+    if (effectiveEnd && createdAt > effectiveEnd) return false
+    return true
 }
 
 function toSortedRows(map: Map<string, RevenueAnalysisEntry>) {

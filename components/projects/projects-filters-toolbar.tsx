@@ -81,7 +81,7 @@ function parseMaybeDate(value: string | null | undefined) {
 
 function triggerClassName(isActive: boolean, extraClassName?: string) {
   return cn(
-    "inline-flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-[10px] font-semibold transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+    "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
     isActive
       ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] text-[var(--brand-primary)]"
       : "border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] text-[var(--text-secondary)] hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))]",
@@ -200,16 +200,19 @@ export function ProjectsFiltersToolbar({
 
   return (
     <div className="space-y-2.5 sm:space-y-3">
-      <FilterBarShell className="rounded-[22px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-2 py-2 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:px-3 sm:py-2.5">
-        <div className="-mx-1 overflow-x-auto px-1 pb-0.5 hidescrollbar">
-          <div className="inline-flex min-w-max items-center gap-1.5">
-            <div className="inline-flex h-8 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
+      <FilterBarShell className="rounded-[22px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-2.5 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:px-3.5 sm:py-3">
+        <div className="relative -mx-1 sm:mx-0">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-white via-white/90 to-transparent sm:hidden" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-white via-white/90 to-transparent sm:hidden" />
+          <div className="overflow-x-auto px-1 pb-0.5 hidescrollbar snap-x snap-mandatory scroll-px-3 touch-pan-x overscroll-x-contain">
+          <div className="inline-flex min-w-max items-center gap-2">
+            <div className="inline-flex h-9 shrink-0 snap-start items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
               {STATUS_OPTIONS.map((option) => (
                 <Link
                   key={option.value}
                   href={buildHref({ status: option.value })}
                   className={cn(
-                    "inline-flex h-6 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentStatus === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -219,13 +222,13 @@ export function ProjectsFiltersToolbar({
               ))}
             </div>
 
-            <div className="inline-flex h-8 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
+            <div className="inline-flex h-9 shrink-0 snap-start items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
               {PAYMENT_OPTIONS.map((option) => (
                 <Link
                   key={option.value}
                   href={buildHref({ payment: option.value })}
                   className={cn(
-                    "inline-flex h-6 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentPayment === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -235,34 +238,42 @@ export function ProjectsFiltersToolbar({
               ))}
             </div>
 
-            <TypeCombobox currentRecurring={currentRecurring} onSelect={(value) => pushWithOverrides({ recurring: value })} />
+            <div className="shrink-0 snap-start">
+              <TypeCombobox currentRecurring={currentRecurring} onSelect={(value) => pushWithOverrides({ recurring: value })} />
+            </div>
 
-            <PartnerCombobox
-              partners={partners}
-              currentPartnerId={currentPartnerId}
-              onSelect={(value) => pushWithOverrides({ partnerId: value })}
-            />
+            <div className="shrink-0 snap-start">
+              <PartnerCombobox
+                partners={partners}
+                currentPartnerId={currentPartnerId}
+                onSelect={(value) => pushWithOverrides({ partnerId: value })}
+              />
+            </div>
 
-            <PeriodCombobox
-              currentPeriod={currentPeriod}
-              currentFrom={currentFrom}
-              currentTo={currentTo}
-              onSelectPreset={(value) => pushWithOverrides({ period: value, from: null, to: null })}
-              onSelectRange={(range) => {
-                const from = range.from ? toYmd(range.from) : null
-                const to = range.to ? toYmd(range.to) : null
-                pushWithOverrides({ period: "custom", from, to })
-              }}
-            />
+            <div className="shrink-0 snap-start">
+              <PeriodCombobox
+                currentPeriod={currentPeriod}
+                currentFrom={currentFrom}
+                currentTo={currentTo}
+                onSelectPreset={(value) => pushWithOverrides({ period: value, from: null, to: null })}
+                onSelectRange={(range) => {
+                  const from = range.from ? toYmd(range.from) : null
+                  const to = range.to ? toYmd(range.to) : null
+                  pushWithOverrides({ period: "custom", from, to })
+                }}
+              />
+            </div>
 
-            <SortCombobox currentSort={currentSort} onSelect={(value) => pushWithOverrides({ sort: value })} />
+            <div className="shrink-0 snap-start">
+              <SortCombobox currentSort={currentSort} onSelect={(value) => pushWithOverrides({ sort: value })} />
+            </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 snap-start items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => pushWithOverrides({ view: "grid" })}
                 className={cn(
-                  "inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
                   currentView === "grid"
                     ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
                     : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
@@ -271,13 +282,13 @@ export function ProjectsFiltersToolbar({
                 aria-label="Board view"
                 aria-pressed={currentView === "grid"}
               >
-                <LayoutGrid className="h-3.5 w-3.5" />
+                <LayoutGrid className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => pushWithOverrides({ view: "list" })}
                 className={cn(
-                  "inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
                   currentView === "list"
                     ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
                     : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
@@ -286,14 +297,15 @@ export function ProjectsFiltersToolbar({
                 aria-label="Table view"
                 aria-pressed={currentView === "list"}
               >
-                <Table2 className="h-3.5 w-3.5" />
+                <Table2 className="h-4 w-4" />
               </button>
             </div>
           </div>
         </div>
+        </div>
       </FilterBarShell>
 
-      <FilterResultsRow className="justify-between gap-2 rounded-[16px] border border-slate-200/70 bg-white/75 px-2.5 py-1.5 shadow-[0_4px_10px_rgba(15,23,42,0.02)] sm:px-3 sm:py-2">
+      <FilterResultsRow className="justify-between gap-2 px-0 py-0.5 shadow-none">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-primary)] sm:text-xs">{resultsLabel}</p>
           <div className="-mx-0.5 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-0.5 hidescrollbar">
@@ -301,7 +313,7 @@ export function ProjectsFiltersToolbar({
               <Link
                 key={filter.key}
                 href={filter.href}
-                className="inline-flex h-5.5 shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
+                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
               >
                 <span>{filter.label}</span>
                 <span className="text-[var(--brand-primary)]/70">×</span>
@@ -337,7 +349,7 @@ function SortCombobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" title="Sort projects" aria-label="Sort projects" className={triggerClassName(isActive, "h-8 w-8 justify-center px-0")}>
+        <button type="button" title="Sort projects" aria-label="Sort projects" className={triggerClassName(isActive, "h-9 w-9 justify-center px-0")}>
           <SlidersHorizontal className={cn("h-4 w-4", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
         </button>
       </PopoverTrigger>

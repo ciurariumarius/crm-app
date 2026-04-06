@@ -147,16 +147,19 @@ export function TasksToolbar({
 
   return (
     <div className="space-y-2.5 sm:space-y-3">
-      <FilterBarShell className="rounded-[24px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-2.5 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.035)] sm:px-4 sm:py-3">
-        <div className="-mx-1 overflow-x-auto px-1 pb-1 hidescrollbar">
+      <FilterBarShell className="rounded-[22px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-2.5 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:px-3.5 sm:py-3">
+        <div className="relative -mx-1 sm:mx-0">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-white via-white/90 to-transparent sm:hidden" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-white via-white/90 to-transparent sm:hidden" />
+          <div className="overflow-x-auto px-1 pb-0.5 hidescrollbar snap-x snap-mandatory scroll-px-3 touch-pan-x overscroll-x-contain">
           <div className="inline-flex min-w-max items-center gap-2">
-            <div className="inline-flex h-9 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
+            <div className="inline-flex h-9 shrink-0 snap-start items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
               {STATUS_OPTIONS.map((option) => (
                 <Link
                   key={option.value}
                   href={buildHref({ status: option.value })}
                   className={cn(
-                    "inline-flex h-7 items-center gap-2 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentStatus === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -166,13 +169,13 @@ export function TasksToolbar({
               ))}
             </div>
 
-            <div className="inline-flex h-9 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
+            <div className="inline-flex h-9 shrink-0 snap-start items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
               {PRIORITY_OPTIONS.map((option) => (
                 <Link
                   key={option.value}
                   href={buildHref({ urgency: option.value })}
                   className={cn(
-                    "inline-flex h-7 items-center gap-2 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentUrgency === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -185,7 +188,7 @@ export function TasksToolbar({
             <Link
               href={buildHref({ overdue: currentOverdue ? null : "1" })}
               className={cn(
-                "inline-flex h-9 items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+                "inline-flex h-9 shrink-0 snap-start items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
                 currentOverdue
                   ? "border-[color:color-mix(in_srgb,var(--state-overdue)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_14%,white)] text-[var(--state-overdue)] ring-1 ring-[color:color-mix(in_srgb,var(--state-overdue)_22%,transparent)]"
                   : "border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] text-[var(--text-secondary)] hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))]"
@@ -196,57 +199,68 @@ export function TasksToolbar({
                 <span>Overdue</span>
               </span>
               {currentOverdue ? (
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--state-overdue)_24%,white)] text-[var(--state-overdue)]">
+                <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--state-overdue)_24%,white)] text-[var(--state-overdue)]">
                   <Check className="h-3 w-3" />
                 </span>
               ) : null}
             </Link>
 
-            <ProjectCombobox
-              projects={projects}
-              currentProject={currentProject}
-              onSelect={(value) => {
-                const overrides: Record<string, string | null> = { projectId: value }
-                if (value !== "all") overrides.partnerId = null
-                pushWithOverrides(overrides)
-              }}
-            />
+            <div className="shrink-0 snap-start">
+              <ProjectCombobox
+                projects={projects}
+                currentProject={currentProject}
+                onSelect={(value) => {
+                  const overrides: Record<string, string | null> = { projectId: value }
+                  if (value !== "all") overrides.partnerId = null
+                  pushWithOverrides(overrides)
+                }}
+              />
+            </div>
 
-            <PartnerCombobox
-              partners={partners}
-              currentPartner={currentPartner}
-              onSelect={(value) => {
-                const overrides: Record<string, string | null> = { partnerId: value }
-                if (value !== "all") overrides.projectId = null
-                pushWithOverrides(overrides)
-              }}
-            />
+            <div className="shrink-0 snap-start">
+              <PartnerCombobox
+                partners={partners}
+                currentPartner={currentPartner}
+                onSelect={(value) => {
+                  const overrides: Record<string, string | null> = { partnerId: value }
+                  if (value !== "all") overrides.projectId = null
+                  pushWithOverrides(overrides)
+                }}
+              />
+            </div>
 
-            <SortCombobox currentSort={currentSort} onSelect={(value) => pushWithOverrides({ sort: value })} />
-            <ColumnsToggle currentCols={currentCols} onSelect={(value) => pushWithOverrides({ cols: String(value) })} />
+            <div className="shrink-0 snap-start">
+              <SortCombobox currentSort={currentSort} onSelect={(value) => pushWithOverrides({ sort: value })} />
+            </div>
+            <div className="shrink-0 snap-start">
+              <ColumnsToggle currentCols={currentCols} onSelect={(value) => pushWithOverrides({ cols: String(value) })} />
+            </div>
           </div>
+        </div>
         </div>
       </FilterBarShell>
 
-      <FilterResultsRow className="justify-between gap-3 rounded-[18px] border border-slate-200/80 bg-white/80 px-3 py-2 shadow-[0_4px_12px_rgba(15,23,42,0.025)] sm:gap-4 sm:px-4 sm:py-2.5">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">{resultsLabel}</p>
-          {activeFilters.map((filter) => (
-            <Link
-              key={filter.key}
-              href={filter.href}
-              className="inline-flex h-6 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2.5 text-[10px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
-            >
-              <span>{filter.label}</span>
-              <span className="text-[var(--brand-primary)]/70">×</span>
-            </Link>
-          ))}
+      <FilterResultsRow className="justify-between gap-2 px-0 py-0.5 shadow-none">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-primary)] sm:text-xs">{resultsLabel}</p>
+          <div className="-mx-0.5 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-0.5 hidescrollbar">
+            {activeFilters.map((filter) => (
+              <Link
+                key={filter.key}
+                href={filter.href}
+                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
+              >
+                <span>{filter.label}</span>
+                <span className="text-[var(--brand-primary)]/70">×</span>
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {activeFilters.length > 0 ? (
             <Link
               href={clearAllHref}
-              className="inline-flex h-7 items-center rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800"
+              className="inline-flex h-6 items-center rounded-full px-2 text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800 sm:text-[10px]"
             >
               Clear all
             </Link>
