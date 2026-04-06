@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format, formatDistanceToNow } from "date-fns"
-import { Archive, ArchiveRestore, FilePlus2, FolderKanban, ListTodo, NotebookPen, Pin, PinOff, Sparkles, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, FilePlus2, FolderKanban, ListTodo, NotebookPen, Pin, PinOff, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { createNote, deleteNote, setNoteArchived, setNotePinned, updateNote, type NoteRecord } from "@/lib/actions/notes"
 import { updateProject } from "@/lib/actions/projects"
@@ -10,7 +10,6 @@ import { updateTask } from "@/lib/actions/tasks"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { NotesSearchInput } from "@/components/notes/notes-search-input"
@@ -648,31 +647,21 @@ export function NotesWorkspace({
               {selectedNote ? (
                 <div className="space-y-2 p-3 sm:p-3.5 md:p-4">
                   {selectedNoteIsLinked ? (
-                    <div className="flex items-center justify-between gap-2 px-1">
+                    <div className="flex items-center gap-2 px-1">
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-600">
                         {selectedNoteSourceType === "project" ? <FolderKanban className="h-3.5 w-3.5" /> : <ListTodo className="h-3.5 w-3.5" />}
                         {selectedNoteSourceType === "project" ? "Project note" : "Task note"}
                         {selectedNote.sourceLabel ? <span className="text-slate-400">• {selectedNote.sourceLabel}</span> : null}
                       </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 rounded-lg px-2 text-[11px] text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                        onClick={appendTemplate}
-                      >
-                        <Sparkles className="mr-1 h-3.5 w-3.5" />
-                        Template
-                      </Button>
                     </div>
                   ) : null}
-                  <Input
+                  <input
                     value={titleDraft}
                     onChange={(event) => setTitleDraft(event.target.value)}
                     readOnly={selectedNoteIsLinked}
                     placeholder={getDefaultNoteTitle(selectedNote.createdAt)}
                     className={cn(
-                      "h-9 rounded-lg !border-0 !bg-transparent px-1 text-[15px] font-medium shadow-none hover:!border-transparent hover:!bg-transparent focus-visible:!border-transparent focus-visible:ring-0",
+                      "h-9 w-full rounded-md border-0 bg-transparent px-1 text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400 focus:ring-0",
                       selectedNoteIsLinked && "cursor-default text-slate-700"
                     )}
                   />
@@ -681,12 +670,27 @@ export function NotesWorkspace({
                     onChange={setContentDraft}
                     placeholder="Write here..."
                     variant="plain"
-                    mode="panel"
+                    mode="document"
+                    documentLayout="left"
                     uploadProjectId={editorUploadContextId}
                     toolbarVisibility="always"
-                    toolbarPreset={selectedNoteIsLinked ? "full" : "minimal"}
-                    panelStyle="borderless"
-                    className="rounded-[12px] border-0 bg-transparent shadow-none [&_.ProseMirror]:text-[13px] [&_.ProseMirror]:leading-6"
+                    toolbarPreset="full"
+                    toolbarActions={
+                      selectedNoteIsLinked ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={appendTemplate}
+                          className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          aria-label="Add template"
+                          title="Add template"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      ) : undefined
+                    }
+                    className="rounded-[22px] bg-white [&_.ProseMirror]:text-[13px] [&_.ProseMirror]:leading-6"
                     minHeightClassName="min-h-[54vh] sm:min-h-[58vh] md:min-h-[60vh]"
                   />
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-[9px] font-medium text-[var(--text-muted)]">

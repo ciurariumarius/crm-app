@@ -3,16 +3,25 @@ import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { PaymentsTable } from "@/components/payments/payments-table"
-import { PaymentsFilters } from "@/components/payments/payments-filters"
-import { AddPartnerPaymentDialog } from "@/components/payments/add-partner-payment-dialog"
 import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
 import { ChevronLeft, ChevronRight, Banknote, Users, History } from "lucide-react"
 import Link from "next/link"
+import dynamicImport from "next/dynamic"
 import { buttonLinkClassName } from "@/components/ui/button-link"
 import { formatCurrency, formatProjectName, serialize, cn } from "@/lib/utils"
 
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
+
+const PaymentsFilters = dynamicImport(
+    () => import("@/components/payments/payments-filters").then((module) => module.PaymentsFilters),
+    { ssr: false }
+)
+
+const AddPartnerPaymentDialog = dynamicImport(
+    () => import("@/components/payments/add-partner-payment-dialog").then((module) => module.AddPartnerPaymentDialog),
+    { ssr: false }
+)
 
 export default async function PaymentsPage({
     searchParams,

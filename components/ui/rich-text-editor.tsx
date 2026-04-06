@@ -72,6 +72,7 @@ interface RichTextEditorProps {
     className?: string
     mode?: "panel" | "document"
     panelStyle?: "default" | "borderless"
+    documentLayout?: "center" | "left"
 }
 
 type UploadState = {
@@ -127,6 +128,7 @@ export function RichTextEditor({
     className,
     mode = "panel",
     panelStyle = "default",
+    documentLayout = "center",
 }: RichTextEditorProps) {
     const [isFocused, setIsFocused] = React.useState(false)
     const [uploadState, setUploadState] = React.useState<UploadState | null>(null)
@@ -626,6 +628,7 @@ export function RichTextEditor({
     const showToolbar = toolbarVisibility === "always" || isFocused
     const isMinimalToolbar = toolbarPreset === "minimal"
     const isBorderlessPanel = variant === "plain" && mode === "panel" && panelStyle === "borderless"
+    const isDocumentLeft = mode === "document" && documentLayout === "left"
 
     return (
         <>
@@ -663,7 +666,9 @@ export function RichTextEditor({
                                     : "border-b border-slate-200 bg-white/95"),
                             variant === "plain" &&
                                 mode === "document" &&
-                                "mx-4 md:mx-auto mt-4 mb-6 w-full md:w-[calc(100%-2rem)] max-w-4xl rounded-xl border border-slate-200/80 bg-white/92 px-3 pt-2 pb-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm"
+                                (isDocumentLeft
+                                    ? "mx-1 mt-3 mb-4 w-[calc(100%-0.5rem)] rounded-xl border border-slate-200/80 bg-white/92 px-3 pt-2 pb-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm"
+                                    : "mx-4 md:mx-auto mt-4 mb-6 w-full md:w-[calc(100%-2rem)] max-w-4xl rounded-xl border border-slate-200/80 bg-white/92 px-3 pt-2 pb-2 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] backdrop-blur-sm")
                         )}
                     >
                         {!isMinimalToolbar ? (
@@ -905,7 +910,14 @@ export function RichTextEditor({
                         minHeightClassName
                     )}
                 >
-                    <div className={cn(mode === "document" && "mx-auto w-full max-w-4xl px-6 pb-8")}>
+                    <div
+                        className={cn(
+                            mode === "document" &&
+                                (isDocumentLeft
+                                    ? "w-full px-3 pb-7"
+                                    : "mx-auto w-full max-w-4xl px-6 pb-8")
+                        )}
+                    >
                         <EditorContent editor={editor} />
                     </div>
                 </div>
@@ -921,7 +933,8 @@ export function RichTextEditor({
                     >
                         <div
                             className={cn(
-                                mode === "document" && "mx-auto w-full max-w-4xl px-6"
+                                mode === "document" &&
+                                    (isDocumentLeft ? "w-full px-3" : "mx-auto w-full max-w-4xl px-6")
                             )}
                         >
                             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-400">
