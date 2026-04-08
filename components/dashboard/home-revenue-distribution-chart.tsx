@@ -373,7 +373,7 @@ function RevenueDateFilter({
 
 export function HomeRevenueDistributionChart({ sourceProjects, allServices, hourlyRate = 0 }: HomeRevenueDistributionChartProps) {
     const presets = React.useMemo(() => getLmsDatePresets(), [])
-    const [period, setPeriod] = React.useState<string>("all")
+    const [period, setPeriod] = React.useState<string>("last-quarter")
     const [customRange, setCustomRange] = React.useState<DateRange | undefined>(undefined)
     const [mode, setMode] = React.useState<RevenueMode>("project")
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
@@ -484,9 +484,6 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
         return (
             <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-6 shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
                 <p className="ui-text-section text-slate-900">Revenue Analysis</p>
-                <p className="mt-2 max-w-xl text-sm font-medium text-slate-500">
-                    Break down billed revenue by partner, domain, project, or revenue type.
-                </p>
                 <p className="mt-4 rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(241,245,249,0.48))] px-4 py-8 text-center text-sm text-slate-500">
                     No revenue data available for this period.
                 </p>
@@ -502,9 +499,6 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
                         <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">Revenue Analysis</h3>
                     </div>
-                    <p className="max-w-2xl text-sm font-medium leading-6 text-slate-500">
-                        Break down billed revenue by partner, domain, project, or revenue type to see where the portfolio is concentrated.
-                    </p>
                     <div className="hidden flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 sm:flex">
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
                             {totalCount} visible {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`}

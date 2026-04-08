@@ -38,17 +38,17 @@ function NavLink({
         <Link
             href={href}
             className={cn(
-                "relative inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl border transition-all",
+                "relative inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl border border-transparent transition-colors",
                 active
-                    ? "border-[color:color-mix(in_srgb,var(--primary)_24%,white)] bg-[color:color-mix(in_srgb,var(--primary)_12%,white)] text-[var(--primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
-                    : "border-transparent text-slate-400 hover:border-slate-200/80 hover:bg-slate-50/70 hover:text-slate-600"
+                    ? "text-[var(--primary)]"
+                    : "text-slate-400 hover:text-slate-600"
             )}
             aria-current={active ? "page" : undefined}
         >
             {active ? (
                 <span
                     aria-hidden="true"
-                    className="absolute left-1/2 top-1 h-1 w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]/70"
+                    className="absolute left-1/2 top-1 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]/55"
                 />
             ) : null}
             <Icon className="h-5 w-5" strokeWidth={1.7} />
@@ -104,10 +104,10 @@ export function MobileBottomNav({
                             type="button"
                             onClick={() => setIsMobileMenuOpen(true)}
                             className={cn(
-                                "relative inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl border transition-all",
+                                "relative inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl border border-transparent transition-colors",
                                 menuActive
-                                    ? "border-[color:color-mix(in_srgb,var(--primary)_24%,white)] bg-[color:color-mix(in_srgb,var(--primary)_12%,white)] text-[var(--primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
-                                    : "border-transparent text-slate-500 hover:border-slate-200/80 hover:bg-slate-50/70 hover:text-slate-700"
+                                    ? "text-[var(--primary)]"
+                                    : "text-slate-500 hover:text-slate-700"
                             )}
                             aria-label="Open menu"
                             aria-current={menuActive ? "page" : undefined}
@@ -115,7 +115,7 @@ export function MobileBottomNav({
                             {menuActive ? (
                                 <span
                                     aria-hidden="true"
-                                    className="absolute left-1/2 top-1 h-1 w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]/70"
+                                    className="absolute left-1/2 top-1 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]/55"
                                 />
                             ) : null}
                             <Menu className="h-5 w-5" strokeWidth={1.7} />

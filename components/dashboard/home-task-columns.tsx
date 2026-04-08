@@ -184,14 +184,11 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
     return (
         <div className="w-full space-y-4.5 sm:space-y-6 lg:space-y-7">
             <section className="w-full">
-                <div className="mb-3.5 flex flex-col gap-2 sm:mb-5">
+                <div className="mb-3.5 flex items-center gap-2 sm:mb-5">
                     <div className="flex items-center gap-2">
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
-                        <h3 className="text-[17px] font-bold tracking-tight text-slate-900">Task Pressure</h3>
+                        <h3 className="text-[17px] font-bold tracking-tight text-slate-900">Tasks</h3>
                     </div>
-                    <p className="max-w-2xl text-sm font-medium leading-6 text-slate-500">
-                        Priority tasks that need attention right now, with the most urgent work surfaced first.
-                    </p>
                 </div>
 
                 <div className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
