@@ -77,9 +77,15 @@ function isActivePath(pathname: string, href: string) {
 
 export function Sidebar({ user }: { user?: { name: string | null, username: string, profilePic: string | null } }) {
   const pathname = usePathname()
-  const { isMobileMenuOpen, setIsMobileMenuOpen, isSidebarCollapsed, setIsSidebarCollapsed } = useHeader()
+  const {
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
+    isSidebarCollapsed,
+    setIsSidebarCollapsed,
+    isSidebarFocusExpanded,
+    setIsSidebarFocusExpanded,
+  } = useHeader()
   const asideRef = useRef<HTMLElement | null>(null)
-  const [isSidebarFocusExpanded, setIsSidebarFocusExpanded] = useState(false)
   const [databaseOpen, setDatabaseOpen] = useState(false)
   const [ppcOpen, setPpcOpen] = useState(false)
   const [lmsAnalysisOpen, setLmsAnalysisOpen] = useState(false)

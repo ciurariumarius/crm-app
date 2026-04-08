@@ -29,6 +29,12 @@ const SORT_OPTIONS = [
 ] as const
 const SORT_VALUES = new Set(SORT_OPTIONS.map((option) => option.value))
 const COL_VALUES = new Set(["3", "4"])
+const OVERVIEW_ROW_CLASS =
+    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.94))] shadow-[0_10px_26px_rgba(15,23,42,0.06)] md:w-full"
+const OVERVIEW_ITEM_CLASS =
+    "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-white/60 md:min-w-0 md:flex-1"
+const OVERVIEW_ICON_CLASS =
+    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_3px_rgba(15,23,42,0.08)]"
 
 function buildSort(sort: string): Prisma.TaskOrderByWithRelationInput[] {
     switch (sort) {
@@ -252,81 +258,60 @@ export default async function TasksPage({
         return `/tasks?${next.toString()}`
     }
     const renderTasksSummaryRow = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            <Link
-                href={buildTasksHref({ q: null, status: "All", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
-            >
-                <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100 shadow-inner">
-                        <ListChecks className="h-4 w-4" />
-                    </div>
-                    <p className="flex items-baseline gap-1.5 leading-none">
-                        <span className="text-lg font-bold tracking-tight text-slate-900">{totalTasksOverall}</span>
-                        <span className="text-[12px] font-semibold text-slate-500">Total</span>
-                    </p>
-                </div>
-            </Link>
-
-            <Link
-                href={buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
-            >
-                <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-inner">
-                        <Play className="h-4 w-4 fill-current" />
-                    </div>
-                    <p className="flex items-baseline gap-1.5 leading-none">
-                        <span className="text-lg font-bold tracking-tight text-slate-900">{totalActiveTasks}</span>
-                        <span className="text-[12px] font-semibold text-slate-500">Active</span>
-                    </p>
-                </div>
-            </Link>
-
-            <Link
-                href={buildTasksHref({ q: null, status: "Active", urgency: "Urgent", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
-            >
-                <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 border border-rose-100 shadow-inner">
-                        <AlertTriangle className="h-4 w-4" />
-                    </div>
-                    <p className="flex items-baseline gap-1.5 leading-none">
-                        <span className="text-lg font-bold tracking-tight text-slate-900">{urgentTasksCount}</span>
-                        <span className="text-[12px] font-semibold text-slate-500">Urgent</span>
-                    </p>
-                </div>
-            </Link>
-
-            <Link
-                href={buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: "1", dueToday: null, projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
-            >
-                <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-100 shadow-inner">
-                        <CalendarClock className="h-4 w-4" />
-                    </div>
-                    <p className="flex items-baseline gap-1.5 leading-none">
-                        <span className="text-lg font-bold tracking-tight text-slate-900">{overdueTasksCount}</span>
-                        <span className="text-[12px] font-semibold text-slate-500">Overdue</span>
-                    </p>
-                </div>
-            </Link>
-
-            <Link
-                href={buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: "1", projectId: null, partnerId: null, page: "1" })}
-                className="relative overflow-hidden rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
-            >
-                <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-inner">
-                        <CalendarDays className="h-4 w-4" />
-                    </div>
-                    <p className="flex items-baseline gap-1.5 leading-none">
-                        <span className="text-lg font-bold tracking-tight text-slate-900">{dueTodayTasksCount}</span>
-                        <span className="text-[12px] font-semibold text-slate-500">Due Today</span>
-                    </p>
-                </div>
-            </Link>
+        <div className="-mx-1 overflow-x-auto pb-1 md:mx-0 md:overflow-visible hidescrollbar">
+            <div className={OVERVIEW_ROW_CLASS}>
+                {[
+                    {
+                        href: buildTasksHref({ q: null, status: "All", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" }),
+                        label: "Total Tasks",
+                        value: totalTasksOverall,
+                        icon: <ListChecks className="h-3.5 w-3.5" />,
+                        toneClass: "border-blue-100/80 bg-blue-50/80 text-blue-700",
+                    },
+                    {
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" }),
+                        label: "Active Tasks",
+                        value: totalActiveTasks,
+                        icon: <Play className="h-3.5 w-3.5 fill-current" />,
+                        toneClass: "border-emerald-100/80 bg-emerald-50/80 text-emerald-700",
+                    },
+                    {
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "Urgent", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" }),
+                        label: "Urgent Tasks",
+                        value: urgentTasksCount,
+                        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+                        toneClass: "border-rose-100/80 bg-rose-50/80 text-rose-700",
+                    },
+                    {
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: "1", dueToday: null, projectId: null, partnerId: null, page: "1" }),
+                        label: "Overdue Tasks",
+                        value: overdueTasksCount,
+                        icon: <CalendarClock className="h-3.5 w-3.5" />,
+                        toneClass: "border-amber-100/80 bg-amber-50/80 text-amber-700",
+                    },
+                    {
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: "1", projectId: null, partnerId: null, page: "1" }),
+                        label: "Due Today",
+                        value: dueTodayTasksCount,
+                        icon: <CalendarDays className="h-3.5 w-3.5" />,
+                        toneClass: "border-indigo-100/80 bg-indigo-50/80 text-indigo-700",
+                    },
+                ].map((item, index, all) => (
+                    <Link
+                        key={item.label}
+                        href={item.href}
+                        className={`${OVERVIEW_ITEM_CLASS} ${index < all.length - 1 ? "border-r border-slate-200/80" : ""}`}
+                    >
+                        <div className={`${OVERVIEW_ICON_CLASS} ${item.toneClass}`}>
+                            {item.icon}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-[13px] font-semibold leading-none text-slate-700">{item.label}</p>
+                            <p className="mt-1 text-[12px] font-medium leading-none text-slate-500">{item.value}</p>
+                        </div>
+                    </Link>
+                ))}
+            </div>
         </div>
     )
 
@@ -351,7 +336,7 @@ export default async function TasksPage({
     return (
         <TasksSearchProvider initialSearch={q || ""}>
             <div className="flex flex-col gap-3.5 sm:gap-4">
-                <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+                <div className="rounded-[24px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
                     <DashboardPageHeader
                         title="Tasks"
                         showMobile
@@ -362,7 +347,7 @@ export default async function TasksPage({
                                 projects={activeProjects}
                                 label="Add"
                                 showLabelOnMobile
-                                className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
+                                className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white"
                             />
                         }
                         actions={<CreateTaskButton projects={activeProjects} />}
@@ -403,15 +388,11 @@ export default async function TasksPage({
                         perPage,
                     }}
                 />
-                <div className="mt-8 rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:mt-10 sm:p-5">
-                    <div className="mb-3 sm:mb-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Task Snapshot</p>
-                        <p className="mt-1 text-sm font-medium text-slate-500">Quick totals for active delivery pressure and due work.</p>
-                    </div>
+                <div className="mt-6 sm:mt-8">
                     {renderTasksSummaryRow()}
                 </div>
 
-                <div className="mt-4 border-t border-slate-200/70 pt-4 sm:mt-5 sm:pt-5">
+                <div className="mt-4 sm:mt-5">
                     {renderPaginationBar()}
                 </div>
             </div>

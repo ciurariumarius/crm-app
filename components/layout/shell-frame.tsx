@@ -28,9 +28,10 @@ export function ShellFrame({
     quickActionProjects,
     children,
 }: ShellFrameProps) {
-    const { isSidebarCollapsed } = useHeader()
+    const { isSidebarCollapsed, isSidebarFocusExpanded } = useHeader()
     const pathname = usePathname()
     const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
+    const isDesktopCollapsed = isSidebarCollapsed && !isSidebarFocusExpanded
 
     React.useEffect(() => {
         const container = scrollContainerRef.current
@@ -45,7 +46,7 @@ export function ShellFrame({
                 ref={scrollContainerRef}
                 className={cn(
                     "flex-1 flex flex-col min-w-0 min-h-dvh overflow-y-auto transition-all duration-300 relative",
-                    isSidebarCollapsed ? "md:pl-[92px]" : "md:pl-[236px]"
+                    isDesktopCollapsed ? "md:pl-[92px]" : "md:pl-[236px]"
                 )}
             >
                 <main className="cockpit-page-enter flex-1 px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:pb-8 max-w-full overflow-hidden">

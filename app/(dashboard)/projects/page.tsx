@@ -201,7 +201,7 @@ export default async function ProjectsPage({
             <ProjectsSearchProvider initialSearch={q || ""}>
                 <div className="space-y-5 sm:space-y-6">
                     <div className="flex flex-col gap-3.5 sm:gap-4">
-                        <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+                        <div className="rounded-[24px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
                             <DashboardPageHeader
                                 title="Projects"
                                 showMobile
@@ -212,7 +212,7 @@ export default async function ProjectsPage({
                                         variant="full"
                                         label="Add"
                                         showLabelOnMobile
-                                        className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
+                                        className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white"
                                         partners={partnersForClient}
                                         services={servicesForClient}
                                     />
@@ -264,21 +264,23 @@ export default async function ProjectsPage({
                     }}
                 />
 
-                <ProjectsPaginationBar
-                    fallback={{
-                        total: totalProjects,
-                        page,
-                        perPage,
-                        totalPages,
-                        pageStart,
-                        pageEnd,
-                        shouldPaginate,
-                        prevPage,
-                        nextPage,
-                    }}
-                    pageSizeOptions={PAGE_SIZE_OPTIONS}
-                    defaultPageSize={DEFAULT_PAGE_SIZE}
-                />
+                <div className="mt-4 sm:mt-5">
+                    <ProjectsPaginationBar
+                        fallback={{
+                            total: totalProjects,
+                            page,
+                            perPage,
+                            totalPages,
+                            pageStart,
+                            pageEnd,
+                            shouldPaginate,
+                            prevPage,
+                            nextPage,
+                        }}
+                        pageSizeOptions={PAGE_SIZE_OPTIONS}
+                        defaultPageSize={DEFAULT_PAGE_SIZE}
+                    />
+                </div>
                 </div>
             </ProjectsSearchProvider>
         </ProjectSheetWrapper>

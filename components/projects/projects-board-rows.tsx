@@ -192,6 +192,63 @@ function EmptyProjectsState({
     )
 }
 
+function ProjectsGridSkeleton() {
+    return (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                    key={`project-grid-skeleton-${index}`}
+                    className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
+                >
+                    <div className="animate-pulse space-y-3">
+                        <div className="flex items-start gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-slate-200" />
+                            <div className="min-w-0 flex-1 space-y-2">
+                                <div className="h-4 w-3/4 rounded bg-slate-200" />
+                                <div className="h-3 w-1/2 rounded bg-slate-200" />
+                            </div>
+                            <div className="h-6 w-20 rounded-full bg-slate-200" />
+                        </div>
+                        <div className="h-8 w-full rounded-full bg-slate-200" />
+                        <div className="h-8 w-4/5 rounded-full bg-slate-200" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function ProjectsListSkeleton() {
+    return (
+        <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
+            <div className="space-y-6 md:min-w-[1280px]">
+                {Array.from({ length: 2 }).map((_, sectionIndex) => (
+                    <section
+                        key={`project-list-skeleton-section-${sectionIndex}`}
+                        className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4"
+                    >
+                        <div className="mb-3 flex items-center gap-3">
+                            <span className="h-5 w-1 rounded-full bg-slate-200" />
+                            <div className="h-5 w-40 animate-pulse rounded bg-slate-200" />
+                        </div>
+
+                        <div className="space-y-2">
+                            {Array.from({ length: 4 }).map((_, rowIndex) => (
+                                <div
+                                    key={`project-list-skeleton-row-${sectionIndex}-${rowIndex}`}
+                                    className="h-[72px] animate-pulse rounded-[18px] border border-slate-200/80 bg-white/92"
+                                />
+                            ))}
+                        </div>
+                    </section>
+                ))}
+
+                <div className="h-[74px] animate-pulse rounded-[22px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.94))]" />
+            </div>
+        </div>
+    )
+}
+
 type BoardProject = {
     id: string
     name?: string | null
@@ -321,6 +378,7 @@ export function ProjectsBoardRows({
 
     const normalizedSearch = (searchContext?.searchTerm || "").trim().toLowerCase()
     const debouncedSearch = useDebounce(normalizedSearch, 250)
+    const showSearchSkeleton = Boolean(searchContext?.isSearching && debouncedSearch)
 
     React.useEffect(() => {
         if (!searchContext) return
@@ -574,6 +632,10 @@ export function ProjectsBoardRows({
             }))
             toast.error(result.error || "Failed to update amount")
         }
+    }
+
+    if (showSearchSkeleton) {
+        return layout === "grid" ? <ProjectsGridSkeleton /> : <ProjectsListSkeleton />
     }
 
     if (layout === "grid") {
