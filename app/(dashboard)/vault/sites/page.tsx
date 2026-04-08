@@ -2,12 +2,10 @@ import prisma from "@/lib/prisma"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { SitesTable } from "@/components/vault/sites-table"
-import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { requireTenantContext } from "@/lib/tenant"
 import { DomainsFilters } from "@/components/vault/domains-filters"
-import { cn } from "@/lib/utils"
 import type { Prisma } from "@prisma/client"
 import { buttonLinkClassName } from "@/components/ui/button-link"
 
@@ -84,13 +82,13 @@ export default async function SitesPage({
             <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Domains"
-                    actions={<CreateSiteDialog partners={partners} />}
+                    actions={<CreateSiteDialog partners={partners} label="Add" className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3" />}
                     mobileActions={
                         <CreateSiteDialog
                             partners={partners}
                             label="Add"
                             showLabelOnMobile
-                            className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
+                            className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
                         />
                     }
                     showMobile
@@ -110,57 +108,39 @@ export default async function SitesPage({
                 />
                 
                 {/* Pagination Footer */}
-                <div className="flex items-center justify-between rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-6 sm:py-4">
-                    <p className="ui-overline">
-                        Page {page} of {totalPages || 1} · {totalSites} Total Domains
-                    </p>
-                    
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild={page > 1}
-                            disabled={page <= 1}
-                            className={cn(
-                                buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" }),
-                                page <= 1 ? "opacity-40" : "hover:bg-slate-50 hover:text-blue-600"
-                            )}
-                        >
-                            {page > 1 ? (
-                                <Link href={buildPageHref(page - 1)} className="flex items-center gap-2">
-                                    <ChevronLeft className="h-4 w-4" />
-                                    Previous
-                                </Link>
-                            ) : (
-                                <span className="flex items-center gap-2">
-                                    <ChevronLeft className="h-4 w-4" />
-                                    Previous
-                                </span>
-                            )}
-                        </Button>
-                        
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild={page < totalPages}
-                            disabled={page >= totalPages}
-                            className={cn(
-                                buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" }),
-                                page >= totalPages ? "opacity-40" : "hover:bg-slate-50 hover:text-blue-600"
-                            )}
-                        >
-                            {page < totalPages ? (
-                                <Link href={buildPageHref(page + 1)} className="flex items-center gap-2">
-                                    Next
-                                    <ChevronRight className="h-4 w-4" />
-                                </Link>
-                            ) : (
-                                <span className="flex items-center gap-2">
-                                    Next
-                                    <ChevronRight className="h-4 w-4" />
-                                </span>
-                            )}
-                        </Button>
+                <div className="flex items-center justify-between rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
+                    <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                        {page}/{totalPages || 1}
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                        {page > 1 ? (
+                            <Link
+                                href={buildPageHref(page - 1)}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                aria-label="Previous page"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Link>
+                        ) : (
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-100/70 text-slate-400" aria-hidden="true">
+                                <ChevronLeft className="h-4 w-4" />
+                            </span>
+                        )}
+
+                        {page < totalPages ? (
+                            <Link
+                                href={buildPageHref(page + 1)}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                aria-label="Next page"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Link>
+                        ) : (
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-100/70 text-slate-400" aria-hidden="true">
+                                <ChevronRight className="h-4 w-4" />
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>

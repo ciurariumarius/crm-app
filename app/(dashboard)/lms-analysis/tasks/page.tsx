@@ -15,7 +15,7 @@ import { normalizeClientKey, normalizeExecutantKey } from "@/lib/lms-tasks/parse
 import { detectLmsDatePresetId, type LmsDatePreset, getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
 import { countWorkingDaysInRange } from "@/lib/lms-tasks/date-utils"
 import { isLmsMobileOptimizedEnabled } from "@/lib/lms-tasks/feature-flags"
-import { ArrowDown, ArrowUp, ArrowUpDown, Building2, CalendarClock, Check, ChevronDown, Clock3, ListTodo, Search, X } from "lucide-react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Building2, CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, ListTodo, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -991,44 +991,45 @@ export default function LmsAnalysisTasksPage() {
             </div>
           ) : null}
           {sortedLoggedTaskRows.length > 0 ? (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-medium text-[var(--text-secondary)]">
-                Page {taskLogPage} of {taskLogTotalPages} · {sortedLoggedTaskRows.length} total rows
-              </p>
-              <div className="flex items-center gap-2">
-                <label className="inline-flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)]">
-                  Results
-                  <div className="relative">
-                    <select
-                      value={taskLogPageSize}
-                      onChange={(event) => setTaskLogPageSize(Number(event.target.value))}
-                      className="h-9 appearance-none rounded-md border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-7 text-xs font-semibold text-[var(--text-primary)] outline-none"
-                      aria-label="Rows per page"
-                    >
-                      {TASK_LOGS_PAGE_SIZE_OPTIONS.map((size) => (
-                        <option key={size} value={size}>
-                          {size} / page
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
-                  </div>
-                </label>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-2.5 py-2">
+              <div className="flex items-center gap-1.5">
+                <div className="relative">
+                  <select
+                    value={taskLogPageSize}
+                    onChange={(event) => setTaskLogPageSize(Number(event.target.value))}
+                    className="h-8 min-w-[58px] appearance-none rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-6 text-[11px] font-semibold text-[var(--text-primary)] outline-none"
+                    aria-label="Rows per page"
+                  >
+                    {TASK_LOGS_PAGE_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
+                </div>
+                <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-2.5 text-[11px] font-semibold text-[var(--text-primary)]">
+                  {taskLogPage}/{taskLogTotalPages}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setTaskLogPage((current) => Math.max(1, current - 1))}
                   disabled={taskLogPage <= 1}
-                  className="inline-flex h-9 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Previous page"
                 >
-                  Previous
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setTaskLogPage((current) => Math.min(taskLogTotalPages, current + 1))}
                   disabled={taskLogPage >= taskLogTotalPages}
-                  className="inline-flex h-9 items-center rounded-md border border-[var(--line-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Next page"
                 >
-                  Next
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </div>

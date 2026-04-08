@@ -19,17 +19,18 @@ export function PaymentsAddPaymentAction({
   partners: PartnerOption[]
   mobile?: boolean
 }) {
+  const compactClassName = "!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
+
   if (mobile) {
     return (
       <AddPartnerPaymentDialog
         partners={partners}
         label="Add"
         showLabelOnMobile
-        className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
+        className={compactClassName}
       />
     )
   }
 
-  return <AddPartnerPaymentDialog partners={partners} />
+  return <AddPartnerPaymentDialog partners={partners} label="Add" className={compactClassName} />
 }
-

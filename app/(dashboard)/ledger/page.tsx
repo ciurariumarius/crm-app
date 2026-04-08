@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { requireTenantContext } from "@/lib/tenant"
 import Link from "next/link"
 import { formatProjectName } from "@/lib/utils"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import type { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
@@ -128,22 +129,36 @@ export default async function LedgerPage({
                             </div>
                         )}
                     </div>
-                    <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
-                        <span className="text-muted-foreground">Page {page} of {totalPages} · {totalActiveProjects} active projects</span>
-                        <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between rounded-[18px] border border-border/60 bg-card/50 px-3 py-2">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-2.5 text-[11px] font-semibold text-foreground">
+                            {page}/{totalPages}
+                        </span>
+                        <div className="flex items-center gap-1.5">
                             {prevPage ? (
-                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={`/ledger?page=${prevPage}`}>
-                                    Previous
+                                <Link
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-foreground transition-colors hover:bg-muted"
+                                    href={`/ledger?page=${prevPage}`}
+                                    aria-label="Previous page"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Previous</span>
+                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground/50" aria-hidden="true">
+                                    <ChevronLeft className="h-4 w-4" />
+                                </span>
                             )}
                             {nextPage ? (
-                                <Link className="px-3 py-1.5 rounded-md border border-border text-foreground hover:bg-muted transition-colors" href={`/ledger?page=${nextPage}`}>
-                                    Next
+                                <Link
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-foreground transition-colors hover:bg-muted"
+                                    href={`/ledger?page=${nextPage}`}
+                                    aria-label="Next page"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className="px-3 py-1.5 rounded-md border border-border text-muted-foreground/50">Next</span>
+                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground/50" aria-hidden="true">
+                                    <ChevronRight className="h-4 w-4" />
+                                </span>
                             )}
                         </div>
                     </div>

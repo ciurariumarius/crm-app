@@ -9,9 +9,7 @@ import { requireTenantContext } from "@/lib/tenant"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { ChevronLeft, ChevronRight, Clock3 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { buttonLinkClassName } from "@/components/ui/button-link"
-import { FilterBarDivider } from "@/components/ui/filter-bar"
 
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
@@ -97,6 +95,8 @@ export default async function TimePage({
                         <CreateTimeLogDialog
                             projects={formattedProjects}
                             tasks={tasks}
+                            label="Add"
+                            className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
                         />
                     )}
                     mobileActions={(
@@ -105,7 +105,7 @@ export default async function TimePage({
                             tasks={tasks}
                             label="Add"
                             showLabelOnMobile
-                            className="!h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5 !text-white"
+                            className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
                         />
                     )}
                 />
@@ -161,66 +161,43 @@ export default async function TimePage({
                     tasks={tasks}
                 />
 
-                <div className="mt-4 flex items-center justify-between rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-6 sm:py-4">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 ui-overline">
-                            <span>Page {page} of {totalPages}</span>
-                            <span className="h-1 w-1 rounded-full bg-slate-200" />
-                            <span>{totalLogs} logs</span>
-                        </div>
-                        <FilterBarDivider className="h-4" />
-                        <div className="flex items-center gap-2 ui-overline">
-                            <span>Total Hours:</span>
-                            <span className="font-mono text-primary text-sm font-bold tracking-tight">{totalHours}h</span>
-                        </div>
+                <div className="mt-4 flex items-center justify-between rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
+                    <div className="flex items-center gap-1.5">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                            {page}/{totalPages}
+                        </span>
+                        <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                            {totalHours}h
+                        </span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            asChild={!!prevPage}
-                            disabled={!prevPage}
-                            className={cn(
-                                buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-10 px-4 rounded-xl ui-text-caption" }),
-                                !prevPage ? "opacity-30 cursor-not-allowed" : "hover:bg-slate-50 hover:text-blue-600"
-                            )}
-                        >
-                            {prevPage ? (
-                                <Link href={buildPageHref(prevPage)} className="flex items-center gap-2">
-                                    <ChevronLeft className="h-4 w-4" />
-                                    Previous
-                                </Link>
-                            ) : (
-                                <span className="flex items-center gap-2">
-                                    <ChevronLeft className="h-4 w-4" />
-                                    Previous
-                                </span>
-                            )}
-                        </Button>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            asChild={!!nextPage}
-                            disabled={!nextPage}
-                            className={cn(
-                                buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-10 px-4 rounded-xl ui-text-caption" }),
-                                !nextPage ? "opacity-30 cursor-not-allowed" : "hover:bg-slate-50 hover:text-blue-600"
-                            )}
-                        >
-                            {nextPage ? (
-                                <Link href={buildPageHref(nextPage)} className="flex items-center gap-2">
-                                    Next
-                                    <ChevronRight className="h-4 w-4" />
-                                </Link>
-                            ) : (
-                                <span className="flex items-center gap-2">
-                                    Next
-                                    <ChevronRight className="h-4 w-4" />
-                                </span>
-                            )}
-                        </Button>
+                    <div className="flex items-center gap-1.5">
+                        {prevPage ? (
+                            <Link
+                                href={buildPageHref(prevPage)}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                aria-label="Previous page"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Link>
+                        ) : (
+                            <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0" }), "opacity-40 cursor-not-allowed")} aria-hidden="true">
+                                <ChevronLeft className="h-4 w-4" />
+                            </span>
+                        )}
+                        {nextPage ? (
+                            <Link
+                                href={buildPageHref(nextPage)}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                aria-label="Next page"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Link>
+                        ) : (
+                            <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0" }), "opacity-40 cursor-not-allowed")} aria-hidden="true">
+                                <ChevronRight className="h-4 w-4" />
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>

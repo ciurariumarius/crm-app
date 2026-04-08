@@ -48,11 +48,11 @@ export function CreatePartnerDialog() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button
-                    className="header-action-button"
+                    className="header-action-button !h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
                     title="Add Partner"
                 >
                     <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
-                    <span className="header-action-label">Add Partner</span>
+                    <span className="header-action-label">Add</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

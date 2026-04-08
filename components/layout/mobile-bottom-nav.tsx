@@ -38,9 +38,9 @@ function NavLink({
         <Link
             href={href}
             className={cn(
-                "relative inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl border border-transparent transition-colors",
+                "relative inline-flex h-[48px] flex-col items-center justify-center gap-0.5 rounded-[14px] border border-transparent px-1 transition-colors",
                 active
-                    ? "text-[var(--primary)]"
+                    ? "bg-[color:color-mix(in_srgb,var(--primary)_12%,white)] text-[var(--primary)]"
                     : "text-slate-400 hover:text-slate-600"
             )}
             aria-current={active ? "page" : undefined}
@@ -48,14 +48,14 @@ function NavLink({
             {active ? (
                 <span
                     aria-hidden="true"
-                    className="absolute left-1/2 top-1 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]/55"
+                    className="absolute left-1/2 top-1 h-0.5 w-4 -translate-x-1/2 rounded-full bg-[var(--primary)]/55"
                 />
             ) : null}
-            <Icon className="h-5 w-5" strokeWidth={1.7} />
+            <Icon className="h-4.5 w-4.5" strokeWidth={1.9} />
             <span
                 className={cn(
-                    "text-[11px] font-medium tracking-[0.03em]",
-                    active ? "text-[var(--primary)]" : "text-slate-500"
+                    "text-[10px] font-medium tracking-[0.03em]",
+                    active ? "inline text-[var(--primary)]" : "sr-only"
                 )}
             >
                 {label}
@@ -78,24 +78,81 @@ export function MobileBottomNav({
     const [quickActionsOpen, setQuickActionsOpen] = React.useState(false)
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
+    const [isDockHidden, setIsDockHidden] = React.useState(false)
+    const lastScrollYRef = React.useRef(0)
+    const appScrollContainerRef = React.useRef<HTMLElement | null>(null)
+    const HIDE_MIN_SCROLL = 56
+    const HIDE_SCROLL_DELTA = 6
+    const SHOW_SCROLL_DELTA = -4
+
+    React.useEffect(() => {
+        appScrollContainerRef.current = document.getElementById("app-scroll-container")
+    }, [])
+
+    React.useEffect(() => {
+        const currentY = appScrollContainerRef.current?.scrollTop ?? window.scrollY ?? 0
+        setIsDockHidden(false)
+        lastScrollYRef.current = currentY
+    }, [pathname])
+
+    React.useEffect(() => {
+        const getCurrentY = () => appScrollContainerRef.current?.scrollTop ?? window.scrollY ?? 0
+
+        const onScroll = () => {
+            const currentY = getCurrentY()
+            const delta = currentY - lastScrollYRef.current
+
+            if (currentY <= 20) {
+                setIsDockHidden(false)
+                lastScrollYRef.current = currentY
+                return
+            }
+
+            if (delta > HIDE_SCROLL_DELTA && currentY > HIDE_MIN_SCROLL) {
+                setIsDockHidden(true)
+            } else if (delta < SHOW_SCROLL_DELTA) {
+                setIsDockHidden(false)
+            }
+
+            lastScrollYRef.current = currentY
+        }
+
+        const scrollContainer = appScrollContainerRef.current
+        if (scrollContainer) {
+            scrollContainer.addEventListener("scroll", onScroll, { passive: true })
+            return () => scrollContainer.removeEventListener("scroll", onScroll)
+        }
+
+        window.addEventListener("scroll", onScroll, { passive: true })
+        return () => window.removeEventListener("scroll", onScroll)
+    }, [HIDE_MIN_SCROLL, HIDE_SCROLL_DELTA, SHOW_SCROLL_DELTA])
+
+    React.useEffect(() => {
+        if (quickActionsOpen || createProjectOpen || createTaskOpen) {
+            setIsDockHidden(false)
+        }
+    }, [createProjectOpen, createTaskOpen, quickActionsOpen])
 
     return (
         <>
             <nav
-                className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/92 backdrop-blur-[10px] md:hidden"
+                className={cn(
+                    "pointer-events-none fixed inset-x-0 bottom-[max(0.35rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-3 transition-all duration-300 md:hidden",
+                    isDockHidden ? "translate-y-[120%] opacity-0" : "translate-y-0 opacity-100"
+                )}
                 aria-label="Mobile navigation"
             >
-                <div className="relative px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2">
+                <div className="pointer-events-auto relative w-full max-w-[430px] rounded-[22px] border border-slate-200/85 bg-white/92 shadow-[0_16px_30px_-20px_rgba(15,23,42,0.42)] backdrop-blur-[12px]">
                     <button
                         type="button"
                         onClick={() => setQuickActionsOpen(true)}
-                        className="absolute left-1/2 top-1/2 z-10 inline-flex h-9 w-9 -translate-x-1/2 -translate-y-[52%] items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[0_10px_20px_-10px_color-mix(in_srgb,var(--primary)_70%,transparent),0_4px_12px_-6px_rgba(15,23,42,0.35)] transition-transform active:scale-[0.97]"
+                        className="absolute left-1/2 top-0 z-20 inline-flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[0_10px_20px_-10px_color-mix(in_srgb,var(--primary)_70%,transparent),0_4px_12px_-6px_rgba(15,23,42,0.35)] transition-transform active:scale-[0.97]"
                         aria-label="Quick actions"
                     >
-                        <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
+                        <Plus className="h-4 w-4" strokeWidth={2.25} />
                     </button>
 
-                    <div className="grid grid-cols-5 gap-1">
+                    <div className="grid grid-cols-5 gap-1 px-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-2">
                         <NavLink href="/" label="Home" icon={Home} active={homeActive} />
                         <NavLink href="/tasks" label="Tasks" icon={CheckCircle2} active={tasksActive} />
                         <div aria-hidden="true" />
@@ -104,9 +161,9 @@ export function MobileBottomNav({
                             type="button"
                             onClick={() => setIsMobileMenuOpen(true)}
                             className={cn(
-                                "relative inline-flex h-[58px] flex-col items-center justify-center gap-1 rounded-xl border border-transparent transition-colors",
+                                "relative inline-flex h-[48px] flex-col items-center justify-center gap-0.5 rounded-[14px] border border-transparent px-1 transition-colors",
                                 menuActive
-                                    ? "text-[var(--primary)]"
+                                    ? "bg-[color:color-mix(in_srgb,var(--primary)_12%,white)] text-[var(--primary)]"
                                     : "text-slate-500 hover:text-slate-700"
                             )}
                             aria-label="Open menu"
@@ -115,14 +172,14 @@ export function MobileBottomNav({
                             {menuActive ? (
                                 <span
                                     aria-hidden="true"
-                                    className="absolute left-1/2 top-1 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[var(--primary)]/55"
+                                    className="absolute left-1/2 top-1 h-0.5 w-4 -translate-x-1/2 rounded-full bg-[var(--primary)]/55"
                                 />
                             ) : null}
-                            <Menu className="h-5 w-5" strokeWidth={1.7} />
+                            <Menu className="h-4.5 w-4.5" strokeWidth={1.9} />
                             <span
                                 className={cn(
-                                    "text-[11px] font-medium tracking-[0.03em]",
-                                    menuActive ? "text-[var(--primary)]" : "text-slate-500"
+                                    "text-[10px] font-medium tracking-[0.03em]",
+                                    menuActive ? "inline text-[var(--primary)]" : "sr-only"
                                 )}
                             >
                                 Menu

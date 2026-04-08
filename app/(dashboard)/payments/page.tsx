@@ -184,40 +184,35 @@ export default async function PaymentsPage({
                     />
 
                     {/* Pagination Footer */}
-                    <div className="flex items-center justify-between rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-6 sm:py-4">
-                        <div className="ui-overline flex items-center gap-2">
-                            <span className="text-slate-400">Showing</span>
-                            <span className="font-bold text-slate-900">Page {page} of {totalPages}</span>
-                            <span className="h-1 w-1 rounded-full bg-slate-300" />
-                            <span className="font-bold text-slate-900">{totalLogs} events</span>
-                        </div>
-                        <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                            {page}/{totalPages}
+                        </span>
+                        <div className="flex items-center gap-1.5">
                             {prevPage ? (
                                 <Link
                                     href={buildPageHref(prevPage)}
-                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption hover:bg-slate-50 hover:text-blue-600" })}
+                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                    aria-label="Previous page"
                                 >
-                                    <ChevronLeft className="mr-2 h-4 w-4" />
-                                    Previous
+                                    <ChevronLeft className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" }), "opacity-40 cursor-not-allowed")}>
-                                    <ChevronLeft className="mr-2 h-4 w-4" />
-                                    Previous
+                                <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0" }), "opacity-40 cursor-not-allowed")} aria-hidden="true">
+                                    <ChevronLeft className="h-4 w-4" />
                                 </span>
                             )}
                             {nextPage ? (
                                 <Link
                                     href={buildPageHref(nextPage)}
-                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption hover:bg-slate-50 hover:text-blue-600" })}
+                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                    aria-label="Next page"
                                 >
-                                    Next
-                                    <ChevronRight className="ml-2 h-4 w-4" />
+                                    <ChevronRight className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-9 px-4 ui-text-caption" }), "opacity-40 cursor-not-allowed")}>
-                                    Next
-                                    <ChevronRight className="ml-2 h-4 w-4" />
+                                <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0" }), "opacity-40 cursor-not-allowed")} aria-hidden="true">
+                                    <ChevronRight className="h-4 w-4" />
                                 </span>
                             )}
                         </div>

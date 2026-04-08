@@ -28,7 +28,7 @@ export function GlobalTimer() {
         const minutes = Math.floor(timerState.elapsedSeconds / 60)
 
         return (
-            <div className="fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 z-50 md:bottom-[max(1rem,env(safe-area-inset-bottom))] md:right-6 animate-in fade-in zoom-in duration-300">
+            <div className="fixed bottom-[calc(4.5rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 z-50 md:bottom-[max(1rem,env(safe-area-inset-bottom))] md:right-6 animate-in fade-in zoom-in duration-300">
                 <div className="relative h-[3.25rem] w-[3.25rem]">
                     <div
                         className={timerState.isRunning
@@ -62,7 +62,7 @@ export function GlobalTimer() {
     }
 
     return (
-        <Card className="fixed bottom-[calc(5.25rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 md:right-6 md:bottom-[max(1rem,env(safe-area-inset-bottom))] p-4 shadow-xl z-50 border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-[calc(100vw-2rem)] max-w-80 animate-in slide-in-from-bottom-10 fade-in duration-300">
+        <Card className="fixed bottom-[calc(4.5rem+max(0.6rem,env(safe-area-inset-bottom)))] right-4 md:right-6 md:bottom-[max(1rem,env(safe-area-inset-bottom))] p-4 shadow-xl z-50 border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-[calc(100vw-2rem)] max-w-80 animate-in slide-in-from-bottom-10 fade-in duration-300">
             <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

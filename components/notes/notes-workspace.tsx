@@ -734,18 +734,18 @@ export function NotesWorkspace({
           actions={
             <Button
               type="button"
-              className="header-action-button"
+              className="header-action-button !h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
               onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
               disabled={isCreating || storageUnavailable}
             >
               <FilePlus2 className="h-5 w-5 md:mr-1.5 md:h-4 md:w-4" />
-              <span className="header-action-label">New Note</span>
+              <span className="header-action-label">Add</span>
             </Button>
           }
           mobileActions={
             <Button
               type="button"
-              className="header-action-button !h-10 !w-auto !min-w-[132px] !rounded-[18px] !px-3.5 !gap-1.5"
+              className="header-action-button !h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
               onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
               disabled={isCreating || storageUnavailable}
             >
