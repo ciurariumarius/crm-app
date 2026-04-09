@@ -35,17 +35,17 @@ function isoFromUtcParts(year: number, monthIndex: number, day: number) {
 }
 
 function fromDateUtc(date: Date) {
-  return isoFromUtcParts(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  return isoFromUtcParts(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
 function endOfMonthDayUtc(year: number, monthIndex: number) {
-  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate()
+  return new Date(year, monthIndex + 1, 0).getDate()
 }
 
 export function getLmsDatePresets(now: Date = new Date()): LmsDatePreset[] {
-  const year = now.getUTCFullYear()
-  const month = now.getUTCMonth()
-  const today = new Date(Date.UTC(year, month, now.getUTCDate()))
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const today = new Date(year, month, now.getDate())
   const todayIso = fromDateUtc(today)
 
   const lastMonthYear = month === 0 ? year - 1 : year

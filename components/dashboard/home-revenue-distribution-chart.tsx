@@ -373,7 +373,7 @@ function RevenueDateFilter({
 
 export function HomeRevenueDistributionChart({ sourceProjects, allServices, hourlyRate = 0 }: HomeRevenueDistributionChartProps) {
     const presets = React.useMemo(() => getLmsDatePresets(), [])
-    const [period, setPeriod] = React.useState<string>("last-quarter")
+    const [period, setPeriod] = React.useState<string>("this-month")
     const [customRange, setCustomRange] = React.useState<DateRange | undefined>(undefined)
     const [mode, setMode] = React.useState<RevenueMode>("project")
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)

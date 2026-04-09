@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { format } from "date-fns"
 import { Banknote, Building2, CalendarDays, Check, Circle, Clock3, ListTodo, Plus, RefreshCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -315,6 +316,8 @@ export function ProjectsBoardRows({
     searchApiFilters?: SearchApiFilters
 }) {
     const { openProject } = React.useContext(ProjectSheetContext)
+    const searchParams = useSearchParams()
+    const searchParamsString = searchParams.toString()
     const searchContext = useProjectsSearchContext()
     const [sortBy, setSortBy] = React.useState<BoardSortBy>(initialSortBy)
     const [sortDirection, setSortDirection] = React.useState<BoardSortDirection>(initialSortDirection)
@@ -391,9 +394,7 @@ export function ProjectsBoardRows({
         }
 
         const params = new URLSearchParams()
-        const locationParams = typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search)
-            : null
+        const locationParams = new URLSearchParams(searchParamsString)
         const locationPage = Number(locationParams?.get("page"))
         const effectivePage = Number.isFinite(locationPage) && locationPage > 0
             ? Math.floor(locationPage)
@@ -484,6 +485,7 @@ export function ProjectsBoardRows({
         searchApiFilters?.sort,
         searchApiFilters?.status,
         searchApiFilters?.to,
+        searchParamsString,
         searchContext,
     ])
 

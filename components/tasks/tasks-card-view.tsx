@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { format, isToday, isPast } from "date-fns"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
@@ -109,6 +110,8 @@ export function TasksCardView({
     searchApiFilters,
 }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
+    const searchParams = useSearchParams()
+    const searchParamsString = searchParams.toString()
     const searchContext = useTasksSearchContext()
     void _initialActiveTimer
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
@@ -253,9 +256,7 @@ export function TasksCardView({
         }
 
         const params = new URLSearchParams()
-        const locationParams = typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search)
-            : null
+        const locationParams = new URLSearchParams(searchParamsString)
         const locationPage = Number(locationParams?.get("page"))
         const effectivePage = Number.isFinite(locationPage) && locationPage > 0
             ? Math.floor(locationPage)
@@ -344,6 +345,7 @@ export function TasksCardView({
         searchApiFilters?.sort,
         searchApiFilters?.status,
         searchApiFilters?.urgency,
+        searchParamsString,
         searchContext,
     ])
 

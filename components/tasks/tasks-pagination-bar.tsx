@@ -32,9 +32,7 @@ export function TasksPaginationBar({
     const isSearching = Boolean(searchContext?.isSearching && hasSearchTerm)
 
     const buildHref = (overrides: Record<string, string | null>) => {
-        const params = typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search)
-            : new URLSearchParams(searchParams.toString())
+        const params = new URLSearchParams(searchParams.toString())
         for (const [key, value] of Object.entries(overrides)) {
             if (
                 value === null ||

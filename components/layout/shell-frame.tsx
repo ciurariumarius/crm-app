@@ -50,7 +50,7 @@ export function ShellFrame({
                     isDesktopCollapsed ? "md:pl-[92px]" : "md:pl-[236px]"
                 )}
             >
-                <main className="cockpit-page-enter flex-1 px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 max-w-full overflow-hidden">
+                <main className="cockpit-page-enter flex-1 px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8 max-w-full overflow-hidden">
                     {children}
                 </main>
             </div>
