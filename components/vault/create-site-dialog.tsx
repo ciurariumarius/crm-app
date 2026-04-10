@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createSite } from "@/lib/actions/sites"
 import { toast } from "sonner"
-import { Plus } from "lucide-react"
+import { Globe2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
     Select,
@@ -72,7 +72,7 @@ export function CreateSiteDialog({
                     className={cn("header-action-button", className)}
                     title="Add Site"
                 >
-                    <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
+                    <Globe2 className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.2} />
                     <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>{label}</span>
                 </Button>
             </DialogTrigger>

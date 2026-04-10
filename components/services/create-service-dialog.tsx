@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Plus } from "lucide-react"
+import { Wrench } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function CreateServiceDialog({
@@ -68,7 +68,7 @@ export function CreateServiceDialog({
                     className={cn("header-action-button", className)}
                     title="New Service"
                 >
-                    <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
+                    <Wrench className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.2} />
                     <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>{label}</span>
                 </Button>
             </DialogTrigger>

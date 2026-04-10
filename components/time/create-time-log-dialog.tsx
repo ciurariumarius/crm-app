@@ -15,7 +15,7 @@ import { useState } from "react"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Plus } from "lucide-react"
+import { Loader2, Clock3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface CreateTimeLogDialogProps {
@@ -93,7 +93,7 @@ export function CreateTimeLogDialog({
                     title="Add new log time"
                     className={cn("header-action-button", className)}
                 >
-                    <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
+                    <Clock3 className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.2} />
                     <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>{label}</span>
                 </Button>
             </DialogTrigger>

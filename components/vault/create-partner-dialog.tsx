@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
-import { Plus } from "lucide-react"
+import { UserPlus } from "lucide-react"
 
 export function CreatePartnerDialog() {
     const [open, setOpen] = useState(false)
@@ -48,10 +48,10 @@ export function CreatePartnerDialog() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button
-                    className="header-action-button !h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
+                    className="header-action-button !h-10 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white md:!px-9"
                     title="Add Partner"
                 >
-                    <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
+                    <UserPlus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.2} />
                     <span className="header-action-label">Add</span>
                 </Button>
             </DialogTrigger>

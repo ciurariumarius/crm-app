@@ -76,6 +76,7 @@ export function MobileBottomNav({
     const lastScrollYRef = React.useRef(0)
     const directionalTravelRef = React.useRef(0)
     const lastDirectionRef = React.useRef<"up" | "down" | null>(null)
+    const touchStartYRef = React.useRef<number | null>(null)
     const appScrollContainerRef = React.useRef<HTMLElement | null>(null)
     const HIDE_MIN_SCROLL = 72
     const HIDE_DISTANCE = 26
@@ -86,18 +87,34 @@ export function MobileBottomNav({
     }, [])
 
     React.useEffect(() => {
-        const currentY = appScrollContainerRef.current?.scrollTop ?? window.scrollY ?? 0
+        const currentY = Math.max(
+            appScrollContainerRef.current?.scrollTop ?? 0,
+            window.scrollY ?? 0,
+            document.documentElement?.scrollTop ?? 0
+        )
         setIsDockHidden(false)
         lastScrollYRef.current = currentY
         directionalTravelRef.current = 0
         lastDirectionRef.current = null
+        touchStartYRef.current = null
     }, [pathname])
 
     React.useEffect(() => {
-        const getCurrentY = () => appScrollContainerRef.current?.scrollTop ?? window.scrollY ?? 0
+        const getFallbackY = () =>
+            Math.max(
+                appScrollContainerRef.current?.scrollTop ?? 0,
+                window.scrollY ?? 0,
+                document.documentElement?.scrollTop ?? 0
+            )
 
-        const onScroll = () => {
-            const currentY = getCurrentY()
+        const getScrollableTargetY = (target: EventTarget | null) => {
+            if (target && target instanceof HTMLElement && target.scrollHeight > target.clientHeight + 1) {
+                return target.scrollTop
+            }
+            return 0
+        }
+
+        const handleScroll = (currentY: number) => {
             const delta = currentY - lastScrollYRef.current
 
             if (currentY <= 20) {
@@ -138,14 +155,71 @@ export function MobileBottomNav({
             lastScrollYRef.current = currentY
         }
 
-        const scrollContainer = appScrollContainerRef.current
-        if (scrollContainer) {
-            scrollContainer.addEventListener("scroll", onScroll, { passive: true })
-            return () => scrollContainer.removeEventListener("scroll", onScroll)
+        const onContainerScroll = () => {
+            handleScroll(appScrollContainerRef.current?.scrollTop ?? getFallbackY())
         }
 
-        window.addEventListener("scroll", onScroll, { passive: true })
-        return () => window.removeEventListener("scroll", onScroll)
+        const onWindowScroll = () => {
+            handleScroll(getFallbackY())
+        }
+
+        const onDocumentScrollCapture = (event: Event) => {
+            const y = Math.max(getFallbackY(), getScrollableTargetY(event.target))
+            handleScroll(y)
+        }
+
+        const onWheel = (event: WheelEvent) => {
+            if (event.deltaY > 6) {
+                const currentY = getFallbackY()
+                if (currentY > HIDE_MIN_SCROLL) {
+                    setIsDockHidden(true)
+                }
+            } else if (event.deltaY < -6) {
+                setIsDockHidden(false)
+            }
+        }
+
+        const onTouchStart = (event: TouchEvent) => {
+            touchStartYRef.current = event.touches[0]?.clientY ?? null
+        }
+
+        const onTouchMove = (event: TouchEvent) => {
+            const startY = touchStartYRef.current
+            const currentY = event.touches[0]?.clientY
+            if (startY === null || currentY === undefined) return
+            const delta = startY - currentY
+            if (delta > 8) {
+                const fallbackY = getFallbackY()
+                if (fallbackY > HIDE_MIN_SCROLL) {
+                    setIsDockHidden(true)
+                }
+            } else if (delta < -8) {
+                setIsDockHidden(false)
+            }
+            touchStartYRef.current = currentY
+        }
+
+        const scrollContainer = appScrollContainerRef.current
+        if (scrollContainer) {
+            scrollContainer.addEventListener("scroll", onContainerScroll, { passive: true })
+        }
+
+        window.addEventListener("scroll", onWindowScroll, { passive: true })
+        document.addEventListener("scroll", onDocumentScrollCapture, { passive: true, capture: true })
+        window.addEventListener("wheel", onWheel, { passive: true })
+        window.addEventListener("touchstart", onTouchStart, { passive: true })
+        window.addEventListener("touchmove", onTouchMove, { passive: true })
+
+        return () => {
+            if (scrollContainer) {
+                scrollContainer.removeEventListener("scroll", onContainerScroll)
+            }
+            window.removeEventListener("scroll", onWindowScroll)
+            document.removeEventListener("scroll", onDocumentScrollCapture, true)
+            window.removeEventListener("wheel", onWheel)
+            window.removeEventListener("touchstart", onTouchStart)
+            window.removeEventListener("touchmove", onTouchMove)
+        }
     }, [HIDE_DISTANCE, HIDE_MIN_SCROLL, SHOW_DISTANCE])
 
     React.useEffect(() => {

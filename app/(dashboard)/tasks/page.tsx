@@ -347,7 +347,7 @@ export default async function TasksPage({
                                 projects={activeProjects}
                                 label="Add"
                                 showLabelOnMobile
-                                className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white"
+                                className="!h-10 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white md:!px-9"
                             />
                         }
                         actions={<CreateTaskButton projects={activeProjects} />}

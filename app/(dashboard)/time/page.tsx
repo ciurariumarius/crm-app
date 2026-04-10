@@ -96,7 +96,7 @@ export default async function TimePage({
                             projects={formattedProjects}
                             tasks={tasks}
                             label="Add"
-                            className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
+                            className="!h-10 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white md:!px-9"
                         />
                     )}
                     mobileActions={(
@@ -105,7 +105,7 @@ export default async function TimePage({
                             tasks={tasks}
                             label="Add"
                             showLabelOnMobile
-                            className="!h-10 !w-auto !min-w-0 !rounded-[16px] !px-2.5 !gap-1 !text-white md:!px-3"
+                            className="!h-10 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white md:!px-9"
                         />
                     )}
                 />

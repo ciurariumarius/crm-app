@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { FolderPlus } from "lucide-react"
 import { GlobalCreateProjectDialog } from "./global-create-project-dialog"
 import { PartnerWithSites } from "@/types"
 import { Service } from "@prisma/client"
@@ -41,7 +41,7 @@ export function CreateProjectButton({
                 }
                 title="Add new project"
             >
-                <Plus className={isFull ? "h-5 w-5 md:h-4 md:w-4" : "h-5 w-5"} strokeWidth={2.5} />
+                <FolderPlus className={isFull ? "h-5 w-5 md:h-4 md:w-4" : "h-5 w-5"} strokeWidth={2.3} />
                 {isFull && (
                     <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>
                         {label}

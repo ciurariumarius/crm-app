@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Loader2, Plus, Check, ChevronsUpDown } from "lucide-react"
+import { Loader2, Plus, Check, ChevronsUpDown, HandCoins } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -137,7 +137,7 @@ export function AddPartnerPaymentDialog({
                 <DialogTrigger asChild>
                     {trigger || (
                         <Button variant="default" className={cn("header-action-button", className)}>
-                            <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.5} />
+                            <HandCoins className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.2} />
                             <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>{label}</span>
                         </Button>
                     )}
