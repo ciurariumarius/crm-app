@@ -126,7 +126,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         href={item.href}
         title={isDesktopCollapsed ? item.name : undefined}
         className={cn(
-          "group relative flex items-center gap-3 rounded-[10px] border border-transparent px-3 py-2.5 text-[14px] font-medium transition-colors",
+          "group relative flex items-center gap-3 rounded-[10px] border border-transparent px-3 py-2.5 text-[14px] min-[768px]:max-[1180px]:text-[13px] font-medium transition-colors",
           isDesktopCollapsed && "justify-center px-0",
           isActive
             ? "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--line-subtle)]"
@@ -180,7 +180,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         type="button"
         onClick={onToggle}
         className={cn(
-          "group relative flex w-full items-center gap-3 rounded-[10px] border border-transparent px-3 py-2.5 text-[14px] font-medium transition-colors",
+          "group relative flex w-full items-center gap-3 rounded-[10px] border border-transparent px-3 py-2.5 text-[14px] min-[768px]:max-[1180px]:text-[13px] font-medium transition-colors",
           isDesktopCollapsed && "justify-center px-0",
           isActive
             ? "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--line-subtle)]"
@@ -301,7 +301,9 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         onBlurCapture={handleDesktopBlurCapture}
         className={cn(
           "fixed left-0 top-0 z-50 hidden h-screen border-r border-[var(--line-subtle)] bg-[var(--bg-sidebar)] md:flex transition-[width] duration-300",
-          isDesktopCollapsed ? "w-[92px]" : "w-[236px]"
+          isDesktopCollapsed
+            ? "w-[92px] min-[768px]:max-[1180px]:w-[78px]"
+            : "w-[236px] min-[768px]:max-[1180px]:w-[208px]"
         )}
       >
         <button
@@ -330,7 +332,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
               </div>
               {!isDesktopCollapsed ? (
                 <div>
-                  <h1 className="text-[31px] font-bold tracking-[-0.03em] text-[var(--text-primary)] leading-none">Pixelist</h1>
+                  <h1 className="text-[31px] min-[768px]:max-[1180px]:text-[27px] font-bold tracking-[-0.03em] text-[var(--text-primary)] leading-none">Pixelist</h1>
                 </div>
               ) : null}
             </Link>

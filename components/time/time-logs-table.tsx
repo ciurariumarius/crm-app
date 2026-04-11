@@ -93,7 +93,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
         <div className="relative">
             <div className="overflow-x-auto">
                 {/* Unified Header */}
-                <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[1240px] grid-cols-[380px_350px_180px_200px_80px] gap-x-6">
+                <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[980px] lg:min-w-[1240px] md:grid-cols-[280px_220px_150px_170px_60px] lg:grid-cols-[380px_350px_180px_200px_80px] gap-x-6">
                     <div className="ui-overline">Project Name</div>
                     <div className="ui-overline">Task Name</div>
                     <div className="ui-overline">Time Range</div>
@@ -102,7 +102,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                 </div>
                 
 
-                <div className="flex flex-col gap-1 md:min-w-[1240px]">
+                <div className="flex flex-col gap-1 md:min-w-[980px] lg:min-w-[1240px]">
                     {logs.length === 0 ? (
                         <ListEmptyState
                             title="No time logs discovered"
@@ -132,7 +132,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                 key={log.id}
                                                 onClick={() => setSelectedLog(log)}
                                                 className={cn(
-                                                    "group stagger-row-enter premium-card relative grid min-h-[68px] items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:grid-cols-[380px_350px_180px_200px_80px] gap-x-6 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                                    "group stagger-row-enter premium-card relative grid min-h-[68px] items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:grid-cols-[280px_220px_150px_170px_60px] lg:grid-cols-[380px_350px_180px_200px_80px] gap-x-6 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
                                                 )}
                                                 style={{ animationDelay: `${rowIdx * 0.05}s` }}
                                                 role="button"

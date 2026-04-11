@@ -131,7 +131,7 @@ export function InlineQuickAddRow({
 
     const rowMinWidthClass = React.useMemo(() => {
         if (!gridColumns) return ""
-        return gridColumns.includes("150px") ? "md:min-w-[1280px]" : ""
+        return gridColumns.includes("150px") ? "md:min-w-[1080px] xl:min-w-[1280px]" : ""
     }, [gridColumns])
 
     const domainListId = React.useId()

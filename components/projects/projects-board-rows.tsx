@@ -222,7 +222,7 @@ function ProjectsGridSkeleton() {
 function ProjectsListSkeleton() {
     return (
         <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
-            <div className="space-y-6 md:min-w-[1280px]">
+            <div className="space-y-6 md:min-w-[1080px] xl:min-w-[1280px]">
                 {Array.from({ length: 2 }).map((_, sectionIndex) => (
                     <section
                         key={`project-list-skeleton-section-${sectionIndex}`}
@@ -735,7 +735,7 @@ export function ProjectsBoardRows({
 
     return (
         <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
-            <div className="space-y-6 md:min-w-[1280px]">
+            <div className="space-y-6 md:min-w-[1080px] xl:min-w-[1280px]">
                 <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
                     <div className="mb-3 flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-emerald-500" />
@@ -1293,7 +1293,7 @@ export function ProjectsBoardRows({
                 {/* Global Shadow Row - Before Overview */}
                 {layout === "list" && (
                     <div className="overflow-x-auto pt-1 text-slate-900 hidescrollbar">
-                        <div className="md:min-w-[1280px]">
+                        <div className="md:min-w-[1080px] xl:min-w-[1280px]">
                             <button
                                 type="button"
                                 onClick={() => setCreateProjectOpen(true)}
