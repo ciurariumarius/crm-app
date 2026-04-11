@@ -154,8 +154,8 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
     return (
         <div className="overflow-x-auto pb-4 hidescrollbar">
             {/* Header */}
-            <div className="mb-3 hidden rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 py-3 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:block md:min-w-[980px] lg:min-w-[1200px]">
-                <div className="grid w-full items-center gap-x-4 md:grid-cols-[280px_minmax(220px,1fr)_110px_130px_110px] lg:grid-cols-[340px_1fr_120px_150px_120px]">
+            <div className="mb-3 hidden rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 py-3 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:block md:min-w-[940px] xl:min-w-[1200px]">
+                <div className="grid w-full items-center gap-x-4 md:grid-cols-[240px_minmax(190px,1fr)_100px_120px_100px] xl:grid-cols-[340px_1fr_120px_150px_120px]">
                     <div className="ui-overline">Project / Partner</div>
                     <div className="ui-overline pl-4">Transaction action</div>
                     <div className="ui-overline text-right">Amount</div>
@@ -165,7 +165,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
             </div>
 
             {/* Body */}
-            <div className="flex flex-col gap-2.5 md:min-w-[980px] lg:min-w-[1200px]">
+            <div className="flex flex-col gap-2.5 md:min-w-[940px] xl:min-w-[1200px]">
                 {logs.map((log, index) => {
                     const { projectName, extraProjects, totalAmount } = parseDetails(log.details)
                     const isExpandable = extraProjects.length > 0
@@ -192,7 +192,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     }
                                 }}
                             >
-                                <div className="grid w-full gap-y-3 md:grid-cols-[280px_minmax(220px,1fr)_110px_130px_110px] lg:grid-cols-[340px_1fr_120px_150px_120px] md:items-center md:gap-x-4 md:gap-y-0">
+                                <div className="grid w-full gap-y-3 md:grid-cols-[240px_minmax(190px,1fr)_100px_120px_100px] xl:grid-cols-[340px_1fr_120px_150px_120px] md:items-center md:gap-x-4 md:gap-y-0">
                                     {/* 1. Project */}
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2.5">

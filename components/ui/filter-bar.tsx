@@ -41,8 +41,8 @@ export function FilterBarRow({
     return (
         <div className={cn(
             wrap
-                ? "flex w-full min-w-0 flex-wrap items-center gap-3 md:gap-6"
-                : "inline-flex min-w-max items-center gap-4 md:flex md:w-full md:min-w-0 md:items-center md:gap-6",
+                ? "flex w-full min-w-0 flex-wrap items-center gap-3 xl:gap-6"
+                : "inline-flex min-w-max items-center gap-4 xl:flex xl:w-full xl:min-w-0 xl:items-center xl:gap-6",
             className
         )}>
             {children}
@@ -62,7 +62,7 @@ export function FilterBarGroup({
     return (
         <div
             className={cn(
-                wrap ? "flex min-w-0 flex-wrap items-center gap-3 md:gap-5" : "inline-flex items-center gap-4 md:gap-5",
+                wrap ? "flex min-w-0 flex-wrap items-center gap-3 xl:gap-5" : "inline-flex items-center gap-4 xl:gap-5",
                 className
             )}
         >

@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { PWARegister } from "@/components/pwa-register"
 import { cn } from "@/lib/utils"
 import { useHeader } from "@/components/layout/header-context"
+import { useResponsiveProfile } from "@/hooks/use-responsive-profile"
 import type { Service } from "@prisma/client"
 import type { PartnerWithSites } from "@/types"
 import type { TaskDialogProject } from "@/components/tasks/global-create-task-dialog"
@@ -30,6 +31,7 @@ export function ShellFrame({
 }: ShellFrameProps) {
     const { isSidebarCollapsed, isSidebarFocusExpanded } = useHeader()
     const pathname = usePathname()
+    const responsiveProfile = useResponsiveProfile()
     const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
     const isDesktopCollapsed = isSidebarCollapsed && !isSidebarFocusExpanded
 
@@ -44,15 +46,16 @@ export function ShellFrame({
             <Sidebar user={user} />
             <div
                 id="app-scroll-container"
+                data-responsive-profile={responsiveProfile}
                 ref={scrollContainerRef}
                 className={cn(
                     "flex-1 flex flex-col min-w-0 min-h-dvh overflow-y-auto transition-all duration-300 relative",
                     isDesktopCollapsed
-                        ? "md:pl-[92px] min-[768px]:max-[1180px]:pl-[78px]"
-                        : "md:pl-[236px] min-[768px]:max-[1180px]:pl-[208px]"
+                        ? "md:pl-[78px] xl:pl-[92px]"
+                        : "md:pl-[208px] xl:pl-[236px]"
                 )}
             >
-                <main className="cockpit-page-enter flex-1 px-4 md:px-6 min-[768px]:max-[1180px]:px-4 lg:px-8 pt-4 md:pt-6 min-[768px]:max-[1180px]:pt-5 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8 max-w-full overflow-hidden">
+                <main className="cockpit-page-enter flex-1 px-4 md:px-4 xl:px-6 2xl:px-8 pt-4 md:pt-5 xl:pt-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-8 max-w-full overflow-hidden">
                     {children}
                 </main>
             </div>

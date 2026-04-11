@@ -212,7 +212,7 @@ export default async function ProjectsPage({
                                         variant="full"
                                         label="Add"
                                         showLabelOnMobile
-                                        className="!h-10 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white md:!px-9"
+                                        className="!h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
                                         partners={partnersForClient}
                                         services={servicesForClient}
                                     />
@@ -220,7 +220,9 @@ export default async function ProjectsPage({
                                 actions={(
                                     <CreateProjectButton
                                         variant="full"
-                                        label="Add Project"
+                                        label="Add"
+                                        showLabelOnMobile
+                                        className="!h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
                                         partners={partnersForClient}
                                         services={servicesForClient}
                                     />

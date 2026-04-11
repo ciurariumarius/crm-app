@@ -100,10 +100,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
         <section className="space-y-4">
             <div className="flex items-center justify-between px-2">
                 <div className="flex flex-col">
-                    <h2 className="ui-text-title-sm text-slate-900">Outstanding Balances</h2>
-                    <p className="text-[11px] font-medium text-slate-400">
-                        Settle partner projects to record payment events
-                    </p>
+                    <h2 className="ui-text-title-sm text-slate-900">Unpaid by partners</h2>
                 </div>
             </div>
 
@@ -113,123 +110,111 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                     <p className="mt-1 text-sm font-medium text-emerald-600/80">New unpaid projects will appear here automatically.</p>
                 </div>
             ) : (
-                <div className="overflow-hidden rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
-                    <div className="overflow-x-auto hidescrollbar">
-                        <table className="w-full min-w-[820px] text-left">
-                            <thead className="border-b border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.82),rgba(241,245,249,0.56))]">
-                                <tr>
-                                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Partner</th>
-                                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Projects</th>
-                                    <th className="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-slate-400">Total unpaid</th>
-                                    <th className="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-slate-400">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100/80">
-                                {items.map((partner) => {
-                                    const isExpanded = expandedId === partner.id
-                                    const isSettling = settlingId === partner.id
-                                    return (
-                                        <React.Fragment key={partner.id}>
-                                            <tr className={cn(
-                                                "align-middle transition-colors hover:bg-slate-50/35",
-                                                isExpanded && "bg-slate-50/25"
-                                            )}>
-                                                <td className="px-5 py-3.5">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setExpandedId((current) => (current === partner.id ? null : partner.id))}
-                                                        className="flex items-center gap-2 group"
-                                                    >
-                                                        <div className={cn(
-                                                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all",
-                                                            isExpanded ? "bg-slate-100 border-slate-200 text-slate-600 rotate-180" : "bg-white border-slate-200 text-slate-400 group-hover:text-slate-600"
-                                                        )}>
-                                                            <ChevronDown className="h-3 w-3" />
-                                                        </div>
-                                                        <span className="text-sm font-bold text-slate-900">{partner.name}</span>
-                                                    </button>
-                                                </td>
-                                                <td className="px-5 py-3.5 text-xs font-bold text-slate-500">
-                                                    {partner.unpaidProjects.length} unpaid project{partner.unpaidProjects.length === 1 ? "" : "s"}
-                                                </td>
-                                                <td className="px-5 py-3.5 text-right">
-                                                    <span className="font-mono text-sm font-black text-rose-600">{formatCurrency(partner.totalUnpaid)}</span>
-                                                </td>
-                                                <td className="px-5 py-3.5 text-right">
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
-                                                        onClick={() => handleMarkAllPaid(partner.id)}
-                                                        disabled={isSettling}
-                                                    >
-                                                        {isSettling ? (
-                                                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                                        ) : (
-                                                            <CheckCircle2 className="mr-1 h-3 w-3" />
-                                                        )}
-                                                        Mark all paid
-                                                    </Button>
-                                                </td>
-                                            </tr>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {items.map((partner) => {
+                        const isExpanded = expandedId === partner.id
+                        const isSettling = settlingId === partner.id
+                        return (
+                            <div key={partner.id} className="flex flex-col rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)] overflow-hidden transition-all hover:border-slate-300/80">
+                                <div className="flex flex-col p-5 gap-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex flex-col flex-1 min-w-0">
+                                            <span className="text-[15px] font-bold text-slate-900 truncate">{partner.name}</span>
+                                            <span className="text-[12px] font-medium text-slate-500 mt-0.5">
+                                                {partner.unpaidProjects.length} unpaid project{partner.unpaidProjects.length === 1 ? "" : "s"}
+                                            </span>
+                                        </div>
+                                        <div className="flex shrink-0 pt-0.5">
+                                            <span className="font-mono text-[16px] font-black text-rose-600 tracking-tight">
+                                                {formatCurrency(partner.totalUnpaid)}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                                            {isExpanded ? (
-                                                <tr>
-                                                    <td colSpan={4} className="bg-[linear-gradient(180deg,rgba(248,250,252,0.8),rgba(241,245,249,0.48))] px-5 py-4">
-                                                        <div className="ml-7 flex max-w-2xl flex-col gap-3">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="ui-overline text-slate-400">Breakdown</span>
-                                                                <Link
-                                                                    href={`/projects?partnerId=${partner.id}&payment=Unpaid`}
-                                                                    className="text-[11px] font-black uppercase text-blue-600 hover:text-blue-500"
-                                                                >
-                                                                    View List
-                                                                </Link>
-                                                            </div>
-                                                            <div className="grid gap-1.5">
-                                                {partner.unpaidProjects.map((project) => {
-                                                                    const isSettlingProj = settlingProjectId === project.id
-                                                                    return (
-                                                                        <div
-                                                                            key={project.id}
-                                                                            className="flex items-center justify-between rounded-[16px] border border-slate-200/80 bg-white/92 px-4 py-2.5 shadow-[0_2px_8px_rgba(15,23,42,0.025)]"
-                                                                        >
-                                                                            <span className="text-[13px] font-bold text-slate-700 truncate">{project.name}</span>
-                                                                            <div className="flex items-center gap-6">
-                                                                                <span className="font-mono text-sm font-black text-slate-900 border-r border-slate-100 pr-6">
-                                                                                    {formatCurrency(project.amount)}
-                                                                                </span>
-                                                                                <Button
-                                                                                    type="button"
-                                                                                    size="sm"
-                                                                                    variant="secondary"
-                                                                                    className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
-                                                                                    onClick={() => handleMarkProjectPaid(partner.id, project.id, project.amount)}
-                                                                                    disabled={isSettlingProj}
-                                                                                >
-                                                                                    {isSettlingProj ? (
-                                                                                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                                                                                    ) : (
-                                                                                        <Check className="mr-1.5 h-3.5 w-3.5" />
-                                                                                    )}
-                                                                                    Mark Paid
-                                                                                </Button>
-                                                                            </div>
-                                                                        </div>
-                                                                    )
-                                                                })}
-                                                            </div>
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100/80">
+                                        <button
+                                            type="button"
+                                            onClick={() => setExpandedId((current) => (current === partner.id ? null : partner.id))}
+                                            className="flex items-center gap-1.5 group px-2 py-1.5 -ml-2 rounded-lg hover:bg-slate-50 transition-colors"
+                                        >
+                                            <div className={cn(
+                                                "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all",
+                                                isExpanded ? "bg-slate-100 border-slate-200 text-slate-600 rotate-180" : "bg-white border-slate-200 text-slate-400 group-hover:text-slate-600"
+                                            )}>
+                                                <ChevronDown className="h-3 w-3" />
+                                            </div>
+                                            <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-slate-500 group-hover:text-slate-700">
+                                                {isExpanded ? "Hide Details" : "View Details"}
+                                            </span>
+                                        </button>
+                                        
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
+                                            onClick={() => handleMarkAllPaid(partner.id)}
+                                            disabled={isSettling}
+                                        >
+                                            {isSettling ? (
+                                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                                            )}
+                                            Mark all paid
+                                        </Button>
+                                    </div>
+                                </div>
+                                
+                                {isExpanded && (
+                                    <div className="flex flex-col bg-[linear-gradient(180deg,rgba(248,250,252,0.8),rgba(241,245,249,0.48))] p-5 border-t border-slate-100/80 gap-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="ui-overline text-slate-400">Breakdown</span>
+                                            <Link
+                                                href={`/projects?partnerId=${partner.id}&payment=Unpaid`}
+                                                className="text-[11px] font-black uppercase tracking-wider text-blue-600 hover:text-blue-500"
+                                            >
+                                                View List
+                                            </Link>
+                                        </div>
+                                        <div className="grid gap-2 outline-none">
+                                            {partner.unpaidProjects.map((project) => {
+                                                const isSettlingProj = settlingProjectId === project.id
+                                                return (
+                                                    <div
+                                                        key={project.id}
+                                                        className="flex flex-col gap-2 rounded-[16px] border border-slate-200/80 bg-white/92 p-3 shadow-[0_2px_8px_rgba(15,23,42,0.025)]"
+                                                    >
+                                                        <span className="text-[13px] font-bold text-slate-700 line-clamp-1">{project.name}</span>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-mono text-sm font-black text-slate-900">
+                                                                {formatCurrency(project.amount)}
+                                                            </span>
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="secondary"
+                                                                className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
+                                                                onClick={() => handleMarkProjectPaid(partner.id, project.id, project.amount)}
+                                                                disabled={isSettlingProj}
+                                                            >
+                                                                {isSettlingProj ? (
+                                                                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                                                                ) : (
+                                                                    <Check className="mr-1.5 h-3.5 w-3.5" />
+                                                                )}
+                                                                Mark Paid
+                                                            </Button>
                                                         </div>
-                                                    </td>
-                                                </tr>
-                                            ) : null}
-                                        </React.Fragment>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
                 </div>
             )}
         </section>

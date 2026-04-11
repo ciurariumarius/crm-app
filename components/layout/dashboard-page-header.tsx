@@ -11,6 +11,8 @@ type DashboardPageHeaderProps = {
     showMobile?: boolean
     mobileSearch?: React.ReactNode
     mobileActions?: React.ReactNode
+    tabletSearch?: React.ReactNode
+    tabletActions?: React.ReactNode
 }
 
 export function DashboardPageHeader({
@@ -23,6 +25,8 @@ export function DashboardPageHeader({
     showMobile = false,
     mobileSearch,
     mobileActions,
+    tabletSearch,
+    tabletActions,
 }: DashboardPageHeaderProps) {
     const duplicateNode = (node: React.ReactNode) => {
         if (!React.isValidElement(node)) return node
@@ -31,6 +35,8 @@ export function DashboardPageHeader({
 
     const resolvedMobileActions = mobileActions ?? duplicateNode(actions)
     const resolvedMobileSearch = mobileSearch ?? duplicateNode(search)
+    const resolvedTabletActions = tabletActions ?? duplicateNode(actions)
+    const resolvedTabletSearch = tabletSearch ?? duplicateNode(search)
 
     return (
         <>
@@ -59,7 +65,24 @@ export function DashboardPageHeader({
                 </div>
             ) : null}
 
-            <div className={["hidden gap-4 md:flex md:flex-col lg:flex-row lg:items-center", className].filter(Boolean).join(" ")}>
+            <div className={["hidden items-center gap-3 md:grid md:grid-cols-[minmax(180px,auto)_minmax(0,1fr)_auto] xl:hidden", className].filter(Boolean).join(" ")}>
+                <div className="min-w-[180px]">
+                    <div className="min-w-0">
+                        {eyebrow ? (
+                            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400/90">
+                                {eyebrow}
+                            </p>
+                        ) : null}
+                        <h1 className="ui-text-title tracking-tight text-slate-900">{title}</h1>
+                    </div>
+                </div>
+
+                {resolvedTabletSearch ? <div className="min-w-0">{resolvedTabletSearch}</div> : <div className="min-w-0" />}
+
+                {resolvedTabletActions ? <div className="flex items-center justify-end gap-2.5">{resolvedTabletActions}</div> : null}
+            </div>
+
+            <div className={["hidden gap-4 xl:flex xl:items-center", className].filter(Boolean).join(" ")}>
                 <div className="min-w-[220px]">
                     <div className="flex items-start gap-3">
                         <MobileMenuTrigger />

@@ -13,6 +13,7 @@
     "verify": "npm run lint && npm run typecheck && npm run build",
     "test:filters": "tsx scripts/verify-filter-helpers.ts",
     "verify:mobile": "tsx scripts/verify-mobile-guardrails.ts",
+    "verify:tablet": "node --import tsx scripts/verify-tablet-guardrails.ts",
     "security:check-encryption-config": "tsx scripts/check-encryption-config.ts",
     "security:rotate-2fa-secrets": "tsx scripts/rotate-two-factor-secrets.ts",
     "security:rotate-2fa-secrets:dry": "tsx scripts/rotate-two-factor-secrets.ts --dry-run",

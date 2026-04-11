@@ -204,8 +204,8 @@ export function ProjectsFiltersToolbar({
         <div className="relative -mx-1 sm:mx-0">
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-white via-white/90 to-transparent sm:hidden" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-white via-white/90 to-transparent sm:hidden" />
-          <div className="overflow-x-auto px-1 pb-0.5 hidescrollbar snap-x snap-mandatory scroll-px-3 touch-pan-x overscroll-x-contain md:overflow-visible md:px-0">
-          <div className="inline-flex min-w-max items-center gap-2 md:flex md:w-full md:min-w-0 md:items-center md:gap-3 lg:gap-4">
+          <div className="overflow-x-auto px-1 pb-0.5 hidescrollbar snap-x snap-mandatory scroll-px-3 touch-pan-x overscroll-x-contain xl:overflow-visible xl:px-0">
+          <div className="inline-flex min-w-max items-center gap-2 xl:flex xl:w-full xl:min-w-0 xl:items-center xl:gap-3 2xl:gap-4">
             <div className="inline-flex h-9 shrink-0 snap-start items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
               {STATUS_OPTIONS.map((option) => (
                 <Link
@@ -238,11 +238,11 @@ export function ProjectsFiltersToolbar({
               ))}
             </div>
 
-            <div className="shrink-0 snap-start md:min-w-[120px] md:flex-1">
+            <div className="shrink-0 snap-start xl:min-w-[120px] xl:flex-1">
               <TypeCombobox currentRecurring={currentRecurring} onSelect={(value) => pushWithOverrides({ recurring: value })} />
             </div>
 
-            <div className="shrink-0 snap-start md:min-w-[150px] md:flex-[1.1]">
+            <div className="shrink-0 snap-start xl:min-w-[150px] xl:flex-[1.1]">
               <PartnerCombobox
                 partners={partners}
                 currentPartnerId={currentPartnerId}
@@ -250,7 +250,7 @@ export function ProjectsFiltersToolbar({
               />
             </div>
 
-            <div className="shrink-0 snap-start md:min-w-[150px] md:flex-[1.1]">
+            <div className="shrink-0 snap-start xl:min-w-[150px] xl:flex-[1.1]">
               <PeriodCombobox
                 currentPeriod={currentPeriod}
                 currentFrom={currentFrom}
@@ -264,7 +264,7 @@ export function ProjectsFiltersToolbar({
               />
             </div>
 
-            <div className="shrink-0 snap-start md:ml-auto">
+            <div className="shrink-0 snap-start xl:ml-auto">
               <SortCombobox currentSort={currentSort} onSelect={(value) => pushWithOverrides({ sort: value })} />
             </div>
 

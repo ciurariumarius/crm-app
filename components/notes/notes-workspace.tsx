@@ -634,7 +634,7 @@ export function NotesWorkspace({
                                   "flex items-center gap-0.5 transition-all duration-200",
                                   isMobile || selected
                                     ? "translate-x-0 opacity-100"
-                                    : "translate-x-0 opacity-100 md:translate-x-1 md:opacity-0 md:group-hover:translate-x-0 md:group-hover:opacity-100 md:group-focus-within:translate-x-0 md:group-focus-within:opacity-100"
+                                    : "translate-x-0 opacity-100 lg:translate-x-1 lg:opacity-0 lg:group-hover:translate-x-0 lg:group-hover:opacity-100 lg:group-focus-within:translate-x-0 lg:group-focus-within:opacity-100"
                                 )}
                               >
                                 <button
@@ -701,7 +701,7 @@ export function NotesWorkspace({
   )
 
   return (
-    <div className="flex h-[calc(100dvh-7.25rem-env(safe-area-inset-bottom))] min-h-[calc(100dvh-7.25rem-env(safe-area-inset-bottom))] flex-col gap-3 overflow-hidden md:h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-3.5rem)]">
+    <div className="flex h-[calc(100dvh-7.25rem-env(safe-area-inset-bottom))] min-h-[calc(100dvh-7.25rem-env(safe-area-inset-bottom))] flex-col gap-3 overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:min-h-[calc(100dvh-3.5rem)]">
       <div className="rounded-[24px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
         <DashboardPageHeader
           title="Notes"
@@ -734,22 +734,22 @@ export function NotesWorkspace({
           actions={
             <Button
               type="button"
-              className="header-action-button !h-10 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white md:!px-9"
+              className="header-action-button !h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
               onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
               disabled={isCreating || storageUnavailable}
             >
-              <FilePlus2 className="h-5 w-5 md:mr-1.5 md:h-4 md:w-4" />
-              <span className="header-action-label">Add</span>
+              <FilePlus2 className="h-5 w-5 xl:mr-1.5 xl:h-4 xl:w-4" />
+              <span className="inline text-sm font-semibold">Add</span>
             </Button>
           }
           mobileActions={
             <Button
               type="button"
-              className="header-action-button !h-10 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white md:!px-9"
+              className="header-action-button !h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
               onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
               disabled={isCreating || storageUnavailable}
             >
-              <FilePlus2 className="h-5 w-5 md:h-4 md:w-4" />
+              <FilePlus2 className="h-5 w-5 xl:h-4 xl:w-4" />
               <span className="inline text-sm font-semibold">Add</span>
             </Button>
           }
@@ -758,13 +758,13 @@ export function NotesWorkspace({
 
       <Card className="flex-1 overflow-hidden rounded-[24px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,250,252,0.88))] py-0 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.35)] gap-0 min-h-0">
         <CardContent className="flex-1 min-h-0 p-0">
-          <div className="grid h-full min-h-0 md:grid-cols-[300px_minmax(0,1fr)]">
-            <aside className="hidden min-h-0 overflow-hidden border-r border-slate-200/70 bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_56%,white)] md:block">
+          <div className="grid h-full min-h-0 lg:grid-cols-[300px_minmax(0,1fr)]">
+            <aside className="hidden min-h-0 overflow-hidden border-r border-slate-200/70 bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_56%,white)] lg:block">
               {renderNotesList(false)}
             </aside>
 
-            <section className="min-w-0 min-h-0 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.75),rgba(255,255,255,0.95))] md:flex md:flex-col">
-              <div className="border-b border-slate-200/70 px-3 py-2.5 sm:px-3.5 sm:py-2.5 md:hidden">
+            <section className="min-w-0 min-h-0 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.75),rgba(255,255,255,0.95))] lg:flex lg:flex-col">
+              <div className="border-b border-slate-200/70 px-3 py-2.5 sm:px-3.5 sm:py-2.5 lg:hidden">
                 <div className="inline-flex items-center gap-2">
                   <Sheet open={isMobileListOpen} onOpenChange={setIsMobileListOpen}>
                     <SheetTrigger asChild>
@@ -821,7 +821,7 @@ export function NotesWorkspace({
 
               {selectedNote ? (
                 <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
-                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 space-y-3 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 md:px-6 md:pb-4 md:pt-3.5 md:pr-3">
+                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 space-y-3 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-3.5 lg:pr-3">
                     <input
                       value={titleDraft}
                       onChange={(event) => setTitleDraft(event.target.value)}
@@ -860,10 +860,10 @@ export function NotesWorkspace({
                         ) : undefined
                       }
                       className="rounded-[22px] bg-transparent [&_.ProseMirror]:text-[14px] [&_.ProseMirror]:leading-7 [&_.ProseMirror]:text-slate-700"
-                      minHeightClassName="min-h-[54vh] sm:min-h-[58vh] md:min-h-[60vh]"
+                      minHeightClassName="min-h-[54vh] sm:min-h-[58vh] lg:min-h-[60vh]"
                     />
                   </div>
-                  <div className="relative shrink-0 overflow-hidden bg-white/94 px-3 py-2.5 sm:px-4 md:px-6">
+                  <div className="relative shrink-0 overflow-hidden bg-white/94 px-3 py-2.5 sm:px-4 lg:px-6">
                     <div className="absolute inset-x-0 top-0 h-px bg-slate-200/80" aria-hidden="true" />
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium text-slate-400">
                       {selectedNoteIsLinked ? (
@@ -887,7 +887,7 @@ export function NotesWorkspace({
                   </div>
                 </div>
               ) : (
-                <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-4 pr-2 sm:p-5 sm:pr-3 md:p-6 md:pr-3">
+                <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-4 pr-2 sm:p-5 sm:pr-3 lg:p-6 lg:pr-3">
                   <div className="flex min-h-[320px] items-start justify-start rounded-[22px] border border-dashed border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(248,250,252,0.9))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] sm:p-7">
                     <div className="max-w-md space-y-2.5">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200/85 bg-white shadow-[0_8px_20px_-16px_rgba(15,23,42,0.28)]">

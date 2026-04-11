@@ -21,7 +21,7 @@ export function ProjectBoardHeaderRow({
     onSort,
 }: ProjectBoardHeaderRowProps) {
     return (
-        <div className={cn("hidden md:grid items-center px-6 pb-2 gap-x-4", gridColumnsClassName)}>
+        <div className={cn("hidden md:grid md:min-w-[1240px] xl:min-w-[1320px] items-center px-6 pb-2 gap-x-4", gridColumnsClassName)}>
             <button
                 type="button"
                 onClick={() => onSort("name")}

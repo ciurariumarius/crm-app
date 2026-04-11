@@ -12,9 +12,9 @@ type ProjectBoardSummaryCardsProps = {
 }
 
 const summaryRowClass =
-    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.04)] md:w-full"
+    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.04)] xl:w-full"
 const summaryItemClass =
-    "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-white/60 md:min-w-0 md:flex-1"
+    "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-white/60 xl:min-w-0 xl:flex-1"
 const summaryIconContainerClass =
     "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_3px_rgba(15,23,42,0.08)]"
 
@@ -83,7 +83,7 @@ export function ProjectBoardSummaryCards({
     ]
 
     return (
-        <div className="mt-5 overflow-x-auto pb-1 md:overflow-visible hidescrollbar">
+        <div className="mt-5 overflow-x-auto pb-1 xl:overflow-visible hidescrollbar">
             <div className={summaryRowClass}>
                 {summaryItems.map((item, index) => (
                     <div

@@ -14,7 +14,7 @@ import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { FolderDot, ListChecks, User, Search, Loader2 } from "lucide-react"
 import { useDebounce } from "react-use"
-import { formatProjectName } from "@/lib/utils"
+import { cn, formatProjectName } from "@/lib/utils"
 
 type SearchProject = {
     id: string
@@ -56,9 +56,10 @@ type GlobalSearchResults = {
 
 interface GlobalSearchProps {
     mobileMode?: "icon" | "full"
+    desktopTriggerClassName?: string
 }
 
-export function GlobalSearch({ mobileMode = "icon" }: GlobalSearchProps) {
+export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: GlobalSearchProps) {
     const [open, setOpen] = React.useState(false)
     const [query, setQuery] = React.useState("")
     const [results, setResults] = React.useState<GlobalSearchResults>({
@@ -114,15 +115,15 @@ export function GlobalSearch({ mobileMode = "icon" }: GlobalSearchProps) {
             {/* Desktop Search Trigger - Redesigned to match screenshot */}
             <button
                 onClick={() => setOpen(true)}
-                className="mx-auto hidden w-full max-w-[560px] items-center gap-3 rounded-[28px] border border-slate-200/90 bg-white/95 px-6 py-3 text-slate-400 shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-slate-300 hover:bg-slate-50 md:flex"
+                className={cn(
+                    "mx-auto hidden h-11 w-full max-w-[560px] items-center gap-3 rounded-[28px] border border-slate-200/90 bg-white/95 pl-4 pr-4 text-slate-400 shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,white)] focus-visible:ring-offset-0 md:flex",
+                    desktopTriggerClassName
+                )}
             >
                 <Search className="h-4 w-4 text-slate-400" />
-                <span className="text-[13px] text-slate-500 font-medium">Search projects, tasks or partners...</span>
-                <div className="ml-auto flex items-center gap-1">
-                    <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-400">
-                        <span className="text-xs">⌘</span>K
-                    </kbd>
-                </div>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-slate-500 font-medium">
+                    Search projects, tasks or partners...
+                </span>
             </button>
 
             {/* Mobile Search Trigger */}

@@ -258,7 +258,7 @@ export default async function TasksPage({
         return `/tasks?${next.toString()}`
     }
     const renderTasksSummaryRow = () => (
-        <div className="overflow-x-auto pb-1 md:overflow-visible hidescrollbar">
+        <div className="overflow-x-auto pb-1 xl:overflow-visible hidescrollbar">
             <div className={OVERVIEW_ROW_CLASS}>
                 {[
                     {
@@ -347,10 +347,17 @@ export default async function TasksPage({
                                 projects={activeProjects}
                                 label="Add"
                                 showLabelOnMobile
-                                className="!h-10 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white md:!px-9"
+                                className="!h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
                             />
                         }
-                        actions={<CreateTaskButton projects={activeProjects} />}
+                        actions={
+                            <CreateTaskButton
+                                projects={activeProjects}
+                                label="Add"
+                                showLabelOnMobile
+                                className="!h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
+                            />
+                        }
                     />
                 </div>
 

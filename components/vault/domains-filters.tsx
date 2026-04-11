@@ -102,8 +102,8 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
         <div className="space-y-3">
             <FilterBarShell>
                 <FilterBarScroll>
-                    <FilterBarRow className="md:gap-4">
-                    <div className="relative h-10 w-full md:w-[240px]">
+                    <FilterBarRow className="xl:gap-4">
+                    <div className="relative h-10 w-full xl:w-[240px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                             placeholder="Search domains..."
@@ -124,9 +124,9 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
                         )}
                     </div>
 
-                    <FilterBarDivider className="hidden md:block" />
+                    <FilterBarDivider className="hidden xl:block" />
 
-                    <FilterBarGroup className="gap-4 md:gap-4">
+                    <FilterBarGroup className="gap-4 xl:gap-4">
                     <PartnerCombobox
                         partners={partners}
                         currentPartner={currentPartnerId}
@@ -135,7 +135,7 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
                     </FilterBarGroup>
 
                     {activeFilters.length > 0 && (
-                        <div className="md:ml-auto">
+                        <div className="xl:ml-auto">
                             <Link
                                 href={clearAllHref}
                                 className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "text-[12px]" })}

@@ -44,7 +44,7 @@ function formatDuration(totalSeconds: number) {
     return `${hours}h ${minutes}m`
 }
 
-const LIST_GRID_COLUMNS = "grid-cols-[minmax(320px,2.7fr)_88px_96px_92px_116px_72px_88px_136px_120px]"
+const LIST_GRID_COLUMNS = "grid-cols-[minmax(280px,2.35fr)_84px_92px_88px_110px_70px_84px_124px_112px] xl:grid-cols-[minmax(320px,2.7fr)_88px_96px_92px_116px_72px_88px_136px_120px]"
 
 function toTimestamp(value: Date | string | null | undefined) {
     if (!value) return null
@@ -222,7 +222,7 @@ function ProjectsGridSkeleton() {
 function ProjectsListSkeleton() {
     return (
         <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
-            <div className="space-y-6 md:min-w-[1080px] xl:min-w-[1280px]">
+            <div className="space-y-6 md:min-w-[1240px] xl:min-w-[1320px]">
                 {Array.from({ length: 2 }).map((_, sectionIndex) => (
                     <section
                         key={`project-list-skeleton-section-${sectionIndex}`}
@@ -735,7 +735,7 @@ export function ProjectsBoardRows({
 
     return (
         <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
-            <div className="space-y-6 md:min-w-[1080px] xl:min-w-[1280px]">
+            <div className="space-y-6 md:min-w-[1240px] xl:min-w-[1320px]">
                 <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
                     <div className="mb-3 flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-emerald-500" />
@@ -816,7 +816,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-slate-200/80 bg-white/92 px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-slate-200/80 bg-white/92 px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -1093,7 +1093,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-slate-200/80 bg-white/92 px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-slate-200/80 bg-white/92 px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -1293,7 +1293,7 @@ export function ProjectsBoardRows({
                 {/* Global Shadow Row - Before Overview */}
                 {layout === "list" && (
                     <div className="overflow-x-auto pt-1 text-slate-900 hidescrollbar">
-                        <div className="md:min-w-[1080px] xl:min-w-[1280px]">
+                        <div className="md:min-w-[1240px] xl:min-w-[1320px]">
                             <button
                                 type="button"
                                 onClick={() => setCreateProjectOpen(true)}

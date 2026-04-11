@@ -48,7 +48,7 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
     }
 
     const renderHeader = () => (
-        <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[980px] lg:min-w-[1240px] grid-cols-[minmax(260px,2fr)_190px_90px_110px_90px] lg:grid-cols-[minmax(400px,3fr)_250px_120px_140px_120px] gap-x-4">
+        <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[940px] xl:min-w-[1240px] grid-cols-[minmax(240px,2fr)_170px_80px_96px_86px] xl:grid-cols-[minmax(400px,3fr)_250px_120px_140px_120px] gap-x-4">
             <button 
                 onClick={() => toggleSort("domainName")}
                 className="ui-overline flex items-center gap-1 text-left hover:text-primary transition-colors"
@@ -76,7 +76,7 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
             <div
                 key={site.id}
                 onClick={() => setSelectedSite(site)}
-                className="group stagger-row-enter premium-card relative grid min-h-[60px] items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] w-full cursor-pointer transition-all duration-300 hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:min-w-[980px] lg:min-w-[1240px] grid-cols-[minmax(260px,2fr)_190px_90px_110px_90px] lg:grid-cols-[minmax(400px,3fr)_250px_120px_140px_120px] gap-x-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                className="group stagger-row-enter premium-card relative grid min-h-[60px] items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] w-full cursor-pointer transition-all duration-300 hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:min-w-[940px] xl:min-w-[1240px] grid-cols-[minmax(240px,2fr)_170px_80px_96px_86px] xl:grid-cols-[minmax(400px,3fr)_250px_120px_140px_120px] gap-x-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
                 style={{ animationDelay: `${index * 0.05}s` }}
                 role="button"
                 tabIndex={0}
@@ -141,7 +141,7 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
     return (
         <div className="space-y-4">
             <div className="overflow-x-auto pb-6 hidescrollbar">
-                <div className="flex flex-col gap-2 md:min-w-[980px] lg:min-w-[1240px]">
+                <div className="flex flex-col gap-2 md:min-w-[940px] xl:min-w-[1240px]">
                     {sites.length > 0 && renderHeader()}
                     {sites.map((site, index) => renderSiteRow(site, index))}
                     

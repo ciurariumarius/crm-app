@@ -424,7 +424,24 @@ export default async function HomePage() {
                         />
                     </div>
 
-                    <div className="hidden grid-cols-[minmax(0,1fr)_minmax(360px,560px)_auto] items-center gap-4 md:grid lg:gap-6">
+                    <div className="hidden md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-3 xl:hidden">
+                        <div className="min-w-0 pr-1">
+                            <h1 className="ui-text-title text-slate-900">Overview</h1>
+                        </div>
+                        <div className="min-w-0">
+                            <GlobalSearch desktopTriggerClassName="mx-0 max-w-none" />
+                        </div>
+                        <div className="shrink-0">
+                            <HomeHeaderActions
+                                partners={homeDialogPartners}
+                                services={homeDialogServices}
+                                projects={homeDialogProjects}
+                                compact
+                            />
+                        </div>
+                    </div>
+
+                    <div className="hidden grid-cols-[minmax(0,1fr)_minmax(360px,560px)_auto] items-center gap-4 xl:grid 2xl:gap-6">
                         <div className="min-w-0">
                             <h1 className="ui-text-title text-slate-900">Overview</h1>
                         </div>

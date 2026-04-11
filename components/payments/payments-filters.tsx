@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, User, Briefcase, X, ChevronDown, Check, Clock } from "lucide-react"
+import { User, Briefcase, X, ChevronDown, Check, Clock } from "lucide-react"
 import { cn, formatProjectName } from "@/lib/utils"
 import {
     Popover,
@@ -18,8 +18,6 @@ import {
     CommandList,
 } from "@/components/ui/command"
 import Link from "next/link"
-import { useDebounce } from "@/hooks/use-debounce"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { buttonLinkClassName } from "@/components/ui/button-link"
 import {
@@ -59,29 +57,10 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
     const router = useRouter()
     const searchParams = useSearchParams()
 
-    // Local state for search
-    const [searchTerm, setSearchTerm] = React.useState(searchParams.get("q") || "")
-    const debouncedSearch = useDebounce(searchTerm, 300)
-
     const currentPartnerId = searchParams.get("partnerId") || "all"
     const currentProjectId = searchParams.get("projectId") || "all"
     const currentTimeRange = searchParams.get("timeRange") || "all"
-
-    // Update URL on search
-    React.useEffect(() => {
-        const params = new URLSearchParams(searchParams.toString())
-        const currentQ = params.get("q") || ""
-
-        if (debouncedSearch !== currentQ) {
-            if (debouncedSearch) {
-                params.set("q", debouncedSearch)
-            } else {
-                params.delete("q")
-            }
-            params.delete("page")
-            router.replace(`/payments?${params.toString()}`, { scroll: false })
-        }
-    }, [debouncedSearch, router, searchParams])
+    const currentSearch = searchParams.get("q") || ""
 
     const buildHref = (overrides: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -105,10 +84,10 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
     const selectedPartner = partners.find((p) => p.id === currentPartnerId)
     const activeFilters: { key: string; label: string; href: string }[] = []
     
-    if (searchTerm) {
+    if (currentSearch) {
         activeFilters.push({
             key: "q",
-            label: `Search: ${searchTerm}`,
+            label: `Search: ${currentSearch}`,
             href: buildHref({ q: null })
         })
     }
@@ -146,38 +125,15 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
         <div className="space-y-2.5 sm:space-y-3">
             <FilterBarShell className="rounded-[24px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.035)] sm:px-5 sm:py-4">
                 <FilterBarScroll>
-                    <FilterBarRow className="md:gap-4">
-                    <div className="relative h-10 w-full md:w-[240px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input
-                            placeholder="Search payments..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="h-10 border-slate-200 bg-white/50 pl-10 text-sm font-medium tracking-[0.02em] text-slate-700 shadow-none transition-all hover:bg-white hover:border-slate-300 focus-visible:ring-0 focus-visible:border-blue-500"
-                        />
-                        {searchTerm && (
-                            <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                type="button"
-                                onClick={() => setSearchTerm("")}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500"
-                            >
-                                <X className="h-3.5 w-3.5" />
-                            </Button>
-                        )}
-                    </div>
-
-                    <FilterBarDivider className="hidden md:block" />
-
-                    <FilterBarGroup className="gap-4 md:gap-4">
+                    <FilterBarRow className="xl:gap-4">
+                    <FilterBarGroup className="gap-4 xl:gap-4">
                         <PartnerCombobox
                             partners={partners}
                             currentPartner={currentPartnerId}
                             onSelect={(value) => pushWithOverrides({ partnerId: value, projectId: "all" })}
                         />
 
-                        <FilterBarDivider className="hidden md:block" />
+                        <FilterBarDivider className="hidden xl:block" />
 
                         <ProjectCombobox
                             projects={projects}
@@ -185,7 +141,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                             onSelect={(value) => pushWithOverrides({ projectId: value, partnerId: "all" })}
                         />
 
-                        <FilterBarDivider className="hidden md:block" />
+                        <FilterBarDivider className="hidden xl:block" />
 
                         <TimeRangeCombobox
                             currentTimeRange={currentTimeRange}
@@ -194,7 +150,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                     </FilterBarGroup>
 
                     {activeFilters.length > 0 && (
-                        <div className="md:ml-auto">
+                        <div className="xl:ml-auto">
                             <Link
                                 href={clearAllHref}
                                 className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "text-[12px]" })}

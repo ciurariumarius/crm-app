@@ -6,6 +6,7 @@ import { PaymentsTable } from "@/components/payments/payments-table"
 import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
 import { PaymentsFiltersClient } from "@/components/payments/payments-filters-client"
 import { PaymentsAddPaymentAction } from "@/components/payments/payments-add-payment-action"
+import { PaymentsSearchInput } from "@/components/payments/payments-search-input"
 import { ChevronLeft, ChevronRight, Banknote, Users, History } from "lucide-react"
 import Link from "next/link"
 import { buttonLinkClassName } from "@/components/ui/button-link"
@@ -103,6 +104,8 @@ export default async function PaymentsPage({
             <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Payments"
+                    search={<PaymentsSearchInput />}
+                    mobileSearch={<PaymentsSearchInput />}
                     actions={<PaymentsAddPaymentAction partners={partners} />}
                     mobileActions={
                         <PaymentsAddPaymentAction
