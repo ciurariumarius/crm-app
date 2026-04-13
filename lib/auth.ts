@@ -15,7 +15,7 @@ export const SESSION_COOKIE_NAME = "crm_session"
 const DAY_IN_MS = 24 * 60 * 60 * 1000
 const DEFAULT_SESSION_TTL_DAYS = 7
 const DEFAULT_SESSION_REMEMBER_TTL_DAYS = 60
-const DEFAULT_SESSION_REFRESH_WINDOW_HOURS = 24
+const DEFAULT_SESSION_REFRESH_WINDOW_HOURS = 72
 const DEFAULT_SESSION_ABSOLUTE_MAX_DAYS = 90
 const DEFAULT_SESSION_SENSITIVE_ACTION_MAX_AGE_HOURS = 24
 const SESSION_LAST_SEEN_TOUCH_MS = 5 * 60 * 1000
@@ -267,7 +267,7 @@ export async function createSession(
         expires: expiresAt,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
     })
 }
@@ -354,7 +354,7 @@ export async function updateSession(request: NextRequest) {
         value: await encrypt(refreshedPayload, { expiresAt }),
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         expires: expiresAt,
         path: "/",
     })

@@ -16,6 +16,7 @@ export default function LoginPage() {
     const [challengeToken, setChallengeToken] = useState("")
     const [token, setToken] = useState("")
     const [showLoginPassword, setShowLoginPassword] = useState(false)
+    const [rememberDevice, setRememberDevice] = useState(true)
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -175,6 +176,8 @@ export default function LoginPage() {
                                     name="rememberDevice"
                                     value="true"
                                     type="checkbox"
+                                    checked={rememberDevice}
+                                    onChange={(event) => setRememberDevice(event.target.checked)}
                                     className="h-4 w-4 rounded border-border"
                                 />
                                 Keep me signed in on this device

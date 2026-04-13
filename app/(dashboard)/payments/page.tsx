@@ -15,6 +15,29 @@ import { formatCurrency, formatProjectName, serialize, cn } from "@/lib/utils"
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
 
+type UnpaidBalanceSplit = {
+    total: number
+    recurring: number
+    oneTime: number
+}
+
+function createUnpaidBalanceSplit(): UnpaidBalanceSplit {
+    return {
+        total: 0,
+        recurring: 0,
+        oneTime: 0,
+    }
+}
+
+function addUnpaidAmount(bucket: UnpaidBalanceSplit, amount: number, isRecurring: boolean) {
+    bucket.total += amount
+    if (isRecurring) {
+        bucket.recurring += amount
+        return
+    }
+    bucket.oneTime += amount
+}
+
 export default async function PaymentsPage({
     searchParams,
 }: {
@@ -79,7 +102,19 @@ export default async function PaymentsPage({
         }))
         .sort((a, b) => b.totalUnpaid - a.totalUnpaid)
 
-    const totalUnpaidAmount = unpaidByPartner.reduce((sum, p) => sum + p.totalUnpaid, 0)
+    const now = new Date()
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const currentMonthUnpaid = createUnpaidBalanceSplit()
+    const previousMonthsUnpaid = createUnpaidBalanceSplit()
+
+    for (const project of projects) {
+        if (project.paymentStatus !== "Unpaid") continue
+        const amount = Number(project.currentFee || 0)
+        const isRecurring = project.services.some((service) => service.isRecurring)
+        const targetBucket = project.createdAt >= currentMonthStart ? currentMonthUnpaid : previousMonthsUnpaid
+        addUnpaidAmount(targetBucket, amount, isRecurring)
+    }
+
     const partnersWithDebt = unpaidByPartner.length
 
     const serializedProjects = serialize(projects)
@@ -118,19 +153,54 @@ export default async function PaymentsPage({
             </div>
 
             {/* KPI Section */}
-            <section className="grid gap-4 md:grid-cols-3">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-slate-400">Unpaid</p>
+                        <p className="ui-overline text-slate-400">Current Month</p>
                         <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50/80 text-rose-400 shadow-[0_4px_10px_rgba(244,63,94,0.06)]">
                             <Banknote className="h-4.5 w-4.5" />
                         </div>
                     </div>
                     <div className="mt-5">
                         <p className="text-[30px] font-bold leading-none tracking-tight text-rose-600 sm:text-[34px]">
-                            {formatCurrency(totalUnpaidAmount)}
+                            {formatCurrency(currentMonthUnpaid.total)}
                         </p>
-                        <p className="mt-2 text-sm font-medium text-slate-500">Outstanding receivables that still need settlement.</p>
+                        <p className="mt-2 text-sm font-medium text-slate-500">Outstanding from projects created this month.</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                            <div className="rounded-xl border border-emerald-100/80 bg-emerald-50/60 px-2.5 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-700/80">Recurring</p>
+                                <p className="mt-1 text-[13px] font-bold text-emerald-700">{formatCurrency(currentMonthUnpaid.recurring)}</p>
+                            </div>
+                            <div className="rounded-xl border border-indigo-100/80 bg-indigo-50/60 px-2.5 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-indigo-700/80">One-time</p>
+                                <p className="mt-1 text-[13px] font-bold text-indigo-700">{formatCurrency(currentMonthUnpaid.oneTime)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                    <div className="flex items-start justify-between gap-3">
+                        <p className="ui-overline text-slate-400">Previous Months</p>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50/80 text-amber-500 shadow-[0_4px_10px_rgba(245,158,11,0.08)]">
+                            <Banknote className="h-4.5 w-4.5" />
+                        </div>
+                    </div>
+                    <div className="mt-5">
+                        <p className="text-[30px] font-bold leading-none tracking-tight text-amber-600 sm:text-[34px]">
+                            {formatCurrency(previousMonthsUnpaid.total)}
+                        </p>
+                        <p className="mt-2 text-sm font-medium text-slate-500">Outstanding carried from previous months.</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                            <div className="rounded-xl border border-emerald-100/80 bg-emerald-50/60 px-2.5 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-700/80">Recurring</p>
+                                <p className="mt-1 text-[13px] font-bold text-emerald-700">{formatCurrency(previousMonthsUnpaid.recurring)}</p>
+                            </div>
+                            <div className="rounded-xl border border-indigo-100/80 bg-indigo-50/60 px-2.5 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-indigo-700/80">One-time</p>
+                                <p className="mt-1 text-[13px] font-bold text-indigo-700">{formatCurrency(previousMonthsUnpaid.oneTime)}</p>
+                            </div>
+                        </div>
                     </div>
                 </article>
 

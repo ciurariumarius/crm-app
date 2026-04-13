@@ -424,14 +424,14 @@ export default async function HomePage() {
                         />
                     </div>
 
-                    <div className="hidden md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-3 xl:hidden">
-                        <div className="min-w-0 pr-1">
+                    <div className="hidden md:grid md:grid-cols-[minmax(180px,1fr)_minmax(320px,640px)_minmax(180px,1fr)] md:items-center md:gap-3 xl:hidden">
+                        <div className="min-w-0 justify-self-start pr-1">
                             <h1 className="ui-text-title text-slate-900">Overview</h1>
                         </div>
-                        <div className="min-w-0">
-                            <GlobalSearch desktopTriggerClassName="mx-0 max-w-none" />
+                        <div className="w-full justify-self-center">
+                            <GlobalSearch desktopTriggerClassName="mx-auto w-full max-w-[640px]" />
                         </div>
-                        <div className="shrink-0">
+                        <div className="min-w-0 justify-self-end">
                             <HomeHeaderActions
                                 partners={homeDialogPartners}
                                 services={homeDialogServices}
@@ -441,14 +441,14 @@ export default async function HomePage() {
                         </div>
                     </div>
 
-                    <div className="hidden grid-cols-[minmax(0,1fr)_minmax(360px,560px)_auto] items-center gap-4 xl:grid 2xl:gap-6">
-                        <div className="min-w-0">
+                    <div className="hidden items-center gap-4 xl:grid xl:grid-cols-[minmax(240px,1fr)_minmax(360px,640px)_minmax(240px,1fr)] 2xl:gap-6">
+                        <div className="min-w-0 justify-self-start">
                             <h1 className="ui-text-title text-slate-900">Overview</h1>
                         </div>
-                        <div className="min-w-[320px] px-1.5 lg:px-1">
-                            <GlobalSearch />
+                        <div className="w-full justify-self-center px-1.5 lg:px-1">
+                            <GlobalSearch desktopTriggerClassName="mx-auto w-full max-w-[640px]" />
                         </div>
-                        <div className="flex items-center justify-end gap-2 shrink-0">
+                        <div className="min-w-0 justify-self-end flex items-center justify-end gap-2">
                             <HomeHeaderActions
                                 partners={homeDialogPartners}
                                 services={homeDialogServices}

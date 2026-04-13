@@ -65,8 +65,8 @@ export function DashboardPageHeader({
                 </div>
             ) : null}
 
-            <div className={["hidden items-center gap-3 md:grid md:grid-cols-[minmax(180px,auto)_minmax(0,1fr)_auto] xl:hidden", className].filter(Boolean).join(" ")}>
-                <div className="min-w-[180px]">
+            <div className={["hidden items-center gap-3 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(320px,640px)_minmax(180px,1fr)] xl:hidden", className].filter(Boolean).join(" ")}>
+                <div className="min-w-0 justify-self-start">
                     <div className="min-w-0">
                         {eyebrow ? (
                             <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400/90">
@@ -77,13 +77,13 @@ export function DashboardPageHeader({
                     </div>
                 </div>
 
-                {resolvedTabletSearch ? <div className="min-w-0">{resolvedTabletSearch}</div> : <div className="min-w-0" />}
+                {resolvedTabletSearch ? <div className="w-full justify-self-center">{resolvedTabletSearch}</div> : <div className="w-full" />}
 
-                {resolvedTabletActions ? <div className="flex items-center justify-end gap-2.5">{resolvedTabletActions}</div> : null}
+                {resolvedTabletActions ? <div className="min-w-0 justify-self-end flex items-center justify-end gap-2.5">{resolvedTabletActions}</div> : <div className="min-w-0" />}
             </div>
 
-            <div className={["hidden gap-4 xl:flex xl:items-center", className].filter(Boolean).join(" ")}>
-                <div className="min-w-[220px]">
+            <div className={["hidden gap-4 xl:grid xl:grid-cols-[minmax(240px,1fr)_minmax(360px,640px)_minmax(240px,1fr)] xl:items-center", className].filter(Boolean).join(" ")}>
+                <div className="min-w-0 justify-self-start">
                     <div className="flex items-start gap-3">
                         <MobileMenuTrigger />
                         <div className="min-w-0 pt-0.5">
@@ -102,9 +102,9 @@ export function DashboardPageHeader({
                     </div>
                 </div>
 
-                {search ? <div className="flex-1 min-w-0">{search}</div> : <div className="flex-1 min-w-0" />}
+                {search ? <div className="w-full justify-self-center">{search}</div> : <div className="w-full" />}
 
-                {actions ? <div className="flex items-center gap-3">{actions}</div> : null}
+                {actions ? <div className="min-w-0 justify-self-end flex items-center justify-end gap-3">{actions}</div> : <div className="min-w-0" />}
             </div>
         </>
     )

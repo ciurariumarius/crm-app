@@ -68,7 +68,7 @@ Session length is configurable and supports a longer "remember device" mode with
 
 - `SESSION_TTL_DAYS=7` (default for standard sign-in)
 - `SESSION_REMEMBER_TTL_DAYS=60` (default when "Keep me signed in" is checked)
-- `SESSION_REFRESH_WINDOW_HOURS=24` (refresh only when token is near expiry)
+- `SESSION_REFRESH_WINDOW_HOURS=72` (refresh only when token is near expiry)
 - `SESSION_ABSOLUTE_MAX_DAYS=90` (maximum total age even with refresh)
 - `SESSION_SENSITIVE_ACTION_MAX_AGE_HOURS=24` (force re-login for sensitive account actions if older)
 - `ENABLE_SESSION_REGISTRY=true` (enable DB-backed per-device sessions + revocation)
