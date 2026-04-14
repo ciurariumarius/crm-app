@@ -26,19 +26,21 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 npm run clean:artifacts   # remove local build/temp artifacts
 npm run typecheck         # TypeScript check
 npm run verify            # lint + typecheck + build
+npm run security:audit    # fail on prod high/critical advisories
+npm run security:test-guardrails  # domain/security guardrail checks
 ```
 
 Cleanup and context compaction guide:
 - `docs/codebase-cleanup-playbook.md`
 - `docs/context-map.md`
+- `docs/security-checklist.md`
 
 ## Debug API Controls
 
-Debug routes are disabled by default and require explicit opt-in.
+Debug routes are disabled by default and are always disabled in production.
 
 - `DEBUG_API_ENABLED=true`
 - `DEBUG_API_SECRET=<strong-random-secret>`
-- `DEBUG_API_ALLOW_PRODUCTION=true` (required in production, otherwise debug routes remain disabled)
 
 Optional server log route controls:
 
@@ -67,11 +69,15 @@ In development only, `unsafe-inline` and `unsafe-eval` are enabled automatically
 Session length is configurable and supports a longer "remember device" mode with sliding refresh.
 
 - `SESSION_TTL_DAYS=7` (default for standard sign-in)
-- `SESSION_REMEMBER_TTL_DAYS=60` (default when "Keep me signed in" is checked)
+- `SESSION_REMEMBER_TTL_DAYS=3650` (default when "Keep me signed in" is checked)
 - `SESSION_REFRESH_WINDOW_HOURS=72` (refresh only when token is near expiry)
 - `SESSION_ABSOLUTE_MAX_DAYS=90` (maximum total age even with refresh)
+- `SESSION_REMEMBER_ABSOLUTE_MAX_DAYS=36500` (absolute cap for remembered sessions)
+- `SESSION_INACTIVITY_TIMEOUT_DAYS=45` (rolling inactivity limit for all sessions, including remembered sessions)
 - `SESSION_SENSITIVE_ACTION_MAX_AGE_HOURS=24` (force re-login for sensitive account actions if older)
-- `ENABLE_SESSION_REGISTRY=true` (enable DB-backed per-device sessions + revocation)
+- `ENABLE_SESSION_REGISTRY=true` (required in production; enables DB-backed per-device sessions + revocation)
+
+In production, startup preflight fails fast if session registry is disabled or encryption keys are missing.
 
 When `ENABLE_SESSION_REGISTRY=true`, run the auth session migration first and regenerate Prisma client:
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { apiError } from "@/lib/api-response"
 import { matchesBearerOrHeaderSecret } from "@/lib/http-auth"
+import { logAuditEvent } from "@/lib/audit"
 
 const DEBUG_HEADERS = {
     "Cache-Control": "no-store, max-age=0",
@@ -10,16 +11,33 @@ const DEBUG_HEADERS = {
 }
 
 function isAuthorized(request: Request) {
-    const allowInProduction = process.env.DEBUG_API_ALLOW_PRODUCTION === "true"
-    if (process.env.NODE_ENV === "production" && !allowInProduction) return false
+    if (process.env.NODE_ENV === "production") return false
     if (process.env.DEBUG_API_ENABLED !== "true") return false
     const secret = process.env.DEBUG_API_SECRET?.trim()
     if (!secret) return false
     return matchesBearerOrHeaderSecret(request, secret, "x-debug-secret")
 }
 
+function getRequestContextFromHeaders(request: Request) {
+    const forwardedFor = request.headers.get("x-forwarded-for")
+    const ipAddress = forwardedFor?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown"
+    const userAgent = request.headers.get("user-agent") || "unknown"
+    return { ipAddress, userAgent }
+}
+
 export async function GET(request: Request) {
-    if (!isAuthorized(request)) {
+    const authorized = isAuthorized(request)
+    const { ipAddress, userAgent } = getRequestContextFromHeaders(request)
+
+    await logAuditEvent({
+        action: authorized ? "DEBUG_API_ACCESS_GRANTED" : "DEBUG_API_ACCESS_DENIED",
+        success: authorized,
+        ipAddress,
+        userAgent,
+        details: "route=/api/debug",
+    })
+
+    if (!authorized) {
         return apiError("Not found", 404, { code: "DEBUG_UNAVAILABLE", headers: DEBUG_HEADERS })
     }
 

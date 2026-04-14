@@ -37,11 +37,10 @@ export async function POST(request: Request) {
       }
     )
   } catch (error) {
-    const errorSuffix = error instanceof Error && error.message ? `: ${error.message}` : ""
     return apiRouteError(error, {
       unauthorizedMessage: "Unauthorized",
       unauthorizedCode: "AUTH_REQUIRED",
-      fallbackMessage: `Failed to import LMS allocations${errorSuffix}`,
+      fallbackMessage: "Failed to import LMS allocations",
       fallbackCode: "LMS_ALLOCATION_IMPORT_FAILED",
       headers: { "Cache-Control": "no-store" },
       logLabel: "API LMS allocation import error:",

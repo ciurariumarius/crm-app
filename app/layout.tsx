@@ -7,12 +7,15 @@ import { getActiveTimer } from "@/lib/actions/time"
 import { getSession } from "@/lib/auth"
 import type { TimerPreferences } from "@/components/providers/timer-provider"
 import prisma from "@/lib/prisma"
+import { runSecurityPreflight } from "@/lib/security/preflight"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-plus-jakarta-sans",
   display: "swap",
 })
+
+runSecurityPreflight()
 
 export const viewport: import("next").Viewport = {
   themeColor: "#f7f9fb",

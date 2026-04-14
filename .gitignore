@@ -34,9 +34,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 *.log
+*.bak
+*.bak*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # local agent/assistant metadata
 /.agent/
@@ -58,6 +61,7 @@ next-env.d.ts
 
 # protected uploads
 /storage/
+/public/uploads/project-notes/
 
 # local temp workspace
 /tmp/

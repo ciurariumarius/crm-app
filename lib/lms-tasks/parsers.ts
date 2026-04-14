@@ -19,6 +19,30 @@ function isCellEmpty(value: unknown) {
   return value == null || String(value).trim() === ""
 }
 
+function normalizeExcelCellValue(value: unknown): unknown {
+  if (value == null) return ""
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value
+  if (value instanceof Date) return value.toISOString().slice(0, 10)
+
+  if (typeof value === "object") {
+    const candidate = value as {
+      text?: string
+      result?: unknown
+      richText?: Array<{ text?: string }>
+      hyperlink?: string
+    }
+
+    if (typeof candidate.text === "string" && candidate.text.trim()) return candidate.text
+    if (typeof candidate.hyperlink === "string" && candidate.hyperlink.trim()) return candidate.hyperlink
+    if (candidate.result != null) return normalizeExcelCellValue(candidate.result)
+    if (Array.isArray(candidate.richText)) {
+      return candidate.richText.map((entry) => entry?.text || "").join("")
+    }
+  }
+
+  return String(value)
+}
+
 async function readRowsFromFile(file: File): Promise<SheetRows> {
   const lowerName = file.name.toLowerCase()
 
@@ -33,14 +57,19 @@ async function readRowsFromFile(file: File): Promise<SheetRows> {
     return (parsed.data as unknown[]) as SheetRows
   }
 
-  const XLSX = await import("xlsx")
+  const ExcelJS = await import("exceljs")
   const buffer = await file.arrayBuffer()
-  const workbook = XLSX.read(buffer, { type: "array", raw: true, cellDates: false })
-  const sheetName = workbook.SheetNames[0]
-  if (!sheetName) return []
-  const sheet = workbook.Sheets[sheetName]
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true })
-  return rows as SheetRows
+  const workbook = new ExcelJS.Workbook()
+  await workbook.xlsx.load(buffer)
+  const worksheet = workbook.worksheets[0]
+  if (!worksheet) return []
+
+  const rows: SheetRows = []
+  worksheet.eachRow({ includeEmpty: true }, (row) => {
+    const values = Array.isArray(row.values) ? row.values.slice(1) : []
+    rows.push(values.map((value) => normalizeExcelCellValue(value)))
+  })
+  return rows
 }
 
 function findColumnIndexByTerms(headers: string[], terms: string[], mode: "partial" | "exact" = "partial") {

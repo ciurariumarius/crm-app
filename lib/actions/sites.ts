@@ -7,7 +7,11 @@ import { requireTenantContext } from "@/lib/tenant"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
-import { normalizeDomainHost, resolveDomainFaviconUrl } from "@/lib/favicon"
+import { resolveDomainFaviconUrl } from "@/lib/favicon"
+import {
+    DomainValidationError,
+    validateExternalDomainHostInput,
+} from "@/lib/security/domain-validation"
 import { z } from "zod"
 
 const SiteIdSchema = z.string().uuid()
@@ -27,6 +31,45 @@ const UpdateSiteSchema = z.object({
     marketingVault: z.string().max(20000).optional(),
 })
 
+async function resolveNormalizedDomainAndFavicon(
+    session: Awaited<ReturnType<typeof requireTenantContext>>,
+    domainInput: string
+) {
+    let normalizedDomainName: string
+
+    try {
+        normalizedDomainName = await validateExternalDomainHostInput(domainInput)
+    } catch (error) {
+        const details = error instanceof DomainValidationError
+            ? `domainInput=${domainInput}; reason=${error.code}`
+            : `domainInput=${domainInput}; reason=UNKNOWN`
+
+        await logSessionAuditEvent(session, {
+            action: "SITE_DOMAIN_REJECTED",
+            success: false,
+            details,
+        })
+        throw new ActionError("INVALID_DOMAIN", "Please enter a valid public domain without custom ports.")
+    }
+
+    let faviconUrl: string | null
+    try {
+        faviconUrl = await resolveDomainFaviconUrl(normalizedDomainName)
+    } catch (error) {
+        const details = error instanceof DomainValidationError
+            ? `domain=${normalizedDomainName}; reason=${error.code}`
+            : `domain=${normalizedDomainName}; reason=UNKNOWN`
+        await logSessionAuditEvent(session, {
+            action: "SITE_FAVICON_FETCH_BLOCKED",
+            success: false,
+            details,
+        })
+        faviconUrl = `https://${normalizedDomainName}/favicon.ico`
+    }
+
+    return { normalizedDomainName, faviconUrl }
+}
+
 export async function createSite(partnerId: string, domainName: string) {
     try {
         const session = await requireTenantContext()
@@ -38,13 +81,15 @@ export async function createSite(partnerId: string, domainName: string) {
         if (!partner) {
             throw new ActionError("PARTNER_NOT_FOUND", "Partner not found")
         }
-        const normalizedDomainName = normalizeDomainHost(validated.domainName)
-        const faviconUrl = await resolveDomainFaviconUrl(normalizedDomainName || validated.domainName)
+        const { normalizedDomainName, faviconUrl } = await resolveNormalizedDomainAndFavicon(
+            session,
+            validated.domainName
+        )
         const site = await prisma.site.create({
             data: {
                 tenantId: session.tenantId,
                 partnerId: validated.partnerId,
-                domainName: normalizedDomainName || validated.domainName,
+                domainName: normalizedDomainName,
                 faviconUrl,
             }
         })
@@ -77,9 +122,12 @@ export async function updateSiteDetails(siteId: string, data: {
         delete (updateData as Record<string, unknown>).siteId
         if (updateData.name === "") updateData.name = null
         if (typeof validated.domainName === "string") {
-            const normalizedDomainName = normalizeDomainHost(validated.domainName) || validated.domainName
+            const { normalizedDomainName, faviconUrl } = await resolveNormalizedDomainAndFavicon(
+                session,
+                validated.domainName
+            )
             updateData.domainName = normalizedDomainName
-            updateData.faviconUrl = await resolveDomainFaviconUrl(normalizedDomainName)
+            updateData.faviconUrl = faviconUrl
         }
         if (validated.driveLink !== undefined) {
             if (validated.driveLink === "") {

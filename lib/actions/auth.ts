@@ -61,6 +61,34 @@ async function checkRateLimitSafe(
     }
 }
 
+async function revokeOtherActiveSessionsForUser(args: {
+    tenantId: string
+    userId: string
+    currentSessionId?: string
+}) {
+    if (!isSessionRegistryEnabled()) return
+
+    const where: {
+        tenantId: string
+        userId: string
+        revokedAt: null
+        id?: { not: string }
+    } = {
+        tenantId: args.tenantId,
+        userId: args.userId,
+        revokedAt: null,
+    }
+
+    if (args.currentSessionId) {
+        where.id = { not: args.currentSessionId }
+    }
+
+    await prisma.authSession.updateMany({
+        where,
+        data: { revokedAt: new Date() },
+    })
+}
+
 export async function loginUser(formData: FormData) {
     const data = Object.fromEntries(formData.entries())
     const username = data.username as string
@@ -332,6 +360,12 @@ export async function changePassword(formData: FormData) {
         data: { passwordHash }
     })
 
+    await revokeOtherActiveSessionsForUser({
+        tenantId: user.tenantId,
+        userId: user.id,
+        currentSessionId: session.sid,
+    })
+
     await logAuditEvent({
         action: "AUTH_PASSWORD_CHANGED",
         success: true,
@@ -416,6 +450,11 @@ export async function enableTwoFactor(token: string, secret: string) {
         where: { id: session.userId, tenantId: session.tenantId },
         data: { twoFactorEnabled: true, twoFactorSecret: encryptedSecret }
     })
+    await revokeOtherActiveSessionsForUser({
+        tenantId: session.tenantId,
+        userId: session.userId,
+        currentSessionId: session.sid,
+    })
 
     await logAuditEvent({
         action: "AUTH_2FA_ENABLED",
@@ -461,6 +500,11 @@ export async function disableTwoFactor(currentPassword: string) {
     await prisma.user.updateMany({
         where: { id: session.userId, tenantId: session.tenantId },
         data: { twoFactorEnabled: false, twoFactorSecret: null }
+    })
+    await revokeOtherActiveSessionsForUser({
+        tenantId: session.tenantId,
+        userId: session.userId,
+        currentSessionId: session.sid,
     })
 
     await logAuditEvent({

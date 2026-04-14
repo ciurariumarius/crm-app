@@ -4,14 +4,18 @@ import {
     decrypt,
     isSessionPastAbsoluteMax,
     isSessionRegistryEnabled,
+    isSessionRegistryRequired,
     SESSION_COOKIE_NAME,
     type SessionPayload,
     updateSession,
 } from './lib/auth'
+import { runSecurityPreflight } from './lib/security/preflight'
 
 const PUBLIC_PATHS = ['/login', '/manifest.json', '/sw.js']
 const PUBLIC_API_PATHS = ['/api/cron/rollover']
 const STATIC_ASSET_PATTERN = /\.(ico|png|svg|jpg|jpeg|gif|webp|txt|xml)$/i
+
+runSecurityPreflight()
 
 // Protected routes configuration
 const isProtectedRoute = (path: string) => {
@@ -60,7 +64,7 @@ export async function proxy(request: NextRequest) {
         return unauthorizedResponse(request)
     }
 
-    if (isSessionRegistryEnabled() && !session.sid) {
+    if ((isSessionRegistryEnabled() || isSessionRegistryRequired()) && !session.sid) {
         return unauthorizedResponse(request)
     }
 

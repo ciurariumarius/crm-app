@@ -16,11 +16,39 @@ export const runtime = "nodejs"
 const MAX_FILE_SIZE_BYTES = 12 * 1024 * 1024
 const MAX_FILES_PER_REQUEST = 8
 
-const EXTENSIONS_BY_MIME: Record<string, string> = {
-    "image/png": "png",
-    "image/jpeg": "jpg",
-    "image/webp": "webp",
-    "image/gif": "gif",
+type AllowedImageExtension = "png" | "jpg" | "webp" | "gif"
+
+function detectImageExtensionFromMagicBytes(buffer: Buffer): AllowedImageExtension | null {
+    if (buffer.length >= 8) {
+        const isPng =
+            buffer[0] === 0x89 &&
+            buffer[1] === 0x50 &&
+            buffer[2] === 0x4e &&
+            buffer[3] === 0x47 &&
+            buffer[4] === 0x0d &&
+            buffer[5] === 0x0a &&
+            buffer[6] === 0x1a &&
+            buffer[7] === 0x0a
+        if (isPng) return "png"
+    }
+
+    if (buffer.length >= 3) {
+        const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+        if (isJpeg) return "jpg"
+    }
+
+    if (buffer.length >= 12) {
+        const riffHeader = buffer.toString("ascii", 0, 4) === "RIFF"
+        const webpHeader = buffer.toString("ascii", 8, 12) === "WEBP"
+        if (riffHeader && webpHeader) return "webp"
+    }
+
+    if (buffer.length >= 6) {
+        const gifHeader = buffer.toString("ascii", 0, 6)
+        if (gifHeader === "GIF87a" || gifHeader === "GIF89a") return "gif"
+    }
+
+    return null
 }
 
 export async function POST(request: Request) {
@@ -76,7 +104,18 @@ export async function POST(request: Request) {
                 )
             }
 
-            const extension = EXTENSIONS_BY_MIME[file.type] || "png"
+            const buffer = Buffer.from(await file.arrayBuffer())
+            const extension = detectImageExtensionFromMagicBytes(buffer)
+            if (!extension) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: `File \"${file.name}\" is not a supported image format.`,
+                    },
+                    { status: 400 }
+                )
+            }
+
             const filename = `${Date.now()}-${randomUUID()}.${extension}`
             const relativePath = buildProjectNoteRelativePath(
                 session.tenantId,
@@ -84,7 +123,6 @@ export async function POST(request: Request) {
                 filename
             )
             const absoluteFilePath = resolveProjectNoteAbsolutePath(relativePath)
-            const buffer = Buffer.from(await file.arrayBuffer())
             await writeFile(absoluteFilePath, buffer)
 
             urls.push(createSignedProjectNoteUrl(relativePath))
