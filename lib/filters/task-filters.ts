@@ -11,6 +11,7 @@ export type TaskFiltersInput = {
     status?: string | null
     partnerId?: string | null
     projectId?: string | null
+    taskId?: string | null
     urgency?: string | null
     overdue?: string | null
     dueToday?: string | null
@@ -21,6 +22,7 @@ export type NormalizedTaskFilters = {
     status: TaskStatusFilter
     partnerId?: string
     projectId?: string
+    taskId?: string
     urgency: TaskUrgencyFilter
     overdueOnly: boolean
     dueTodayOnly: boolean
@@ -62,10 +64,12 @@ export function normalizeTaskFilters(input: TaskFiltersInput): NormalizedTaskFil
 
     const projectId = normalizeOptionalText(input.projectId)
     const partnerId = normalizeOptionalText(input.partnerId)
+    const taskId = normalizeOptionalText(input.taskId)
 
     return {
         q,
         status,
+        taskId: taskId && taskId !== "all" ? taskId : undefined,
         projectId: projectId && projectId !== "all" ? projectId : undefined,
         partnerId: partnerId && partnerId !== "all" ? partnerId : undefined,
         urgency,
@@ -87,7 +91,9 @@ export function buildTaskWhereInput(input: {
         where.status = filters.status === "Active" ? { in: ["Active", "Paused"] } : filters.status
     }
 
-    if (filters.projectId) {
+    if (filters.taskId) {
+        where.id = filters.taskId
+    } else if (filters.projectId) {
         where.projectId = filters.projectId
     } else if (filters.partnerId) {
         where.project = { site: { partnerId: filters.partnerId } }

@@ -11,6 +11,7 @@ export type ProjectRecurringFilter = (typeof PROJECT_RECURRING_FILTER_VALUES)[nu
 
 export type ProjectFiltersInput = {
     q?: string | null
+    projectId?: string | null
     status?: string | null
     payment?: string | null
     recurring?: string | null
@@ -22,6 +23,7 @@ export type ProjectFiltersInput = {
 
 export type NormalizedProjectFilters = {
     q?: string
+    projectId?: string
     status: ProjectStatusFilter
     payment: ProjectPaymentFilter
     recurring: ProjectRecurringFilter
@@ -47,12 +49,14 @@ function normalizeOptionalText(value: string | null | undefined) {
 
 export function normalizeProjectFilters(input: ProjectFiltersInput): NormalizedProjectFilters {
     const q = normalizeOptionalText(input.q)
+    const projectId = normalizeOptionalText(input.projectId)
     const partnerId = normalizeOptionalText(input.partnerId)
     const from = normalizeOptionalText(input.from)
     const to = normalizeOptionalText(input.to)
 
     return {
         q,
+        projectId: projectId && projectId !== "all" ? projectId : undefined,
         status: normalizeEnumValue(input.status, PROJECT_STATUS_FILTER_VALUES, "Active"),
         payment: normalizeEnumValue(input.payment, PROJECT_PAYMENT_FILTER_VALUES, "All"),
         recurring: normalizeEnumValue(input.recurring, PROJECT_RECURRING_FILTER_VALUES, "All"),
@@ -89,6 +93,7 @@ export function buildProjectWhereInput(input: {
     return {
         AND: [
             { tenantId },
+            filters.projectId ? { id: filters.projectId } : {},
             filters.status === "All" ? {} : { status: filters.status },
             filters.payment === "All" ? {} : { paymentStatus: filters.payment },
             filters.partnerId ? { site: { partnerId: filters.partnerId } } : {},

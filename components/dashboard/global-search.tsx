@@ -9,9 +9,8 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
+import { useRouter } from "next/navigation"
 import { globalSearch } from "@/lib/actions/search"
-import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
-import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { FolderDot, ListChecks, User, Search, Loader2 } from "lucide-react"
 import { useDebounce } from "react-use"
 import { cn, formatProjectName } from "@/lib/utils"
@@ -44,7 +43,6 @@ type SearchTask = {
 type SearchPartner = {
     id: string
     name?: string | null
-    username?: string | null
     businessName?: string | null
 }
 
@@ -60,6 +58,7 @@ interface GlobalSearchProps {
 }
 
 export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: GlobalSearchProps) {
+    const router = useRouter()
     const [open, setOpen] = React.useState(false)
     const [query, setQuery] = React.useState("")
     const [results, setResults] = React.useState<GlobalSearchResults>({
@@ -68,9 +67,7 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
         partners: []
     })
     const [loading, setLoading] = React.useState(false)
-
-    const { openProject } = React.useContext(ProjectSheetContext)
-    const { openTask } = React.useContext(TaskSheetContext)
+    const [failed, setFailed] = React.useState(false)
 
     React.useEffect(() => {
         const down = (e: KeyboardEvent) => {
@@ -85,18 +82,23 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
 
     useDebounce(
         async () => {
-            if (query.length < 2) {
+            const normalizedQuery = query.trim()
+            if (normalizedQuery.length < 2) {
                 setResults({ projects: [], tasks: [], partners: [] })
+                setFailed(false)
                 setLoading(false)
                 return
             }
 
             setLoading(true)
+            setFailed(false)
             try {
-                const searchResults = await globalSearch(query)
+                const searchResults = await globalSearch(normalizedQuery)
                 setResults(searchResults)
             } catch (error) {
                 console.error(error)
+                setResults({ projects: [], tasks: [], partners: [] })
+                setFailed(true)
             } finally {
                 setLoading(false)
             }
@@ -105,9 +107,11 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
         [query]
     )
 
-    const handleSelect = (callback: () => void) => {
+    const normalizedQuery = query.trim()
+
+    const handleSelect = (href: string) => {
         setOpen(false)
-        callback()
+        router.push(href)
     }
 
     return (
@@ -163,6 +167,15 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
                     )}
 
                     {!loading && query.length > 0 &&
+                        normalizedQuery.length < 2 && (
+                            <CommandEmpty>Type at least 2 characters to search.</CommandEmpty>
+                        )}
+
+                    {!loading && normalizedQuery.length >= 2 && failed && (
+                        <CommandEmpty>Search is unavailable right now. Please try again.</CommandEmpty>
+                    )}
+
+                    {!loading && normalizedQuery.length >= 2 && !failed &&
                         results.projects.length === 0 &&
                         results.tasks.length === 0 &&
                         results.partners.length === 0 && (
@@ -174,7 +187,9 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
                             {results.projects.map((project) => (
                                 <CommandItem
                                     key={project.id}
-                                    onSelect={() => handleSelect(() => openProject(project.id))}
+                                    onSelect={() =>
+                                        handleSelect(`/projects?projectId=${encodeURIComponent(project.id)}&status=All&page=1`)
+                                    }
                                     className="flex items-center gap-3 cursor-pointer p-4"
                                 >
                                     <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -194,7 +209,9 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
                             {results.tasks.map((task) => (
                                 <CommandItem
                                     key={task.id}
-                                    onSelect={() => handleSelect(() => openTask(task.id, task))}
+                                    onSelect={() =>
+                                        handleSelect(`/tasks?taskId=${encodeURIComponent(task.id)}&status=All&page=1`)
+                                    }
                                     className="flex items-center gap-3 cursor-pointer p-4"
                                 >
                                     <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
@@ -214,7 +231,7 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
                             {results.partners.map((partner) => (
                                 <CommandItem
                                     key={partner.id}
-                                    onSelect={() => handleSelect(() => { })}
+                                    onSelect={() => handleSelect(`/partners?partnerId=${encodeURIComponent(partner.id)}`)}
                                     className="flex items-center gap-3 cursor-pointer p-4"
                                 >
                                     <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center">
@@ -222,7 +239,7 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="font-semibold text-slate-700">{partner.name}</span>
-                                        <span className="ui-text-caption text-slate-400">@{partner.username || partner.businessName}</span>
+                                        <span className="ui-text-caption text-slate-400">{partner.businessName || "Partner"}</span>
                                     </div>
                                 </CommandItem>
                             ))}

@@ -13,12 +13,13 @@ export const dynamic = "force-dynamic"
 export default async function VaultPage({
     searchParams
 }: {
-    searchParams: Promise<{ page?: string; tab?: string; sortBy?: string; order?: string }>
+    searchParams: Promise<{ page?: string; tab?: string; sortBy?: string; order?: string; partnerId?: string }>
 }) {
     const session = await requireTenantContext()
     const params = await searchParams
     const sortBy = params.sortBy === "revenue" ? "revenue" : "name"
     const order: Prisma.SortOrder = params.order === "desc" ? "desc" : "asc"
+    const partnerId = params.partnerId?.trim() || undefined
 
     type PartnerRow = Prisma.PartnerGetPayload<{
         include: {
@@ -49,7 +50,10 @@ export default async function VaultPage({
 
     // Fetch partners with site projects and billing data
     const partnersRaw = await prisma.partner.findMany({
-        where: { tenantId: session.tenantId },
+        where: {
+            tenantId: session.tenantId,
+            ...(partnerId ? { id: partnerId } : {}),
+        },
         include: {
             _count: {
                 select: { sites: true },
@@ -80,6 +84,15 @@ export default async function VaultPage({
         },
         orderBy: sortBy === "name" ? { name: order } : { createdAt: "desc" },
     })
+
+    const buildPartnersHref = (nextSortBy: "name" | "revenue", nextOrder: Prisma.SortOrder) => {
+        const next = new URLSearchParams()
+        next.set("tab", "partners")
+        next.set("sortBy", nextSortBy)
+        next.set("order", nextOrder)
+        if (partnerId) next.set("partnerId", partnerId)
+        return `/partners?${next.toString()}`
+    }
 
     const partnersWithUnpaidProjects = (partnersRaw as PartnerRow[]).map((partner) => {
         const normalizedSites = partner.sites.map((site) => ({
@@ -145,7 +158,7 @@ export default async function VaultPage({
                     <div className="flex items-center gap-2">
                         <div className="hidden md:flex items-center gap-2 mr-2">
                             <Link
-                                href={`/partners?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
+                                href={buildPartnersHref(sortBy === "name" ? "revenue" : "name", order)}
                                 className={cn(
                                     "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-medium tracking-[0.02em]",
                                     sortBy === "name"
@@ -158,7 +171,7 @@ export default async function VaultPage({
                             </Link>
 
                             <Link
-                                href={`/partners?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
+                                href={buildPartnersHref(sortBy, order === "asc" ? "desc" : "asc")}
                                 className={cn(
                                     "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-medium tracking-[0.02em]"
                                 )}
@@ -173,7 +186,7 @@ export default async function VaultPage({
 
                 <div className="flex md:hidden items-center gap-2">
                     <Link
-                        href={`/partners?tab=partners&sortBy=${sortBy === 'name' ? 'revenue' : 'name'}&order=${order}`}
+                        href={buildPartnersHref(sortBy === "name" ? "revenue" : "name", order)}
                         className={cn(
                             "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-medium tracking-[0.02em]",
                             sortBy === "name"
@@ -186,7 +199,7 @@ export default async function VaultPage({
                     </Link>
 
                     <Link
-                        href={`/partners?tab=partners&sortBy=${sortBy}&order=${order === 'asc' ? 'desc' : 'asc'}`}
+                        href={buildPartnersHref(sortBy, order === "asc" ? "desc" : "asc")}
                         className={cn(
                             "flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-muted/30 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-all text-xs font-medium tracking-[0.02em]"
                         )}

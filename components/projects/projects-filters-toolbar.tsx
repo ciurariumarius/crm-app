@@ -99,6 +99,8 @@ export function ProjectsFiltersToolbar({
   currentTo,
   currentSort,
   currentView,
+  currentProjectId,
+  currentProjectLabel,
   currentPartnerId,
   totalProjects,
 }: {
@@ -111,6 +113,8 @@ export function ProjectsFiltersToolbar({
   currentTo: string
   currentSort: string
   currentView: "grid" | "list"
+  currentProjectId: string
+  currentProjectLabel?: string
   currentPartnerId: string
   totalProjects: number
 }) {
@@ -127,6 +131,7 @@ export function ProjectsFiltersToolbar({
       const isDefaultRecurring = key === "recurring" && value === "All"
       const isDefaultPeriod = key === "period" && value === "all_time"
       const isDefaultSort = key === "sort" && value === DEFAULT_SORT
+      const isDefaultProject = key === "projectId" && (value === "all" || !value)
       const isDefaultPartner = key === "partnerId" && value === "all"
       const isDefaultFrom = key === "from" && !value
       const isDefaultTo = key === "to" && !value
@@ -139,6 +144,7 @@ export function ProjectsFiltersToolbar({
         isDefaultRecurring ||
         isDefaultPeriod ||
         isDefaultSort ||
+        isDefaultProject ||
         isDefaultPartner ||
         isDefaultFrom ||
         isDefaultTo ||
@@ -175,6 +181,7 @@ export function ProjectsFiltersToolbar({
   if (currentStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${currentStatus}`, href: buildHref({ status: "Active" }) })
   if (currentPayment !== "All") activeFilters.push({ key: "payment", label: `Payment: ${currentPayment}`, href: buildHref({ payment: "All" }) })
   if (currentRecurring !== "All") activeFilters.push({ key: "recurring", label: `Type: ${RECURRING_OPTIONS.find((option) => option.value === currentRecurring)?.label || currentRecurring}`, href: buildHref({ recurring: "All" }) })
+  if (currentProjectId !== "all") activeFilters.push({ key: "projectId", label: `Project: ${currentProjectLabel || "Selected"}`, href: buildHref({ projectId: "all" }) })
   if (currentPartnerId !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: "all" }) })
   if (hasCustomRange) activeFilters.push({ key: "period_custom", label: `Period: ${customRangeLabel}`, href: buildHref({ period: "all_time", from: null, to: null }) })
   if (!hasCustomRange && currentPeriod !== "all_time") activeFilters.push({ key: "period", label: `Period: ${selectedPeriod.label}`, href: buildHref({ period: "all_time", from: null, to: null }) })
@@ -184,6 +191,7 @@ export function ProjectsFiltersToolbar({
     status: "Active",
     payment: "All",
     recurring: "All",
+    projectId: null,
     partnerId: null,
     period: "all_time",
     from: null,

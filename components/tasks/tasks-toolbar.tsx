@@ -65,6 +65,7 @@ export function TasksToolbar({
   currentSort,
   currentCols,
   currentProject,
+  currentTaskId,
   currentPartner,
   totalTasks,
 }: {
@@ -77,6 +78,7 @@ export function TasksToolbar({
   currentSort: string
   currentCols: number
   currentProject: string
+  currentTaskId: string
   currentPartner: string
   totalTasks: number
 }) {
@@ -93,6 +95,7 @@ export function TasksToolbar({
       const isDefaultSort = key === "sort" && value === "newest"
       const isDefaultCols = key === "cols" && value === "3"
       const isDefaultProject = key === "projectId" && value === "all"
+      const isDefaultTask = key === "taskId" && (value === "all" || !value)
       const isDefaultPartner = key === "partnerId" && value === "all"
 
       if (
@@ -102,6 +105,7 @@ export function TasksToolbar({
         isDefaultSort ||
         isDefaultCols ||
         isDefaultProject ||
+        isDefaultTask ||
         isDefaultPartner
       ) {
         params.delete(key)
@@ -109,6 +113,7 @@ export function TasksToolbar({
         params.set(key, value)
       }
     })
+    params.delete("page")
     return `${pathname}?${params.toString()}`
   }
 
@@ -123,6 +128,7 @@ export function TasksToolbar({
     dueToday: null,
     sort: "newest",
     projectId: null,
+    taskId: null,
     partnerId: null,
   })
 
@@ -141,6 +147,7 @@ export function TasksToolbar({
   if (currentUrgency !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${currentUrgency}`, href: buildHref({ urgency: "all" }) })
   if (currentOverdue) activeFilters.push({ key: "overdue", label: "Overdue", href: buildHref({ overdue: null }) })
   if (currentDueToday) activeFilters.push({ key: "dueToday", label: "Due today", href: buildHref({ dueToday: null }) })
+  if (currentTaskId !== "all") activeFilters.push({ key: "taskId", label: "Task: Selected", href: buildHref({ taskId: "all" }) })
   if (currentProject !== "all" && selectedProject) activeFilters.push({ key: "projectId", label: `Project: ${selectedProject.name}`, href: buildHref({ projectId: "all" }) })
   if (currentPartner !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: "all" }) })
   if (currentSort !== "newest" && selectedSort) activeFilters.push({ key: "sort", label: `Sort: ${selectedSort.label}`, href: buildHref({ sort: "newest" }) })
@@ -210,7 +217,7 @@ export function TasksToolbar({
                 projects={projects}
                 currentProject={currentProject}
                 onSelect={(value) => {
-                  const overrides: Record<string, string | null> = { projectId: value }
+                  const overrides: Record<string, string | null> = { projectId: value, taskId: null }
                   if (value !== "all") overrides.partnerId = null
                   pushWithOverrides(overrides)
                 }}
@@ -222,7 +229,7 @@ export function TasksToolbar({
                 partners={partners}
                 currentPartner={currentPartner}
                 onSelect={(value) => {
-                  const overrides: Record<string, string | null> = { partnerId: value }
+                  const overrides: Record<string, string | null> = { partnerId: value, taskId: null }
                   if (value !== "all") overrides.projectId = null
                   pushWithOverrides(overrides)
                 }}

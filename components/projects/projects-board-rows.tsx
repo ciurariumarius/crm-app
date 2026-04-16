@@ -284,6 +284,7 @@ type TotalsSummary = {
 type BoardSortBy = "createdAt" | "updatedAt" | "amount" | "name" | "time"
 type BoardSortDirection = "asc" | "desc"
 type SearchApiFilters = {
+    projectId?: string
     status: string
     payment: string
     recurring: string
@@ -411,6 +412,7 @@ export function ProjectsBoardRows({
         if (searchApiFilters?.payment) params.set("payment", searchApiFilters.payment)
         if (searchApiFilters?.recurring) params.set("recurring", searchApiFilters.recurring)
         if (searchApiFilters?.sort) params.set("sort", searchApiFilters.sort)
+        if (searchApiFilters?.projectId) params.set("projectId", searchApiFilters.projectId)
         if (searchApiFilters?.partnerId) params.set("partnerId", searchApiFilters.partnerId)
         if (searchApiFilters?.period) params.set("period", searchApiFilters.period)
         if (searchApiFilters?.from) params.set("from", searchApiFilters.from)
@@ -477,6 +479,7 @@ export function ProjectsBoardRows({
         debouncedSearch,
         searchApiFilters?.from,
         searchApiFilters?.page,
+        searchApiFilters?.projectId,
         searchApiFilters?.partnerId,
         searchApiFilters?.perPage,
         searchApiFilters?.payment,

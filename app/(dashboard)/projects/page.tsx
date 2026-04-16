@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
-import { formatProjectServiceList } from "@/lib/utils"
+import { formatProjectName, formatProjectServiceList } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
 import { requireTenantContext } from "@/lib/tenant"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
@@ -65,6 +65,7 @@ export default async function ProjectsPage({
 }: {
     searchParams: Promise<{
         q?: string
+        projectId?: string
         status?: string
         partnerId?: string
         payment?: string
@@ -82,6 +83,7 @@ export default async function ProjectsPage({
     const params = await searchParams
     const normalizedFilters = normalizeProjectFilters({
         q: params.q,
+        projectId: params.projectId,
         status: params.status,
         payment: params.payment,
         recurring: params.recurring,
@@ -91,6 +93,7 @@ export default async function ProjectsPage({
         to: params.to,
     })
     const q = normalizedFilters.q
+    const projectId = normalizedFilters.projectId
     const queryStatus = normalizedFilters.status
     const partnerId = normalizedFilters.partnerId
     const payment = normalizedFilters.payment
@@ -176,6 +179,8 @@ export default async function ProjectsPage({
             amount: Number(project.currentFee ?? 0),
         }
     })
+    const selectedProject = projectId ? projects.find((project) => project.id === projectId) : null
+    const selectedProjectLabel = selectedProject ? formatProjectName(selectedProject) : undefined
 
     const projectsForClient = JSON.parse(JSON.stringify(projects))
     const partnersForClient = JSON.parse(JSON.stringify(partnersFullRaw))
@@ -239,6 +244,8 @@ export default async function ProjectsPage({
                             currentTo={toParam || ""}
                             currentSort={sort}
                             currentView={layout}
+                            currentProjectId={projectId || "all"}
+                            currentProjectLabel={selectedProjectLabel}
                             currentPartnerId={partnerId || "all"}
                             totalProjects={totalProjects}
                         />
@@ -253,6 +260,7 @@ export default async function ProjectsPage({
                     initialSortBy={boardSort.by}
                     initialSortDirection={boardSort.direction}
                     searchApiFilters={{
+                        projectId,
                         status: queryStatus,
                         payment,
                         recurring,

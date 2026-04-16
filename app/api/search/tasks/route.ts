@@ -56,6 +56,7 @@ export async function GET(request: Request) {
             status: searchParams.get("status"),
             partnerId: searchParams.get("partnerId"),
             projectId: searchParams.get("projectId"),
+            taskId: searchParams.get("taskId"),
             urgency: searchParams.get("urgency"),
             overdue: searchParams.get("overdue"),
             dueToday: searchParams.get("dueToday"),

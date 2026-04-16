@@ -60,6 +60,7 @@ export default async function TasksPage({
         status?: string
         partnerId?: string
         projectId?: string
+        taskId?: string
         urgency?: string
         overdue?: string
         dueToday?: string
@@ -76,6 +77,7 @@ export default async function TasksPage({
         status: params.status,
         partnerId: params.partnerId,
         projectId: params.projectId,
+        taskId: params.taskId,
         urgency: params.urgency,
         overdue: params.overdue,
         dueToday: params.dueToday,
@@ -84,6 +86,7 @@ export default async function TasksPage({
     const statusFilter = normalizedFilters.status
     const partnerId = normalizedFilters.partnerId
     const projectId = normalizedFilters.projectId
+    const taskId = normalizedFilters.taskId
     const urgencyFilter = normalizedFilters.urgency
     const dueTodayOnly = normalizedFilters.dueTodayOnly
     const overdueOnly = normalizedFilters.overdueOnly
@@ -223,6 +226,7 @@ export default async function TasksPage({
         if (statusFilter) next.set("status", statusFilter)
         if (partnerId) next.set("partnerId", partnerId)
         if (projectId) next.set("projectId", projectId)
+        if (taskId) next.set("taskId", taskId)
         if (urgencyFilter) next.set("urgency", urgencyFilter)
         if (overdueOnly) next.set("overdue", "1")
         if (dueTodayOnly) next.set("dueToday", "1")
@@ -262,35 +266,35 @@ export default async function TasksPage({
             <div className={OVERVIEW_ROW_CLASS}>
                 {[
                     {
-                        href: buildTasksHref({ q: null, status: "All", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "All", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, page: "1" }),
                         label: "Total Tasks",
                         value: totalTasksOverall,
                         icon: <ListChecks className="h-3.5 w-3.5" />,
                         toneClass: "border-blue-100/80 bg-blue-50/80 text-blue-700",
                     },
                     {
-                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, page: "1" }),
                         label: "Active Tasks",
                         value: totalActiveTasks,
                         icon: <Play className="h-3.5 w-3.5 fill-current" />,
                         toneClass: "border-emerald-100/80 bg-emerald-50/80 text-emerald-700",
                     },
                     {
-                        href: buildTasksHref({ q: null, status: "Active", urgency: "Urgent", overdue: null, dueToday: null, projectId: null, partnerId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "Urgent", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, page: "1" }),
                         label: "Urgent Tasks",
                         value: urgentTasksCount,
                         icon: <AlertTriangle className="h-3.5 w-3.5" />,
                         toneClass: "border-rose-100/80 bg-rose-50/80 text-rose-700",
                     },
                     {
-                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: "1", dueToday: null, projectId: null, partnerId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: "1", dueToday: null, projectId: null, partnerId: null, taskId: null, page: "1" }),
                         label: "Overdue Tasks",
                         value: overdueTasksCount,
                         icon: <CalendarClock className="h-3.5 w-3.5" />,
                         toneClass: "border-amber-100/80 bg-amber-50/80 text-amber-700",
                     },
                     {
-                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: "1", projectId: null, partnerId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: "1", projectId: null, partnerId: null, taskId: null, page: "1" }),
                         label: "Due Today",
                         value: dueTodayTasksCount,
                         icon: <CalendarDays className="h-3.5 w-3.5" />,
@@ -371,6 +375,7 @@ export default async function TasksPage({
                     currentSort={sort}
                     currentCols={cols}
                     currentProject={projectId || "all"}
+                    currentTaskId={taskId || "all"}
                     currentPartner={partnerId || "all"}
                     totalTasks={totalTasks}
                 />
@@ -387,6 +392,7 @@ export default async function TasksPage({
                         status: statusFilter,
                         partnerId,
                         projectId,
+                        taskId,
                         urgency: urgencyFilter,
                         overdue: overdueOnly,
                         dueToday: dueTodayOnly,

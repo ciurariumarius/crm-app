@@ -36,6 +36,7 @@ export function ProjectsSearchInput() {
             } else {
                 params.delete("q")
             }
+            params.delete("projectId")
             params.delete("page")
 
             const queryString = params.toString()
@@ -56,6 +57,7 @@ export function ProjectsSearchInput() {
             } else {
                 params.delete("q")
             }
+            params.delete("projectId")
             params.delete("page")
             const queryString = params.toString()
             router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })

@@ -102,6 +102,7 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const filters = normalizeProjectFilters({
             q: searchParams.get("q"),
+            projectId: searchParams.get("projectId"),
             status: searchParams.get("status"),
             payment: searchParams.get("payment"),
             recurring: searchParams.get("recurring"),

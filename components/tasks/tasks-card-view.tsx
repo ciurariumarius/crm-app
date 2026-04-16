@@ -90,6 +90,7 @@ interface TasksCardViewProps {
         status: string
         partnerId?: string
         projectId?: string
+        taskId?: string
         urgency: string
         overdue: boolean
         dueToday: boolean
@@ -276,6 +277,7 @@ export function TasksCardView({
         if (searchApiFilters?.dueToday) params.set("dueToday", "1")
         if (searchApiFilters?.partnerId) params.set("partnerId", searchApiFilters.partnerId)
         if (searchApiFilters?.projectId) params.set("projectId", searchApiFilters.projectId)
+        if (searchApiFilters?.taskId) params.set("taskId", searchApiFilters.taskId)
 
         const cacheKey = params.toString()
         const cached = searchCacheRef.current.get(cacheKey)
@@ -342,6 +344,7 @@ export function TasksCardView({
         searchApiFilters?.partnerId,
         searchApiFilters?.perPage,
         searchApiFilters?.projectId,
+        searchApiFilters?.taskId,
         searchApiFilters?.sort,
         searchApiFilters?.status,
         searchApiFilters?.urgency,
