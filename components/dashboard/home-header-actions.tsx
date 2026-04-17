@@ -35,6 +35,13 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
         () => partners.map((partner) => ({ id: partner.id, name: partner.name })),
         [partners]
     )
+    const paymentServices = React.useMemo(
+        () =>
+            services
+                .filter((service) => !service.isRecurring)
+                .map((service) => ({ id: service.id, name: service.serviceName })),
+        [services]
+    )
 
     return (
         <>
@@ -144,6 +151,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                 open={createPaymentOpen}
                 onOpenChange={setCreatePaymentOpen}
                 partners={paymentPartners}
+                services={paymentServices}
                 hideTrigger
             />
         </>

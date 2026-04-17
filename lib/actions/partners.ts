@@ -17,6 +17,7 @@ const CreatePartnerSchema = z.object({
 const AddAdHocPaymentSchema = z.object({
     partnerId: z.string().uuid(),
     projectId: z.string().uuid().optional(),
+    serviceId: z.string().uuid().optional(),
     name: z.string().trim().min(1, "Name is required").optional(),
     amount: z.number().positive("Amount must be positive"),
     description: z.string().max(2000).optional(),
@@ -164,6 +165,7 @@ export async function getPartnerById(partnerId: string) {
 export async function addPartnerAdHocPayment(data: {
     partnerId: string
     projectId?: string
+    serviceId?: string
     name?: string
     amount: number
     description?: string
@@ -171,6 +173,7 @@ export async function addPartnerAdHocPayment(data: {
     try {
         const session = await requireTenantContext()
         const validated = AddAdHocPaymentSchema.parse(data)
+        const paymentDate = new Date()
         const selectedProject = validated.projectId
             ? await prisma.project.findFirst({
                 where: {
@@ -182,8 +185,8 @@ export async function addPartnerAdHocPayment(data: {
                     id: true,
                     name: true,
                     createdAt: true,
-                    site: { select: { domainName: true } },
-                    services: { select: { serviceName: true, isRecurring: true } },
+                    site: { select: { id: true, domainName: true } },
+                    services: { select: { id: true, serviceName: true, isRecurring: true } },
                 },
             })
             : null
@@ -192,8 +195,59 @@ export async function addPartnerAdHocPayment(data: {
             return { success: false, error: "Selected project does not belong to this partner" }
         }
 
+        let service = null as { id: string; serviceName: string } | null
+
+        if (validated.serviceId) {
+            service = await prisma.service.findFirst({
+                where: {
+                    id: validated.serviceId,
+                    tenantId: session.tenantId,
+                    isRecurring: false,
+                },
+                select: {
+                    id: true,
+                    serviceName: true,
+                },
+            })
+
+            if (!service) {
+                return { success: false, error: "Please select a valid one-time service" }
+            }
+        } else {
+            // Backward compatible fallback for older UI paths.
+            const fallbackService = await prisma.service.findFirst({
+                where: {
+                    tenantId: session.tenantId,
+                    serviceName: "Ad-Hoc Payment",
+                    isRecurring: false
+                },
+                select: {
+                    id: true,
+                    serviceName: true,
+                },
+            })
+
+            if (fallbackService) {
+                service = fallbackService
+            } else {
+                service = await prisma.service.create({
+                    data: {
+                        tenantId: session.tenantId,
+                        serviceName: "Ad-Hoc Payment",
+                        isRecurring: false,
+                        standardTasks: JSON.stringify([])
+                    },
+                    select: {
+                        id: true,
+                        serviceName: true,
+                    },
+                })
+            }
+        }
+
         const resolvedName = (
             validated.name?.trim()
+            || selectedProject?.name?.trim()
             || (selectedProject ? formatProjectName(selectedProject) : "")
         ).trim()
 
@@ -201,55 +255,41 @@ export async function addPartnerAdHocPayment(data: {
             return { success: false, error: "Please select a project or provide a payment name" }
         }
 
-        // Find or create a generic Site for this Partner
-        let site = await prisma.site.findFirst({
-            where: {
-                tenantId: session.tenantId,
-                partnerId: validated.partnerId,
-                domainName: "ad-hoc-payments.local"
-            }
-        })
+        let siteIdForProject = selectedProject?.site.id || ""
+        const sourceProjectId = selectedProject?.id || "none"
 
-        if (!site) {
-            site = await prisma.site.create({
-                data: {
+        if (!siteIdForProject) {
+            // Find or create a generic Site for this Partner
+            let site = await prisma.site.findFirst({
+                where: {
                     tenantId: session.tenantId,
                     partnerId: validated.partnerId,
-                    domainName: "ad-hoc-payments.local",
-                    name: "Ad-Hoc Payments",
+                    domainName: "ad-hoc-payments.local"
                 }
             })
-        }
 
-        // Find or create a generic Service
-        let service = await prisma.service.findFirst({
-            where: {
-                tenantId: session.tenantId,
-                serviceName: "Ad-Hoc Payment",
-                isRecurring: false
+            if (!site) {
+                site = await prisma.site.create({
+                    data: {
+                        tenantId: session.tenantId,
+                        partnerId: validated.partnerId,
+                        domainName: "ad-hoc-payments.local",
+                        name: "Ad-Hoc Payments",
+                    }
+                })
             }
-        })
-
-        if (!service) {
-            service = await prisma.service.create({
-                data: {
-                    tenantId: session.tenantId,
-                    serviceName: "Ad-Hoc Payment",
-                    isRecurring: false,
-                    standardTasks: JSON.stringify([])
-                }
-            })
+            siteIdForProject = site.id
         }
 
-        const project = await prisma.project.create({
+        const createdProject = await prisma.project.create({
             data: {
                 tenantId: session.tenantId,
-                siteId: site.id,
+                siteId: siteIdForProject,
                 name: resolvedName,
                 description: validated.description || null,
-                status: "Completed",
+                status: "Active",
                 paymentStatus: "Paid",
-                paidAt: new Date(),
+                paidAt: paymentDate,
                 currentFee: validated.amount,
                 services: {
                     connect: { id: service.id }
@@ -259,7 +299,7 @@ export async function addPartnerAdHocPayment(data: {
 
         await logSessionAuditEvent(session, {
             action: "PARTNER_AD_HOC_PAYMENT_ADDED",
-            details: `partnerId=${validated.partnerId}; projectId=${project.id}; sourceProjectId=${selectedProject?.id || "none"}; amount=${validated.amount}`,
+            details: `partnerId=${validated.partnerId}; projectId=${createdProject.id}; sourceProjectId=${sourceProjectId}; serviceId=${service.id}; serviceName=${service.serviceName}; amount=${validated.amount}`,
         })
 
         revalidatePath("/")
@@ -269,6 +309,7 @@ export async function addPartnerAdHocPayment(data: {
         revalidatePath("/vault")
         revalidatePath(`/vault/${validated.partnerId}`)
         revalidatePath("/payments")
+        revalidatePath("/projects")
         
         return { success: true }
     } catch (error) {

@@ -119,7 +119,7 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
             <button
                 onClick={() => setOpen(true)}
                 className={cn(
-                    "mx-auto hidden h-11 w-full max-w-[560px] items-center gap-3 rounded-full border border-slate-200/90 bg-white/95 pl-4 pr-4 text-slate-400 shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,white)] focus-visible:ring-offset-0 md:flex",
+                    "mx-auto hidden h-11 w-full max-w-[560px] items-center gap-3 rounded-[28px] border border-slate-200/90 bg-white/95 pl-4 pr-4 text-slate-400 shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,white)] focus-visible:ring-offset-0 md:flex",
                     desktopTriggerClassName
                 )}
             >
@@ -133,7 +133,7 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
             {mobileMode === "full" ? (
                 <button
                     onClick={() => setOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 text-left text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 md:hidden"
+                    className="flex w-full items-center gap-3 rounded-[28px] border border-slate-200 bg-white px-4 py-3 text-left text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 md:hidden"
                 >
                     <Search className="h-4 w-4 shrink-0 text-slate-400" />
                     <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-500">

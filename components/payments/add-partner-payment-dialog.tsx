@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 
 type AddPartnerPaymentDialogProps = {
     partners: { id: string; name: string }[]
+    services: { id: string; name: string }[]
     open?: boolean
     onOpenChange?: (open: boolean) => void
     trigger?: ReactNode
@@ -27,6 +28,7 @@ type AddPartnerPaymentDialogProps = {
 
 export function AddPartnerPaymentDialog({
     partners,
+    services,
     open,
     onOpenChange,
     trigger,
@@ -39,6 +41,7 @@ export function AddPartnerPaymentDialog({
     const [internalOpen, setInternalOpen] = useState(false)
     const [partnerId, setPartnerId] = useState("")
     const [projectId, setProjectId] = useState("")
+    const [serviceId, setServiceId] = useState("")
     const [paymentName, setPaymentName] = useState("")
     const [paymentAmount, setPaymentAmount] = useState("")
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -107,11 +110,16 @@ export function AddPartnerPaymentDialog({
             toast.error("Please provide a valid positive amount")
             return
         }
+        if (!serviceId) {
+            toast.error("Please select a one-time service")
+            return
+        }
 
         setIsSubmitting(true)
         const result = await addPartnerAdHocPayment({
             partnerId,
             projectId: projectId || undefined,
+            serviceId,
             name: !projectId ? trimmedName : undefined,
             amount: amountNum,
         })
@@ -122,6 +130,7 @@ export function AddPartnerPaymentDialog({
             setIsOpen(false)
             setPartnerId("")
             setProjectId("")
+            setServiceId("")
             setPartnerProjects([])
             setPaymentName("")
             setPaymentAmount("")
@@ -257,12 +266,31 @@ export function AddPartnerPaymentDialog({
                         
                         {selectedProject ? (
                             <p className="text-xs text-emerald-600 font-medium mt-1">
-                                ✓ Existing project selected ({selectedProject.paymentStatus} • {selectedProject.amount} RON)
+                                ✓ Existing project selected. A new paid project entry will be created on the same domain.
                             </p>
                         ) : paymentName.trim() ? (
                             <p className="text-xs text-blue-600 font-medium mt-1">
                                 + Will create a new project
                             </p>
+                        ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="service">One-time Service</Label>
+                        <Select value={serviceId} onValueChange={setServiceId} required>
+                            <SelectTrigger id="service">
+                                <SelectValue placeholder="Select one-time service" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {services.map((service) => (
+                                    <SelectItem key={service.id} value={service.id}>
+                                        {service.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {services.length === 0 ? (
+                            <p className="text-xs text-amber-600">No one-time services found. Add one in Services first.</p>
                         ) : null}
                     </div>
 
@@ -289,7 +317,7 @@ export function AddPartnerPaymentDialog({
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting || (!projectId && !paymentName.trim())}>
+                        <Button type="submit" disabled={isSubmitting || services.length === 0 || !serviceId || (!projectId && !paymentName.trim())}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Save Payment
                         </Button>

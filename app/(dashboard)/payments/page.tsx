@@ -65,6 +65,12 @@ export default async function PaymentsPage({
             skip: (page - 1) * PAGE_SIZE,
         })
     ])
+    const oneTimeServices = await prisma.service.findMany({
+        where: { tenantId: session.tenantId, isRecurring: false },
+        select: { id: true, serviceName: true },
+        orderBy: { serviceName: "asc" },
+    })
+    const paymentServiceOptions = oneTimeServices.map((service) => ({ id: service.id, name: service.serviceName }))
 
     const logs = logsResult.success && logsResult.data ? logsResult.data : []
     const partnerNameById = new Map(partners.map((partner) => [partner.id, partner.name]))
@@ -141,10 +147,11 @@ export default async function PaymentsPage({
                     title="Payments"
                     search={<PaymentsSearchInput />}
                     mobileSearch={<PaymentsSearchInput />}
-                    actions={<PaymentsAddPaymentAction partners={partners} />}
+                    actions={<PaymentsAddPaymentAction partners={partners} services={paymentServiceOptions} />}
                     mobileActions={
                         <PaymentsAddPaymentAction
                             partners={partners}
+                            services={paymentServiceOptions}
                             mobile
                         />
                     }
