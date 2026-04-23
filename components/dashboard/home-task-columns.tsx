@@ -196,20 +196,20 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
                         <div className="grid grid-cols-3 gap-2 sm:gap-5">
                             <Link
                                 href="/tasks?status=Active&urgency=Urgent"
-                                className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50/60 px-2 py-3 transition-colors hover:bg-rose-100/70 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                                className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-[color:color-mix(in_srgb,var(--state-urgent)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_16%,transparent)] px-2 py-3 transition-colors hover:bg-[color:color-mix(in_srgb,var(--state-urgent)_22%,transparent)] sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
                             >
-                                <span className="mt-0.5 h-2 w-2 rounded-full bg-rose-500" />
+                                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--state-urgent)]" />
                                 <p className="text-[22px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px]">{urgentState.length}</p>
-                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-rose-600 sm:text-[11px]">Urgent</p>
+                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-[var(--state-urgent)] sm:text-[11px]">Urgent</p>
                             </Link>
 
                             <Link
                                 href="/tasks?status=Active&overdue=1"
-                                className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-orange-100 bg-orange-50/60 px-2 py-3 transition-colors hover:bg-orange-100/70 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:before:mr-5 sm:before:block sm:before:h-10 sm:before:w-px sm:before:bg-[var(--line-subtle)] sm:before:content-['']"
+                                className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-[color:color-mix(in_srgb,var(--state-overdue)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_16%,transparent)] px-2 py-3 transition-colors hover:bg-[color:color-mix(in_srgb,var(--state-overdue)_22%,transparent)] sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:before:mr-5 sm:before:block sm:before:h-10 sm:before:w-px sm:before:bg-[var(--line-subtle)] sm:before:content-['']"
                             >
-                                <span className="mt-0.5 h-2 w-2 rounded-full bg-orange-500" />
+                                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--state-overdue)]" />
                                 <p className="text-[22px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px]">{overdueState.length}</p>
-                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-orange-600 sm:text-[11px]">Overdue</p>
+                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-[var(--state-overdue)] sm:text-[11px]">Overdue</p>
                             </Link>
 
                             <Link

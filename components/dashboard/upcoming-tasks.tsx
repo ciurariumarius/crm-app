@@ -119,11 +119,11 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                     Your Tasks
                                 </h2>
                                 <div className="flex items-center gap-2 mt-0.5 text-xs font-medium text-muted-foreground">
-                                    <span className={cn(urgentTasks.length > 0 && "text-orange-500 font-bold")}>
+                                    <span className={cn(urgentTasks.length > 0 && "font-bold text-[var(--state-urgent)]")}>
                                         {urgentTasks.length} urgent
                                     </span>
                                     <span>•</span>
-                                    <span className={cn(overdueTasks.length > 0 && "text-rose-500 font-bold")}>
+                                    <span className={cn(overdueTasks.length > 0 && "font-bold text-[var(--state-overdue)]")}>
                                         {overdueTasks.length} due
                                     </span>
                                     <span>•</span>
@@ -186,23 +186,23 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                             onClick={() => setFilter("overdue")}
                             className={cn(
                                 "flex items-center gap-2 px-1 py-2 text-[12px] font-semibold tracking-[0.02em] transition-all relative",
-                                filter === "overdue" ? "text-rose-600" : "text-muted-foreground hover:text-rose-600"
+                                filter === "overdue" ? "text-[var(--state-overdue)]" : "text-muted-foreground hover:text-[var(--state-overdue)]"
                             )}
                         >
                             <Clock className="h-3.5 w-3.5" />
                             Overdue
-                            {filter === "overdue" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-rose-600 rounded-full" />}
+                            {filter === "overdue" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] rounded-full bg-[var(--state-overdue)]" />}
                         </button>
                         <button
                             onClick={() => setFilter("urgent")}
                             className={cn(
                                 "flex items-center gap-2 px-1 py-2 text-[12px] font-semibold tracking-[0.02em] transition-all relative",
-                                filter === "urgent" ? "text-orange-600" : "text-muted-foreground hover:text-orange-600"
+                                filter === "urgent" ? "text-[var(--state-urgent)]" : "text-muted-foreground hover:text-[var(--state-urgent)]"
                             )}
                         >
                             <Sparkles className="h-3.5 w-3.5" />
                             Urgent
-                            {filter === "urgent" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-orange-600 rounded-full" />}
+                            {filter === "urgent" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] rounded-full bg-[var(--state-urgent)]" />}
                         </button>
                     </div>
 

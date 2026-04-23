@@ -294,11 +294,11 @@ export function MobileHomeView({
                                     </p>
                                     <div className="mt-3 flex items-center gap-2">
                                         {isOverdue ? (
-                                            <Badge className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[var(--debt)]">
+                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--state-overdue)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_16%,transparent)] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[var(--state-overdue)]">
                                                 Overdue
                                             </Badge>
                                         ) : (
-                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--primary-container)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[var(--primary)]">
+                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--primary-container)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[var(--primary)]">
                                                 {task?.status || "Active"}
                                             </Badge>
                                         )}

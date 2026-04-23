@@ -636,6 +636,14 @@
     background-color: color-mix(in srgb, var(--surface-low) 84%, transparent) !important;
   }
 
+  .dark .bg-slate-200,
+  .dark .bg-slate-200\/90,
+  .dark .bg-slate-200\/80,
+  .dark .bg-slate-200\/70,
+  .dark .bg-slate-200\/60 {
+    background-color: color-mix(in srgb, var(--surface-highest) 74%, var(--surface-lowest)) !important;
+  }
+
   .dark .text-slate-900,
   .dark .text-slate-800 {
     color: var(--text-primary) !important;
