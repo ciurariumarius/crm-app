@@ -100,7 +100,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
         <section className="space-y-4">
             <div className="flex items-center justify-between px-2">
                 <div className="flex flex-col">
-                    <h2 className="ui-text-title-sm text-slate-900">Unpaid by partners</h2>
+                    <h2 className="ui-text-title-sm text-[var(--text-primary)]">Unpaid by partners</h2>
                 </div>
             </div>
 
@@ -115,11 +115,11 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                         const isExpanded = expandedId === partner.id
                         const isSettling = settlingId === partner.id
                         return (
-                            <div key={partner.id} className="flex flex-col rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] shadow-[0_6px_18px_rgba(15,23,42,0.03)] overflow-hidden transition-all hover:border-slate-300/80">
+                            <div key={partner.id} className="flex flex-col overflow-hidden rounded-[24px] border border-slate-200/90 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] shadow-[0_6px_18px_rgba(15,23,42,0.03)] transition-all hover:border-slate-300/80">
                                 <div className="flex flex-col p-5 gap-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex flex-col flex-1 min-w-0">
-                                            <span className="text-[15px] font-bold text-slate-900 truncate">{partner.name}</span>
+                                            <span className="truncate text-[15px] font-bold text-[var(--text-primary)]">{partner.name}</span>
                                             <span className="text-[12px] font-medium text-slate-500 mt-0.5">
                                                 {partner.unpaidProjects.length} unpaid project{partner.unpaidProjects.length === 1 ? "" : "s"}
                                             </span>
@@ -135,11 +135,11 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                         <button
                                             type="button"
                                             onClick={() => setExpandedId((current) => (current === partner.id ? null : partner.id))}
-                                            className="flex items-center gap-1.5 group px-2 py-1.5 -ml-2 rounded-lg hover:bg-slate-50 transition-colors"
+                                            className="-ml-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--surface-low)] group"
                                         >
                                             <div className={cn(
                                                 "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all",
-                                                isExpanded ? "bg-slate-100 border-slate-200 text-slate-600 rotate-180" : "bg-white border-slate-200 text-slate-400 group-hover:text-slate-600"
+                                                isExpanded ? "rotate-180 border-slate-200 bg-slate-100 text-slate-600" : "border-slate-200 bg-[var(--surface-lowest)] text-slate-400 group-hover:text-slate-600"
                                             )}>
                                                 <ChevronDown className="h-3 w-3" />
                                             </div>
@@ -167,7 +167,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                 </div>
                                 
                                 {isExpanded && (
-                                    <div className="flex flex-col bg-[linear-gradient(180deg,rgba(248,250,252,0.8),rgba(241,245,249,0.48))] p-5 border-t border-slate-100/80 gap-4">
+                                    <div className="flex flex-col gap-4 border-t border-slate-100/80 bg-[color:color-mix(in_srgb,var(--surface-low)_82%,var(--surface-lowest)_18%)] p-5">
                                         <div className="flex items-center justify-between">
                                             <span className="ui-overline text-slate-400">Breakdown</span>
                                             <Link
@@ -183,7 +183,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                                 return (
                                                     <div
                                                         key={project.id}
-                                                        className="flex flex-col gap-2 rounded-[16px] border border-slate-200/80 bg-white/92 p-3 shadow-[0_2px_8px_rgba(15,23,42,0.025)]"
+                                                        className="flex flex-col gap-2 rounded-[16px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] p-3 shadow-[0_2px_8px_rgba(15,23,42,0.025)]"
                                                     >
                                                         <span className="text-[13px] font-bold text-slate-700 line-clamp-1">{project.name}</span>
                                                         <div className="flex items-center justify-between">

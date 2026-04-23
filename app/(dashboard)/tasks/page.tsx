@@ -30,11 +30,11 @@ const SORT_OPTIONS = [
 const SORT_VALUES = new Set(SORT_OPTIONS.map((option) => option.value))
 const COL_VALUES = new Set(["3", "4"])
 const OVERVIEW_ROW_CLASS =
-    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.04)] md:w-full"
+    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] md:w-full"
 const OVERVIEW_ITEM_CLASS =
-    "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-white/60 md:min-w-0 md:flex-1"
+    "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] md:min-w-0 md:flex-1"
 const OVERVIEW_ICON_CLASS =
-    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_3px_rgba(15,23,42,0.08)]"
+    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-[var(--surface-lowest)] shadow-[0_1px_3px_rgba(15,23,42,0.08)]"
 
 function buildSort(sort: string): Prisma.TaskOrderByWithRelationInput[] {
     switch (sort) {
@@ -304,14 +304,14 @@ export default async function TasksPage({
                     <Link
                         key={item.label}
                         href={item.href}
-                        className={`${OVERVIEW_ITEM_CLASS} ${index < all.length - 1 ? "border-r border-slate-200/80" : ""}`}
+                        className={`${OVERVIEW_ITEM_CLASS} ${index < all.length - 1 ? "border-r border-[var(--line-subtle)]" : ""}`}
                     >
                         <div className={`${OVERVIEW_ICON_CLASS} ${item.toneClass}`}>
                             {item.icon}
                         </div>
                         <div className="min-w-0">
-                            <p className="text-[13px] font-semibold leading-none text-slate-700">{item.label}</p>
-                            <p className="mt-1 text-[12px] font-medium leading-none text-slate-500">{item.value}</p>
+                            <p className="text-[13px] font-semibold leading-none text-[var(--text-primary)]">{item.label}</p>
+                            <p className="mt-1 text-[12px] font-medium leading-none text-[var(--text-secondary)]">{item.value}</p>
                         </div>
                     </Link>
                 ))}
@@ -340,7 +340,7 @@ export default async function TasksPage({
     return (
         <TasksSearchProvider initialSearch={q || ""}>
             <div className="flex flex-col gap-3.5 sm:gap-4">
-                <div className="rounded-[24px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
+                <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
                     <DashboardPageHeader
                         title="Tasks"
                         showMobile

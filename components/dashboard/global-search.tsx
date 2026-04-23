@@ -119,12 +119,12 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
             <button
                 onClick={() => setOpen(true)}
                 className={cn(
-                    "mx-auto hidden h-11 w-full max-w-[560px] items-center gap-3 rounded-[28px] border border-slate-200/90 bg-white/95 pl-4 pr-4 text-slate-400 shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,white)] focus-visible:ring-offset-0 md:flex",
+                    "mx-auto hidden h-11 w-full max-w-[560px] items-center gap-3 rounded-[28px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] pl-4 pr-4 text-[var(--text-muted)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_74%,var(--text-muted)_26%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,transparent)] focus-visible:ring-offset-0 md:flex",
                     desktopTriggerClassName
                 )}
             >
-                <Search className="h-4 w-4 text-slate-400" />
-                <span className="min-w-0 flex-1 truncate text-[13px] text-slate-500 font-medium">
+                <Search className="h-4 w-4 text-[var(--text-muted)]" />
+                <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-secondary)] font-medium">
                     Search
                 </span>
             </button>
@@ -133,17 +133,17 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
             {mobileMode === "full" ? (
                 <button
                     onClick={() => setOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-[28px] border border-slate-200 bg-white px-4 py-3 text-left text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 md:hidden"
+                    className="flex w-full items-center gap-3 rounded-[28px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left text-[var(--text-secondary)] shadow-sm transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_74%,var(--text-muted)_26%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] md:hidden"
                 >
-                    <Search className="h-4 w-4 shrink-0 text-slate-400" />
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-500">
+                    <Search className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--text-secondary)]">
                         Search
                     </span>
                 </button>
             ) : (
                 <button
                     onClick={() => setOpen(true)}
-                    className="flex items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-500 shadow-sm md:hidden"
+                    className="flex items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-2 text-[var(--text-secondary)] shadow-sm md:hidden"
                 >
                     <Search className="h-5 w-5" />
                 </button>
@@ -192,12 +192,12 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
                                     }
                                     className="flex items-center gap-3 cursor-pointer p-4"
                                 >
-                                    <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                    <div className="h-8 w-8 rounded-lg bg-blue-50/90 dark:bg-blue-500/18 flex items-center justify-center">
                                         <FolderDot className="h-4 w-4 text-blue-500" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="font-semibold text-slate-700">{formatProjectName(project)}</span>
-                                        <span className="ui-text-caption text-slate-400">{project.site?.partner?.name}</span>
+                                        <span className="font-semibold text-[var(--text-primary)]">{formatProjectName(project)}</span>
+                                        <span className="ui-text-caption text-[var(--text-muted)]">{project.site?.partner?.name}</span>
                                     </div>
                                 </CommandItem>
                             ))}
@@ -214,12 +214,12 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
                                     }
                                     className="flex items-center gap-3 cursor-pointer p-4"
                                 >
-                                    <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                    <div className="h-8 w-8 rounded-lg bg-emerald-50/90 dark:bg-emerald-500/18 flex items-center justify-center">
                                         <ListChecks className="h-4 w-4 text-emerald-500" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="font-semibold text-slate-700">{task.name}</span>
-                                        <span className="ui-text-caption text-slate-400">{task.project ? formatProjectName(task.project) : "No project"}</span>
+                                        <span className="font-semibold text-[var(--text-primary)]">{task.name}</span>
+                                        <span className="ui-text-caption text-[var(--text-muted)]">{task.project ? formatProjectName(task.project) : "No project"}</span>
                                     </div>
                                 </CommandItem>
                             ))}
@@ -234,12 +234,12 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
                                     onSelect={() => handleSelect(`/partners?partnerId=${encodeURIComponent(partner.id)}`)}
                                     className="flex items-center gap-3 cursor-pointer p-4"
                                 >
-                                    <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                                    <div className="h-8 w-8 rounded-lg bg-amber-50/90 dark:bg-amber-500/18 flex items-center justify-center">
                                         <User className="h-4 w-4 text-amber-500" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="font-semibold text-slate-700">{partner.name}</span>
-                                        <span className="ui-text-caption text-slate-400">{partner.businessName || "Partner"}</span>
+                                        <span className="font-semibold text-[var(--text-primary)]">{partner.name}</span>
+                                        <span className="ui-text-caption text-[var(--text-muted)]">{partner.businessName || "Partner"}</span>
                                     </div>
                                 </CommandItem>
                             ))}

@@ -106,7 +106,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
         <text
             x={x}
             y={y}
-            fill="rgba(255,255,255,0.9)"
+            fill="var(--text-primary)"
             textAnchor="middle"
             dominantBaseline="central"
             className="text-[11.5px] font-semibold tracking-tight pointer-events-none"
@@ -286,7 +286,7 @@ function RevenueDateFilter({
                         "inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all sm:h-10 sm:text-xs sm:min-w-[148px] sm:w-auto",
                         activePresetId !== "all"
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
-                            : "border-slate-200 bg-slate-100/60 text-slate-700 hover:bg-slate-100"
+                            : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_94%,transparent)]"
                     )}
                 >
                     <span className="max-w-[180px] truncate">{label}</span>
@@ -482,9 +482,9 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
 
     if (rows.length === 0) {
         return (
-            <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-6 shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
-                <p className="ui-text-section text-slate-900">Revenue Analysis</p>
-                <p className="mt-4 rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(241,245,249,0.48))] px-4 py-8 text-center text-sm text-slate-500">
+            <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-6 shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
+                <p className="ui-text-section text-[var(--text-primary)]">Revenue Analysis</p>
+                <p className="mt-4 rounded-[24px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_78%,transparent)] px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
                     No revenue data available for this period.
                 </p>
             </section>
@@ -492,23 +492,23 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
     }
 
     return (
-        <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-6 lg:p-8">
+        <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-6 lg:p-8">
             <div className="mb-4 flex flex-col gap-2.5 sm:mb-6 sm:gap-4 lg:mb-8 lg:flex-row lg:items-end lg:justify-between">
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
-                        <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">Revenue Analysis</h3>
+                        <h3 className="text-[17px] font-bold text-[var(--text-primary)] tracking-tight">Revenue Analysis</h3>
                     </div>
-                    <div className="hidden flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 sm:flex">
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+                    <div className="hidden flex-wrap items-center gap-2 text-[11px] font-semibold text-[var(--text-secondary)] sm:flex">
+                        <span className="rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5">
                             {totalCount} visible {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`}
                         </span>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+                        <span className="rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5">
                             {dateLabel}
                         </span>
                     </div>
                     <div className="sm:hidden">
-                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-semibold text-slate-500">
+                        <span className="inline-flex rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5 text-[10px] font-semibold text-[var(--text-secondary)]">
                             {totalCount} {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`} in view
                         </span>
                     </div>
@@ -530,7 +530,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                         }}
                     />
 
-                    <div className="grid grid-cols-2 gap-1 rounded-[16px] border border-slate-200 bg-slate-50 p-1 sm:flex sm:flex-wrap sm:items-center">
+                    <div className="grid grid-cols-2 gap-1 rounded-[16px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] p-1 sm:flex sm:flex-wrap sm:items-center">
                         {MODE_OPTIONS.map((option) => (
                             <button
                                 key={option.value}
@@ -539,8 +539,8 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                 className={cn(
                                     "rounded-full px-3 py-1.5 text-[10px] font-bold tracking-tight transition-all sm:px-5 sm:py-1.5 sm:text-[11px]",
                                     mode === option.value
-                                        ? "bg-white text-blue-600 shadow-sm"
-                                        : "text-slate-500 hover:text-slate-700"
+                                        ? "bg-[var(--surface-lowest)] text-blue-600 shadow-sm"
+                                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                 )}
                             >
                                 {option.label}
@@ -565,7 +565,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                     outerRadius="86%"
                                     startAngle={90}
                                     endAngle={-270}
-                                    stroke="white"
+                                    stroke="var(--surface-lowest)"
                                     strokeWidth={4}
                                     style={{ outline: 'none' }}
                                     labelLine={false}
@@ -595,9 +595,9 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     </div>
                     {/* Central Label */}
                     <div className="relative z-10 flex flex-col items-center justify-center">
-                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500 sm:text-[10px]">Total Revenue</p>
-                        <p className="mt-1 text-[28px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px] lg:text-[36px]">
-                            {formatCurrency(totalRevenue).replace(/[\s\u00A0]*RON/i, "")} <span className="ml-1 text-[11px] font-bold text-slate-400 sm:text-[12px] lg:text-[14px]">RON</span>
+                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--text-secondary)] sm:text-[10px]">Total Revenue</p>
+                        <p className="mt-1 text-[28px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px] lg:text-[36px]">
+                            {formatCurrency(totalRevenue).replace(/[\s\u00A0]*RON/i, "")} <span className="ml-1 text-[11px] font-bold text-[var(--text-muted)] sm:text-[12px] lg:text-[14px]">RON</span>
                         </p>
                     </div>
                 </div>
@@ -633,8 +633,8 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                     disabled={!canOpen}
                                     className={cn(
                                         "flex w-full min-w-0 overflow-hidden flex-col items-start gap-2.5 rounded-[16px] px-4 py-3 text-left transition-all sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4",
-                                        isHighlighted ? "relative z-10 scale-[1.02] border border-blue-100 bg-white shadow-lg ring-2 ring-blue-500/70" : "border border-slate-200/80 bg-slate-50/70",
-                                        canOpen && !isHighlighted ? "group cursor-pointer hover:border-slate-200 hover:bg-slate-50" : !canOpen && !isHighlighted ? "cursor-default" : ""
+                                        isHighlighted ? "relative z-10 scale-[1.02] border border-blue-200/70 bg-[var(--surface-lowest)] shadow-lg ring-2 ring-blue-500/70" : "border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)]",
+                                        canOpen && !isHighlighted ? "group cursor-pointer hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_92%,transparent)]" : !canOpen && !isHighlighted ? "cursor-default" : ""
                                     )}
                                 >
                                     <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:flex sm:w-auto sm:items-center sm:gap-4">
@@ -643,28 +643,28 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                             style={{ backgroundColor: dotColor }}
                                         />
                                         <div className="col-start-2 min-w-0">
-                                            <p className="truncate text-[12px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[13px]">
+                                            <p className="truncate text-[12px] font-bold text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-[13px]">
                                                     {entry.label}
                                             </p>
-                                            <p className="mt-1 truncate text-[9px] font-bold text-slate-400 sm:mt-0 sm:text-[10px]">
+                                            <p className="mt-1 truncate text-[9px] font-bold text-[var(--text-muted)] sm:mt-0 sm:text-[10px]">
                                                 {metaText}
                                             </p>
                                         </div>
                                         <div className="col-start-3 row-span-2 shrink-0 text-right sm:hidden">
-                                            <p className="text-[12px] font-bold text-slate-900">
+                                            <p className="text-[12px] font-bold text-[var(--text-primary)]">
                                                 {formatCurrency(entry.revenue)}
                                             </p>
-                                            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                                            <p className="mt-0.5 text-[10px] font-semibold text-[var(--text-muted)]">
                                                 {share.toFixed(1)}%
                                             </p>
                                         </div>
                                     </div>
 
                                     <div className="hidden w-full min-w-0 items-center justify-between gap-3 sm:flex sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
-                                        <p className="text-[13px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-[14px]">
+                                        <p className="text-[13px] font-bold text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-[14px]">
                                             {formatCurrency(entry.revenue)}
                                         </p>
-                                        <div className="mt-0.5 text-[10px] font-semibold text-slate-400 sm:text-[11px]">
+                                        <div className="mt-0.5 text-[10px] font-semibold text-[var(--text-muted)] sm:text-[11px]">
                                             {share.toFixed(1)}%
                                         </div>
                                     </div>
@@ -675,7 +675,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     {chartData.length > 4 && (
                         <button
                             onClick={() => setIsListExpanded(!isListExpanded)}
-                            className="w-full rounded-xl border border-transparent py-2 text-center text-[11px] font-bold text-slate-500 transition-colors hover:border-slate-200/60 hover:bg-slate-50/80 hover:text-slate-800 sm:py-2.5 sm:text-[12px]"
+                            className="w-full rounded-xl border border-transparent py-2 text-center text-[11px] font-bold text-[var(--text-secondary)] transition-colors hover:border-[var(--line-subtle)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_88%,transparent)] hover:text-[var(--text-primary)] sm:py-2.5 sm:text-[12px]"
                         >
                             {isListExpanded ? "Show less" : `View all ${totalCount} ${mode === "type" ? "types" : `${mode}s`}`}
                         </button>

@@ -84,7 +84,7 @@ function triggerClassName(isActive: boolean, extraClassName?: string) {
     "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
     isActive
       ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] text-[var(--brand-primary)]"
-      : "border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] text-[var(--text-secondary)] hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))]",
+      : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]",
     extraClassName
   )
 }
@@ -208,10 +208,10 @@ export function ProjectsFiltersToolbar({
 
   return (
     <div className="space-y-2.5 sm:space-y-3">
-      <FilterBarShell className="rounded-[22px] border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-2.5 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:px-3.5 sm:py-3">
+      <FilterBarShell className="rounded-[22px] border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] px-2.5 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:px-3.5 sm:py-3">
         <div className="relative -mx-1 sm:mx-0">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-white via-white/90 to-transparent sm:hidden" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-white via-white/90 to-transparent sm:hidden" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-[var(--surface-lowest)] via-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] to-transparent sm:hidden" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-[var(--surface-lowest)] via-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] to-transparent sm:hidden" />
           <div className="overflow-x-auto px-1 pb-0.5 hidescrollbar snap-x snap-mandatory scroll-px-3 touch-pan-x overscroll-x-contain xl:overflow-visible xl:px-0">
           <div className="inline-flex min-w-max items-center gap-2 xl:flex xl:w-full xl:min-w-0 xl:items-center xl:gap-3 2xl:gap-4">
             <div className="inline-flex h-9 shrink-0 snap-start items-center rounded-xl bg-[var(--bg-surface-soft)] p-1">
@@ -333,7 +333,7 @@ export function ProjectsFiltersToolbar({
           {activeFilters.length > 0 ? (
             <Link
               href={clearAllHref}
-              className="inline-flex h-6 items-center rounded-full px-2 text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800 sm:text-[10px]"
+              className="inline-flex h-6 items-center rounded-full px-2 text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:text-[10px]"
             >
               Clear all
             </Link>

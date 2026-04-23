@@ -142,7 +142,7 @@ export default async function PaymentsPage({
 
     return (
         <div className="flex flex-col gap-8 pb-10 sm:gap-10">
-            <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+            <div className="rounded-[28px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Payments"
                     search={<PaymentsSearchInput />}
@@ -161,9 +161,9 @@ export default async function PaymentsPage({
 
             {/* KPI Section */}
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                <article className="relative rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-slate-400">Current Month</p>
+                        <p className="ui-overline text-[var(--text-muted)]">Current Month</p>
                         <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50/80 text-rose-400 shadow-[0_4px_10px_rgba(244,63,94,0.06)]">
                             <Banknote className="h-4.5 w-4.5" />
                         </div>
@@ -172,7 +172,7 @@ export default async function PaymentsPage({
                         <p className="text-[30px] font-bold leading-none tracking-tight text-rose-600 sm:text-[34px]">
                             {formatCurrency(currentMonthUnpaid.total)}
                         </p>
-                        <p className="mt-2 text-sm font-medium text-slate-500">Outstanding from projects created this month.</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Outstanding from projects created this month.</p>
                         <div className="mt-3 grid grid-cols-2 gap-2">
                             <div className="rounded-xl border border-emerald-100/80 bg-emerald-50/60 px-2.5 py-2">
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-700/80">Recurring</p>
@@ -186,9 +186,9 @@ export default async function PaymentsPage({
                     </div>
                 </article>
 
-                <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                <article className="relative rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-slate-400">Previous Months</p>
+                        <p className="ui-overline text-[var(--text-muted)]">Previous Months</p>
                         <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50/80 text-amber-500 shadow-[0_4px_10px_rgba(245,158,11,0.08)]">
                             <Banknote className="h-4.5 w-4.5" />
                         </div>
@@ -197,7 +197,7 @@ export default async function PaymentsPage({
                         <p className="text-[30px] font-bold leading-none tracking-tight text-amber-600 sm:text-[34px]">
                             {formatCurrency(previousMonthsUnpaid.total)}
                         </p>
-                        <p className="mt-2 text-sm font-medium text-slate-500">Outstanding carried from previous months.</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Outstanding carried from previous months.</p>
                         <div className="mt-3 grid grid-cols-2 gap-2">
                             <div className="rounded-xl border border-emerald-100/80 bg-emerald-50/60 px-2.5 py-2">
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-700/80">Recurring</p>
@@ -211,29 +211,29 @@ export default async function PaymentsPage({
                     </div>
                 </article>
 
-                <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                <article className="relative rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-slate-400">Partners</p>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200/90 bg-white/90 text-slate-400 shadow-[0_4px_10px_rgba(15,23,42,0.03)]">
+                        <p className="ui-overline text-[var(--text-muted)]">Partners</p>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[0_4px_10px_rgba(15,23,42,0.03)]">
                             <Users className="h-4.5 w-4.5" />
                         </div>
                     </div>
                     <div className="mt-5">
-                        <p className="text-[30px] font-bold leading-none tracking-tight text-slate-900 sm:text-[34px]">{partnersWithDebt}</p>
-                        <p className="mt-2 text-sm font-medium text-slate-500">Partners currently carrying unpaid project balances.</p>
+                        <p className="text-[30px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[34px]">{partnersWithDebt}</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Partners currently carrying unpaid project balances.</p>
                     </div>
                 </article>
 
-                <article className="relative rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                <article className="relative rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-slate-400">Events</p>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200/90 bg-white/90 text-slate-400 shadow-[0_4px_10px_rgba(15,23,42,0.03)]">
+                        <p className="ui-overline text-[var(--text-muted)]">Events</p>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[0_4px_10px_rgba(15,23,42,0.03)]">
                             <History className="h-4.5 w-4.5" />
                         </div>
                     </div>
                     <div className="mt-5">
-                        <p className="text-[30px] font-bold leading-none tracking-tight text-slate-900 sm:text-[34px]">{totalLogs}</p>
-                        <p className="mt-2 text-sm font-medium text-slate-500">Recorded payment updates, manual entries, and settlements.</p>
+                        <p className="text-[30px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[34px]">{totalLogs}</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Recorded payment updates, manual entries, and settlements.</p>
                     </div>
                 </article>
             </section>
@@ -244,8 +244,8 @@ export default async function PaymentsPage({
                 <div className="flex flex-col gap-6">
                     <div className="flex items-center justify-between px-2">
                         <div className="flex flex-col">
-                            <h2 className="ui-text-title-sm text-slate-900">Transaction History</h2>
-                            <p className="text-[11px] font-medium text-slate-400">
+                            <h2 className="ui-text-title-sm text-[var(--text-primary)]">Transaction History</h2>
+                            <p className="text-[11px] font-medium text-[var(--text-muted)]">
                                 Review payment changes, manual entries, and settlement events.
                             </p>
                         </div>
@@ -264,15 +264,15 @@ export default async function PaymentsPage({
                     />
 
                     {/* Pagination Footer */}
-                    <div className="flex items-center justify-between rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
-                        <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                    <div className="flex items-center justify-between rounded-[18px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-primary)]">
                             {page}/{totalPages}
                         </span>
                         <div className="flex items-center gap-1.5">
                             {prevPage ? (
                                 <Link
                                     href={buildPageHref(prevPage)}
-                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] hover:text-blue-500" })}
                                     aria-label="Previous page"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
@@ -285,7 +285,7 @@ export default async function PaymentsPage({
                             {nextPage ? (
                                 <Link
                                     href={buildPageHref(nextPage)}
-                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] hover:text-blue-500" })}
                                     aria-label="Next page"
                                 >
                                     <ChevronRight className="h-4 w-4" />

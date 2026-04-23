@@ -524,16 +524,16 @@ export function NotesWorkspace({
         className={cn(
           "flex h-full min-h-0 flex-col",
           isMobile
-            ? "bg-white"
-            : "bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_56%,white)]"
+            ? "bg-[var(--surface-lowest)]"
+            : "bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_84%,var(--bg-surface)_16%)]"
         )}
       >
         <div
           className={cn(
             "sticky top-0 z-10 border-b border-slate-200/70 px-3 py-2.5 backdrop-blur-sm",
             isMobile
-              ? "bg-white/96"
-              : "bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)]/95"
+              ? "bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)]"
+              : "bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_88%,var(--bg-surface)_12%)]/95"
           )}
         >
           <div className="flex items-center justify-between gap-2">
@@ -553,7 +553,7 @@ export function NotesWorkspace({
                       {section.label}
                     </p>
                     <div className="h-px flex-1 bg-slate-200/70" />
-                    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/85 px-1.5 text-[9px] font-semibold text-slate-400 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.14)]">
+                    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] px-1.5 text-[9px] font-semibold text-slate-400 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.14)]">
                       {section.notes.length}
                     </span>
                   </div>
@@ -580,10 +580,10 @@ export function NotesWorkspace({
                           role="button"
                           tabIndex={0}
                           className={cn(
-                            "group relative w-full overflow-hidden rounded-[16px] border px-3 py-2.5 text-left transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_24%,white)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+                            "group relative w-full overflow-hidden rounded-[16px] border px-3 py-2.5 text-left transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_24%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-lowest)]",
                             selected
-                              ? "translate-x-[1px] border-[color:color-mix(in_srgb,var(--brand-cyan)_20%,white)] bg-[linear-gradient(180deg,rgba(236,250,255,0.95),rgba(228,246,252,0.92))] shadow-[0_12px_28px_-22px_rgba(15,23,42,0.42)]"
-                              : "border-transparent bg-white/72 hover:-translate-y-[1px] hover:border-slate-200/85 hover:bg-white/92 hover:shadow-[0_10px_22px_-24px_rgba(15,23,42,0.35)]"
+                              ? "translate-x-[1px] border-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_14%,var(--surface-lowest))] shadow-[0_12px_28px_-22px_rgba(15,23,42,0.42)]"
+                              : "border-transparent bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] hover:-translate-y-[1px] hover:border-slate-200/85 hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_76%,var(--surface-low)_24%)] hover:shadow-[0_10px_22px_-24px_rgba(15,23,42,0.35)]"
                           )}
                         >
                           <span
@@ -614,7 +614,7 @@ export function NotesWorkspace({
                               {isLinked ? (
                                 <>
                                   <span className="text-slate-300">•</span>
-                                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.16)]">
+                                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.16)]">
                                     {sourceType === "project" ? (
                                       <FolderKanban className="h-3 w-3 shrink-0" />
                                     ) : (
@@ -644,7 +644,7 @@ export function NotesWorkspace({
                                     event.stopPropagation()
                                     void handlePinToggle(note)
                                   }}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,white)]"
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,transparent)]"
                                   aria-label={note.pinned ? "Unpin note" : "Pin note"}
                                 >
                                   {note.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -656,7 +656,7 @@ export function NotesWorkspace({
                                     event.stopPropagation()
                                     void handleArchiveToggle(note)
                                   }}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,white)]"
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,transparent)]"
                                   aria-label={note.archived ? "Restore note" : "Archive note"}
                                 >
                                   {note.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
@@ -684,8 +684,8 @@ export function NotesWorkspace({
               ))}
             </div>
           ) : (
-            <div className="rounded-[18px] border border-dashed border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(248,250,252,0.82))] p-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 shadow-[0_6px_18px_-14px_rgba(15,23,42,0.25)]">
+            <div className="rounded-[18px] border border-dashed border-slate-200/85 bg-[color:color-mix(in_srgb,var(--surface-lowest)_84%,var(--surface-low)_16%)] p-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] shadow-[0_6px_18px_-14px_rgba(15,23,42,0.25)]">
                 <NotebookPen className="h-4 w-4 text-slate-400" />
               </div>
               <p className="mt-3 text-sm font-semibold text-slate-700">No notes in this view</p>
@@ -702,7 +702,7 @@ export function NotesWorkspace({
 
   return (
     <div className="flex h-[calc(100dvh-7.25rem-env(safe-area-inset-bottom))] min-h-[calc(100dvh-7.25rem-env(safe-area-inset-bottom))] flex-col gap-3 overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:min-h-[calc(100dvh-3.5rem)]">
-      <div className="rounded-[24px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
+      <div className="rounded-[24px] border border-slate-200/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
         <DashboardPageHeader
           title="Notes"
           showMobile
@@ -756,14 +756,14 @@ export function NotesWorkspace({
         />
       </div>
 
-      <Card className="flex-1 overflow-hidden rounded-[24px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,250,252,0.88))] py-0 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.35)] gap-0 min-h-0">
+      <Card className="flex-1 min-h-0 gap-0 overflow-hidden rounded-[24px] border border-slate-200/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] py-0 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.35)]">
         <CardContent className="flex-1 min-h-0 p-0">
           <div className="grid h-full min-h-0 lg:grid-cols-[300px_minmax(0,1fr)]">
-            <aside className="hidden min-h-0 overflow-hidden border-r border-slate-200/70 bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_56%,white)] lg:block">
+            <aside className="hidden min-h-0 overflow-hidden border-r border-slate-200/70 bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_84%,var(--bg-surface)_16%)] lg:block">
               {renderNotesList(false)}
             </aside>
 
-            <section className="min-w-0 min-h-0 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.75),rgba(255,255,255,0.95))] lg:flex lg:flex-col">
+            <section className="min-w-0 min-h-0 overflow-hidden bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,var(--surface-low)_8%)] lg:flex lg:flex-col">
               <div className="border-b border-slate-200/70 px-3 py-2.5 sm:px-3.5 sm:py-2.5 lg:hidden">
                 <div className="inline-flex items-center gap-2">
                   <Sheet open={isMobileListOpen} onOpenChange={setIsMobileListOpen}>
@@ -774,7 +774,7 @@ export function NotesWorkspace({
                       </Button>
                     </SheetTrigger>
                     <SheetContent side="left" className="w-[86vw] border-r border-slate-200/80 p-0 sm:max-w-md">
-                      <SheetHeader className="gap-3 border-b border-slate-200/70 bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_78%,white)] px-4 py-3">
+                      <SheetHeader className="gap-3 border-b border-slate-200/70 bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_90%,var(--bg-surface)_10%)] px-4 py-3">
                         <div className="flex items-center justify-between gap-3 pr-10">
                           <SheetTitle>Notes</SheetTitle>
                           <Button
@@ -809,7 +809,7 @@ export function NotesWorkspace({
                         </div>
                       </SheetHeader>
                       {renderNotesList(true)}
-                      <div className="border-t border-slate-200/70 bg-white/95 px-4 py-3">
+                      <div className="border-t border-slate-200/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] px-4 py-3">
                         <p className="text-[11px] font-medium text-slate-400">
                           Tap a note to open it in the editor.
                         </p>
@@ -828,8 +828,8 @@ export function NotesWorkspace({
                       readOnly={selectedNoteIsLinked}
                       placeholder={getDefaultNoteTitle(selectedNote.createdAt)}
                       className={cn(
-                        "w-full border-0 bg-transparent px-1 py-0 text-[28px] font-semibold tracking-[-0.03em] text-slate-900 outline-none placeholder:text-slate-300 focus:ring-0 sm:text-[32px]",
-                        selectedNoteIsLinked && "cursor-default text-slate-700"
+                        "w-full border-0 bg-transparent px-1 py-0 text-[28px] font-semibold tracking-[-0.03em] text-[var(--text-primary)] outline-none placeholder:text-slate-300 focus:ring-0 sm:text-[32px]",
+                        selectedNoteIsLinked && "cursor-default text-[var(--text-secondary)]"
                       )}
                     />
                     <RichTextEditor
@@ -851,7 +851,7 @@ export function NotesWorkspace({
                             variant="ghost"
                             size="icon"
                             onClick={appendTemplate}
-                            className="h-7 w-7 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            className="h-7 w-7 rounded-lg text-slate-500 hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                             aria-label="Add template"
                             title="Add template"
                           >
@@ -863,7 +863,7 @@ export function NotesWorkspace({
                       minHeightClassName="min-h-[54vh] sm:min-h-[58vh] lg:min-h-[60vh]"
                     />
                   </div>
-                  <div className="relative shrink-0 overflow-hidden bg-white/94 px-3 py-2.5 sm:px-4 lg:px-6">
+                  <div className="relative shrink-0 overflow-hidden bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] px-3 py-2.5 sm:px-4 lg:px-6">
                     <div className="absolute inset-x-0 top-0 h-px bg-slate-200/80" aria-hidden="true" />
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium text-slate-400">
                       {selectedNoteIsLinked ? (
@@ -888,9 +888,9 @@ export function NotesWorkspace({
                 </div>
               ) : (
                 <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-4 pr-2 sm:p-5 sm:pr-3 lg:p-6 lg:pr-3">
-                  <div className="flex min-h-[320px] items-start justify-start rounded-[22px] border border-dashed border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(248,250,252,0.9))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] sm:p-7">
+                  <div className="flex min-h-[320px] items-start justify-start rounded-[22px] border border-dashed border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_84%,var(--surface-low)_16%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] sm:p-7">
                     <div className="max-w-md space-y-2.5">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200/85 bg-white shadow-[0_8px_20px_-16px_rgba(15,23,42,0.28)]">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200/85 bg-[var(--surface-lowest)] shadow-[0_8px_20px_-16px_rgba(15,23,42,0.28)]">
                         <NotebookPen className="h-5 w-5 text-slate-400" />
                       </div>
                       <div className="space-y-1 text-left">

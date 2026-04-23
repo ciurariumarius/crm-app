@@ -103,7 +103,7 @@ function DomainFaviconTile({
     }, [domain])
 
     return (
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)]">
             {!failed && activeFaviconUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -131,7 +131,7 @@ function DomainFaviconTile({
                     }}
                 />
             ) : (
-                <span className="text-[11px] font-extrabold tracking-wide text-slate-700">{fallback}</span>
+                <span className="text-[11px] font-extrabold tracking-wide text-[var(--text-secondary)]">{fallback}</span>
             )}
         </span>
     )
@@ -141,8 +141,8 @@ function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
     const { dateLabel, dateTimeLabel } = formatDateTimeParts(value)
     return (
         <div className="flex items-center justify-start gap-1.5" title={dateTimeLabel}>
-            <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-            <span className="text-[11px] font-medium text-slate-500">{dateLabel}</span>
+            <CalendarDays className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
+            <span className="text-[11px] font-medium text-[var(--text-secondary)]">{dateLabel}</span>
         </div>
     )
 }
@@ -163,11 +163,11 @@ function ProjectMetaPill({
             title={typeof value === "string" ? `${label}: ${value}` : label}
             aria-label={label}
             className={cn(
-                "inline-flex h-8 max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-2.5 text-[12px] font-semibold text-slate-700 shadow-sm",
+                "inline-flex h-8 max-w-full items-center gap-2 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[12px] font-semibold text-[var(--text-secondary)] shadow-sm",
                 className
             )}
         >
-            <span className="shrink-0 text-slate-400">{icon}</span>
+            <span className="shrink-0 text-[var(--text-muted)]">{icon}</span>
             <span className="truncate">{value}</span>
         </div>
     )
@@ -181,12 +181,12 @@ function EmptyProjectsState({
     description: string
 }) {
     return (
-        <div className="rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.74),rgba(241,245,249,0.48))] px-5 py-9 text-center">
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
-                <Building2 className="h-5 w-5 text-slate-400" />
+        <div className="rounded-[24px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] px-5 py-9 text-center">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                <Building2 className="h-5 w-5 text-[var(--text-muted)]" />
             </div>
-            <p className="mt-4 text-sm font-semibold tracking-tight text-slate-900">{title}</p>
-            <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-slate-500">
+            <p className="mt-4 text-sm font-semibold tracking-tight text-[var(--text-primary)]">{title}</p>
+            <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-[var(--text-secondary)]">
                 {description}
             </p>
         </div>
@@ -199,7 +199,7 @@ function ProjectsGridSkeleton() {
             {Array.from({ length: 6 }).map((_, index) => (
                 <div
                     key={`project-grid-skeleton-${index}`}
-                    className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
+                    className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
                 >
                     <div className="animate-pulse space-y-3">
                         <div className="flex items-start gap-3">
@@ -226,7 +226,7 @@ function ProjectsListSkeleton() {
                 {Array.from({ length: 2 }).map((_, sectionIndex) => (
                     <section
                         key={`project-list-skeleton-section-${sectionIndex}`}
-                        className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4"
+                        className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4"
                     >
                         <div className="mb-3 flex items-center gap-3">
                             <span className="h-5 w-1 rounded-full bg-slate-200" />
@@ -237,14 +237,14 @@ function ProjectsListSkeleton() {
                             {Array.from({ length: 4 }).map((_, rowIndex) => (
                                 <div
                                     key={`project-list-skeleton-row-${sectionIndex}-${rowIndex}`}
-                                    className="h-[72px] animate-pulse rounded-[18px] border border-slate-200/80 bg-white/92"
+                                    className="h-[72px] animate-pulse rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
                                 />
                             ))}
                         </div>
                     </section>
                 ))}
 
-                <div className="h-[74px] animate-pulse rounded-[22px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.94))]" />
+                <div className="h-[74px] animate-pulse rounded-[22px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)]" />
             </div>
         </div>
     )
@@ -566,15 +566,15 @@ export function ProjectsBoardRows({
     }
 
     const getProjectTitleClass = (status: string) => {
-        if (status === "Completed") return "text-slate-800"
-        if (status === "Closed") return "text-slate-500"
-        return "text-slate-900"
+        if (status === "Completed") return "text-[var(--text-primary)]"
+        if (status === "Closed") return "text-[var(--text-secondary)]"
+        return "text-[var(--text-primary)]"
     }
 
     const getProjectMetaClass = (status: string) => {
-        if (status === "Closed") return "text-slate-400"
-        if (status === "Completed") return "text-slate-500"
-        return "text-slate-500"
+        if (status === "Closed") return "text-[var(--text-muted)]"
+        if (status === "Completed") return "text-[var(--text-secondary)]"
+        return "text-[var(--text-secondary)]"
     }
 
     const setProjectStatus = async (project: BoardProject, nextStatus: "Active" | "Paused" | "Completed" | "Closed") => {
@@ -660,7 +660,7 @@ export function ProjectsBoardRows({
                             type="button"
                             onClick={() => openDetails(project)}
                             className={cn(
-                                "text-left rounded-2xl border border-border/60 bg-card p-4 premium-card transition-all hover:border-slate-300",
+                                "text-left rounded-2xl border border-border/60 bg-card p-4 premium-card transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]",
                                 getProjectToneClass(projectStatus)
                             )}
                         >
@@ -739,10 +739,10 @@ export function ProjectsBoardRows({
     return (
         <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
             <div className="space-y-6 md:min-w-[1240px] xl:min-w-[1320px]">
-                <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+                <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
                     <div className="mb-3 flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-emerald-500" />
-                        <h2 className="text-lg font-semibold tracking-tight text-slate-900">One-time Projects</h2>
+                        <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">One-time Projects</h2>
                     </div>
 
                     <ProjectBoardHeaderRow
@@ -775,7 +775,7 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project)}
-                                        className="w-full rounded-2xl border border-slate-200/80 bg-white/92 px-4 py-3 text-left shadow-[0_2px_8px_rgba(15,23,42,0.02)] md:hidden"
+                                        className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[0_2px_8px_rgba(15,23,42,0.02)] md:hidden"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
@@ -796,8 +796,8 @@ export function ProjectsBoardRows({
                                             </StatusChip>
                                         </div>
                                         <div className="mt-3 flex items-center justify-between">
-                                            <span className="font-mono text-base font-bold text-slate-900">
-                                                {currencyFormatter.format(project.amount)} <span className="text-[10px] text-slate-400">RON</span>
+                                            <span className="font-mono text-base font-bold text-[var(--text-primary)]">
+                                                {currencyFormatter.format(project.amount)} <span className="text-[10px] text-[var(--text-muted)]">RON</span>
                                             </span>
                                             <div className="flex items-center gap-2">
                                                 <StatusChip tone={statusToneFromLabel(projectStatus)} size="sm">
@@ -819,7 +819,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-slate-200/80 bg-white/92 px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -840,6 +840,8 @@ export function ProjectsBoardRows({
                                                     <button
                                                         type="button"
                                                         onClick={(event) => event.stopPropagation()}
+                                                        onPointerDown={(event) => event.stopPropagation()}
+                                                        onKeyDown={(event) => event.stopPropagation()}
                                                         className="focus:outline-none"
                                                     >
                                                         <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
@@ -847,12 +849,15 @@ export function ProjectsBoardRows({
                                                         </StatusChip>
                                                     </button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                                     {(["Active", "Paused", "Completed", "Closed"] as const).map((option) => (
                                                         <DropdownMenuItem
                                                             key={option}
-                                                            onSelect={() => void setProjectStatus(project, option)}
-                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                            onSelect={(event) => {
+                                                                event.stopPropagation()
+                                                                void setProjectStatus(project, option)
+                                                            }}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                                         >
                                                             <span className={cn(
                                                                 "mr-2 h-2 w-2 rounded-full",
@@ -862,7 +867,7 @@ export function ProjectsBoardRows({
                                                                 option === "Closed" && "bg-slate-500"
                                                             )} />
                                                             {option}
-                                                            {projectStatus === option && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                            {projectStatus === option && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                                         </DropdownMenuItem>
                                                     ))}
                                                 </DropdownMenuContent>
@@ -874,6 +879,8 @@ export function ProjectsBoardRows({
                                                     <button
                                                         type="button"
                                                         onClick={(event) => event.stopPropagation()}
+                                                        onPointerDown={(event) => event.stopPropagation()}
+                                                        onKeyDown={(event) => event.stopPropagation()}
                                                         className="focus:outline-none"
                                                     >
                                                         <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
@@ -881,19 +888,22 @@ export function ProjectsBoardRows({
                                                         </StatusChip>
                                                     </button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                                     {(["Paid", "Unpaid"] as const).map((option) => (
                                                         <DropdownMenuItem
                                                             key={option}
-                                                            onSelect={() => void setProjectPayment(project, option)}
-                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                            onSelect={(event) => {
+                                                                event.stopPropagation()
+                                                                void setProjectPayment(project, option)
+                                                            }}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                                         >
                                                             <span className={cn(
                                                                 "mr-2 h-2 w-2 rounded-full",
                                                                 option === "Paid" ? "bg-emerald-500" : "bg-rose-500"
                                                             )} />
                                                             {option}
-                                                            {projectPayment === option && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                            {projectPayment === option && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                                         </DropdownMenuItem>
                                                     ))}
                                                 </DropdownMenuContent>
@@ -919,19 +929,19 @@ export function ProjectsBoardRows({
                                                             event.stopPropagation()
                                                             openAmountEditor(project)
                                                         }}
-                                                        className="font-bold text-slate-800 text-right transition-colors hover:text-blue-700"
+                                                        className="font-bold text-[var(--text-primary)] text-right transition-colors hover:text-blue-700"
                                                         title="Edit amount"
                                                     >
-                                                        {currencyFormatter.format(getDisplayAmount(project))} <span className="text-slate-400 text-[9px]">RON</span>
+                                                        {currencyFormatter.format(getDisplayAmount(project))} <span className="text-[var(--text-muted)] text-[9px]">RON</span>
                                                     </button>
                                                 </PopoverTrigger>
                                                 <PopoverContent
                                                     align="end"
-                                                    className="w-44 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"
+                                                    className="w-44 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-xl"
                                                     onClick={(event) => event.stopPropagation()}
                                                 >
                                                     <div className="space-y-2">
-                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Amount (RON)</p>
+                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Amount (RON)</p>
                                                         <input
                                                             value={amountDraft}
                                                             onChange={(event) => setAmountDraft(event.target.value)}
@@ -944,13 +954,13 @@ export function ProjectsBoardRows({
                                                                     setAmountEditorProjectId(null)
                                                                 }
                                                             }}
-                                                            className="h-9 w-full rounded-lg border border-slate-200 px-2 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                                            className="h-9 w-full rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                                                             autoFocus
                                                         />
                                                         <div className="flex items-center justify-end gap-2">
                                                             <button
                                                                 type="button"
-                                                                className="rounded-md px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+                                                                className="rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)]"
                                                                 onClick={() => setAmountEditorProjectId(null)}
                                                             >
                                                                 Cancel
@@ -970,7 +980,7 @@ export function ProjectsBoardRows({
                                         <div className="flex items-center justify-center">
                                             <div className="relative h-8 w-8">
                                                 <svg className="h-full w-full" viewBox="0 0 36 36">
-                                                    <circle className="stroke-slate-100 dark:stroke-zinc-800" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
+                                                    <circle className="stroke-[var(--line-subtle)]" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
                                                     <circle
                                                         className="stroke-emerald-600 transition-all duration-500"
                                                         strokeWidth="3"
@@ -984,7 +994,7 @@ export function ProjectsBoardRows({
                                                     />
                                                 </svg>
                                                 <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300">{project.completedTasks}/{totalTasks}</span>
+                                                    <span className="text-[9px] font-bold text-[var(--text-secondary)]">{project.completedTasks}/{totalTasks}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -994,13 +1004,13 @@ export function ProjectsBoardRows({
                                                     "px-2 py-1 rounded-lg text-[10px] font-bold text-center uppercase tracking-tight min-w-[50px] border",
                                                     overAllocated
                                                         ? "text-rose-800 bg-rose-100 border-rose-300 ring-1 ring-rose-200 shadow-sm font-black"
-                                                        : "text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700"
+                                                        : "text-[var(--text-secondary)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] border-[var(--line-subtle)]"
                                                 )}
                                             >
                                                 {formatDuration(project.secondsLogged)}
                                             </span>
                                         </div>
-                                        <span className="text-sm font-medium text-slate-700 truncate block">{project.site.partner.name}</span>
+                                        <span className="text-sm font-medium text-[var(--text-secondary)] truncate block">{project.site.partner.name}</span>
                                         <div className="flex w-full justify-end justify-self-end">
                                             <DateTimeCell value={project.createdAt} />
                                         </div>
@@ -1013,10 +1023,10 @@ export function ProjectsBoardRows({
                     </div>
                 </section>
 
-                <section className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+                <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
                     <div className="mb-3 flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-violet-500" />
-                        <h2 className="text-lg font-semibold tracking-tight text-slate-900">Monthly Projects</h2>
+                        <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Monthly Projects</h2>
                     </div>
 
                     <ProjectBoardHeaderRow
@@ -1049,7 +1059,7 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project)}
-                                        className="w-full rounded-2xl border border-slate-200/80 bg-white/92 px-4 py-3 text-left shadow-[0_2px_8px_rgba(15,23,42,0.02)] md:hidden"
+                                        className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[0_2px_8px_rgba(15,23,42,0.02)] md:hidden"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
@@ -1073,8 +1083,8 @@ export function ProjectsBoardRows({
                                             </StatusChip>
                                         </div>
                                         <div className="mt-3 flex items-center justify-between">
-                                            <span className="font-mono text-base font-bold text-slate-900">
-                                                {currencyFormatter.format(project.amount)} <span className="text-[10px] text-slate-400">RON</span>
+                                            <span className="font-mono text-base font-bold text-[var(--text-primary)]">
+                                                {currencyFormatter.format(project.amount)} <span className="text-[10px] text-[var(--text-muted)]">RON</span>
                                             </span>
                                             <div className="flex items-center gap-2">
                                                 <StatusChip tone={statusToneFromLabel(projectStatus)} size="sm">
@@ -1096,7 +1106,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-slate-200/80 bg-white/92 px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -1120,6 +1130,8 @@ export function ProjectsBoardRows({
                                                     <button
                                                         type="button"
                                                         onClick={(event) => event.stopPropagation()}
+                                                        onPointerDown={(event) => event.stopPropagation()}
+                                                        onKeyDown={(event) => event.stopPropagation()}
                                                         className="focus:outline-none"
                                                     >
                                                         <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
@@ -1127,12 +1139,15 @@ export function ProjectsBoardRows({
                                                         </StatusChip>
                                                     </button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                                     {(["Active", "Paused", "Completed", "Closed"] as const).map((option) => (
                                                         <DropdownMenuItem
                                                             key={option}
-                                                            onSelect={() => void setProjectStatus(project, option)}
-                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                            onSelect={(event) => {
+                                                                event.stopPropagation()
+                                                                void setProjectStatus(project, option)
+                                                            }}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                                         >
                                                             <span className={cn(
                                                                 "mr-2 h-2 w-2 rounded-full",
@@ -1142,7 +1157,7 @@ export function ProjectsBoardRows({
                                                                 option === "Closed" && "bg-slate-500"
                                                             )} />
                                                             {option}
-                                                            {projectStatus === option && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                            {projectStatus === option && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                                         </DropdownMenuItem>
                                                     ))}
                                                 </DropdownMenuContent>
@@ -1154,6 +1169,8 @@ export function ProjectsBoardRows({
                                                     <button
                                                         type="button"
                                                         onClick={(event) => event.stopPropagation()}
+                                                        onPointerDown={(event) => event.stopPropagation()}
+                                                        onKeyDown={(event) => event.stopPropagation()}
                                                         className="focus:outline-none"
                                                     >
                                                         <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs" className={PROJECT_ROW_CHIP_CLASS}>
@@ -1161,19 +1178,22 @@ export function ProjectsBoardRows({
                                                         </StatusChip>
                                                     </button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                                <DropdownMenuContent align="center" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                                     {(["Paid", "Unpaid"] as const).map((option) => (
                                                         <DropdownMenuItem
                                                             key={option}
-                                                            onSelect={() => void setProjectPayment(project, option)}
-                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                            onSelect={(event) => {
+                                                                event.stopPropagation()
+                                                                void setProjectPayment(project, option)
+                                                            }}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                                         >
                                                             <span className={cn(
                                                                 "mr-2 h-2 w-2 rounded-full",
                                                                 option === "Paid" ? "bg-emerald-500" : "bg-rose-500"
                                                             )} />
                                                             {option}
-                                                            {projectPayment === option && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                            {projectPayment === option && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                                         </DropdownMenuItem>
                                                     ))}
                                                 </DropdownMenuContent>
@@ -1199,19 +1219,19 @@ export function ProjectsBoardRows({
                                                             event.stopPropagation()
                                                             openAmountEditor(project)
                                                         }}
-                                                        className="font-bold text-slate-800 text-right transition-colors hover:text-blue-700"
+                                                        className="font-bold text-[var(--text-primary)] text-right transition-colors hover:text-blue-700"
                                                         title="Edit amount"
                                                     >
-                                                        {currencyFormatter.format(getDisplayAmount(project))} <span className="text-slate-400 text-[9px]">RON</span>
+                                                        {currencyFormatter.format(getDisplayAmount(project))} <span className="text-[var(--text-muted)] text-[9px]">RON</span>
                                                     </button>
                                                 </PopoverTrigger>
                                                 <PopoverContent
                                                     align="end"
-                                                    className="w-44 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"
+                                                    className="w-44 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-xl"
                                                     onClick={(event) => event.stopPropagation()}
                                                 >
                                                     <div className="space-y-2">
-                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Amount (RON)</p>
+                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Amount (RON)</p>
                                                         <input
                                                             value={amountDraft}
                                                             onChange={(event) => setAmountDraft(event.target.value)}
@@ -1224,13 +1244,13 @@ export function ProjectsBoardRows({
                                                                     setAmountEditorProjectId(null)
                                                                 }
                                                             }}
-                                                            className="h-9 w-full rounded-lg border border-slate-200 px-2 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                                            className="h-9 w-full rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                                                             autoFocus
                                                         />
                                                         <div className="flex items-center justify-end gap-2">
                                                             <button
                                                                 type="button"
-                                                                className="rounded-md px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+                                                                className="rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)]"
                                                                 onClick={() => setAmountEditorProjectId(null)}
                                                             >
                                                                 Cancel
@@ -1250,7 +1270,7 @@ export function ProjectsBoardRows({
                                         <div className="flex items-center justify-center">
                                             <div className="relative h-8 w-8">
                                                 <svg className="h-full w-full" viewBox="0 0 36 36">
-                                                    <circle className="stroke-slate-100 dark:stroke-zinc-800" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
+                                                    <circle className="stroke-[var(--line-subtle)]" strokeWidth="3" fill="transparent" r="16" cx="18" cy="18" />
                                                     <circle
                                                         className="stroke-blue-600 transition-all duration-500"
                                                         strokeWidth="3"
@@ -1264,7 +1284,7 @@ export function ProjectsBoardRows({
                                                     />
                                                 </svg>
                                                 <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300">{project.completedTasks}/{totalTasks}</span>
+                                                    <span className="text-[9px] font-bold text-[var(--text-secondary)]">{project.completedTasks}/{totalTasks}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1274,13 +1294,13 @@ export function ProjectsBoardRows({
                                                     "px-2 py-1 rounded-lg text-[10px] font-bold text-center uppercase tracking-tight min-w-[50px] border",
                                                     overAllocated
                                                         ? "text-rose-800 bg-rose-100 border-rose-300 ring-1 ring-rose-200 shadow-sm font-black"
-                                                        : "text-slate-600 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700"
+                                                        : "text-[var(--text-secondary)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] border-[var(--line-subtle)]"
                                                 )}
                                             >
                                                 {formatDuration(project.secondsLogged)}
                                             </span>
                                         </div>
-                                        <span className="text-sm font-medium text-slate-700 truncate block">{project.site.partner.name}</span>
+                                        <span className="text-sm font-medium text-[var(--text-secondary)] truncate block">{project.site.partner.name}</span>
                                         <div className="flex w-full justify-end justify-self-end">
                                             <DateTimeCell value={project.createdAt} />
                                         </div>
@@ -1295,21 +1315,21 @@ export function ProjectsBoardRows({
 
                 {/* Global Shadow Row - Before Overview */}
                 {layout === "list" && (
-                    <div className="overflow-x-auto pt-1 text-slate-900 hidescrollbar">
+                    <div className="overflow-x-auto pt-1 text-[var(--text-primary)] hidescrollbar">
                         <div className="md:min-w-[1240px] xl:min-w-[1320px]">
                             <button
                                 type="button"
                                 onClick={() => setCreateProjectOpen(true)}
                                 className={cn(
-                                    "grid w-full items-center gap-x-2 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/40 px-5 py-3.5 text-left transition-all hover:border-blue-300 hover:bg-blue-50/40 group/shadow",
+                                    "grid w-full items-center gap-x-2 rounded-[18px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] px-5 py-3.5 text-left transition-all hover:border-blue-300 hover:bg-blue-50/40 group/shadow",
                                     LIST_GRID_COLUMNS
                                 )}
                             >
                                 <div className="min-w-0 flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-100 shadow-sm group-hover/shadow:border-blue-200 transition-all">
-                                        <Plus className="h-4 w-4 text-slate-400 group-hover/shadow:text-blue-600 group-hover/shadow:scale-110 transition-all" />
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-lowest)] border border-[var(--line-subtle)] shadow-sm group-hover/shadow:border-blue-200 transition-all">
+                                        <Plus className="h-4 w-4 text-[var(--text-muted)] group-hover/shadow:text-blue-600 group-hover/shadow:scale-110 transition-all" />
                                     </div>
-                                    <span className="text-sm font-semibold text-slate-500 group-hover/shadow:text-blue-600 transition-colors">
+                                    <span className="text-sm font-semibold text-[var(--text-secondary)] group-hover/shadow:text-blue-600 transition-colors">
                                         Add new project...
                                     </span>
                                 </div>

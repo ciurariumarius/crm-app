@@ -33,13 +33,13 @@ export function TasksViewToggle({ currentView }: { currentView: string }) {
     }
 
     return (
-        <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm gap-0.5">
+        <div className="flex items-center gap-0.5 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1 shadow-sm">
             <button
                 onClick={() => setView("list")}
                 title="List view"
                 className={cn(
                     "h-8 w-8 rounded-lg flex items-center justify-center transition-colors",
-                    currentView === "list" ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-700"
+                    currentView === "list" ? "bg-[var(--surface-low)] text-[var(--text-primary)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 )}
             >
                 <List className="h-4 w-4" />
@@ -49,7 +49,7 @@ export function TasksViewToggle({ currentView }: { currentView: string }) {
                 title="Grid view"
                 className={cn(
                     "h-8 w-8 rounded-lg flex items-center justify-center transition-colors",
-                    currentView !== "list" ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-700"
+                    currentView !== "list" ? "bg-[var(--surface-low)] text-[var(--text-primary)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 )}
             >
                 <LayoutGrid className="h-4 w-4" />
@@ -57,7 +57,7 @@ export function TasksViewToggle({ currentView }: { currentView: string }) {
 
             {currentView !== "list" && (
                 <>
-                    <div className="w-px h-4 bg-slate-200 mx-1" />
+                    <div className="mx-1 h-4 w-px bg-[var(--line-subtle)]" />
                     {[3, 4].map((c) => (
                         <button
                             key={c}
@@ -66,8 +66,8 @@ export function TasksViewToggle({ currentView }: { currentView: string }) {
                             className={cn(
                                 "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors",
                                 colsTarget === c.toString()
-                                    ? "bg-slate-100 text-slate-900"
-                                    : "text-slate-400 hover:text-slate-700"
+                                    ? "bg-[var(--surface-low)] text-[var(--text-primary)]"
+                                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                             )}
                         >
                             {c}

@@ -40,8 +40,8 @@ function NavLink({
             className={cn(
                 "relative inline-flex h-[56px] flex-col items-center justify-center gap-1 rounded-xl border border-transparent px-1 transition-colors",
                 active
-                    ? "border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.92))] text-[var(--primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_6px_14px_-10px_rgba(15,23,42,0.45)]"
-                    : "text-slate-400 hover:text-slate-600"
+                    ? "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--primary)] shadow-[0_6px_14px_-10px_rgba(15,23,42,0.45)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             )}
             aria-current={active ? "page" : undefined}
         >
@@ -49,7 +49,7 @@ function NavLink({
             <span
                 className={cn(
                     "text-[10px] font-medium tracking-[0.03em]",
-                    active ? "text-[var(--primary)]" : "text-slate-500"
+                    active ? "text-[var(--primary)]" : "text-[var(--text-secondary)]"
                 )}
             >
                 {label}
@@ -237,7 +237,7 @@ export function MobileBottomNav({
                 )}
                 aria-label="Mobile navigation"
             >
-                <div className="pointer-events-auto relative w-full max-w-[430px] rounded-[22px] border border-slate-200/90 bg-white/94 shadow-[0_14px_26px_-18px_rgba(15,23,42,0.42)] backdrop-blur-[12px]">
+                <div className="pointer-events-auto relative w-full max-w-[430px] rounded-[22px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] shadow-[0_14px_26px_-18px_rgba(15,23,42,0.42)] backdrop-blur-[12px]">
                     <button
                         type="button"
                         onClick={() => setQuickActionsOpen(true)}
@@ -258,8 +258,8 @@ export function MobileBottomNav({
                             className={cn(
                                 "relative inline-flex h-[56px] flex-col items-center justify-center gap-1 rounded-xl border border-transparent px-1 transition-colors",
                                 menuActive
-                                    ? "border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.92))] text-[var(--primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_6px_14px_-10px_rgba(15,23,42,0.45)]"
-                                    : "text-slate-500 hover:text-slate-700"
+                                    ? "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--primary)] shadow-[0_6px_14px_-10px_rgba(15,23,42,0.45)]"
+                                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                             )}
                             aria-label="Open menu"
                             aria-current={menuActive ? "page" : undefined}
@@ -268,7 +268,7 @@ export function MobileBottomNav({
                             <span
                                 className={cn(
                                     "text-[10px] font-medium tracking-[0.03em]",
-                                    menuActive ? "text-[var(--primary)]" : "text-slate-500"
+                                    menuActive ? "text-[var(--primary)]" : "text-[var(--text-secondary)]"
                                 )}
                             >
                                 Menu
@@ -282,12 +282,12 @@ export function MobileBottomNav({
                 <SheetContent
                     side="bottom"
                     showCloseButton={false}
-                    className="rounded-t-[20px] border-x-0 border-b-0 border-t border-slate-200 bg-white/96 p-0 backdrop-blur-[8px]"
+                    className="rounded-t-[20px] border-x-0 border-b-0 border-t border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,transparent)] p-0 backdrop-blur-[8px]"
                 >
                     <SheetTitle className="sr-only">Quick actions</SheetTitle>
                     <div className="p-5 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-3">
-                        <div className="mx-auto h-1.5 w-10 rounded-full bg-slate-200" />
-                        <p className="text-center text-[12px] font-medium tracking-[0.04em] text-slate-500">
+                        <div className="mx-auto h-1.5 w-10 rounded-full bg-[var(--line-subtle)]" />
+                        <p className="text-center text-[12px] font-medium tracking-[0.04em] text-[var(--text-secondary)]">
                             Quick Actions
                         </p>
 
@@ -303,7 +303,7 @@ export function MobileBottomNav({
                                 <Sparkles className="h-4 w-4" />
                                 Add Task
                             </span>
-                            <p className="mt-1 text-xs text-slate-500">Create a task from anywhere in the app.</p>
+                            <p className="mt-1 text-xs text-[var(--text-secondary)]">Create a task from anywhere in the app.</p>
                         </button>
 
                         <button
@@ -312,13 +312,13 @@ export function MobileBottomNav({
                                 setQuickActionsOpen(false)
                                 setCreateProjectOpen(true)
                             }}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left transition-colors hover:bg-slate-50"
+                            className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3.5 text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
                         >
-                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                                 <FolderPlus className="h-4 w-4 text-[var(--primary)]" />
                                 Add Project
                             </span>
-                            <p className="mt-1 text-xs text-slate-500">Start a new project with partner, domain and services.</p>
+                            <p className="mt-1 text-xs text-[var(--text-secondary)]">Start a new project with partner, domain and services.</p>
                         </button>
                     </div>
                 </SheetContent>

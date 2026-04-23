@@ -210,7 +210,7 @@ export function TasksCardView({
     const renderTaskActionMenu = (task: TaskCardViewTask) => (
         <>
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task); }} className="gap-2 text-sm font-medium cursor-pointer">
-                <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
+                <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2 text-sm font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={(e) => {
                 e.stopPropagation()
@@ -396,14 +396,14 @@ export function TasksCardView({
             ))}
 
             <div
-                className="group self-start cursor-pointer rounded-[22px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.78),rgba(241,245,249,0.55))] px-4 py-6 text-center transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                className="group self-start cursor-pointer rounded-[22px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-4 py-6 text-center transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50/30 hover:shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
                 onClick={() => setCreateTaskOpen(true)}
             >
                 <div className="flex h-full flex-col items-center justify-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-500 group-hover:bg-emerald-500">
-                        <Plus className="h-5 w-5 text-slate-400 group-hover:text-white" strokeWidth={2} />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-500 group-hover:bg-emerald-500">
+                        <Plus className="h-5 w-5 text-[var(--text-muted)] group-hover:text-white" strokeWidth={2} />
                     </div>
-                    <p className="mt-3 text-[13px] font-semibold text-slate-500 transition-colors group-hover:text-emerald-700">
+                    <p className="mt-3 text-[13px] font-semibold text-[var(--text-secondary)] transition-colors group-hover:text-emerald-700">
                         Quick add task...
                     </p>
                 </div>
@@ -418,7 +418,7 @@ export function TasksCardView({
                 {Array.from({ length: skeletonCount }).map((_, index) => (
                     <div
                         key={`tasks-grid-skeleton-${index}`}
-                        className="rounded-[22px] border border-slate-200/80 bg-white/92 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)] sm:p-5"
+                        className="rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)] sm:p-5"
                     >
                         <div className="animate-pulse space-y-3">
                             <div className="flex items-start justify-between gap-3">
@@ -439,8 +439,8 @@ export function TasksCardView({
     }
 
     const renderListView = () => (
-        <div className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
-            <div className="mb-3 hidden grid-cols-[auto_1fr_auto_auto_auto] gap-6 border-b border-slate-200/70 px-5 pb-3 pt-1 text-xs font-semibold text-muted-foreground lg:grid">
+        <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+            <div className="mb-3 hidden grid-cols-[auto_1fr_auto_auto_auto] gap-6 border-b border-[var(--line-subtle)] px-5 pb-3 pt-1 text-xs font-semibold text-muted-foreground lg:grid">
                 <div className="flex w-16 items-center gap-6">
                     <span className="w-8 text-center">PRI</span>
                 </div>
@@ -467,7 +467,7 @@ export function TasksCardView({
                         <div
                             key={task.id}
                             className={cn(
-                                "group relative flex cursor-pointer flex-col gap-4 overflow-hidden rounded-[20px] border border-slate-200/80 bg-white/92 p-5 shadow-[0_2px_10px_rgba(15,23,42,0.02)] transition-all duration-300 hover:border-slate-300 hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)] lg:flex-row lg:items-center lg:gap-6 lg:px-6",
+                                "group relative flex cursor-pointer flex-col gap-4 overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.02)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)] lg:flex-row lg:items-center lg:gap-6 lg:px-6",
                                 selectedIds.includes(task.id) && "border-primary ring-2 ring-primary/20 bg-primary/5"
                             )}
                             onClick={() => setSelectedTask(task)}
@@ -484,7 +484,7 @@ export function TasksCardView({
                                     {task.name}
                                 </h3>
                                 {task.project ? (
-                                    <p className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-300 break-words whitespace-normal leading-tight">
+                                    <p className="mt-1 text-xs font-semibold text-[var(--text-secondary)] break-words whitespace-normal leading-tight">
                                         {formatProjectName(task.project)}
                                     </p>
                                 ) : null}
@@ -526,7 +526,7 @@ export function TasksCardView({
                                         </div>
                                         <div className="text-xs font-medium text-muted-foreground mt-0.5">Spent / Est</div>
                                     </div>
-                                    <div className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/90 p-1">
+                                    <div className="flex items-center gap-1.5 rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] p-1">
                                         <button
                                             className={cn(
                                                 "h-7 w-7 rounded-lg flex items-center justify-center transition-all",
@@ -572,12 +572,12 @@ export function TasksCardView({
     )
 
     const renderListSkeleton = () => (
-        <div className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.84))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+        <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
             <div className="space-y-3">
                 {Array.from({ length: 6 }).map((_, index) => (
                     <div
                         key={`tasks-list-skeleton-${index}`}
-                        className="rounded-[20px] border border-slate-200/80 bg-white/92 p-5 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
+                        className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
                     >
                         <div className="animate-pulse space-y-3">
                             <div className="flex items-start justify-between gap-4">
@@ -600,7 +600,7 @@ export function TasksCardView({
         <div className="space-y-5">
             {/* Bulk Actions Bar */}
             {selectedIds.length > 0 && (
-                <div className="animate-in fade-in zoom-in flex items-center justify-between rounded-[20px] border border-primary/20 bg-[color:color-mix(in_srgb,var(--primary)_6%,white)] p-2 pl-4 duration-300 backdrop-blur-md">
+                <div className="animate-in fade-in zoom-in flex items-center justify-between rounded-[20px] border border-primary/20 bg-[color:color-mix(in_srgb,var(--primary)_8%,var(--surface-lowest))] p-2 pl-4 duration-300 backdrop-blur-md">
                     <div className="flex items-center gap-6">
                         <span className="text-xs font-semibold text-primary">
                             {selectedIds.length} Selected
@@ -652,18 +652,18 @@ export function TasksCardView({
             {showSearchSkeleton ? (
                 view === "list" ? renderListSkeleton() : renderGridSkeleton()
             ) : visibleTasks.length === 0 ? (
-                <div className="col-span-full flex h-64 flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.7),rgba(241,245,249,0.45))] px-5 text-center">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
-                        <Clock className="h-5 w-5 text-slate-400" strokeWidth={1.6} />
+                <div className="col-span-full flex h-64 flex-col items-center justify-center rounded-[28px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] px-5 text-center">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                        <Clock className="h-5 w-5 text-[var(--text-muted)]" strokeWidth={1.6} />
                     </div>
-                    <p className="mt-4 text-sm font-semibold tracking-tight text-slate-900">
+                    <p className="mt-4 text-sm font-semibold tracking-tight text-[var(--text-primary)]">
                         {tasks.length === 0
                             ? "No tasks yet"
                             : normalizedSearch
                               ? "No matching tasks"
                               : "No tasks for these filters"}
                     </p>
-                    <p className="mt-1 max-w-md text-sm font-medium leading-6 text-slate-500">
+                    <p className="mt-1 max-w-md text-sm font-medium leading-6 text-[var(--text-secondary)]">
                         {tasks.length === 0
                             ? "Create your first task to start tracking delivery and time across projects."
                             : normalizedSearch

@@ -28,11 +28,13 @@ import {
     LogOut,
     Eye,
     EyeOff,
+    Palette,
 } from "lucide-react"
 import QRCode from "qrcode"
 import { PageHeader } from "@/components/layout/page-header"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { ThemeModeToggle } from "@/components/theme/theme-mode-toggle"
 
 export interface UserData {
     name: string | null
@@ -217,6 +219,21 @@ export function SettingsContent({
             />
 
             <div className="grid grid-cols-1 gap-8">
+                <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-violet-500/10 rounded-xl flex items-center justify-center text-violet-500">
+                                <Palette className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold">Appearance</h2>
+                                <p className="text-xs text-muted-foreground">Choose Light, Dark, or System theme.</p>
+                            </div>
+                        </div>
+                        <ThemeModeToggle />
+                    </div>
+                </div>
+
                 {/* Profile Card */}
                 <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
                     <div className="flex items-center gap-3 mb-6">

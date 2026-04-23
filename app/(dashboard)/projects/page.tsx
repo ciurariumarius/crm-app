@@ -206,7 +206,7 @@ export default async function ProjectsPage({
             <ProjectsSearchProvider initialSearch={q || ""}>
                 <div className="space-y-5 sm:space-y-6">
                     <div className="flex flex-col gap-3.5 sm:gap-4">
-                        <div className="rounded-[24px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,252,0.9))] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
+                        <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
                             <DashboardPageHeader
                                 title="Projects"
                                 showMobile

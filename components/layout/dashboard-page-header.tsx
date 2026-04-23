@@ -47,13 +47,13 @@ export function DashboardPageHeader({
                             <MobileMenuTrigger />
                             <div className="min-w-0">
                                 {eyebrow ? (
-                                    <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400/90">
+                                    <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
                                         {eyebrow}
                                     </p>
                                 ) : null}
-                                <h1 className="ui-text-title tracking-tight text-slate-900">{title}</h1>
+                                <h1 className="ui-text-title tracking-tight text-[var(--text-primary)]">{title}</h1>
                                 {subtitle ? (
-                                    <p className="mt-1 max-w-xl text-[13px] font-medium leading-5 text-slate-500">
+                                    <p className="mt-1 max-w-xl text-[13px] font-medium leading-5 text-[var(--text-secondary)]">
                                         {subtitle}
                                     </p>
                                 ) : null}
@@ -69,11 +69,11 @@ export function DashboardPageHeader({
                 <div className="min-w-0 justify-self-start">
                     <div className="min-w-0">
                         {eyebrow ? (
-                            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400/90">
+                            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
                                 {eyebrow}
                             </p>
                         ) : null}
-                        <h1 className="ui-text-title tracking-tight text-slate-900">{title}</h1>
+                        <h1 className="ui-text-title tracking-tight text-[var(--text-primary)]">{title}</h1>
                     </div>
                 </div>
 
@@ -88,13 +88,13 @@ export function DashboardPageHeader({
                         <MobileMenuTrigger />
                         <div className="min-w-0 pt-0.5">
                             {eyebrow ? (
-                                <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400/90">
+                                <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
                                     {eyebrow}
                                 </p>
                             ) : null}
-                            <h1 className="ui-text-title tracking-tight text-slate-900">{title}</h1>
+                            <h1 className="ui-text-title tracking-tight text-[var(--text-primary)]">{title}</h1>
                             {subtitle ? (
-                                <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-500">
+                                <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[var(--text-secondary)]">
                                     {subtitle}
                                 </p>
                             ) : null}

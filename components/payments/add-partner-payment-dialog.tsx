@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Loader2, Plus, Check, ChevronsUpDown, HandCoins } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -44,6 +45,7 @@ export function AddPartnerPaymentDialog({
     const [serviceId, setServiceId] = useState("")
     const [paymentName, setPaymentName] = useState("")
     const [paymentAmount, setPaymentAmount] = useState("")
+    const [paymentDescription, setPaymentDescription] = useState("")
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isLoadingProjects, setIsLoadingProjects] = useState(false)
     const [partnerProjects, setPartnerProjects] = useState<Array<{ id: string; name: string; amount: number; paymentStatus: string }>>([])
@@ -122,6 +124,7 @@ export function AddPartnerPaymentDialog({
             serviceId,
             name: !projectId ? trimmedName : undefined,
             amount: amountNum,
+            description: paymentDescription.trim() || undefined,
         })
         setIsSubmitting(false)
 
@@ -134,6 +137,7 @@ export function AddPartnerPaymentDialog({
             setPartnerProjects([])
             setPaymentName("")
             setPaymentAmount("")
+            setPaymentDescription("")
             router.refresh()
         } else {
             toast.error(result.error || "Failed to add payment")
@@ -305,6 +309,18 @@ export function AddPartnerPaymentDialog({
                             value={paymentAmount}
                             onChange={(e) => setPaymentAmount(e.target.value)}
                             required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="paymentDescription">Description (added to project notes)</Label>
+                        <Textarea
+                            id="paymentDescription"
+                            placeholder="Write payment details, scope, or notes..."
+                            value={paymentDescription}
+                            onChange={(e) => setPaymentDescription(e.target.value)}
+                            rows={4}
+                            maxLength={2000}
                         />
                     </div>
                     

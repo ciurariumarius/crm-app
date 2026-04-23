@@ -59,7 +59,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     <button
                         type="button"
                         onClick={() => setCreateProjectOpen(true)}
-                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[22px] border border-slate-200 bg-white px-3 text-[11px] font-bold text-[var(--primary)] shadow-sm transition-colors hover:bg-slate-50"
+                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[11px] font-bold text-[var(--primary)] shadow-sm transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
                     >
                         <FolderPlus className="h-4 w-4 stroke-[2.5px]" />
                         Project
@@ -68,7 +68,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     <button
                         type="button"
                         onClick={() => setCreatePaymentOpen(true)}
-                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[22px] border border-slate-200 bg-white px-3 text-[11px] font-bold text-[var(--primary)] shadow-sm transition-colors hover:bg-slate-50"
+                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[11px] font-bold text-[var(--primary)] shadow-sm transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
                     >
                         <WalletCards className="h-4 w-4 stroke-[2.5px]" />
                         Payment
@@ -102,7 +102,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     </DropdownMenuContent>
                 </DropdownMenu>
             ) : (
-                <div className="inline-flex shrink-0 items-center whitespace-nowrap rounded-[18px] border border-slate-200/90 bg-white/95 p-1 shadow-[0_6px_18px_rgba(15,23,42,0.04)] xl:p-1.5">
+                <div className="inline-flex shrink-0 items-center whitespace-nowrap rounded-[18px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-1 shadow-[0_6px_18px_rgba(15,23,42,0.04)] xl:p-1.5">
                     <button
                         type="button"
                         onClick={() => setCreateTaskOpen(true)}
@@ -112,12 +112,12 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                         Add Task
                     </button>
 
-                    <div className="mx-1.5 h-4 w-px bg-slate-200 xl:mx-2" />
+                    <div className="mx-1.5 h-4 w-px bg-[var(--line-subtle)] xl:mx-2" />
 
                     <button
                         type="button"
                         onClick={() => setCreateProjectOpen(true)}
-                        className="inline-flex h-[36px] items-center gap-2 rounded-[13px] px-3 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-slate-50 xl:px-3.5"
+                        className="inline-flex h-[36px] items-center gap-2 rounded-[13px] px-3 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] xl:px-3.5"
                     >
                         <FolderPlus className="h-4 w-4 stroke-[2.5px]" />
                         Add Project
@@ -126,7 +126,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     <button
                         type="button"
                         onClick={() => setCreatePaymentOpen(true)}
-                        className="inline-flex h-[36px] items-center gap-2 rounded-[13px] px-3 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-slate-50 xl:px-3.5"
+                        className="inline-flex h-[36px] items-center gap-2 rounded-[13px] px-3 text-[13px] font-bold text-[var(--primary)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] xl:px-3.5"
                     >
                         <WalletCards className="h-4 w-4 stroke-[2.5px]" />
                         Add Payment

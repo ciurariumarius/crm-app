@@ -154,7 +154,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
     return (
         <div className="overflow-x-auto pb-4 hidescrollbar">
             {/* Header */}
-            <div className="mb-3 hidden rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 py-3 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:block md:min-w-[940px] xl:min-w-[1200px]">
+            <div className="mb-3 hidden rounded-[20px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-5 py-3 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:block md:min-w-[940px] xl:min-w-[1200px]">
                 <div className="grid w-full items-center gap-x-4 md:grid-cols-[240px_minmax(190px,1fr)_100px_120px_100px] xl:grid-cols-[340px_1fr_120px_150px_120px]">
                     <div className="ui-overline">Project / Partner</div>
                     <div className="ui-overline pl-4">Transaction action</div>
@@ -175,8 +175,8 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                         <Fragment key={log.id}>
                             <div
                                 className={cn(
-                                    "group stagger-row-enter relative flex items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-4 py-3 transition-all shadow-[0_4px_14px_rgba(15,23,42,0.03)] cursor-pointer hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:px-5",
-                                    isExpanded && "border-blue-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(239,246,255,0.8))] ring-1 ring-blue-500/10",
+                                    "group stagger-row-enter relative flex cursor-pointer items-center rounded-[20px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:border-slate-300/80 hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] md:px-5",
+                                    isExpanded && "border-blue-200/80 bg-[color:color-mix(in_srgb,var(--brand-cyan)_10%,var(--surface-lowest))] ring-1 ring-blue-500/10",
                                     log.status === "Unpaid" && "shadow-[0_4px_16px_rgba(244,63,94,0.05)]",
                                     log.status === "Paid" && "shadow-[0_4px_16px_rgba(16,185,129,0.05)]"
                                 )}
@@ -199,7 +199,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                             {isExpandable && (
                                                 <div className={cn(
                                                     "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-all",
-                                                    isExpanded ? "bg-blue-50 text-blue-600 rotate-90" : "bg-slate-50 text-slate-400 group-hover:text-blue-500"
+                                                    isExpanded ? "rotate-90 bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-400 group-hover:text-blue-500"
                                                 )}>
                                                     <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
                                                 </div>
@@ -263,15 +263,15 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                             {/* Expanded Content (Settlements) */}
                             {isExpanded && (extraProjects.length > 0) && (
                                 <div className="mb-2 flex animate-in slide-in-from-top-2 fade-in duration-300">
-                                    <div className="mr-1 flex-1 rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(247,250,252,0.96),rgba(239,246,255,0.82))] p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:ml-10 md:mr-2">
-                                        <div className="rounded-[16px] bg-white/80 p-4">
+                                    <div className="mr-1 flex-1 rounded-[20px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-low)_88%,var(--surface-lowest)_12%)] p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:ml-10 md:mr-2">
+                                        <div className="rounded-[16px] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] p-4">
                                             <div className="mb-3 flex items-center gap-2">
                                                 <History className="h-3.5 w-3.5 text-blue-500" />
                                                 <span className="ui-overline text-blue-700">Settlement breakdown</span>
                                             </div>
                                             <div className="space-y-2">
                                                 {extraProjects.map((projectEntry) => (
-                                                    <div key={projectEntry.id} className="flex items-center justify-between rounded-[14px] border border-slate-200/70 bg-white/90 px-4 py-2.5 transition-colors hover:bg-white">
+                                                    <div key={projectEntry.id} className="flex items-center justify-between rounded-[14px] border border-slate-200/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-4 py-2.5 transition-colors hover:bg-[var(--surface-lowest)]">
                                                         <span className="text-sm font-bold text-slate-700">{projectEntry.name}</span>
                                                         <span className="font-mono text-xs font-black text-slate-900 pl-4">
                                                             {formatCurrency(projectEntry.fee)}

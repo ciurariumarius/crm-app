@@ -187,11 +187,11 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
                 <div className="mb-3.5 flex items-center gap-2 sm:mb-5">
                     <div className="flex items-center gap-2">
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
-                        <h3 className="text-[17px] font-bold tracking-tight text-slate-900">Tasks</h3>
+                        <h3 className="text-[17px] font-bold tracking-tight text-[var(--text-primary)]">Tasks</h3>
                     </div>
                 </div>
 
-                <div className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+                <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
                     <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
                         <div className="grid grid-cols-3 gap-2 sm:gap-5">
                             <Link
@@ -199,26 +199,26 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
                                 className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50/60 px-2 py-3 transition-colors hover:bg-rose-100/70 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
                             >
                                 <span className="mt-0.5 h-2 w-2 rounded-full bg-rose-500" />
-                                <p className="text-[22px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px]">{urgentState.length}</p>
+                                <p className="text-[22px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px]">{urgentState.length}</p>
                                 <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-rose-600 sm:text-[11px]">Urgent</p>
                             </Link>
 
                             <Link
                                 href="/tasks?status=Active&overdue=1"
-                                className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-orange-100 bg-orange-50/60 px-2 py-3 transition-colors hover:bg-orange-100/70 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:before:mr-5 sm:before:block sm:before:h-10 sm:before:w-px sm:before:bg-slate-200 sm:before:content-['']"
+                                className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-orange-100 bg-orange-50/60 px-2 py-3 transition-colors hover:bg-orange-100/70 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:before:mr-5 sm:before:block sm:before:h-10 sm:before:w-px sm:before:bg-[var(--line-subtle)] sm:before:content-['']"
                             >
                                 <span className="mt-0.5 h-2 w-2 rounded-full bg-orange-500" />
-                                <p className="text-[22px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px]">{overdueState.length}</p>
+                                <p className="text-[22px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px]">{overdueState.length}</p>
                                 <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-orange-600 sm:text-[11px]">Overdue</p>
                             </Link>
 
                             <Link
                                 href="/tasks?status=Active&urgency=Normal"
-                                className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-2 py-3 transition-colors hover:bg-slate-100 sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:before:mr-5 sm:before:block sm:before:h-10 sm:before:w-px sm:before:bg-slate-200 sm:before:content-['']"
+                                className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-2 py-3 transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-low)_94%,transparent)] sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:before:mr-5 sm:before:block sm:before:h-10 sm:before:w-px sm:before:bg-[var(--line-subtle)] sm:before:content-['']"
                             >
-                                <span className="mt-0.5 h-2 w-2 rounded-full bg-slate-500" />
-                                <p className="text-[22px] font-bold leading-none tracking-tight text-slate-900 sm:text-[32px]">{normalOnlyOrdered.length}</p>
-                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-slate-600 sm:text-[11px]">Normal</p>
+                                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--text-muted)]" />
+                                <p className="text-[22px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px]">{normalOnlyOrdered.length}</p>
+                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-[var(--text-secondary)] sm:text-[11px]">Normal</p>
                             </Link>
                         </div>
 
@@ -232,7 +232,7 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
                 </div>
 
                 {visibleTasks.length === 0 ? (
-                    <div className="mt-4 rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(241,245,249,0.48))] px-4 py-5 text-sm text-slate-500">
+                    <div className="mt-4 rounded-[24px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_78%,transparent)] px-4 py-5 text-sm text-[var(--text-secondary)]">
                         No active tasks.
                     </div>
                 ) : (

@@ -287,7 +287,7 @@ export async function addPartnerAdHocPayment(data: {
                 siteId: siteIdForProject,
                 name: resolvedName,
                 description: validated.description || null,
-                status: "Active",
+                status: "Completed",
                 paymentStatus: "Paid",
                 paidAt: paymentDate,
                 currentFee: validated.amount,

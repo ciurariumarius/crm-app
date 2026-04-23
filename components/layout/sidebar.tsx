@@ -20,6 +20,7 @@ import {
   NotebookPen,
   Package,
   Settings,
+  SunMoon,
   UserPlus,
   Users,
   Zap,
@@ -37,6 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ThemeDropdownItems } from "@/components/theme/theme-dropdown-items"
 
 type NavItem = {
   name: string
@@ -280,6 +282,20 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                   <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{displayName}</p>
                   <p className="text-[11px] text-[var(--text-muted)]">{displayRole}</p>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)]"
+                      aria-label="Theme menu"
+                    >
+                      <SunMoon className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <ThemeDropdownItems withSeparator={false} />
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -359,6 +375,20 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                   <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{displayName}</p>
                   <p className="text-[11px] text-[var(--text-muted)]">{displayRole}</p>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-soft)]"
+                      aria-label="Theme menu"
+                    >
+                      <SunMoon className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="top" className="w-44">
+                    <ThemeDropdownItems withSeparator={false} />
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -396,6 +426,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                         Settings
                       </Link>
                     </DropdownMenuItem>
+                    <ThemeDropdownItems />
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-600">
                       <LogOut className="mr-2 h-4 w-4" />
                       Log out

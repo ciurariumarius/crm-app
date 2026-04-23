@@ -140,8 +140,8 @@ export function TaskGridCard({
         return (
             <div
                 className={cn(
-                    "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[22px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all duration-200 sm:p-4",
-                    "hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)]",
+                    "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[22px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] p-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all duration-200 sm:p-4",
+                    "hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)]",
                     isRunning && "border-blue-200 bg-blue-50/20",
                     isSelected && "border-primary/30 bg-primary/[0.02]",
                     className
@@ -154,19 +154,19 @@ export function TaskGridCard({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                                className="h-7 w-7 rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                             >
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52 rounded-2xl shadow-xl border-slate-100 p-1.5">
+                        <DropdownMenuContent align="end" className="w-52 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                             {task.status !== "Completed" ? (
                                 <>
                                     <DropdownMenuItem
                                         onClick={() => onComplete(task.id)}
                                         className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                     >
-                                        <CheckCheck className="h-4 w-4 text-slate-500" />
+                                        <CheckCheck className="h-4 w-4 text-[var(--text-secondary)]" />
                                         Mark completed
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
@@ -191,7 +191,7 @@ export function TaskGridCard({
                                 }}
                                 className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                             >
-                                {isRunning ? <Pause className="h-4 w-4 fill-slate-500 text-slate-500" /> : <Play className="h-4 w-4 fill-slate-500 text-slate-500" />}
+                                {isRunning ? <Pause className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" /> : <Play className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />}
                                 {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
                             </DropdownMenuItem>
 
@@ -200,7 +200,7 @@ export function TaskGridCard({
                                     onClick={() => stopTimer()}
                                     className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                 >
-                                    <Square className="h-4 w-4 fill-slate-500 text-slate-500" />
+                                    <Square className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />
                                     Stop timer
                                 </DropdownMenuItem>
                             ) : null}
@@ -211,7 +211,7 @@ export function TaskGridCard({
                                 onClick={() => onOpen(task.id)}
                                 className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                             >
-                                <ArrowUpRight className="h-4 w-4 text-slate-500" />
+                                <ArrowUpRight className="h-4 w-4 text-[var(--text-secondary)]" />
                                 Open panel
                             </DropdownMenuItem>
 
@@ -234,7 +234,7 @@ export function TaskGridCard({
 
                 <h4
                     className={cn(
-                        "line-clamp-2 pr-7 text-[15px] font-bold leading-[1.28] tracking-tight text-slate-900 sm:pr-8 sm:text-[16px]",
+                        "line-clamp-2 pr-7 text-[15px] font-bold leading-[1.28] tracking-tight text-[var(--text-primary)] sm:pr-8 sm:text-[16px]",
                         task.status === "Completed" && "line-through opacity-40"
                     )}
                 >
@@ -242,12 +242,12 @@ export function TaskGridCard({
                 </h4>
 
                 <div className="mt-1 min-w-0 sm:mt-1.5">
-                    <div className="flex min-w-0 items-center gap-1.5 text-slate-400">
+                    <div className="flex min-w-0 items-center gap-1.5 text-[var(--text-muted)]">
                         {isRecurring
                             ? <RefreshCcw className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
                             : <Circle className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
                         }
-                        <p className="min-w-0 truncate text-[11px] font-medium text-slate-500 sm:text-[12px]">
+                        <p className="min-w-0 truncate text-[11px] font-medium text-[var(--text-secondary)] sm:text-[12px]">
                             {projectFullName}
                         </p>
                     </div>
@@ -260,9 +260,9 @@ export function TaskGridCard({
     return (
         <div
             className={cn(
-                "group relative self-start border bg-white cursor-pointer transition-all duration-200",
-                compact ? "rounded-2xl border-slate-200 shadow-sm" : "rounded-3xl",
-                "hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 border-slate-100",
+                "group relative self-start cursor-pointer border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] transition-all duration-200",
+                compact ? "rounded-2xl shadow-sm" : "rounded-3xl",
+                "hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)]",
                 isOverdue && "border-rose-200/80 shadow-[0_0_0_1px_rgba(244,63,94,0.08)]",
                 isRunning && "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]",
                 isSelected && "border-primary/30 bg-primary/[0.02] shadow-[0_0_0_2px_rgba(var(--primary),0.1)]",
@@ -282,19 +282,19 @@ export function TaskGridCard({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                                    className="h-7 w-7 rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                 >
                                     <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-52 rounded-2xl shadow-xl border-slate-100 p-1.5">
+                            <DropdownMenuContent align="end" className="w-52 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                 {task.status !== "Completed" ? (
                                     <>
                                         <DropdownMenuItem
                                             onClick={() => onComplete(task.id)}
                                             className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                         >
-                                            <CheckCheck className="h-4 w-4 text-slate-500" />
+                                            <CheckCheck className="h-4 w-4 text-[var(--text-secondary)]" />
                                             Mark completed
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
@@ -319,7 +319,7 @@ export function TaskGridCard({
                                     }}
                                     className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                 >
-                                    {isRunning ? <Pause className="h-4 w-4 fill-slate-500 text-slate-500" /> : <Play className="h-4 w-4 fill-slate-500 text-slate-500" />}
+                                    {isRunning ? <Pause className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" /> : <Play className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />}
                                     {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
                                 </DropdownMenuItem>
 
@@ -328,7 +328,7 @@ export function TaskGridCard({
                                         onClick={() => stopTimer()}
                                         className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                     >
-                                        <Square className="h-4 w-4 fill-slate-500 text-slate-500" />
+                                        <Square className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />
                                         Stop timer
                                     </DropdownMenuItem>
                                 ) : null}
@@ -339,7 +339,7 @@ export function TaskGridCard({
                                     onClick={() => onOpen(task.id)}
                                     className="gap-2 rounded-xl text-sm font-semibold cursor-pointer"
                                 >
-                                    <ArrowUpRight className="h-4 w-4 text-slate-500" />
+                                    <ArrowUpRight className="h-4 w-4 text-[var(--text-secondary)]" />
                                     Open panel
                                 </DropdownMenuItem>
 
@@ -361,7 +361,7 @@ export function TaskGridCard({
                 ) : null}
 
                 <h4 className={cn(
-                    "line-clamp-2 flex-1 pr-7 font-bold leading-tight text-slate-900 sm:pr-8",
+                    "line-clamp-2 flex-1 pr-7 font-bold leading-tight text-[var(--text-primary)] sm:pr-8",
                     compact ? "min-h-[2rem] pt-0 text-[14px] sm:min-h-[2.15rem] sm:text-[15px]" : "min-h-[2.5rem] pt-0.5 text-[16px]",
                     task.status === "Completed" && "line-through opacity-40"
                 )}>
@@ -373,19 +373,19 @@ export function TaskGridCard({
                     <div className="min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
                             {isRecurring
-                                ? <RefreshCcw className="h-2.5 w-2.5 shrink-0 text-slate-400 sm:h-3 sm:w-3" />
-                                : <Circle className="h-2.5 w-2.5 shrink-0 text-slate-400 sm:h-3 sm:w-3" />
+                                ? <RefreshCcw className="h-2.5 w-2.5 shrink-0 text-[var(--text-muted)] sm:h-3 sm:w-3" />
+                                : <Circle className="h-2.5 w-2.5 shrink-0 text-[var(--text-muted)] sm:h-3 sm:w-3" />
                             }
-                            <p className="min-w-0 truncate text-[10px] font-medium text-slate-400 sm:text-[11px]">{projectDomain}</p>
+                            <p className="min-w-0 truncate text-[10px] font-medium text-[var(--text-muted)] sm:text-[11px]">{projectDomain}</p>
                         </div>
                     </div>
                 ) : (
                     <div className="flex items-start gap-1.5 min-w-0">
                         {isRecurring
-                            ? <RefreshCcw className="mt-0.5 h-3 w-3 text-slate-400 shrink-0" />
-                            : <Circle className="mt-0.5 h-3 w-3 text-slate-400 shrink-0" />
+                            ? <RefreshCcw className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-muted)]" />
+                            : <Circle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-muted)]" />
                         }
-                        <p className="min-w-0 text-[12px] font-medium text-slate-400 line-clamp-2 leading-snug tracking-tight min-h-[2rem]">
+                        <p className="min-w-0 min-h-[2rem] line-clamp-2 text-[12px] font-medium leading-snug tracking-tight text-[var(--text-muted)]">
                             {projectFullName}
                         </p>
                     </div>

@@ -66,14 +66,14 @@ export function TasksSearchInput() {
 
     return (
         <div className="relative h-11 w-full md:mx-auto md:max-w-[640px]">
-            <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+            <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                 <Search className="h-4 w-4" />
             </div>
             <Input
-                placeholder="Search tasks..."
+                placeholder="Search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-11 w-full rounded-full border border-slate-200/90 bg-white/95 pl-11 pr-4 text-[14px] font-medium text-slate-900 shadow-[0_6px_18px_rgba(15,23,42,0.04)] outline-none transition placeholder:font-medium placeholder:text-slate-400 focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] focus-visible:ring-offset-0"
+                className="h-11 w-full rounded-[28px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] pl-11 pr-4 text-[14px] font-medium text-[var(--text-primary)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] outline-none transition placeholder:font-medium placeholder:text-[var(--text-muted)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_16%,transparent)] focus-visible:ring-offset-0"
             />
         </div>
     )
