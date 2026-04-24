@@ -87,7 +87,7 @@ function toMonthYearLabel(value: string | Date | null | undefined) {
     if (!value) return ""
     const parsed = new Date(value)
     if (Number.isNaN(parsed.getTime())) return ""
-    return format(parsed, "MMMM yyyy").toUpperCase()
+    return format(parsed, "MMMM yyyy")
 }
 
 export function TaskGridCard({
@@ -97,7 +97,7 @@ export function TaskGridCard({
     renderMenu,
     isSelected,
     className,
-    compact = false,
+    compact = true,
 }: TaskGridCardProps) {
     const { timerState, startTimer, stopTimer, pauseTimer, resumeTimer } = useTimer()
 
@@ -106,30 +106,47 @@ export function TaskGridCard({
     const isPaused = isActiveTimerThisTask && !timerState.isRunning && timerState.elapsedSeconds > 0
 
     const services = task.project?.services || []
-    const serviceLabel = services.find((service) => service.serviceName?.trim())?.serviceName?.trim()
+    const serviceLabels = Array.from(
+        new Set(
+            services
+                .map((service) => service.serviceName?.trim())
+                .filter((serviceName): serviceName is string => Boolean(serviceName))
+        )
+    )
+    const isRecurring = services.some((service) => service.isRecurring)
     const projectDomain = task.project?.site?.domainName || "No domain"
     const isOverdue = task.status !== "Completed" && task.deadline ? isBefore(new Date(task.deadline), startOfDay(new Date())) : false
-    const monthYearLabel = toMonthYearLabel(task.project?.createdAt || task.createdAt)
-    const secondaryLine = [serviceLabel || task.project?.name || "Task", monthYearLabel].filter(Boolean).join(" ")
+    const recurringMonthLabel = isRecurring ? toMonthYearLabel(task.project?.createdAt || task.createdAt) : ""
+    const servicesLine = serviceLabels.length > 0 ? serviceLabels.join(" · ") : (task.project?.name || "Task")
+    const secondaryLine = [servicesLine, recurringMonthLabel].filter(Boolean).join(" · ")
     const flag = getTaskFlag({ urgency: task.urgency || "Normal", status: task.status || "Active", isOverdue })
+    const topPillSizeClass = compact ? "h-[18px] px-2 text-[10px] leading-4" : "h-[22px] px-2 text-[11px] leading-4"
 
     return (
         <div
             className={cn(
-                "group relative flex h-full cursor-pointer flex-col overflow-hidden border-[1.5px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] transition-all duration-200",
-                compact ? "rounded-[22px] p-4" : "rounded-[24px] p-4 sm:p-5",
-                "hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]",
-                isRunning && "border-blue-300 bg-blue-50/30 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]",
-                isSelected && "border-primary/30 bg-primary/[0.02] shadow-[0_0_0_2px_rgba(var(--primary),0.1)]",
+                "group relative flex h-full cursor-pointer flex-col overflow-hidden border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] transition-all duration-200",
+                compact ? "rounded-[16px] px-2.5 py-3" : "rounded-[18px] p-3.5",
+                "hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[0_6px_14px_rgba(15,23,42,0.06)]",
+                isRunning && "border-[color:color-mix(in_srgb,var(--primary)_42%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary)_10%,var(--surface-lowest))]",
+                isSelected && "border-[color:color-mix(in_srgb,var(--primary)_34%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary)_8%,var(--surface-lowest))]",
                 className
             )}
             onClick={() => onOpen(task.id)}
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    onOpen(task.id)
+                }
+            }}
+            role="button"
+            tabIndex={0}
         >
             {isRunning && (
-                <div className={cn("absolute inset-x-0 top-0 h-[2.5px] bg-blue-500 animate-pulse", compact ? "rounded-t-[22px]" : "rounded-t-[24px]")} />
+                <div className={cn("absolute inset-x-0 top-0 h-[1.5px] bg-[var(--primary)] animate-pulse", compact ? "rounded-t-[16px]" : "rounded-t-[18px]")} />
             )}
 
-            <div onClick={(e) => e.stopPropagation()} className={cn("absolute right-2.5 top-2.5 z-10", compact ? "sm:right-3 sm:top-3" : "sm:right-3.5 sm:top-3.5")}>
+            <div onClick={(e) => e.stopPropagation()} className={cn("absolute right-1.5 top-1.5 z-10", compact ? "sm:right-2 sm:top-2" : "sm:right-2.5 sm:top-2.5")}>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button
@@ -137,10 +154,10 @@ export function TaskGridCard({
                             size="icon"
                             className={cn(
                                 "rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
-                                compact ? "h-7 w-7" : "h-8 w-8"
+                                compact ? "h-[22px] w-[22px]" : "h-7 w-7"
                             )}
                         >
-                            <MoreVertical className={cn(compact ? "h-4 w-4" : "h-[18px] w-[18px]")} />
+                            <MoreVertical className={cn(compact ? "h-3 w-3" : "h-4 w-4")} />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
@@ -209,18 +226,34 @@ export function TaskGridCard({
                 </DropdownMenu>
             </div>
 
-            <div className={cn("flex min-h-0 flex-1 flex-col", compact ? "gap-3" : "gap-3.5")}>
-                <p className={cn(
-                    "truncate pr-9 font-semibold text-[var(--text-secondary)] underline decoration-[var(--state-warning)] decoration-[1.5px] underline-offset-4",
-                    compact ? "text-[11px]" : "text-[12px]"
-                )}>
-                    {projectDomain}
-                </p>
+            <div className={cn("flex min-h-0 flex-1 flex-col", compact ? "gap-1" : "gap-2.5")}>
+                <div className="flex items-start justify-between gap-2 pr-7 sm:pr-8">
+                    <div className="min-w-0 flex-1">
+                        <p
+                            className={cn(
+                                "inline-flex max-w-full items-center rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)]",
+                                topPillSizeClass
+                            )}
+                            title={projectDomain}
+                        >
+                            <span className="truncate font-semibold text-[var(--text-secondary)]">{projectDomain}</span>
+                        </p>
+                    </div>
+                    <span
+                        className={cn(
+                            "hidden shrink-0 items-center justify-center rounded-full font-black uppercase tracking-[0.07em] sm:inline-flex",
+                            topPillSizeClass,
+                            flag.className
+                        )}
+                    >
+                        {flag.label}
+                    </span>
+                </div>
 
                 <h4
                     className={cn(
-                        "line-clamp-2 pr-9 font-bold tracking-[-0.015em] text-[var(--text-primary)]",
-                        compact ? "min-h-[2.3rem] text-[23px] leading-[1.08]" : "min-h-[2.7rem] text-[30px] leading-[1.04]",
+                        "pr-8 font-bold tracking-[-0.015em] text-[var(--text-primary)] whitespace-normal break-words",
+                        compact ? "py-2 text-[16px] leading-[1.14]" : "min-h-[2.25rem] text-[19px] leading-[1.12]",
                         task.status === "Completed" && "line-through opacity-50"
                     )}
                 >
@@ -231,19 +264,19 @@ export function TaskGridCard({
 
                 <p
                     className={cn(
-                        "line-clamp-2 min-h-[1.4rem] font-medium tracking-[0.01em] text-[var(--text-secondary)]",
-                        compact ? "text-[12px] leading-5" : "text-[13px] leading-[1.45rem]"
+                        "line-clamp-1 min-h-[1rem] font-medium tracking-[0.01em] text-[var(--text-secondary)]",
+                        compact ? "text-[10px] leading-4" : "text-[11px] leading-[1.1rem]"
                     )}
                     title={secondaryLine}
                 >
                     {secondaryLine}
                 </p>
 
-                <div className="mt-auto pt-1">
+                <div className="mt-auto sm:hidden">
                     <span
                         className={cn(
-                            "inline-flex items-center justify-center rounded-full px-3 text-[10px] font-black uppercase tracking-[0.07em]",
-                            compact ? "h-6" : "h-7",
+                            "inline-flex items-center justify-center rounded-full px-2 text-[8px] font-black uppercase tracking-[0.07em]",
+                            compact ? "h-[18px]" : "h-[22px]",
                             flag.className
                         )}
                     >
