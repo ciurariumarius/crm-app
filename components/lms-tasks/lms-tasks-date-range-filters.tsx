@@ -104,7 +104,7 @@ export function LmsTasksDateRangeFilters() {
               "h-10 min-w-[132px] w-full md:w-auto justify-between rounded-xl px-4 gap-2 text-xs font-semibold shadow-none",
               activePresetId !== "custom" && activePresetId !== "all" 
                 ? "bg-cyan-50/50 text-cyan-800 border-cyan-200 hover:bg-cyan-100/50" 
-                : "bg-white text-slate-700 hover:bg-slate-50 border-slate-200"
+                : "bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] border-[var(--line-subtle)]"
             )}
           >
             {buttonLabel}
@@ -113,7 +113,7 @@ export function LmsTasksDateRangeFilters() {
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-[min(96vw,640px)] p-0 rounded-[1.25rem] border-slate-200 shadow-xl overflow-hidden pointer-events-auto bg-white"
+          className="w-[min(96vw,640px)] p-0 rounded-[1.25rem] border-[var(--line-subtle)] shadow-xl overflow-hidden pointer-events-auto bg-[var(--surface-lowest)]"
         >
           <div className="p-4 flex flex-col gap-4 w-full">
             {/* Presets Grid */}
@@ -124,7 +124,7 @@ export function LmsTasksDateRangeFilters() {
                   variant="outline"
                   onClick={() => applyPreset(preset.id)}
                   className={cn(
-                    "h-10 px-3 w-full justify-center font-medium shadow-none text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900",
+                    "h-10 px-3 w-full justify-center font-medium shadow-none text-[var(--text-secondary)] border-[var(--line-subtle)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
                     activePresetId === preset.id && "bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-100 hover:text-cyan-800 shadow-sm",
                     // make the 7th element (last-year) span full width
                     i === 6 && "col-span-2"
@@ -135,7 +135,7 @@ export function LmsTasksDateRangeFilters() {
               ))}
             </div>
 
-            <div className="h-px bg-slate-100 -mx-4" />
+            <div className="h-px bg-[var(--surface-low)] -mx-4" />
 
             <div className="w-full [&_[data-slot=calendar]]:![--cell-size:clamp(36px,11vw,46px)] [&_.rdp-month_grid]:!w-full [&_.rdp-weeks]:!w-full">
               <Calendar
@@ -153,12 +153,12 @@ export function LmsTasksDateRangeFilters() {
                   weekdays: "grid w-full grid-cols-7",
                   week: "grid w-full grid-cols-7 mt-2",
                   day: "w-full",
-                  nav_button: "hover:bg-slate-100",
+                  nav_button: "hover:bg-[var(--surface-low)]",
                   day_selected: "bg-cyan-600 text-white hover:bg-cyan-600 hover:text-white",
-                  day_today: "bg-slate-100 text-slate-900 font-bold",
+                  day_today: "bg-[var(--surface-low)] text-[var(--text-primary)] font-bold",
                   day_range_start: "bg-cyan-600 text-white",
                   day_range_end: "bg-cyan-600 text-white",
-                  day_range_middle: "text-slate-900 bg-cyan-50 rounded-none",
+                  day_range_middle: "text-[var(--text-primary)] bg-cyan-50 rounded-none",
                 }}
               />
             </div>
@@ -167,11 +167,11 @@ export function LmsTasksDateRangeFilters() {
               <Button 
                 variant="ghost" 
                 onClick={clearRange} 
-                className="h-8 px-2 text-[13px] text-slate-500 hover:text-slate-900"
+                className="h-8 px-2 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               >
                 Clear range
               </Button>
-              <span className="text-[12px] font-medium text-slate-500">Pick start and end date</span>
+              <span className="text-[12px] font-medium text-[var(--text-secondary)]">Pick start and end date</span>
             </div>
           </div>
         </PopoverContent>

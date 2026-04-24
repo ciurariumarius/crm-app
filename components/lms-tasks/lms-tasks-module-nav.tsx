@@ -30,7 +30,7 @@ export function LmsTasksModuleNav() {
               className={cn(
                 "rounded-xl px-3 py-2 text-sm font-semibold tracking-[0.01em] transition-colors",
                 isActive
-                  ? "bg-[color:color-mix(in_srgb,var(--primary-container)_36%,white)] text-[var(--primary)]"
+                  ? "bg-[color:color-mix(in_srgb,var(--primary-container)_36%,var(--surface-lowest))] text-[var(--primary)]"
                   : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
               )}
             >

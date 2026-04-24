@@ -162,14 +162,14 @@ export function TimeLogSheet({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                            className="h-10 w-10 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] transition hover:text-[var(--text-secondary)]"
                             onClick={() => onOpenChange(false)}
                         >
                             <X className="h-5 w-5" />
                         </Button>
                     </div>
-                    <SheetTitle className="ui-text-title text-slate-900">Edit Time Entry</SheetTitle>
-                    <SheetDescription className="ui-text-label text-slate-500">
+                    <SheetTitle className="ui-text-title text-[var(--text-primary)]">Edit Time Entry</SheetTitle>
+                    <SheetDescription className="ui-text-label text-[var(--text-secondary)]">
                         Modify the details of your time log.
                     </SheetDescription>
                 </SheetHeader>
@@ -186,7 +186,7 @@ export function TimeLogSheet({
                     <div className="space-y-4">
                         <SidePanelSectionTitle title="Assignment" />
                         <div className="space-y-2">
-                            <Label htmlFor="project" className="ui-overline text-slate-500">Project</Label>
+                            <Label htmlFor="project" className="ui-overline text-[var(--text-secondary)]">Project</Label>
                             <Select value={projectId} onValueChange={(val) => {
                                 setProjectId(val)
                                 setTaskId("no-task") // Reset task when project changes
@@ -203,7 +203,7 @@ export function TimeLogSheet({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="task" className="ui-overline text-slate-500">Task (optional)</Label>
+                            <Label htmlFor="task" className="ui-overline text-[var(--text-secondary)]">Task (optional)</Label>
                             <Select value={taskId} onValueChange={setTaskId} disabled={!projectId}>
                                 <SelectTrigger id="task" className={cn(!projectId && "opacity-50")}>
                                     <SelectValue placeholder={projectId ? "Select task or leave empty" : "Select project first"} />
@@ -223,7 +223,7 @@ export function TimeLogSheet({
                         <SidePanelSectionTitle title="Time details" />
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="ui-overline text-slate-500">Date</Label>
+                                <Label className="ui-overline text-[var(--text-secondary)]">Date</Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
@@ -248,7 +248,7 @@ export function TimeLogSheet({
                                 </Popover>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="startTime" className="ui-overline text-slate-500">Start time</Label>
+                                <Label htmlFor="startTime" className="ui-overline text-[var(--text-secondary)]">Start time</Label>
                                 <Input
                                     id="startTime"
                                     type="time"
@@ -259,7 +259,7 @@ export function TimeLogSheet({
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="ui-overline text-slate-500">Duration</Label>
+                            <Label className="ui-overline text-[var(--text-secondary)]">Duration</Label>
                             <div className="flex items-center gap-2">
                                 <div className="relative flex-1">
                                     <Input
@@ -286,7 +286,7 @@ export function TimeLogSheet({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="description" className="ui-overline text-slate-500">Description (optional)</Label>
+                            <Label htmlFor="description" className="ui-overline text-[var(--text-secondary)]">Description (optional)</Label>
                             <Textarea
                                 id="description"
                                 value={description}
@@ -298,11 +298,11 @@ export function TimeLogSheet({
                     </div>
                 </div>
 
-                <SheetFooter className="border-t border-slate-200 bg-white px-8 py-4 flex-row items-center justify-between sm:justify-between">
+                <SheetFooter className="border-t border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-8 py-4 flex-row items-center justify-between sm:justify-between">
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                        className="text-[var(--text-secondary)] hover:bg-rose-50 hover:text-rose-600"
                         onClick={handleDelete}
                         disabled={isSaving}
                     >

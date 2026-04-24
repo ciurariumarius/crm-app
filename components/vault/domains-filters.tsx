@@ -104,12 +104,12 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
                 <FilterBarScroll>
                     <FilterBarRow className="xl:gap-4">
                     <div className="relative h-10 w-full xl:w-[240px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
                         <Input
                             placeholder="Search domains..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="h-10 border-slate-200 bg-white/50 pl-10 text-sm font-medium tracking-[0.02em] text-slate-700 shadow-none transition-all hover:bg-white hover:border-slate-300 focus-visible:ring-0 focus-visible:border-blue-500"
+                            className="h-10 border-[var(--line-subtle)] bg-[var(--surface-lowest)]/50 pl-10 text-sm font-medium tracking-[0.02em] text-[var(--text-secondary)] shadow-none transition-all hover:bg-[var(--surface-lowest)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] focus-visible:ring-0 focus-visible:border-blue-500"
                         />
                         {searchTerm && (
                             <Button
@@ -117,7 +117,7 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
                                 size="icon-xs"
                                 type="button"
                                 onClick={() => setSearchTerm("")}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-rose-500"
                             >
                                 <X className="h-3.5 w-3.5" />
                             </Button>
@@ -150,7 +150,7 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
 
             <FilterResultsRow>
                 <p className="ui-text-label">{totalLogs} Results found</p>
-                {activeFilters.length > 0 && <span className="text-slate-300">|</span>}
+                {activeFilters.length > 0 && <span className="text-[var(--text-muted)]">|</span>}
                 {activeFilters.map((filter) => (
                     <Link
                         key={filter.key}
@@ -158,7 +158,7 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
                         className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "h-8 gap-1 text-[12px]" })}
                     >
                         <span>{filter.label}</span>
-                        <X className="h-3 w-3 text-slate-400" />
+                        <X className="h-3 w-3 text-[var(--text-muted)]" />
                     </Link>
                 ))}
             </FilterResultsRow>
@@ -189,15 +189,15 @@ function PartnerCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
                         isActive
                             ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                     )}
                 >
-                    <User className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <User className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[150px] truncate">{selectedPartner?.name || "Partner"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[280px] rounded-xl border border-slate-200 bg-white p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[280px] rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-0 shadow-xl">
                 <Command className="rounded-xl">
                     <CommandInput placeholder="Search partner..." />
                     <CommandList>

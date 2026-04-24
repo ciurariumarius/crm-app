@@ -116,7 +116,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                        className="h-10 w-10 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] transition hover:text-[var(--text-secondary)]"
                         onClick={onClose}
                         aria-label="Close service"
                     >
@@ -136,7 +136,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                             onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
                             onBlur={handleSave}
                             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                            className="text-2xl font-semibold leading-tight tracking-[-0.02em] border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto w-full text-slate-900"
+                            className="text-2xl font-semibold leading-tight tracking-[-0.02em] border-none bg-transparent p-0 focus-visible:ring-0 placeholder:opacity-20 h-auto w-full text-[var(--text-primary)]"
                             placeholder="Service Name"
                         />
                     </SheetTitle>
@@ -146,14 +146,14 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
             {/* Content Scroller */}
             <div className="flex-1 overflow-y-auto px-8 pb-6 pt-0">
                 <div className="space-y-8 pb-20">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 rounded-2xl border border-slate-200 bg-white p-5 premium-card shadow-sm">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-5 premium-card shadow-sm">
                         <div className="space-y-2">
                             <SidePanelSectionTitle title="Type" className="text-xs" />
                             <Select
                                 value={formData.isRecurring}
                                 onValueChange={(val) => setFormData({ ...formData, isRecurring: val })}
                             >
-                                <SelectTrigger className="h-12 w-full justify-start rounded-xl border border-slate-200 bg-slate-50 text-left text-sm font-semibold shadow-none">
+                                <SelectTrigger className="h-12 w-full justify-start rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)] text-left text-sm font-semibold shadow-none">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl">
@@ -166,7 +166,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                         <div className="space-y-2">
                             <SidePanelSectionTitle title="Base fee" className="text-xs" />
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold uppercase tracking-widest">RON</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-xs font-bold uppercase tracking-widest">RON</span>
                                 <Input
                                     type="number"
                                     step="0.01"
@@ -174,7 +174,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                                     onChange={(e) => setFormData({ ...formData, baseFee: e.target.value })}
                                     onBlur={handleSave}
                                     placeholder="0.00"
-                                    className="pl-14 h-12 w-full rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                                    className="pl-14 h-12 w-full rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)] text-sm font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
                                 />
                             </div>
                         </div>
@@ -184,14 +184,14 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                         <SidePanelSectionTitle title="Standard tasks (template)" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
                         <div className="relative group">
                             <Textarea
-                                className="min-h-[300px] font-mono text-sm leading-relaxed bg-white border-slate-200 rounded-2xl focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all p-5 shadow-sm"
+                                className="min-h-[300px] font-mono text-sm leading-relaxed bg-[var(--surface-lowest)] border-[var(--line-subtle)] rounded-2xl focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all p-5 shadow-sm"
                                 placeholder="Enter one task per line..."
                                 value={formData.standardTasks}
                                 onChange={(e) => setFormData({ ...formData, standardTasks: e.target.value })}
                                 onBlur={handleSave}
                             />
                         </div>
-                        <p className="ui-text-caption px-1 text-slate-500">
+                        <p className="ui-text-caption px-1 text-[var(--text-secondary)]">
                             These tasks will be automatically added when you create a new project with this service.
                         </p>
                     </div>
@@ -199,7 +199,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                     <SidePanelDangerZone
                         title="Danger zone"
                         description="Delete this service template. Existing projects keep their stored data."
-                        className="border-slate-200"
+                        className="border-[var(--line-subtle)]"
                     >
                         <div className="flex items-center gap-2">
                             <Button
@@ -217,7 +217,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setIsDeleting(false)}
-                                    className="h-8 rounded-lg px-2.5 text-xs font-semibold text-slate-400 hover:text-slate-600"
+                                    className="h-8 rounded-lg px-2.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                                 >
                                     Cancel
                                 </Button>
@@ -227,7 +227,7 @@ export function ServiceSheetContent({ service, onUpdate, onClose }: ServiceSheet
                 </div>
             </div>
 
-            <div className="bg-white px-8 pb-4">
+            <div className="bg-[var(--surface-lowest)] px-8 pb-4">
                 <SidePanelMetaBar
                     className="mt-0 pt-4"
                     entityLabel="Service ID"

@@ -26,20 +26,20 @@ export function SidePanelManualTimeForm({
     className,
 }: SidePanelManualTimeFormProps) {
     return (
-        <div className={className || "rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"}>
+        <div className={className || "rounded-[26px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"}>
             <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
                 <Input
                     type="number"
                     value={minutes}
                     onChange={(event) => onMinutesChange(event.target.value)}
                     placeholder="Minutes"
-                    className="h-10 rounded-xl border-slate-200"
+                    className="h-10 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
                 />
                 <Input
                     value={notes}
                     onChange={(event) => onNotesChange(event.target.value)}
                     placeholder="Optional note"
-                    className="h-10 rounded-xl border-slate-200"
+                    className="h-10 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
                 />
                 <Button
                     onClick={onSave}

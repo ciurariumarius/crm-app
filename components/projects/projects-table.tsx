@@ -210,7 +210,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
             <div
                 key={project.id}
                 className={cn(
-                    "group premium-card relative flex flex-col bg-white rounded-xl p-5 border border-border/60 overflow-hidden",
+                    "group premium-card relative flex flex-col bg-[var(--surface-lowest)] rounded-xl p-5 border border-border/60 overflow-hidden",
                     project.paymentStatus === "Unpaid"
                         ? "cockpit-debt-row border-l-[4px] border-l-rose-600"
                         : isMonthly
@@ -249,7 +249,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                 <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-semibold text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
@@ -321,7 +321,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
             <div
                 key={project.id}
                 className={cn(
-                    "group stagger-row-enter premium-card relative flex min-h-[52px] items-center bg-white rounded-xl p-4 border border-border/60 w-full cursor-pointer overflow-x-auto md:min-w-[1080px] xl:min-w-[1280px] gap-5 px-6",
+                    "group stagger-row-enter premium-card relative flex min-h-[52px] items-center bg-[var(--surface-lowest)] rounded-xl p-4 border border-border/60 w-full cursor-pointer overflow-x-auto md:min-w-[1080px] xl:min-w-[1280px] gap-5 px-6",
                     project.paymentStatus === "Unpaid" ? "cockpit-debt-row" : "hover:bg-[#F1F5F9]"
                 )}
                 style={{ animationDelay: `${rowIndex * 0.05}s` }}
@@ -357,7 +357,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                             <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-semibold text-slate-700 p-2 cursor-pointer">Closed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -430,7 +430,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                     />
                                 </svg>
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300">{completedTasks}/{totalTasks}</span>
+                                    <span className="text-[10px] font-semibold text-[var(--text-secondary)] dark:text-[var(--text-muted)]">{completedTasks}/{totalTasks}</span>
                                 </div>
                             </div>
                         )
@@ -439,7 +439,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
 
                 {/* 7. Time Tracking */}
                 <div className="w-[75px] shrink-0 flex items-center justify-center">
-                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-center font-mono text-[11px] font-semibold tracking-[0.01em] text-slate-600 tabular-nums">
+                    <span className="rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2 py-1 text-center font-mono text-[11px] font-semibold tracking-[0.01em] text-[var(--text-secondary)] tabular-nums">
                         {(() => {
                             const totalSeconds = project.tasks?.reduce((acc: number, task: ProjectTaskSummary) => {
                                 const taskLogs = task.timeLogs?.reduce((lAcc: number, log: ProjectTimeLog) => lAcc + (log.durationSeconds || 0), 0) || 0
@@ -476,7 +476,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-border/40 text-muted-foreground hover:text-rose-500 hover:border-rose-200 transition-colors"
+                            className="h-8 w-8 rounded-full bg-[var(--surface-lowest)] dark:bg-zinc-800 shadow-sm border border-border/40 text-muted-foreground hover:text-rose-500 hover:border-rose-200 transition-colors"
                             onClick={(e) => {
                                 e.stopPropagation()
                             }}
@@ -522,7 +522,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                             <div className="grid grid-cols-1 gap-4 md:hidden">
                                 {oneTimeProjects.map(p => renderGridCard(p, false))}
                             </div>
-                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
+                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-[var(--text-primary)]">
                                 <div className="md:min-w-[1080px] xl:min-w-[1240px] flex flex-col gap-2">
                                     {renderHeader()}
                                     {oneTimeProjects.map((project, index) => renderProjectCard(project, index))}
@@ -554,7 +554,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                             <div className="grid grid-cols-1 gap-4 md:hidden">
                                 {recurringProjects.map(p => renderGridCard(p, true))}
                             </div>
-                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-slate-900">
+                            <div className="hidden md:block overflow-x-auto pb-4 hidescrollbar text-[var(--text-primary)]">
                                 <div className="md:min-w-[1080px] xl:min-w-[1280px] flex flex-col gap-2">
                                     {renderHeader()}
                                     {recurringProjects.map((project, index) => renderProjectCard(project, index))}
@@ -566,7 +566,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
             )}
 
             {layout === "list" && (
-                <div className="pt-2 overflow-x-auto pb-24 hidescrollbar text-slate-900">
+                <div className="pt-2 overflow-x-auto pb-24 hidescrollbar text-[var(--text-primary)]">
                     <div className="md:min-w-[1080px] xl:min-w-[1280px]">
                         {quickAddOpen ? (
                             <InlineQuickAddRow

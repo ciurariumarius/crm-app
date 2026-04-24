@@ -45,11 +45,11 @@ export function SidePanelNotesSection({
     expandLabel = "Open notes in full view",
     extraToolbarActions,
     className,
-    editorClassName = "rounded-[22px] bg-white",
+    editorClassName = "rounded-[22px] bg-[var(--surface-lowest)]",
     minHeightClassName = "h-[360px]",
 }: SidePanelNotesSectionProps) {
     return (
-        <section className={cn("space-y-3 border-t border-slate-200/80 pt-3", className)}>
+        <section className={cn("space-y-3 border-t border-[var(--line-subtle)] pt-3", className)}>
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <SidePanelSectionTitle title={title} icon={icon} />
                 <SidePanelChip
@@ -77,7 +77,7 @@ export function SidePanelNotesSection({
                                 variant="ghost"
                                 size="icon"
                                 onClick={onAddTemplate}
-                                className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                 aria-label="Add template"
                                 title="Add template"
                             >
@@ -91,7 +91,7 @@ export function SidePanelNotesSection({
                                 variant="ghost"
                                 size="icon"
                                 onClick={onExpand}
-                                className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                 aria-label={expandLabel}
                                 title={expandLabel}
                             >

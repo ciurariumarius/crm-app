@@ -79,7 +79,7 @@ export default async function SitesPage({
 
     return (
         <div className="flex flex-col gap-8 pb-8 sm:gap-10">
-            <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+            <div className="rounded-[28px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Domains"
                     actions={<CreateSiteDialog partners={partners} label="Add" showLabelOnMobile className="!h-11 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white xl:!px-9" />}
@@ -108,8 +108,8 @@ export default async function SitesPage({
                 />
                 
                 {/* Pagination Footer */}
-                <div className="flex items-center justify-between rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
-                    <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                <div className="flex items-center justify-between rounded-[18px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
+                    <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
                         {page}/{totalPages || 1}
                     </span>
 
@@ -117,13 +117,13 @@ export default async function SitesPage({
                         {page > 1 ? (
                             <Link
                                 href={buildPageHref(page - 1)}
-                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-[var(--surface-low)] hover:text-blue-600" })}
                                 aria-label="Previous page"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Link>
                         ) : (
-                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-100/70 text-slate-400" aria-hidden="true">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)]/70 text-[var(--text-muted)]" aria-hidden="true">
                                 <ChevronLeft className="h-4 w-4" />
                             </span>
                         )}
@@ -131,13 +131,13 @@ export default async function SitesPage({
                         {page < totalPages ? (
                             <Link
                                 href={buildPageHref(page + 1)}
-                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-[var(--surface-low)] hover:text-blue-600" })}
                                 aria-label="Next page"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Link>
                         ) : (
-                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-100/70 text-slate-400" aria-hidden="true">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)]/70 text-[var(--text-muted)]" aria-hidden="true">
                                 <ChevronRight className="h-4 w-4" />
                             </span>
                         )}

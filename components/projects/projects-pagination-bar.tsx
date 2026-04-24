@@ -49,14 +49,14 @@ export function ProjectsPaginationBar({
     }
 
     return (
-        <div className="rounded-[18px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.94))] px-2.5 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-3">
+        <div className="rounded-[18px] border border-[var(--line-subtle)]/85 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-2.5 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-3">
             <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
-                                className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                                className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]"
                                 aria-label="Projects per page"
                                 title="Projects per page"
                             >
@@ -64,9 +64,9 @@ export function ProjectsPaginationBar({
                                 <ChevronDown className="h-3.5 w-3.5 opacity-70" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-20 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                        <DropdownMenuContent align="start" className="w-20 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                             {pageSizeOptions.map((size) => (
-                                <DropdownMenuItem key={size} asChild className="cursor-pointer justify-center rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700">
+                                <DropdownMenuItem key={size} asChild className="cursor-pointer justify-center rounded-lg px-2 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
                                     <Link href={buildHref({ perPage: String(size), page: "1" })}>
                                         {size}
                                     </Link>
@@ -75,7 +75,7 @@ export function ProjectsPaginationBar({
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                    <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
                         {isSearching ? "..." : `${display.page}/${display.totalPages}`}
                     </span>
                 </div>
@@ -83,7 +83,7 @@ export function ProjectsPaginationBar({
                 <div className="flex items-center gap-1.5">
                     {display.prevPage ? (
                         <Link
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]"
                             href={buildHref({ page: String(display.prevPage) })}
                             aria-label="Previous page"
                         >
@@ -91,7 +91,7 @@ export function ProjectsPaginationBar({
                         </Link>
                     ) : (
                         <span
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-100/70 text-slate-400"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)]/70 text-[var(--text-muted)]"
                             aria-hidden="true"
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -99,7 +99,7 @@ export function ProjectsPaginationBar({
                     )}
                     {display.nextPage ? (
                         <Link
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]"
                             href={buildHref({ page: String(display.nextPage) })}
                             aria-label="Next page"
                         >
@@ -107,7 +107,7 @@ export function ProjectsPaginationBar({
                         </Link>
                     ) : (
                         <span
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-100/70 text-slate-400"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)]/70 text-[var(--text-muted)]"
                             aria-hidden="true"
                         >
                             <ChevronRight className="h-4 w-4" />

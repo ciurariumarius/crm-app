@@ -44,15 +44,15 @@ export function ProjectSheetInfoSection({
     oneTimeServices,
 }: ProjectSheetInfoSectionProps) {
     return (
-        <section className="space-y-3 border-t border-slate-200/80 pt-3">
+        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-3">
             <SidePanelSectionTitle title="Project info" />
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button type="button" onClick={onOpenPartner} className="text-left">
                     <SidePanelInfoCard
                         title="Partner"
-                        subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">{partnerName}</p>}
-                        action={<FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />}
+                        subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">{partnerName}</p>}
+                        action={<FolderOpen className="h-4 w-4 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]" />}
                     />
                 </button>
 
@@ -62,14 +62,14 @@ export function ProjectSheetInfoSection({
                         <button
                             type="button"
                             onClick={onOpenSitePanel}
-                            className="truncate text-left text-base font-black leading-tight tracking-tight text-slate-800 transition hover:text-blue-600 sm:text-lg"
+                            className="truncate text-left text-base font-black leading-tight tracking-tight text-[var(--text-primary)] transition hover:text-blue-600 sm:text-lg"
                             title="Open site panel"
                         >
                             {domainName}
                         </button>
                     }
                     action={
-                        <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
+                        <span className="inline-flex items-center gap-1 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]">
                             <Globe className="h-4 w-4" />
                             <ArrowUpRight className="h-4 w-4" />
                         </span>
@@ -96,13 +96,13 @@ export function ProjectSheetInfoSection({
                 </SidePanelInfoCard>
             </div>
 
-            <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="rounded-[26px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                 <div className="flex items-center justify-between gap-3">
                     <SidePanelSectionTitle title="Project services" className="text-xs" />
                     <button
                         type="button"
                         onClick={onToggleEditServices}
-                        className="rounded-full border border-slate-300 px-3.5 py-1.5 ui-text-caption font-semibold text-slate-600 transition hover:border-slate-400 hover:bg-slate-50"
+                        className="rounded-full border border-[var(--line-subtle)] px-3.5 py-1.5 ui-text-caption font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)]"
                     >
                         + Add
                     </button>
@@ -124,7 +124,7 @@ export function ProjectSheetInfoSection({
             </div>
 
             {isEditingServices && (
-                <div className="rounded-[26px] border border-slate-200 bg-white p-4">
+                <div className="rounded-[26px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
                             <StatusChip tone="recurring" size="xs" className="mb-2">Recurring</StatusChip>
@@ -140,7 +140,7 @@ export function ProjectSheetInfoSection({
                                                 "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
                                                 isSelected
                                                     ? "border-blue-300 bg-blue-50 text-blue-700"
-                                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                                                    : "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                                             )}
                                         >
                                             {service.serviceName}
@@ -165,7 +165,7 @@ export function ProjectSheetInfoSection({
                                                 "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
                                                 isSelected
                                                     ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                                                    : "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                                             )}
                                         >
                                             {service.serviceName}
@@ -181,4 +181,3 @@ export function ProjectSheetInfoSection({
         </section>
     )
 }
-

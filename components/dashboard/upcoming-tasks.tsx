@@ -136,7 +136,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
 
                         <div className="flex items-center gap-3">
                             {/* Column switcher */}
-                            <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm gap-0.5">
+                            <div className="flex items-center rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1 shadow-sm gap-0.5">
                                 {([3, 4] as const).map((c) => (
                                     <button
                                         key={c}
@@ -145,8 +145,8 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                         className={cn(
                                             "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors",
                                             cols === c
-                                                ? "bg-slate-100 text-slate-900"
-                                                : "text-slate-400 hover:text-slate-700"
+                                                ? "bg-[var(--surface-low)] text-[var(--text-primary)]"
+                                                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                                         )}
                                     >
                                         {c}
@@ -240,7 +240,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                                     }}
                                                     className="gap-2 text-sm font-medium cursor-pointer"
                                                 >
-                                                    <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
+                                                    <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem

@@ -93,7 +93,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
         <div className="relative">
             <div className="overflow-x-auto">
                 {/* Unified Header */}
-                <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[960px] xl:min-w-[1240px] md:grid-cols-[250px_200px_130px_150px_64px] xl:grid-cols-[380px_350px_180px_200px_80px] gap-x-6">
+                <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-[var(--text-secondary)] shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[960px] xl:min-w-[1240px] md:grid-cols-[250px_200px_130px_150px_64px] xl:grid-cols-[380px_350px_180px_200px_80px] gap-x-6">
                     <div className="ui-overline">Project Name</div>
                     <div className="ui-overline">Task Name</div>
                     <div className="ui-overline">Time Range</div>
@@ -116,10 +116,10 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                 {/* Date Header (Section Title) */}
                                 <div className="py-6 px-4 flex items-center gap-3 group/date transition-all duration-300">
                                     <span className="h-4 w-1 rounded-full bg-blue-500/80" />
-                                    <h3 className="ui-overline text-slate-500">
+                                    <h3 className="ui-overline text-[var(--text-secondary)]">
                                         {isToday(new Date(dateKey)) ? "Today" : isYesterday(new Date(dateKey)) ? "Yesterday" : format(new Date(dateKey), "d MMMM yyyy")}
                                     </h3>
-                                    <div className="h-px flex-1 bg-slate-100 hidden md:block opacity-50 ml-2" />
+                                    <div className="h-px flex-1 bg-[var(--surface-low)] hidden md:block opacity-50 ml-2" />
                                 </div>
 
                                 {/* Rows for this date */}
@@ -132,7 +132,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                 key={log.id}
                                                 onClick={() => setSelectedLog(log)}
                                                 className={cn(
-                                                    "group stagger-row-enter premium-card relative grid min-h-[68px] items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:grid-cols-[250px_200px_130px_150px_64px] xl:grid-cols-[380px_350px_180px_200px_80px] gap-x-6 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                                    "group stagger-row-enter premium-card relative grid min-h-[68px] items-center rounded-[20px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:grid-cols-[250px_200px_130px_150px_64px] xl:grid-cols-[380px_350px_180px_200px_80px] gap-x-6 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
                                                 )}
                                                 style={{ animationDelay: `${rowIdx * 0.05}s` }}
                                                 role="button"
@@ -146,7 +146,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                             >
                                                 {/* 1. Project */}
                                                 <div className="min-w-0 pr-4">
-                                                    <span className="text-[15px] font-bold tracking-tight text-slate-900 leading-tight" title={formatProjectName(log.project)}>
+                                                    <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)] leading-tight" title={formatProjectName(log.project)}>
                                                         {formatProjectName(log.project)}
                                                     </span>
                                                 </div>
@@ -154,7 +154,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                 {/* 2. Task (Dedicated Column) */}
                                                 <div className="min-w-0 pr-4">
                                                     {log.task && (
-                                                        <span className="text-xs font-medium text-slate-500 leading-tight block truncate">
+                                                        <span className="text-xs font-medium text-[var(--text-secondary)] leading-tight block truncate">
                                                             {log.task.name}
                                                         </span>
                                                     )}
@@ -162,7 +162,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
 
                                                 {/* 3. Time Range */}
                                                 <div className="flex flex-col justify-center">
-                                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100 text-[12px] font-mono font-bold tracking-tight text-slate-600 w-fit shadow-sm">
+                                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-low)] border border-[var(--line-subtle)] text-[12px] font-mono font-bold tracking-tight text-[var(--text-secondary)] w-fit shadow-sm">
                                                         <span>{format(new Date(log.startTime), "HH:mm")}</span>
                                                         <span className="opacity-30">—</span>
                                                         <span>{log.endTime ? format(new Date(log.endTime), "HH:mm") : "..."}</span>
@@ -174,7 +174,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                     {/* Source Indicator */}
                                                     <div className={cn(
                                                         "h-2 w-2 rounded-full shrink-0 shadow-sm transition-colors duration-300",
-                                                        log.source === "TIMER" ? "bg-emerald-500 shadow-emerald-200" : "bg-slate-200"
+                                                        log.source === "TIMER" ? "bg-emerald-500 shadow-emerald-200" : "bg-[var(--surface-low)]"
                                                     )} title={log.source === "TIMER" ? "Live Tracked" : "Manually Logged"} />
 
                                                     {/* Duration Badge */}
@@ -182,7 +182,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                         "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border shadow-sm text-sm font-bold font-mono tracking-tight transition-all min-w-[100px] justify-center",
                                                         isRunning 
                                                             ? "bg-emerald-50 text-emerald-700 border-emerald-200 animate-pulse" 
-                                                            : "bg-white text-slate-900 border-slate-200 group-hover:bg-slate-50"
+                                                            : "bg-[var(--surface-lowest)] text-[var(--text-primary)] border-[var(--line-subtle)] group-hover:bg-[var(--surface-low)]"
                                                     )}>
                                                         {isRunning ? (
                                                             <StatusChip tone="active" size="xs">Active</StatusChip>
@@ -213,7 +213,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                             <Button
                                                                 size="icon"
                                                                 variant="outline"
-                                                                className="h-9 w-9 text-slate-400 hover:text-white hover:bg-emerald-500 border-slate-200 hover:border-emerald-500 transition-all rounded-xl shadow-sm"
+                                                                className="h-9 w-9 text-[var(--text-muted)] hover:text-white hover:bg-emerald-500 border-[var(--line-subtle)] hover:border-emerald-500 transition-all rounded-xl shadow-sm"
                                                                 onClick={(e) => handleResume(e, log)}
                                                                 title="Resume Timer"
                                                             >

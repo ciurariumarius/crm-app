@@ -51,11 +51,11 @@ export function SidePanelTimeLogHistoryList({
     return (
         <div className={cn("space-y-0", className)}>
             {logs.length === 0 ? (
-                <SidePanelEmptyState message={emptyMessage} className={cn("rounded-xl bg-white/70 text-sm", emptyClassName)} />
+                <SidePanelEmptyState message={emptyMessage} className={cn("rounded-xl bg-[color:color-mix(in_srgb,var(--surface-lowest)_88%,transparent)] text-sm", emptyClassName)} />
             ) : (
                 <>
                     {/* Table Header */}
-                    <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                    <div className="flex items-center gap-2 border-b border-[var(--line-subtle)] px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
                         <div className="w-24 shrink-0">Date</div>
                         <div className="w-20 shrink-0">Time</div>
                         <div className="w-14 shrink-0 text-right">Duration</div>
@@ -71,19 +71,19 @@ export function SidePanelTimeLogHistoryList({
                             const hasValidEnd = Boolean(endDate)
                             
                             // Row styling: simple border-b, no card-like padding/background unless hovered
-                            const rowClasses = "flex items-center gap-2 px-2.5 py-1.5 transition hover:bg-slate-50 group w-full text-left border-b border-slate-50 last:border-0"
+                            const rowClasses = "group flex w-full items-center gap-2 border-b border-[color:color-mix(in_srgb,var(--line-subtle)_75%,transparent)] px-2.5 py-1.5 text-left transition hover:bg-[var(--surface-low)] last:border-0"
 
                             const content = (
                                 <div className={rowClasses}>
                                     {/* Date Column */}
                                     <div className="w-24 shrink-0">
-                                        <span className="text-[11px] font-medium text-slate-500 truncate block">
+                                        <span className="block truncate text-[11px] font-medium text-[var(--text-secondary)]">
                                             {hasValidStart ? formatRelativeDate(startDate as Date) : "—"}
                                         </span>
                                     </div>
 
                                     {/* Time Column */}
-                                    <div className="w-20 shrink-0 flex items-center gap-1 text-[11px] font-mono text-slate-400">
+                                    <div className="flex w-20 shrink-0 items-center gap-1 text-[11px] font-mono text-[var(--text-muted)]">
                                         <span>{hasValidStart ? format(startDate as Date, "HH:mm") : "--:--"}</span>
                                         <span className="opacity-30">-</span>
                                         <span>{hasValidEnd ? format(endDate as Date, "HH:mm") : "..."}</span>
@@ -91,7 +91,7 @@ export function SidePanelTimeLogHistoryList({
 
                                     {/* Duration Column */}
                                     <div className="w-14 shrink-0 flex justify-end">
-                                        <span className="text-[11px] font-bold tabular-nums text-slate-700">
+                                        <span className="text-[11px] font-bold tabular-nums text-[var(--text-primary)]">
                                             {formatDurationLabel(log.durationSeconds || 0)}
                                         </span>
                                     </div>
@@ -105,18 +105,18 @@ export function SidePanelTimeLogHistoryList({
                                                 className="rounded px-1.5 py-0.5 text-[9px] font-bold truncate block w-full text-center"
                                             />
                                         ) : (
-                                            <span className="text-[10px] text-slate-300 italic ml-2">—</span>
+                                            <span className="ml-2 text-[10px] italic text-[var(--text-muted)]">—</span>
                                         )}
                                     </div>
 
                                     {/* Notes Column */}
                                     <div className="flex-1 ml-1 min-w-0">
                                         {log.notes ? (
-                                            <span className="truncate text-[11px] text-slate-400 group-hover:text-slate-600 transition-colors block">
+                                            <span className="block truncate text-[11px] text-[var(--text-muted)] transition-colors group-hover:text-[var(--text-secondary)]">
                                                 {log.notes}
                                             </span>
                                         ) : (
-                                            <span className="text-[10px] text-slate-200 block italic">—</span>
+                                            <span className="block text-[10px] italic text-[var(--text-muted)]">—</span>
                                         )}
                                     </div>
                                 </div>

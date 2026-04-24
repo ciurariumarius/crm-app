@@ -285,7 +285,7 @@ function RevenueDateFilter({
                     className={cn(
                         "inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all sm:h-10 sm:text-xs sm:min-w-[148px] sm:w-auto",
                         activePresetId !== "all"
-                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                             : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_94%,transparent)]"
                     )}
                 >
@@ -311,7 +311,7 @@ function RevenueDateFilter({
                                 "inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-[11px] font-semibold transition-colors",
                                 index === 0 ? "w-full" : "w-[calc(50%-4px)]",
                                 activePresetId === preset.id
-                                    ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                                    ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                                     : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
                             )}
                         >
@@ -333,7 +333,7 @@ function RevenueDateFilter({
                         }
                     }}
                     numberOfMonths={1}
-                    className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-0.5 text-sm [&_[data-slot=calendar]]:![--cell-size:clamp(18px,4.2vw,22px)]"
+                    className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,var(--surface-lowest))] p-0.5 text-sm [&_[data-slot=calendar]]:![--cell-size:clamp(18px,4.2vw,22px)]"
                     classNames={{
                         root: "w-full p-0.5",
                         months: "relative w-full",

@@ -56,7 +56,7 @@ function SiteFaviconTile({
     const fallback = getDomainInitials(domain)
 
     return (
-        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)]">
             {!failed && activeFaviconUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -83,7 +83,7 @@ function SiteFaviconTile({
                     }}
                 />
             ) : (
-                <span className="text-[11px] font-extrabold tracking-wide text-slate-700">{fallback}</span>
+                <span className="text-[11px] font-extrabold tracking-wide text-[var(--text-primary)]">{fallback}</span>
             )}
         </span>
     )
@@ -161,7 +161,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                        className="h-10 w-10 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
                         aria-label="Close site"
                     >
                         <X className="h-5 w-5" />
@@ -190,7 +190,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                                         setIsEditingDomain(false)
                                     }
                                 }}
-                                className="text-2xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-3xl h-auto p-0 border-none bg-transparent focus-visible:ring-0"
+                                className="text-2xl font-bold leading-tight tracking-[-0.03em] text-[var(--text-primary)] md:text-3xl h-auto p-0 border-none bg-transparent focus-visible:ring-0"
                                 autoFocus
                             />
                         ) : (
@@ -201,7 +201,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                                     faviconUrl={site.faviconUrl}
                                 />
                                 <div className="min-w-0 flex-1 pt-1">
-                                    <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-2xl">
+                                    <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-[var(--text-primary)] md:text-2xl">
                                         {formData.domainName}
                                     </h1>
                                 </div>
@@ -210,7 +210,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => setIsEditingDomain(true)}
-                                    className="mt-0.5 h-8 w-8 shrink-0 rounded-lg text-slate-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-slate-100 hover:text-slate-700"
+                                    className="mt-0.5 h-8 w-8 shrink-0 rounded-lg text-[var(--text-muted)] opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                 >
                                     <Pencil className="h-4 w-4" />
                                 </Button>
@@ -218,58 +218,58 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                         )}
                     </div>
 
-                    <div className="h-px w-full bg-slate-200" />
+                    <div className="h-px w-full bg-[var(--line-subtle)]" />
 
                     <div className="space-y-4">
                         <SidePanelSectionTitle title="Tracking IDs" />
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="space-y-1">
-                            <Label className="ui-overline text-slate-400">GTM ID</Label>
+                            <Label className="ui-overline text-[var(--text-muted)]">GTM ID</Label>
                             <div className="flex items-center gap-2">
                                 <Input
                                     value={formData.gtmId}
                                     onChange={(e) => setFormData({ ...formData, gtmId: e.target.value })}
                                     onBlur={handleSave}
-                                    className="h-9 bg-white border-slate-200 hover:border-slate-300 transition-colors font-mono text-xs shadow-sm rounded-xl"
+                                    className="h-9 bg-[var(--surface-lowest)] border-[var(--line-subtle)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] transition-colors font-mono text-xs shadow-sm rounded-xl"
                                     placeholder="GTM-XXXXXX"
                                 />
-                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-slate-100 rounded-xl" onClick={() => handleCopy(formData.gtmId)}>
-                                    <Copy className="h-3.5 w-3.5 text-slate-400" />
+                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-[var(--surface-low)] rounded-xl" onClick={() => handleCopy(formData.gtmId)}>
+                                    <Copy className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                                 </Button>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <Label className="ui-overline text-slate-400">Ads ID</Label>
+                            <Label className="ui-overline text-[var(--text-muted)]">Ads ID</Label>
                             <div className="flex items-center gap-2">
                                 <Input
                                     value={formData.googleAdsId}
                                     onChange={(e) => setFormData({ ...formData, googleAdsId: e.target.value })}
                                     onBlur={handleSave}
-                                    className="h-9 bg-white border-slate-200 hover:border-slate-300 transition-colors font-mono text-xs shadow-sm rounded-xl"
+                                    className="h-9 bg-[var(--surface-lowest)] border-[var(--line-subtle)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] transition-colors font-mono text-xs shadow-sm rounded-xl"
                                     placeholder="123-456-7890"
                                 />
-                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-slate-100 rounded-xl" onClick={() => handleCopy(formData.googleAdsId)}>
-                                    <Copy className="h-3.5 w-3.5 text-slate-400" />
+                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-[var(--surface-low)] rounded-xl" onClick={() => handleCopy(formData.googleAdsId)}>
+                                    <Copy className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                                 </Button>
                             </div>
                         </div>
                         <div className="space-y-1 col-span-full">
-                            <Label className="ui-overline text-slate-400">Drive folder</Label>
+                            <Label className="ui-overline text-[var(--text-muted)]">Drive folder</Label>
                             <div className="flex items-center gap-2">
                                 <div className="relative flex-1">
-                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                                         <Globe className="h-3.5 w-3.5" />
                                     </div>
                                     <Input
                                         value={formData.driveLink}
                                         onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
                                         onBlur={handleSave}
-                                        className="h-9 bg-white border-slate-200 hover:border-slate-300 transition-colors text-xs shadow-sm rounded-xl pl-9"
+                                        className="h-9 bg-[var(--surface-lowest)] border-[var(--line-subtle)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] transition-colors text-xs shadow-sm rounded-xl pl-9"
                                         placeholder="https://drive.google.com/..."
                                     />
                                 </div>
                                 {safeDriveLink && (
-                                    <Link href={safeDriveLink} target="_blank" rel="noopener noreferrer" className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-blue-600 transition-all shadow-sm">
+                                    <Link href={safeDriveLink} target="_blank" rel="noopener noreferrer" className="p-2.5 bg-[var(--surface-lowest)] border border-[var(--line-subtle)] hover:bg-[var(--surface-low)] rounded-xl text-[var(--text-muted)] hover:text-blue-600 transition-all shadow-sm">
                                         <ExternalLink className="h-3.5 w-3.5" />
                                     </Link>
                                 )}
@@ -279,17 +279,17 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                     </div>
 
                     <Tabs defaultValue="marketing" className="w-full pt-4">
-                        <TabsList className="bg-slate-100 p-1 rounded-xl w-full grid grid-cols-2">
-                            <TabsTrigger value="marketing" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-tight">Marketing Hub</TabsTrigger>
-                            <TabsTrigger value="technical" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-tight">Raw Data</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-2 rounded-xl bg-[var(--surface-low)] p-1">
+                            <TabsTrigger value="marketing" className="rounded-lg data-[state=active]:bg-[var(--surface-lowest)] data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-tight">Marketing Hub</TabsTrigger>
+                            <TabsTrigger value="technical" className="rounded-lg data-[state=active]:bg-[var(--surface-lowest)] data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-tight">Raw Data</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="marketing" className="space-y-5 pt-6 animate-in slide-in-from-bottom-2 duration-300">
                             <SidePanelSectionTitle title="Marketing hub" />
                             <div className="space-y-2">
-                                <Label className="ui-overline text-slate-500">Headlines / ad copy</Label>
+                                <Label className="ui-overline text-[var(--text-secondary)]">Headlines / ad copy</Label>
                                 <Textarea
-                                    className="min-h-[120px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
+                                    className="min-h-[120px] bg-[var(--surface-lowest)] border-[var(--line-subtle)] focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
                                     value={marketingData.headlines}
                                     onChange={(e) => setMarketingData({ ...marketingData, headlines: e.target.value })}
                                     onBlur={handleSave}
@@ -298,9 +298,9 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="ui-overline text-slate-500">Brand voice & notes</Label>
+                                <Label className="ui-overline text-[var(--text-secondary)]">Brand voice & notes</Label>
                                 <Textarea
-                                    className="min-h-[100px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
+                                    className="min-h-[100px] bg-[var(--surface-lowest)] border-[var(--line-subtle)] focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
                                     value={marketingData.brandNotes}
                                     onChange={(e) => setMarketingData({ ...marketingData, brandNotes: e.target.value })}
                                     onBlur={handleSave}
@@ -309,9 +309,9 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="ui-overline text-slate-500">Competitor intelligence</Label>
+                                <Label className="ui-overline text-[var(--text-secondary)]">Competitor intelligence</Label>
                                 <Textarea
-                                    className="min-h-[100px] bg-white border-slate-200 focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
+                                    className="min-h-[100px] bg-[var(--surface-lowest)] border-[var(--line-subtle)] focus-visible:ring-1 rounded-2xl shadow-sm text-sm"
                                     value={marketingData.competitors}
                                     onChange={(e) => setMarketingData({ ...marketingData, competitors: e.target.value })}
                                     onBlur={handleSave}
@@ -321,7 +321,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                         </TabsContent>
 
                         <TabsContent value="technical" className="pt-6">
-                            <div className="p-8 bg-slate-50 rounded-2xl border border-slate-200 border-dashed ui-text-caption text-slate-400 text-center">
+                            <div className="p-8 bg-[var(--surface-low)] rounded-2xl border border-[var(--line-subtle)] border-dashed ui-text-caption text-[var(--text-muted)] text-center">
                                 Raw JSON data view coming soon.
                             </div>
                         </TabsContent>
@@ -330,7 +330,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                     <SidePanelDangerZone
                         title="Danger zone"
                         description="Delete this domain and all related references."
-                        className="border-slate-200"
+                        className="border-[var(--line-subtle)]"
                     >
                         <DeleteSiteButton siteId={site.id} partnerId={site.partnerId} />
                     </SidePanelDangerZone>
@@ -345,7 +345,7 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                 </div>
             </div>
             
-            <div className="p-4 border-t bg-white flex justify-end gap-3 px-8">
+            <div className="p-4 border-t bg-[var(--surface-lowest)] flex justify-end gap-3 px-8">
                 <Button onClick={handleSave} disabled={loading} size="sm" className="rounded-full px-6 font-bold shadow-sm">
                     {loading ? "Saving..." : "Save Changes"}
                 </Button>

@@ -297,7 +297,7 @@ export function MobileBottomNav({
                                 setQuickActionsOpen(false)
                                 setCreateTaskOpen(true)
                             }}
-                            className="w-full rounded-2xl border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] px-4 py-3.5 text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--primary-container)_24%,white)]"
+                            className="w-full rounded-2xl border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-4 py-3.5 text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--primary-container)_24%,var(--surface-lowest))]"
                         >
                             <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--primary)]">
                                 <Sparkles className="h-4 w-4" />

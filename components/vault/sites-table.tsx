@@ -48,7 +48,7 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
     }
 
     const renderHeader = () => (
-        <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[940px] xl:min-w-[1240px] grid-cols-[minmax(240px,2fr)_170px_80px_96px_86px] xl:grid-cols-[minmax(400px,3fr)_250px_120px_140px_120px] gap-x-4">
+        <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-[var(--text-secondary)] shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[940px] xl:min-w-[1240px] grid-cols-[minmax(240px,2fr)_170px_80px_96px_86px] xl:grid-cols-[minmax(400px,3fr)_250px_120px_140px_120px] gap-x-4">
             <button 
                 onClick={() => toggleSort("domainName")}
                 className="ui-overline flex items-center gap-1 text-left hover:text-primary transition-colors"
@@ -76,7 +76,7 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
             <div
                 key={site.id}
                 onClick={() => setSelectedSite(site)}
-                className="group stagger-row-enter premium-card relative grid min-h-[60px] items-center rounded-[20px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] w-full cursor-pointer transition-all duration-300 hover:border-slate-300/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:min-w-[940px] xl:min-w-[1240px] grid-cols-[minmax(240px,2fr)_170px_80px_96px_86px] xl:grid-cols-[minmax(400px,3fr)_250px_120px_140px_120px] gap-x-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                className="group stagger-row-enter premium-card relative grid min-h-[60px] items-center rounded-[20px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] w-full cursor-pointer transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:min-w-[940px] xl:min-w-[1240px] grid-cols-[minmax(240px,2fr)_170px_80px_96px_86px] xl:grid-cols-[minmax(400px,3fr)_250px_120px_140px_120px] gap-x-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
                 style={{ animationDelay: `${index * 0.05}s` }}
                 role="button"
                 tabIndex={0}
@@ -90,11 +90,11 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
                 {/* 1. Domain Branding */}
                 <div className="min-w-0 pr-4">
                     <div className="flex flex-col">
-                        <span className="font-bold tracking-tight text-slate-900 group-hover:text-primary transition-colors whitespace-nowrap overflow-x-auto hidescrollbar">
+                        <span className="font-bold tracking-tight text-[var(--text-primary)] group-hover:text-primary transition-colors whitespace-nowrap overflow-x-auto hidescrollbar">
                             {site.domainName}
                         </span>
                         {site.name && (
-                            <span className="ui-overline mt-1 leading-none text-slate-400">
+                            <span className="ui-overline mt-1 leading-none text-[var(--text-muted)]">
                                 {site.name}
                             </span>
                         )}
@@ -103,7 +103,7 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
 
                 {/* 2. Partner Column */}
                 <div className="min-w-0 pr-4">
-                    <span className="text-sm font-medium text-slate-500 truncate leading-snug">
+                    <span className="text-sm font-medium text-[var(--text-secondary)] truncate leading-snug">
                         {site.partner.name}
                     </span>
                 </div>
@@ -121,7 +121,7 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
                         variant="outline"
                         size="sm"
                         onClick={openWebsite}
-                        className="h-8 px-3 text-xs font-semibold tracking-[0.02em] gap-2 bg-white/50 hover:bg-white border-slate-200 transition-all shadow-sm"
+                        className="h-8 px-3 text-xs font-semibold tracking-[0.02em] gap-2 bg-[var(--surface-lowest)]/50 hover:bg-[var(--surface-lowest)] border-[var(--line-subtle)] transition-all shadow-sm"
                     >
                         Visit
                         <ExternalLink className="h-3 w-3" />
@@ -130,7 +130,7 @@ export function SitesTable({ sites, currentSort, currentOrder }: SitesTableProps
 
                 {/* 5. Date */}
                 <div className="flex items-center justify-end">
-                    <span className="text-xs font-medium text-slate-500 font-mono tracking-tight text-right shrink-0 tabular-nums">
+                    <span className="text-xs font-medium text-[var(--text-secondary)] font-mono tracking-tight text-right shrink-0 tabular-nums">
                         {formatRelativeDate(site.createdAt)}
                     </span>
                 </div>

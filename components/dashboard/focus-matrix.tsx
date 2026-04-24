@@ -102,7 +102,7 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
                 }}
                 className="gap-2 text-sm font-medium cursor-pointer"
             >
-                <Clock className="h-3.5 w-3.5 text-slate-400" /> Add Manual Time
+                <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
             </DropdownMenuItem>
             <DropdownMenuItem
                 className="gap-2 text-sm font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"

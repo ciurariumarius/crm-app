@@ -11,11 +11,11 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-[color:color-mix(in_srgb,var(--state-active)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-active)_16%,white)] text-[var(--state-active)]",
+        default: "border-[color:color-mix(in_srgb,var(--state-active)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-active)_16%,var(--surface-lowest))] text-[var(--state-active)]",
         secondary:
           "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]",
         destructive:
-          "border-[color:color-mix(in_srgb,var(--state-urgent)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,white)] text-[var(--state-urgent)]",
+          "border-[color:color-mix(in_srgb,var(--state-urgent)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,var(--surface-lowest))] text-[var(--state-urgent)]",
         outline:
           "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "hover:bg-accent hover:text-accent-foreground",

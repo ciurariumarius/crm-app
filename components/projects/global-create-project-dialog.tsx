@@ -297,10 +297,10 @@ export function GlobalCreateProjectDialog({
                     {trigger}
                 </DialogTrigger>
             )}
-            <DialogContent className="w-[96vw] sm:max-w-[860px] p-0 overflow-hidden border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
+            <DialogContent className="w-[96vw] sm:max-w-[860px] p-0 overflow-hidden border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-2xl flex flex-col max-h-[90vh]">
                 <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
                     <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-primary/10">
-                        <DialogHeader className="p-7 pb-5 border-b border-slate-200">
+                        <DialogHeader className="p-7 pb-5 border-b border-[var(--line-subtle)]">
                             <DialogTitle className="text-[40px] leading-none font-semibold tracking-tight">
                                 Add New Project
                             </DialogTitle>
@@ -310,11 +310,11 @@ export function GlobalCreateProjectDialog({
                         {/* 1. Partner Selection */}
                         {!defaultPartnerId && (
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                     01. Target Partner
                                 </Label>
                                 <Select value={partnerId} onValueChange={handlePartnerChange}>
-                                    <SelectTrigger className="h-12 rounded-xl bg-white border border-slate-200 shadow-none focus:ring-1 focus:ring-primary/20 px-4">
+                                    <SelectTrigger className="h-12 rounded-xl bg-[var(--surface-lowest)] border border-[var(--line-subtle)] shadow-none focus:ring-1 focus:ring-primary/20 px-4">
                                         <SelectValue placeholder="Choose a partner..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -330,7 +330,7 @@ export function GlobalCreateProjectDialog({
                         {!defaultSiteId && (
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
-                                    <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                    <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                         02. Target Site
                                     </Label>
                                 </div>
@@ -341,7 +341,7 @@ export function GlobalCreateProjectDialog({
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={siteComboboxOpen}
-                                            className="w-full justify-between h-12 rounded-xl bg-white border border-slate-200 shadow-none hover:bg-white px-4 font-semibold text-slate-900"
+                                            className="w-full justify-between h-12 rounded-xl bg-[var(--surface-lowest)] border border-[var(--line-subtle)] shadow-none hover:bg-[var(--surface-lowest)] px-4 font-semibold text-[var(--text-primary)]"
                                         >
                                             <span className="truncate text-left">
                                                 {siteId
@@ -379,11 +379,11 @@ export function GlobalCreateProjectDialog({
                                                             className="py-2.5"
                                                         >
                                                             <div className="flex min-w-0 flex-col">
-                                                                <span className="truncate font-medium text-slate-800">
+                                                                <span className="truncate font-medium text-[var(--text-primary)]">
                                                                     {s.domainName}
                                                                 </span>
                                                                 {!partnerId && !defaultPartnerId && (
-                                                                    <span className="truncate text-[11px] font-medium text-slate-500">
+                                                                    <span className="truncate text-[11px] font-medium text-[var(--text-secondary)]">
                                                                         {s.partnerName}
                                                                     </span>
                                                                 )}
@@ -392,7 +392,7 @@ export function GlobalCreateProjectDialog({
                                                         </CommandItem>
                                                     ))}
                                                     {hasSiteQuery && (
-                                                        <div className="px-3 py-2 text-sm font-semibold text-slate-400 border-t border-slate-100">
+                                                        <div className="px-3 py-2 text-sm font-semibold text-[var(--text-muted)] border-t border-[var(--line-subtle)]">
                                                             {suggestedSiteDomain}
                                                         </div>
                                                     )}
@@ -426,14 +426,14 @@ export function GlobalCreateProjectDialog({
                         {/* 3. Service Selection (Multi) */}
                         <div className="space-y-4 pt-4 border-t border-dashed">
                             <div className="space-y-3">
-                                <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                     03. Services
                                 </Label>
 
                                 {selectedServices.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="flex flex-wrap gap-2 p-2 bg-[var(--surface-low)] rounded-xl border border-[var(--line-subtle)]">
                                         {selectedServices.map(s => (
-                                            <Badge key={s.id} variant="secondary" className="pl-2 pr-1 h-7 gap-1 font-bold bg-white shadow-sm border-slate-200 text-slate-700">
+                                            <Badge key={s.id} variant="secondary" className="pl-2 pr-1 h-7 gap-1 font-bold bg-[var(--surface-lowest)] shadow-sm border-[var(--line-subtle)] text-[var(--text-secondary)]">
                                                 {s.serviceName}
                                                 <button
                                                     type="button"
@@ -451,7 +451,7 @@ export function GlobalCreateProjectDialog({
                                     placeholder="Select one or more services..."
                                     value={serviceQuery}
                                     onChange={(e) => setServiceQuery(e.target.value)}
-                                    className="h-12 rounded-xl bg-white border border-slate-200 shadow-none focus-visible:ring-1 focus-visible:ring-primary/20"
+                                    className="h-12 rounded-xl bg-[var(--surface-lowest)] border border-[var(--line-subtle)] shadow-none focus-visible:ring-1 focus-visible:ring-primary/20"
                                 />
 
                                 <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-[160px] pr-2 scrollbar-thin scrollbar-thumb-primary/10">
@@ -472,7 +472,7 @@ export function GlobalCreateProjectDialog({
                                                     "flex flex-col items-start p-4 text-left rounded-xl border transition-colors relative overflow-hidden",
                                                     isSelected
                                                         ? "bg-primary/5 border-primary"
-                                                        : "bg-white border-slate-200 hover:border-slate-300"
+                                                        : "bg-[var(--surface-lowest)] border-[var(--line-subtle)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                                                 )}
                                             >
                                                 <div className="flex items-center justify-between w-full gap-2">
@@ -480,7 +480,7 @@ export function GlobalCreateProjectDialog({
                                                         {s.isRecurring ? (
                                                             <Repeat className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                                                         ) : (
-                                                            <Clock3 className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                                                            <Clock3 className="h-3.5 w-3.5 text-[var(--text-secondary)] shrink-0" />
                                                         )}
                                                         <span className={cn("text-xs font-bold truncate", isSelected ? "text-primary" : "text-foreground")}>
                                                             {s.serviceName}
@@ -488,7 +488,7 @@ export function GlobalCreateProjectDialog({
                                                     </div>
                                                     <span className={cn(
                                                         "h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0",
-                                                        isSelected ? "bg-primary border-primary text-white" : "bg-white border-slate-300 text-transparent"
+                                                        isSelected ? "bg-primary border-primary text-white" : "bg-[var(--surface-lowest)] border-[var(--line-subtle)] text-transparent"
                                                     )}>
                                                         <Check className="h-3 w-3" />
                                                     </span>
@@ -538,7 +538,7 @@ export function GlobalCreateProjectDialog({
 
                                 {showDetails && (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="rounded-xl border border-slate-200 bg-slate-100 p-1">
+                                        <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)] p-1">
                                             <div className="grid grid-cols-4 gap-1">
                                                 {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
                                                     <button
@@ -551,7 +551,7 @@ export function GlobalCreateProjectDialog({
                                                             projectStatus === statusOption && statusOption === "Paused" && "status-pill-warning shadow-sm",
                                                             projectStatus === statusOption && statusOption === "Completed" && "status-pill-success shadow-sm",
                                                             projectStatus === statusOption && statusOption === "Closed" && "status-pill-closed shadow-sm",
-                                                            projectStatus !== statusOption && "text-slate-500 hover:bg-white/80 hover:text-slate-700"
+                                                            projectStatus !== statusOption && "text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)]/80 hover:text-[var(--text-secondary)]"
                                                         )}
                                                     >
                                                         {statusOption}

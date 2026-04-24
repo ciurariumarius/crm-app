@@ -145,7 +145,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                         <SelectTrigger className={cn(
                                             "h-8 text-xs font-medium border-none bg-transparent hover:bg-muted/50 p-1 w-[120px]",
                                             task.status === "Completed" ? "text-emerald-600" :
-                                                task.status === "Active" ? "text-blue-600" : "text-slate-600"
+                                                task.status === "Active" ? "text-blue-600" : "text-[var(--text-secondary)]"
                                         )}>
                                             <SelectValue />
                                         </SelectTrigger>
@@ -219,13 +219,13 @@ export function TasksTable({ tasks }: TasksTableProps) {
                             <TableRow>
                                 <TableCell colSpan={6} className="h-32 text-center">
                                     <div className="mx-auto flex max-w-md flex-col items-center justify-center px-4">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
-                                            <Clock className="h-4 w-4 text-slate-400" />
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                                            <Clock className="h-4 w-4 text-[var(--text-muted)]" />
                                         </div>
-                                        <p className="mt-3 text-sm font-semibold tracking-tight text-slate-900">
+                                        <p className="mt-3 text-sm font-semibold tracking-tight text-[var(--text-primary)]">
                                             No matching tasks
                                         </p>
-                                        <p className="mt-1 text-sm font-medium text-slate-500">
+                                        <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
                                             Try a different search term or adjust the current filters.
                                         </p>
                                     </div>

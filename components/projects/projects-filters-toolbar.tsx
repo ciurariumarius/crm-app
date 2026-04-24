@@ -29,11 +29,11 @@ import type { DateRange } from "react-day-picker"
 import { useProjectsSearchContext } from "./projects-search-context"
 
 const STATUS_OPTIONS = [
-  { label: "All", value: "All", dotClass: "bg-slate-400", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+  { label: "All", value: "All", dotClass: "bg-[var(--text-muted)]", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Active", value: "Active", dotClass: "bg-emerald-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Paused", value: "Paused", dotClass: "bg-amber-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Completed", value: "Completed", dotClass: "bg-cyan-700", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
-  { label: "Closed", value: "Closed", dotClass: "bg-slate-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+  { label: "Closed", value: "Closed", dotClass: "bg-[var(--text-secondary)]", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
 ]
 
 const PAYMENT_OPTIONS = [
@@ -83,7 +83,7 @@ function triggerClassName(isActive: boolean, extraClassName?: string) {
   return cn(
     "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
     isActive
-      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] text-[var(--brand-primary)]"
+      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,var(--surface-lowest))] text-[var(--brand-primary)]"
       : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]",
     extraClassName
   )
@@ -321,7 +321,7 @@ export function ProjectsFiltersToolbar({
               <Link
                 key={filter.key}
                 href={filter.href}
-                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
+                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
               >
                 <span>{filter.label}</span>
                 <span className="text-[var(--brand-primary)]/70">×</span>
@@ -451,7 +451,7 @@ function PeriodCombobox({
               className={cn(
                 "inline-flex h-7 items-center justify-center rounded-md border px-2 text-[10px] font-medium transition-colors",
                 currentPeriod === option.value && !currentFrom && !currentTo
-                  ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                  ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                   : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
               )}
             >
@@ -473,7 +473,7 @@ function PeriodCombobox({
             }
           }}
           numberOfMonths={1}
-          className="rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)]"
+          className="rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,var(--surface-lowest))]"
         />
 
         <div className="mt-2.5 flex items-center justify-between">

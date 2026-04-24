@@ -154,7 +154,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
     return (
         <div className="overflow-x-auto pb-4 hidescrollbar">
             {/* Header */}
-            <div className="mb-3 hidden rounded-[20px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-5 py-3 text-slate-500 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:block md:min-w-[940px] xl:min-w-[1200px]">
+            <div className="mb-3 hidden rounded-[20px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-5 py-3 text-[var(--text-secondary)] shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:block md:min-w-[940px] xl:min-w-[1200px]">
                 <div className="grid w-full items-center gap-x-4 md:grid-cols-[240px_minmax(190px,1fr)_100px_120px_100px] xl:grid-cols-[340px_1fr_120px_150px_120px]">
                     <div className="ui-overline">Project / Partner</div>
                     <div className="ui-overline pl-4">Transaction action</div>
@@ -175,7 +175,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                         <Fragment key={log.id}>
                             <div
                                 className={cn(
-                                    "group stagger-row-enter relative flex cursor-pointer items-center rounded-[20px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:border-slate-300/80 hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] md:px-5",
+                                    "group stagger-row-enter relative flex cursor-pointer items-center rounded-[20px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80 hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] md:px-5",
                                     isExpanded && "border-blue-200/80 bg-[color:color-mix(in_srgb,var(--brand-cyan)_10%,var(--surface-lowest))] ring-1 ring-blue-500/10",
                                     log.status === "Unpaid" && "shadow-[0_4px_16px_rgba(244,63,94,0.05)]",
                                     log.status === "Paid" && "shadow-[0_4px_16px_rgba(16,185,129,0.05)]"
@@ -199,13 +199,13 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                             {isExpandable && (
                                                 <div className={cn(
                                                     "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-all",
-                                                    isExpanded ? "rotate-90 bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-400 group-hover:text-blue-500"
+                                                    isExpanded ? "rotate-90 bg-blue-50 text-blue-600" : "bg-[var(--surface-low)] text-[var(--text-muted)] group-hover:text-blue-500"
                                                 )}>
                                                     <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
                                                 </div>
                                             )}
                                             <span className={cn(
-                                                "text-sm font-bold tracking-tight text-slate-900 line-clamp-1",
+                                                "text-sm font-bold tracking-tight text-[var(--text-primary)] line-clamp-1",
                                                 isExpandable && "group-hover:text-primary transition-colors"
                                             )}>
                                                 {projectName}
@@ -226,7 +226,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                                 <CreditCard className="h-4 w-4" />
                                             )}
                                         </div>
-                                        <span className="text-[13px] font-bold text-slate-700">
+                                        <span className="text-[13px] font-bold text-[var(--text-secondary)]">
                                             {getActionLabel(log.action)}
                                         </span>
                                     </div>
@@ -236,7 +236,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                         <span className="ui-overline md:hidden">Amount</span>
                                         <span className={cn(
                                             "font-mono text-sm font-black tracking-tight",
-                                            log.status === "Unpaid" ? "text-rose-600" : "text-slate-900"
+                                            log.status === "Unpaid" ? "text-rose-600" : "text-[var(--text-primary)]"
                                         )}>
                                             {formatCurrency(totalAmount)}
                                         </span>
@@ -253,7 +253,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     {/* 5. Date */}
                                     <div className="flex items-center justify-between gap-3 text-right md:block">
                                         <span className="ui-overline md:hidden">Date</span>
-                                        <span className="text-[12px] font-bold text-slate-500 tabular-nums">
+                                        <span className="text-[12px] font-bold text-[var(--text-secondary)] tabular-nums">
                                             {formatRelativeDate(log.date)}
                                         </span>
                                     </div>
@@ -263,7 +263,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                             {/* Expanded Content (Settlements) */}
                             {isExpanded && (extraProjects.length > 0) && (
                                 <div className="mb-2 flex animate-in slide-in-from-top-2 fade-in duration-300">
-                                    <div className="mr-1 flex-1 rounded-[20px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-low)_88%,var(--surface-lowest)_12%)] p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:ml-10 md:mr-2">
+                                    <div className="mr-1 flex-1 rounded-[20px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-low)_88%,var(--surface-lowest)_12%)] p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:ml-10 md:mr-2">
                                         <div className="rounded-[16px] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] p-4">
                                             <div className="mb-3 flex items-center gap-2">
                                                 <History className="h-3.5 w-3.5 text-blue-500" />
@@ -271,9 +271,9 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                             </div>
                                             <div className="space-y-2">
                                                 {extraProjects.map((projectEntry) => (
-                                                    <div key={projectEntry.id} className="flex items-center justify-between rounded-[14px] border border-slate-200/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-4 py-2.5 transition-colors hover:bg-[var(--surface-lowest)]">
-                                                        <span className="text-sm font-bold text-slate-700">{projectEntry.name}</span>
-                                                        <span className="font-mono text-xs font-black text-slate-900 pl-4">
+                                                    <div key={projectEntry.id} className="flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-4 py-2.5 transition-colors hover:bg-[var(--surface-lowest)]">
+                                                        <span className="text-sm font-bold text-[var(--text-secondary)]">{projectEntry.name}</span>
+                                                        <span className="font-mono text-xs font-black text-[var(--text-primary)] pl-4">
                                                             {formatCurrency(projectEntry.fee)}
                                                         </span>
                                                     </div>

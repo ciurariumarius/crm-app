@@ -36,7 +36,7 @@ function FileDropzone({ title, description, file, onFileSelected, accept }: Drop
       className={[
         "rounded-2xl border border-dashed p-4 transition-colors",
         dragging
-          ? "border-[var(--primary)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)]"
+          ? "border-[var(--primary)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))]"
           : "border-[var(--line-subtle)] bg-[var(--bg-surface)]",
       ].join(" ")}
     >
@@ -154,7 +154,7 @@ export default function LmsIngestionPage() {
               <select
                 value={syncMode}
                 onChange={(event) => setSyncMode(event.target.value as LmsSyncMode)}
-                className="h-10 rounded-xl border border-[var(--line-subtle)] bg-white px-3 text-sm"
+                className="h-10 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-sm"
               >
                 <option value="merge">Merge</option>
                 <option value="replace">Replace (Full Refresh)</option>

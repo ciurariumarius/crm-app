@@ -28,7 +28,7 @@ type TaskHistorySectionProps = {
 
 export function TaskHistorySection({ entries, isLoading }: TaskHistorySectionProps) {
     return (
-        <section className="space-y-0 border-t border-slate-200/80 pt-3">
+        <section className="space-y-0 border-t border-[var(--line-subtle)] pt-3">
             <SidePanelSectionTitle title="Task history" icon={<History className="h-3.5 w-3.5" />} />
             
             {isLoading && entries.length === 0 ? (
@@ -40,7 +40,7 @@ export function TaskHistorySection({ entries, isLoading }: TaskHistorySectionPro
             ) : (
                 <div className="mt-2">
                     {/* Table Header */}
-                    <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                    <div className="flex items-center gap-2 border-b border-[var(--line-subtle)] px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
                         <div className="w-24 shrink-0">Date</div>
                         <div className="flex-1">Event</div>
                         <div className="w-16 shrink-0 text-right">Type</div>
@@ -78,18 +78,18 @@ export function TaskHistorySection({ entries, isLoading }: TaskHistorySectionPro
                             }
 
                             return (
-                                <div key={entry.id} className="flex items-center gap-2 px-2.5 py-2 transition hover:bg-slate-50 border-b border-slate-50 last:border-0 group">
+                                <div key={entry.id} className="group flex items-center gap-2 border-b border-[color:color-mix(in_srgb,var(--line-subtle)_75%,transparent)] px-2.5 py-2 transition hover:bg-[var(--surface-low)] last:border-0">
                                     <div className="w-24 shrink-0">
-                                        <span className="text-[11px] font-medium text-slate-500 truncate block">
+                                        <span className="block truncate text-[11px] font-medium text-[var(--text-secondary)]">
                                             {formatRelativeDate(entry.date)}
                                         </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <span className="text-[11px] font-bold text-slate-700 truncate block">
+                                        <span className="block truncate text-[11px] font-bold text-[var(--text-primary)]">
                                             {entryTitle}
                                         </span>
                                         {sourceLabel && (
-                                            <span className="text-[10px] text-slate-400 group-hover:text-slate-500 transition-colors block truncate">
+                                            <span className="block truncate text-[10px] text-[var(--text-muted)] transition-colors group-hover:text-[var(--text-secondary)]">
                                                 {sourceLabel}
                                             </span>
                                         )}
@@ -106,4 +106,3 @@ export function TaskHistorySection({ entries, isLoading }: TaskHistorySectionPro
         </section>
     )
 }
-

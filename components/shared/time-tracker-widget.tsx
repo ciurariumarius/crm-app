@@ -38,25 +38,25 @@ export function TimeTrackerWidget({
     const primaryActionLabel = isRunning ? "Pause" : isPaused ? "Resume" : "Start"
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-5 overflow-hidden">
                     {/* Total Tracked */}
                     <div className="flex items-baseline gap-2 shrink-0">
-                        <span className="text-xs font-semibold text-slate-500 hidden sm:inline">Total tracked:</span>
-                        <span className="font-mono text-[15px] font-black tabular-nums text-slate-900">
+                        <span className="hidden text-xs font-semibold text-[var(--text-secondary)] sm:inline">Total tracked:</span>
+                        <span className="font-mono text-[15px] font-black tabular-nums text-[var(--text-primary)]">
                             {totalTrackedHours}h {totalTrackedMinutes}m
                         </span>
                     </div>
 
-                    <div className="w-px h-4 bg-slate-200 shrink-0" />
+                    <div className="h-4 w-px shrink-0 bg-[var(--line-subtle)]" />
 
                     {/* Current Session */}
                     <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 hidden sm:inline">Session:</span>
+                        <span className="hidden text-xs font-semibold text-[var(--text-secondary)] sm:inline">Session:</span>
                         <span className={cn(
                             "font-mono text-[15px] font-bold tabular-nums truncate",
-                            isRunning ? "text-emerald-600" : "text-slate-700"
+                            isRunning ? "text-emerald-600" : "text-[var(--text-primary)]"
                         )}>
                             {formatClock(currentSessionSeconds)}
                         </span>
@@ -94,7 +94,7 @@ export function TimeTrackerWidget({
                         size="icon"
                         disabled={isStopDisabled}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onStopAction(); }}
-                        className="h-9 w-9 shrink-0 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                        className="h-9 w-9 shrink-0 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)] transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:pointer-events-none disabled:opacity-50"
                     >
                         <Square className="h-3.5 w-3.5 fill-current" />
                     </Button>

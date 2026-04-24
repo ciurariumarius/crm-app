@@ -560,7 +560,7 @@ export default function LmsAnalysisTasksPage() {
                   className={cn(
                     "inline-flex h-10 min-w-[170px] flex-[2_1_240px] items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all",
                     search.trim()
-                      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                       : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
                   )}
                 >
@@ -612,13 +612,13 @@ export default function LmsAnalysisTasksPage() {
             {activeFilters.map((filter) => (
               <span
                 key={filter.id}
-                className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
+                className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
               >
                 <span>{filter.label}</span>
                 <button
                   type="button"
                   onClick={filter.onRemove}
-                  className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--brand-primary)]/80 transition-colors hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_20%,white)] hover:text-[var(--brand-primary)]"
+                  className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--brand-primary)]/80 transition-colors hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_20%,var(--surface-lowest))] hover:text-[var(--brand-primary)]"
                   aria-label={`Remove ${filter.label} filter`}
                 >
                   <X className="h-3 w-3" />
@@ -629,7 +629,7 @@ export default function LmsAnalysisTasksPage() {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800"
+                className="inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
               >
                 Clear all
               </button>
@@ -638,11 +638,11 @@ export default function LmsAnalysisTasksPage() {
         </FilterResultsRow>
       </div>
 
-      <div className="flex flex-col lg:flex-row overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+      <div className="flex flex-col lg:flex-row overflow-hidden rounded-[24px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
         {/* Worked Hours Card */}
-        <div className="relative flex-1 border-b border-slate-100 p-6 lg:border-b-0 lg:border-r lg:p-8">
+        <div className="relative flex-1 border-b border-[var(--line-subtle)] p-6 lg:border-b-0 lg:border-r lg:p-8">
           <div className="flex items-start justify-between">
-            <p className="ui-overline text-slate-400">Worked Hours</p>
+            <p className="ui-overline text-[var(--text-muted)]">Worked Hours</p>
             <Clock3 className="absolute right-4 top-4 h-8 w-8 text-slate-100" />
           </div>
           <div className="mt-6 flex items-end justify-between">
@@ -650,8 +650,8 @@ export default function LmsAnalysisTasksPage() {
               <DurationValue
                 minutes={totalMinutes}
                 className="text-[32px] leading-none tracking-tight"
-                numberClassName="font-bold text-slate-900"
-                unitClassName="font-bold text-slate-400"
+                numberClassName="font-bold text-[var(--text-primary)]"
+                unitClassName="font-bold text-[var(--text-muted)]"
               />
               <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[var(--brand-primary)]">Within selected filters</p>
             </div>
@@ -659,29 +659,29 @@ export default function LmsAnalysisTasksPage() {
         </div>
 
         {/* Total Tasks Card */}
-        <div className="relative flex-1 border-b border-slate-100 p-6 lg:border-b-0 lg:border-r lg:p-8">
+        <div className="relative flex-1 border-b border-[var(--line-subtle)] p-6 lg:border-b-0 lg:border-r lg:p-8">
           <div className="flex items-start justify-between">
-            <p className="ui-overline text-slate-400">Total Tasks</p>
+            <p className="ui-overline text-[var(--text-muted)]">Total Tasks</p>
             <ListTodo className="absolute right-4 top-4 h-8 w-8 text-slate-100" />
           </div>
           <div className="mt-6 flex items-end justify-between">
             <div>
-              <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{totalTasks}</p>
-              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-slate-400">In current selection</p>
+              <p className="text-[32px] font-bold leading-none tracking-tight text-[var(--text-primary)]">{totalTasks}</p>
+              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">In current selection</p>
             </div>
           </div>
         </div>
 
         {/* Working Days Card */}
-        <div className="relative flex-1 border-b border-slate-100 p-6 lg:border-b-0 lg:border-r lg:p-8">
+        <div className="relative flex-1 border-b border-[var(--line-subtle)] p-6 lg:border-b-0 lg:border-r lg:p-8">
           <div className="flex items-start justify-between">
-            <p className="ui-overline text-slate-400">Working Days</p>
+            <p className="ui-overline text-[var(--text-muted)]">Working Days</p>
             <CalendarClock className="absolute right-4 top-4 h-8 w-8 text-slate-100" />
           </div>
           <div className="mt-6 flex items-end justify-between">
             <div>
-              <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{workingDays}</p>
-              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-slate-400">{start} to {end}</p>
+              <p className="text-[32px] font-bold leading-none tracking-tight text-[var(--text-primary)]">{workingDays}</p>
+              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">{start} to {end}</p>
             </div>
           </div>
         </div>
@@ -689,22 +689,22 @@ export default function LmsAnalysisTasksPage() {
         {/* Internal Work Card */}
         <div className="relative flex-1 p-6 lg:p-8">
           <div className="flex items-start justify-between">
-            <p className="ui-overline text-slate-400">Internal work</p>
+            <p className="ui-overline text-[var(--text-muted)]">Internal work</p>
             <Building2 className="absolute right-4 top-4 h-8 w-8 text-slate-100" />
           </div>
           <div className="mt-6 flex items-end gap-6">
             <div className="min-w-[60px]">
-              <p className="text-[32px] font-bold leading-none tracking-tight text-slate-900">{internalTaskCount}</p>
-              <p className="mt-1 text-[10px] italic text-slate-400">Total tasks</p>
+              <p className="text-[32px] font-bold leading-none tracking-tight text-[var(--text-primary)]">{internalTaskCount}</p>
+              <p className="mt-1 text-[10px] italic text-[var(--text-muted)]">Total tasks</p>
             </div>
-            <div className="flex-1 space-y-2 border-l border-slate-100 pl-4">
+            <div className="flex-1 space-y-2 border-l border-[var(--line-subtle)] pl-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-[var(--brand-primary)]">Ratio</span>
-                <span className="text-sm font-bold text-slate-900">{internalTaskPercent.toFixed(1)}%</span>
+                <span className="text-sm font-bold text-[var(--text-primary)]">{internalTaskPercent.toFixed(1)}%</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-[var(--brand-primary)]">Hours</span>
-                <DurationValue minutes={internalMinutes} className="text-sm" numberClassName="font-bold text-slate-900" unitClassName="font-bold text-slate-500" />
+                <DurationValue minutes={internalMinutes} className="text-sm" numberClassName="font-bold text-[var(--text-primary)]" unitClassName="font-bold text-[var(--text-secondary)]" />
               </div>
             </div>
           </div>
@@ -890,7 +890,7 @@ export default function LmsAnalysisTasksPage() {
                   <button
                     type="button"
                     onClick={() => setIsTaskTypeListExpanded((prev) => !prev)}
-                    className="w-full rounded-xl border border-transparent py-2 text-center text-xs font-bold text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800"
+                    className="w-full rounded-xl border border-transparent py-2 text-center text-xs font-bold text-[var(--text-secondary)] transition-colors hover:border-[var(--line-subtle)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                   >
                     {isTaskTypeListExpanded ? "Show less" : `See all ${taskTypeTotalCount} task types`}
                   </button>
@@ -1070,7 +1070,7 @@ function DateFilterCombobox({
           className={cn(
             "inline-flex h-10 min-w-[130px] flex-1 items-center justify-between gap-2 rounded-lg border px-3 text-xs font-medium transition-all md:flex-none",
             activePresetId !== "all"
-              ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+              ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
               : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
           )}
         >
@@ -1096,7 +1096,7 @@ function DateFilterCombobox({
                 "inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-[11px] font-semibold transition-colors",
                 index === 0 ? "w-full" : "w-[calc(50%-4px)]",
                 activePresetId === preset.id
-                  ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                  ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                   : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
               )}
             >
@@ -1118,7 +1118,7 @@ function DateFilterCombobox({
             }
           }}
           numberOfMonths={1}
-          className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,white)] p-0.5 text-sm [&_[data-slot=calendar]]:![--cell-size:clamp(18px,4.2vw,22px)]"
+          className="w-full rounded-[12px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_70%,var(--surface-lowest))] p-0.5 text-sm [&_[data-slot=calendar]]:![--cell-size:clamp(18px,4.2vw,22px)]"
           classNames={{
             root: "w-full p-0.5",
             months: "relative w-full",
@@ -1183,7 +1183,7 @@ function InlineCombobox({
           className={cn(
             "inline-flex h-10 min-w-[130px] flex-1 items-center justify-between gap-2 rounded-lg border px-3 text-xs font-medium transition-all md:flex-none",
             isActive
-              ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+              ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
               : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
           )}
         >

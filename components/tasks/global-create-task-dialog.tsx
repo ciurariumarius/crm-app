@@ -165,7 +165,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                                         {p.status !== "Active" && (
                                                             <Badge variant="outline" className={cn(
                                                                 "text-xs font-medium ml-2 flex-shrink-0 px-2 py-0.5 border-dashed",
-                                                                p.status === "Completed" ? "text-blue-500 border-blue-500/30" : "text-slate-500 border-slate-400/40"
+                                                                p.status === "Completed" ? "text-blue-500 border-blue-500/30" : "text-[var(--text-secondary)] border-[var(--line-subtle)]"
                                                             )}>
                                                                 {p.status}
                                                             </Badge>

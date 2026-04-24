@@ -422,14 +422,14 @@ export function TasksCardView({
                     >
                         <div className="animate-pulse space-y-3">
                             <div className="flex items-start justify-between gap-3">
-                                <div className="h-4 w-2/3 rounded bg-slate-200" />
-                                <div className="h-6 w-16 rounded-lg bg-slate-200" />
+                                <div className="h-4 w-2/3 rounded bg-[var(--surface-low)]" />
+                                <div className="h-6 w-16 rounded-lg bg-[var(--surface-low)]" />
                             </div>
-                            <div className="h-3 w-1/2 rounded bg-slate-200" />
-                            <div className="h-3 w-5/6 rounded bg-slate-200" />
+                            <div className="h-3 w-1/2 rounded bg-[var(--surface-low)]" />
+                            <div className="h-3 w-5/6 rounded bg-[var(--surface-low)]" />
                             <div className="flex items-center justify-between pt-2">
-                                <div className="h-7 w-24 rounded-xl bg-slate-200" />
-                                <div className="h-7 w-20 rounded-xl bg-slate-200" />
+                                <div className="h-7 w-24 rounded-xl bg-[var(--surface-low)]" />
+                                <div className="h-7 w-20 rounded-xl bg-[var(--surface-low)]" />
                             </div>
                         </div>
                     </div>
@@ -581,13 +581,13 @@ export function TasksCardView({
                     >
                         <div className="animate-pulse space-y-3">
                             <div className="flex items-start justify-between gap-4">
-                                <div className="h-4 w-2/5 rounded bg-slate-200" />
-                                <div className="h-6 w-20 rounded-lg bg-slate-200" />
+                                <div className="h-4 w-2/5 rounded bg-[var(--surface-low)]" />
+                                <div className="h-6 w-20 rounded-lg bg-[var(--surface-low)]" />
                             </div>
-                            <div className="h-3 w-3/5 rounded bg-slate-200" />
+                            <div className="h-3 w-3/5 rounded bg-[var(--surface-low)]" />
                             <div className="flex items-center justify-between pt-1">
-                                <div className="h-3 w-28 rounded bg-slate-200" />
-                                <div className="h-8 w-28 rounded-xl bg-slate-200" />
+                                <div className="h-3 w-28 rounded bg-[var(--surface-low)]" />
+                                <div className="h-8 w-28 rounded-xl bg-[var(--surface-low)]" />
                             </div>
                         </div>
                     </div>

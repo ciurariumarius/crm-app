@@ -115,12 +115,12 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                         const isExpanded = expandedId === partner.id
                         const isSettling = settlingId === partner.id
                         return (
-                            <div key={partner.id} className="flex flex-col overflow-hidden rounded-[24px] border border-slate-200/90 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] shadow-[0_6px_18px_rgba(15,23,42,0.03)] transition-all hover:border-slate-300/80">
+                            <div key={partner.id} className="flex flex-col overflow-hidden rounded-[24px] border border-[var(--line-subtle)]/90 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] shadow-[0_6px_18px_rgba(15,23,42,0.03)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80">
                                 <div className="flex flex-col p-5 gap-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex flex-col flex-1 min-w-0">
                                             <span className="truncate text-[15px] font-bold text-[var(--text-primary)]">{partner.name}</span>
-                                            <span className="text-[12px] font-medium text-slate-500 mt-0.5">
+                                            <span className="text-[12px] font-medium text-[var(--text-secondary)] mt-0.5">
                                                 {partner.unpaidProjects.length} unpaid project{partner.unpaidProjects.length === 1 ? "" : "s"}
                                             </span>
                                         </div>
@@ -131,7 +131,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100/80">
+                                    <div className="flex items-center justify-between pt-3 border-t border-[var(--line-subtle)]/80">
                                         <button
                                             type="button"
                                             onClick={() => setExpandedId((current) => (current === partner.id ? null : partner.id))}
@@ -139,11 +139,11 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                         >
                                             <div className={cn(
                                                 "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all",
-                                                isExpanded ? "rotate-180 border-slate-200 bg-slate-100 text-slate-600" : "border-slate-200 bg-[var(--surface-lowest)] text-slate-400 group-hover:text-slate-600"
+                                                isExpanded ? "rotate-180 border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]" : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]"
                                             )}>
                                                 <ChevronDown className="h-3 w-3" />
                                             </div>
-                                            <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-slate-500 group-hover:text-slate-700">
+                                            <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-secondary)] group-hover:text-[var(--text-secondary)]">
                                                 {isExpanded ? "Hide Details" : "View Details"}
                                             </span>
                                         </button>
@@ -167,9 +167,9 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                 </div>
                                 
                                 {isExpanded && (
-                                    <div className="flex flex-col gap-4 border-t border-slate-100/80 bg-[color:color-mix(in_srgb,var(--surface-low)_82%,var(--surface-lowest)_18%)] p-5">
+                                    <div className="flex flex-col gap-4 border-t border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-low)_82%,var(--surface-lowest)_18%)] p-5">
                                         <div className="flex items-center justify-between">
-                                            <span className="ui-overline text-slate-400">Breakdown</span>
+                                            <span className="ui-overline text-[var(--text-muted)]">Breakdown</span>
                                             <Link
                                                 href={`/projects?partnerId=${partner.id}&payment=Unpaid`}
                                                 className="text-[11px] font-black uppercase tracking-wider text-blue-600 hover:text-blue-500"
@@ -183,11 +183,11 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                                 return (
                                                     <div
                                                         key={project.id}
-                                                        className="flex flex-col gap-2 rounded-[16px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] p-3 shadow-[0_2px_8px_rgba(15,23,42,0.025)]"
+                                                        className="flex flex-col gap-2 rounded-[16px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] p-3 shadow-[0_2px_8px_rgba(15,23,42,0.025)]"
                                                     >
-                                                        <span className="text-[13px] font-bold text-slate-700 line-clamp-1">{project.name}</span>
+                                                        <span className="text-[13px] font-bold text-[var(--text-secondary)] line-clamp-1">{project.name}</span>
                                                         <div className="flex items-center justify-between">
-                                                            <span className="font-mono text-sm font-black text-slate-900">
+                                                            <span className="font-mono text-sm font-black text-[var(--text-primary)]">
                                                                 {formatCurrency(project.amount)}
                                                             </span>
                                                             <Button

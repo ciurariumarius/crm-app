@@ -33,15 +33,15 @@ const SORT_OPTIONS = [
 ]
 
 const STATUS_OPTIONS = [
-  { label: "All", value: "All", dotClass: "bg-slate-400", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+  { label: "All", value: "All", dotClass: "bg-[var(--text-muted)]", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Active", value: "Active", dotClass: "bg-emerald-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Completed", value: "Completed", dotClass: "bg-cyan-700", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
 ]
 
 const PRIORITY_OPTIONS = [
-  { label: "All", value: "all", icon: <span className="h-2 w-2 rounded-full bg-slate-400" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+  { label: "All", value: "all", icon: <span className="h-2 w-2 rounded-full bg-[var(--text-muted)]" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Urgent", value: "Urgent", icon: <AlertTriangle className="h-3 w-3" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
-  { label: "Normal", value: "Normal", icon: <span className="h-2 w-2 rounded-full bg-slate-500" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+  { label: "Normal", value: "Normal", icon: <span className="h-2 w-2 rounded-full bg-[var(--text-secondary)]" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3 w-3" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
 ]
 
@@ -49,7 +49,7 @@ function triggerClassName(isActive: boolean, extraClassName?: string) {
   return cn(
     "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
     isActive
-      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,white)] text-[var(--brand-primary)]"
+      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,var(--surface-lowest))] text-[var(--brand-primary)]"
       : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]",
     extraClassName
   )
@@ -197,7 +197,7 @@ export function TasksToolbar({
               className={cn(
                 "inline-flex h-9 shrink-0 snap-start items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
                 currentOverdue
-                  ? "border-[color:color-mix(in_srgb,var(--state-overdue)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_14%,white)] text-[var(--state-overdue)] ring-1 ring-[color:color-mix(in_srgb,var(--state-overdue)_22%,transparent)]"
+                  ? "border-[color:color-mix(in_srgb,var(--state-overdue)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_14%,var(--surface-lowest))] text-[var(--state-overdue)] ring-1 ring-[color:color-mix(in_srgb,var(--state-overdue)_22%,transparent)]"
                   : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
               )}
             >
@@ -206,7 +206,7 @@ export function TasksToolbar({
                 <span>Overdue</span>
               </span>
               {currentOverdue ? (
-                <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--state-overdue)_24%,white)] text-[var(--state-overdue)]">
+                <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--state-overdue)_24%,var(--surface-lowest))] text-[var(--state-overdue)]">
                   <Check className="h-3 w-3" />
                 </span>
               ) : null}
@@ -255,7 +255,7 @@ export function TasksToolbar({
               <Link
                 key={filter.key}
                 href={filter.href}
-                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
+                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
               >
                 <span>{filter.label}</span>
                 <span className="text-[var(--brand-primary)]/70">×</span>

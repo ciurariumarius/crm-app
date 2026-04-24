@@ -29,7 +29,7 @@ export function FinancialStatusBar({
     return (
         <div className={cn("grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4", className)}>
             {/* 1. This Month Revenue */}
-            <Card className="p-6 border-none shadow-sm bg-white dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
+            <Card className="p-6 border-none shadow-sm bg-[var(--surface-lowest)] dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                         <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
@@ -45,7 +45,7 @@ export function FinancialStatusBar({
             </Card>
 
             {/* 2. All Time Unpaid */}
-            <Card className="p-6 border-none shadow-sm bg-white dark:bg-zinc-900 group hover:shadow-md transition-all duration-300 border-l-4 border-l-rose-500/20">
+            <Card className="p-6 border-none shadow-sm bg-[var(--surface-lowest)] dark:bg-zinc-900 group hover:shadow-md transition-all duration-300 border-l-4 border-l-rose-500/20">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                         <div className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600">
@@ -61,7 +61,7 @@ export function FinancialStatusBar({
             </Card>
 
             {/* 3. Active Projects */}
-            <Card className="p-6 border-none shadow-sm bg-white dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
+            <Card className="p-6 border-none shadow-sm bg-[var(--surface-lowest)] dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                         <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
@@ -79,7 +79,7 @@ export function FinancialStatusBar({
                                 <span className="text-[11px] font-medium text-muted-foreground">{activeMonthlyProjectsCount} Monthly</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)]" />
                                 <span className="text-[11px] font-medium text-muted-foreground">{activeOneTimeProjectsCount} One-time</span>
                             </div>
                         </div>
@@ -88,7 +88,7 @@ export function FinancialStatusBar({
             </Card>
 
             {/* 4. Active Tasks */}
-            <Card className="p-6 border-none shadow-sm bg-white dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
+            <Card className="p-6 border-none shadow-sm bg-[var(--surface-lowest)] dark:bg-zinc-900 group hover:shadow-md transition-all duration-300">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                         <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">

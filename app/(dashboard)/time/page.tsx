@@ -87,7 +87,7 @@ export default async function TimePage({
 
     return (
         <div className="flex flex-col gap-6 pb-8 sm:gap-8">
-            <div className="rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+            <div className="rounded-[28px] border border-[var(--line-subtle)]/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Time Logs"
                     showMobile
@@ -131,7 +131,7 @@ export default async function TimePage({
                                 )}
                             </div>
                             <div className="flex items-center gap-2 md:justify-end">
-                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white/70 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-[var(--surface-lowest)]/70 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
                                     <Clock3 className="h-3.5 w-3.5" />
                                     Started {activeTimerStartedAt || "now"}
                                 </span>
@@ -162,12 +162,12 @@ export default async function TimePage({
                     tasks={tasks}
                 />
 
-                <div className="mt-4 flex items-center justify-between rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
+                <div className="mt-4 flex items-center justify-between rounded-[18px] border border-[var(--line-subtle)]/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
                     <div className="flex items-center gap-1.5">
-                        <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
                             {page}/{totalPages}
                         </span>
-                        <span className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
                             {totalHours}h
                         </span>
                     </div>
@@ -176,7 +176,7 @@ export default async function TimePage({
                         {prevPage ? (
                             <Link
                                 href={buildPageHref(prevPage)}
-                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-[var(--surface-low)] hover:text-blue-600" })}
                                 aria-label="Previous page"
                             >
                                 <ChevronLeft className="h-4 w-4" />
@@ -189,7 +189,7 @@ export default async function TimePage({
                         {nextPage ? (
                             <Link
                                 href={buildPageHref(nextPage)}
-                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-slate-50 hover:text-blue-600" })}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-[var(--surface-low)] hover:text-blue-600" })}
                                 aria-label="Next page"
                             >
                                 <ChevronRight className="h-4 w-4" />

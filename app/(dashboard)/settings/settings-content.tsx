@@ -444,7 +444,7 @@ export function SettingsContent({
                                     <div className="space-y-6 animate-in fade-in zoom-in slide-in-from-bottom-4 duration-500 text-center">
                                         <h3 className="font-bold">1. Scan QR Code</h3>
                                         <p className="text-xs text-muted-foreground">Use Google Authenticator or Authy to scan this code.</p>
-                                        <div className="bg-white p-4 rounded-xl inline-block shadow-md">
+                                        <div className="bg-[var(--surface-lowest)] p-4 rounded-xl inline-block shadow-md">
                                             <Image src={qrCodeUrl} alt="2FA QR Code" width={192} height={192} className="w-48 h-48 mx-auto" unoptimized />
                                         </div>
                                         <p className="text-[10px] font-mono select-all bg-muted p-2 rounded">{twoFactorSecret}</p>

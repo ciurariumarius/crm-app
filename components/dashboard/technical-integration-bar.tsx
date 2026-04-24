@@ -48,7 +48,7 @@ export function TechnicalIntegrationBar() {
 
             <div className="mt-2 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100/50">
                 <p className="ui-text-caption leading-tight text-indigo-600">
-                    Tip: Press <kbd className="px-1 py-0.5 rounded border border-indigo-200 bg-white shadow-sm font-sans mx-0.5">CMD+K</kbd> to trigger these tools anywhere.
+                    Tip: Press <kbd className="px-1 py-0.5 rounded border border-indigo-200 bg-[var(--surface-lowest)] shadow-sm font-sans mx-0.5">CMD+K</kbd> to trigger these tools anywhere.
                 </p>
             </div>
         </Card>

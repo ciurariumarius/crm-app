@@ -176,7 +176,7 @@ export function MobileHomeView({
         <div className="md:hidden flex flex-col gap-6">
             <section className="flex items-center justify-between gap-4 pt-1">
                 <div className="flex min-w-0 flex-1 flex-col justify-center">
-                    <h1 className="text-[34px] font-semibold text-slate-900 leading-none tracking-[-0.03em] truncate">
+                    <h1 className="text-[34px] font-semibold text-[var(--text-primary)] leading-none tracking-[-0.03em] truncate">
                         {name}
                     </h1>
                 </div>
@@ -187,22 +187,22 @@ export function MobileHomeView({
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
-                                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] shadow-sm transition-colors hover:bg-[var(--surface-low)]"
                                 aria-label="Quick actions"
                             >
                                 <Plus className="h-5 w-5" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                        <DropdownMenuContent align="end" className="w-44 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                             <DropdownMenuItem
                                 onSelect={() => setCreateProjectOpen(true)}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-slate-700"
+                                className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
                             >
                                 Add Project
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onSelect={() => setCreateTaskOpen(true)}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-slate-700"
+                                className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
                             >
                                 Add Task
                             </DropdownMenuItem>
@@ -212,17 +212,17 @@ export function MobileHomeView({
             </section>
 
             <section className="space-y-3">
-                <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Financial overview</h2>
+                <h2 className="text-[13px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Financial overview</h2>
                 <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">{monthName} revenue</p>
+                    <div className="rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4 shadow-[var(--shadow-apple)]">
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">{monthName} revenue</p>
                         <p className="mt-2 flex items-baseline gap-1.5">
                             <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[var(--primary)] leading-none">{revenueLabel.amount}</span>
                             <span className="font-mono text-[12px] font-semibold text-[var(--primary)]">{revenueLabel.code}</span>
                         </p>
                     </div>
-                    <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">Unpaid projects</p>
+                    <div className="rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4 shadow-[var(--shadow-apple)]">
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Unpaid projects</p>
                         <p className="mt-2 flex items-baseline gap-1.5">
                             <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[var(--debt)] leading-none">{unpaidLabel.amount}</span>
                             <span className="font-mono text-[12px] font-semibold text-[var(--debt)]">{unpaidLabel.code}</span>
@@ -232,28 +232,28 @@ export function MobileHomeView({
             </section>
 
             <section className="space-y-3">
-                <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Projects overview</h2>
-                <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[var(--shadow-apple)]">
+                <h2 className="text-[13px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Projects overview</h2>
+                <div className="rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4 shadow-[var(--shadow-apple)]">
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="border-r border-slate-100 pr-3">
+                        <div className="border-r border-[var(--line-subtle)] pr-3">
                             <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-[var(--primary)] leading-none">{liveProjects}</p>
-                            <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-slate-500">Live projects</p>
+                            <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Live projects</p>
                             <div className="mt-3 flex flex-wrap gap-1.5">
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_16%,white)] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
                                     <RotateCw className="h-2.5 w-2.5" />
                                     {activeMonthlyProjects}
                                 </span>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary)_10%,white)] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary)_10%,var(--surface-lowest))] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
                                     <Zap className="h-2.5 w-2.5" />
                                     {activeOneTimeProjects}
                                 </span>
                             </div>
                         </div>
                         <div className="pl-1">
-                            <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-slate-900 leading-none">{activeTasks}</p>
-                            <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-slate-500">Active tasks</p>
-                            <p className="mt-3 font-mono text-[30px] font-bold leading-none text-slate-900">{formatHours(totalHoursMonth)}h</p>
-                            <p className="mt-1 text-[11px] text-slate-500">worked in {monthName}</p>
+                            <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-[var(--text-primary)] leading-none">{activeTasks}</p>
+                            <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Active tasks</p>
+                            <p className="mt-3 font-mono text-[30px] font-bold leading-none text-[var(--text-primary)]">{formatHours(totalHoursMonth)}h</p>
+                            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">worked in {monthName}</p>
                         </div>
                     </div>
                 </div>
@@ -262,11 +262,11 @@ export function MobileHomeView({
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Your tasks</h2>
+                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Your tasks</h2>
                 </div>
 
                 {visibleTasks.length === 0 ? (
-                    <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                    <div className="rounded-3xl border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-6 text-center text-sm text-[var(--text-secondary)]">
                         No active tasks.
                     </div>
                 ) : (
@@ -286,10 +286,10 @@ export function MobileHomeView({
                                     key={task.id}
                                     type="button"
                                     onClick={() => openTask(task.id)}
-                                    className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-4 text-left shadow-[var(--shadow-apple)] transition-colors hover:bg-slate-50/70"
+                                    className="w-full rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4 text-left shadow-[var(--shadow-apple)] transition-colors hover:bg-[var(--surface-low)]/70"
                                 >
-                                    <h3 className="text-[15px] font-semibold text-slate-900 leading-snug">{task.name}</h3>
-                                    <p className="mt-1 truncate text-[12px] text-slate-500">
+                                    <h3 className="text-[15px] font-semibold text-[var(--text-primary)] leading-snug">{task.name}</h3>
+                                    <p className="mt-1 truncate text-[12px] text-[var(--text-secondary)]">
                                         {projectLabel}
                                     </p>
                                     <div className="mt-3 flex items-center gap-2">
@@ -310,7 +310,7 @@ export function MobileHomeView({
                         {upcomingTasks.length > 6 ? (
                             <Link
                                 href="/tasks"
-                                className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 px-4 py-2 text-[12px] font-semibold tracking-[0.03em] text-slate-600 transition-colors hover:bg-white"
+                                className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-[var(--line-subtle)] px-4 py-2 text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-lowest)]"
                             >
                                 View All Tasks
                             </Link>
@@ -322,7 +322,7 @@ export function MobileHomeView({
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
                     <FolderOpen className="h-5 w-5 text-[var(--primary)]" />
-                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Projects</h2>
+                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Projects</h2>
                 </div>
 
                 <div className="space-y-4">
@@ -335,15 +335,15 @@ export function MobileHomeView({
                                         key={project.id}
                                         type="button"
                                         onClick={() => openProject(project.id)}
-                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-[var(--shadow-apple)]"
+                                        className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[var(--shadow-apple)]"
                                     >
-                                        <p className="text-[15px] font-bold leading-tight text-slate-900">{project.siteName || "Untitled project"}</p>
+                                        <p className="text-[15px] font-bold leading-tight text-[var(--text-primary)]">{project.siteName || "Untitled project"}</p>
                                         <div className="mt-2 flex items-center justify-between gap-3">
-                                            <div className="inline-flex items-center gap-3 text-[11px] font-semibold text-slate-500">
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[var(--primary)]">
+                                            <div className="inline-flex items-center gap-3 text-[11px] font-semibold text-[var(--text-secondary)]">
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-low)] px-2 py-0.5 text-[var(--primary)]">
                                                     {format(new Date(project.createdAt || new Date()), "MMMM")}
                                                 </span>
-                                                <p className="font-mono font-bold text-slate-900">
+                                                <p className="font-mono font-bold text-[var(--text-primary)]">
                                                     {formatCurrency(Number(project.currentFee || 0))}
                                                 </p>
                                             </div>
@@ -360,7 +360,7 @@ export function MobileHomeView({
                                 )
                             })}
                             {visibleMonthlyProjects.length === 0 ? (
-                                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                                <div className="rounded-2xl border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                                     No monthly projects.
                                 </div>
                             ) : null}
@@ -378,12 +378,12 @@ export function MobileHomeView({
                                         key={project.id}
                                         type="button"
                                         onClick={() => openProject(project.id)}
-                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-[var(--shadow-apple)]"
+                                        className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[var(--shadow-apple)]"
                                     >
-                                        <p className="text-[15px] font-semibold leading-tight text-slate-900">{parsed.title}</p>
-                                        <p className="mt-1 truncate text-[12px] text-slate-500">{parsed.subtitle || "No service"}</p>
+                                        <p className="text-[15px] font-semibold leading-tight text-[var(--text-primary)]">{parsed.title}</p>
+                                        <p className="mt-1 truncate text-[12px] text-[var(--text-secondary)]">{parsed.subtitle || "No service"}</p>
                                         <div className="mt-2 flex items-center justify-between gap-3">
-                                            <div className="inline-flex items-center gap-3 text-[11px] font-medium text-slate-500">
+                                            <div className="inline-flex items-center gap-3 text-[11px] font-medium text-[var(--text-secondary)]">
                                                 <span className="inline-flex items-center gap-1">
                                                     <Clock3 className="h-3 w-3" />
                                                     {Math.floor(Number(project.hoursLogged || 0))}h {minutes}m
@@ -403,7 +403,7 @@ export function MobileHomeView({
                                 )
                             })}
                             {visibleOneTimeProjects.length === 0 ? (
-                                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                                <div className="rounded-2xl border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                                     No fixed-fee projects.
                                 </div>
                             ) : null}
@@ -412,7 +412,7 @@ export function MobileHomeView({
 
                     <Link
                         href="/projects"
-                        className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 px-4 py-2 text-[12px] font-semibold tracking-[0.03em] text-slate-600 transition-colors hover:bg-white"
+                        className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-[var(--line-subtle)] px-4 py-2 text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-lowest)]"
                     >
                         View All Active Projects
                     </Link>
@@ -422,15 +422,15 @@ export function MobileHomeView({
             <section className="space-y-3">
                 <div className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-[var(--warning)]" />
-                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-slate-500">Payments</h2>
+                    <h2 className="text-[13px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Payments</h2>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white shadow-[var(--shadow-apple)]">
-                    <div className="border-b border-slate-100 px-4 py-3">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">Due payment</p>
+                <div className="rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
+                    <div className="border-b border-[var(--line-subtle)] px-4 py-3">
+                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Due payment</p>
                     </div>
                     {visibleUnpaidPartners.length === 0 ? (
-                        <div className="px-4 py-5 text-sm text-slate-500">No unpaid balances.</div>
+                        <div className="px-4 py-5 text-sm text-[var(--text-secondary)]">No unpaid balances.</div>
                     ) : (
                         <div className="divide-y divide-slate-100">
                             {visibleUnpaidPartners.map((partner) => {
@@ -442,18 +442,18 @@ export function MobileHomeView({
                                             onClick={() => togglePartner(partner.id)}
                                             className={cn(
                                                 "flex items-center justify-between gap-3 px-4 py-3 cursor-pointer transition-colors",
-                                                isExpanded && "bg-slate-50/50"
+                                                isExpanded && "bg-[var(--surface-low)]/50"
                                             )}
                                         >
                                             <div className="flex-1 min-w-0 flex items-center gap-3">
                                                 {isExpanded ? (
-                                                    <ChevronUp className="h-4 w-4 text-slate-300" />
+                                                    <ChevronUp className="h-4 w-4 text-[var(--text-muted)]" />
                                                 ) : (
-                                                    <ChevronDown className="h-4 w-4 text-slate-300" />
+                                                    <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
                                                 )}
                                                 <div>
-                                                    <p className="text-[13px] font-semibold text-slate-900">{partner.name}</p>
-                                                    <p className="mt-0.5 text-[11px] text-slate-500">
+                                                    <p className="text-[13px] font-semibold text-[var(--text-primary)]">{partner.name}</p>
+                                                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
                                                         Owed sum:
                                                         <span className="ml-1 font-mono font-bold text-[var(--debt)]">
                                                             {formatCurrency(partner.totalUnpaid)}
@@ -470,7 +470,7 @@ export function MobileHomeView({
                                                     e.stopPropagation()
                                                     handleSettlePartner(partner.id)
                                                 }}
-                                                className="h-8 rounded-full px-3 text-[11px] font-semibold tracking-[0.03em] text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                                                className="h-8 rounded-full px-3 text-[11px] font-semibold tracking-[0.03em] text-[var(--text-secondary)] hover:bg-emerald-50 hover:text-emerald-700"
                                             >
                                                 {currentSettling ? "Saving..." : "Mark Paid"}
                                             </Button>
@@ -478,14 +478,14 @@ export function MobileHomeView({
 
                                         {/* Unpaid Projects List */}
                                         {isExpanded && (
-                                            <div className="flex flex-col gap-2 px-4 py-3 bg-slate-50/50 animate-in fade-in slide-in-from-top-1 duration-200">
+                                            <div className="flex flex-col gap-2 px-4 py-3 bg-[var(--surface-low)]/50 animate-in fade-in slide-in-from-top-1 duration-200">
                                                 {partner.unpaidProjects.map(project => (
-                                                    <div key={project.id} className="flex items-center justify-between py-1 border-b border-slate-100 last:border-0 border-dashed">
+                                                    <div key={project.id} className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)] last:border-0 border-dashed">
                                                         <div className="flex items-center gap-2 flex-1 min-w-0">
                                                             <div className="h-1 w-1 rounded-full bg-rose-400 shrink-0" />
-                                                            <span className="text-[11px] font-medium text-slate-600 truncate">{project.name}</span>
+                                                            <span className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{project.name}</span>
                                                         </div>
-                                                        <span className="text-[11px] font-bold text-slate-900 tabular-nums ml-2">{formatCurrency(project.amount)}</span>
+                                                        <span className="text-[11px] font-bold text-[var(--text-primary)] tabular-nums ml-2">{formatCurrency(project.amount)}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -497,18 +497,18 @@ export function MobileHomeView({
                     )}
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white shadow-[var(--shadow-apple)]">
-                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                <div className="rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
+                    <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-4 py-3">
                         <div className="inline-flex items-center gap-2">
-                            <History className="h-4 w-4 text-slate-500" />
-                            <p className="text-[12px] font-semibold tracking-[0.03em] text-slate-500">Payment history</p>
+                            <History className="h-4 w-4 text-[var(--text-secondary)]" />
+                            <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Payment history</p>
                         </div>
                         <Link href="/payments" className="text-[12px] font-semibold tracking-[0.03em] text-[var(--primary)]">
                             View all
                         </Link>
                     </div>
                     {visibleHistory.length === 0 ? (
-                        <div className="px-4 py-5 text-sm text-slate-500">No payment history yet.</div>
+                        <div className="px-4 py-5 text-sm text-[var(--text-secondary)]">No payment history yet.</div>
                     ) : (
                         <div className="divide-y divide-slate-100">
                             {visibleHistory.map((item) => (
@@ -516,15 +516,15 @@ export function MobileHomeView({
                                     key={item.id}
                                     type="button"
                                     onClick={() => openProject(item.id)}
-                                    className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50/70"
+                                    className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-low)]/70"
                                 >
                                     <div className="inline-flex min-w-0 items-start gap-2">
                                         <span className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                                             <CheckCircle2 className="h-3 w-3" />
                                         </span>
                                         <div className="min-w-0">
-                                            <p className="text-[13px] font-semibold text-slate-900">{item.projectName}</p>
-                                            <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                                            <p className="text-[13px] font-semibold text-[var(--text-primary)]">{item.projectName}</p>
+                                            <p className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">
                                                 {item.partnerName} · {formatRelativeDate(item.date)}
                                             </p>
                                         </div>

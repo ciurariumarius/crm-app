@@ -163,7 +163,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                 </FilterBarScroll>
             </FilterBarShell>
 
-            <FilterResultsRow className="justify-between gap-3 rounded-[18px] border border-slate-200/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-3 py-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.025)] sm:gap-4 sm:px-4 sm:py-3">
+            <FilterResultsRow className="justify-between gap-3 rounded-[18px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-3 py-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.025)] sm:gap-4 sm:px-4 sm:py-3">
                 <p className="ui-text-label">{totalLogs} Results found</p>
                 {activeFilters.length > 0 && <span className="text-[var(--text-muted)]/60">|</span>}
                 {activeFilters.map((filter) => (
@@ -173,7 +173,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                         className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "h-8 gap-1 text-[12px]" })}
                     >
                         <span>{filter.label}</span>
-                        <X className="h-3 w-3 text-slate-400" />
+                        <X className="h-3 w-3 text-[var(--text-muted)]" />
                     </Link>
                 ))}
             </FilterResultsRow>
@@ -204,15 +204,15 @@ function PartnerCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
                         isActive
                             ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-[var(--surface-lowest)] text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                     )}
                 >
-                    <User className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <User className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[150px] truncate">{selectedPartner?.name || "Partner"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[280px] rounded-xl border border-slate-200 bg-[var(--surface-lowest)] p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[280px] rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-0 shadow-xl">
                 <Command className="rounded-xl">
                     <CommandInput placeholder="Search partner..." />
                     <CommandList>
@@ -274,15 +274,15 @@ function ProjectCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
                         isActive
                             ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-[var(--surface-lowest)] text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                     )}
                 >
-                    <Briefcase className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <Briefcase className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[200px] truncate">{selectedProject ? formatProjectName(selectedProject) : "Project"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[320px] rounded-xl border border-slate-200 bg-[var(--surface-lowest)] p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[320px] rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-0 shadow-xl">
                 <Command className="rounded-xl">
                     <CommandInput placeholder="Search project..." />
                     <CommandList>
@@ -357,15 +357,15 @@ export function TimeRangeCombobox({
                         "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
                         isActive
                             ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-[var(--surface-lowest)] text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                     )}
                 >
-                    <Clock className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <Clock className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[150px] truncate">{timeRangeLabels[currentTimeRange] || "All Time"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[220px] rounded-xl border border-slate-200 bg-[var(--surface-lowest)] p-0 shadow-xl">
+            <PopoverContent align="start" className="w-[220px] rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-0 shadow-xl">
                 <Command className="rounded-xl">
                     <CommandList>
                         <CommandEmpty>No range found.</CommandEmpty>

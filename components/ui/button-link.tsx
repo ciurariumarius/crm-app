@@ -12,7 +12,7 @@ export const buttonLinkVariants = cva(
             },
             variant: {
                 subtle: "border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]",
-                activeBlue: "border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_18%,white)] text-[var(--primary)] hover:bg-[color:color-mix(in_srgb,var(--primary-container)_24%,white)]",
+                activeBlue: "border border-[color:color-mix(in_srgb,var(--primary-container)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_18%,var(--surface-lowest))] text-[var(--primary)] hover:bg-[color:color-mix(in_srgb,var(--primary-container)_24%,var(--surface-lowest))]",
                 activeRose: "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100/60",
             },
             emphasis: {

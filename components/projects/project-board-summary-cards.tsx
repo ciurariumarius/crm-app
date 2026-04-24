@@ -12,11 +12,11 @@ type ProjectBoardSummaryCardsProps = {
 }
 
 const summaryRowClass =
-    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.04)] xl:w-full"
+    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] xl:w-full"
 const summaryItemClass =
-    "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-white/60 xl:min-w-0 xl:flex-1"
+    "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-[var(--surface-lowest)]/60 xl:min-w-0 xl:flex-1"
 const summaryIconContainerClass =
-    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_3px_rgba(15,23,42,0.08)]"
+    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-[var(--surface-lowest)] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_3px_rgba(15,23,42,0.08)]"
 
 function SummaryItem({
     icon,
@@ -35,8 +35,8 @@ function SummaryItem({
                 {icon}
             </div>
             <div className="min-w-0">
-                <p className="text-[13px] font-semibold leading-none text-slate-700">{label}</p>
-                <p className="mt-1 text-[12px] font-medium leading-none text-slate-500">{value}</p>
+                <p className="text-[13px] font-semibold leading-none text-[var(--text-secondary)]">{label}</p>
+                <p className="mt-1 text-[12px] font-medium leading-none text-[var(--text-secondary)]">{value}</p>
             </div>
         </div>
     )
@@ -88,7 +88,7 @@ export function ProjectBoardSummaryCards({
                 {summaryItems.map((item, index) => (
                     <div
                         key={item.label}
-                        className={`flex-1 ${index < summaryItems.length - 1 ? "border-r border-slate-200/80" : ""}`}
+                        className={`flex-1 ${index < summaryItems.length - 1 ? "border-r border-[var(--line-subtle)]" : ""}`}
                     >
                         <SummaryItem icon={item.icon} value={item.value} label={item.label} toneClass={item.toneClass} />
                     </div>

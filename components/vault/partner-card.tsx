@@ -77,7 +77,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
     }
 
     return (
-        <Card className="group relative border-slate-200/60 bg-white transition-all duration-300 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.07)] hover:border-slate-300">
+        <Card className="group relative border-[var(--line-subtle)]/60 bg-[var(--surface-lowest)] transition-all duration-300 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.07)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]">
             <div 
                 onClick={() => setIsSheetOpen(true)}
                 className="h-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 rounded-xl"
@@ -96,7 +96,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                                    <h3 className="text-lg font-black tracking-tight text-slate-900 group-hover:text-primary transition-colors truncate">
+                                    <h3 className="text-lg font-black tracking-tight text-[var(--text-primary)] group-hover:text-primary transition-colors truncate">
                                         {partner.name}
                                     </h3>
                                     {partner.isMainJob && (
@@ -106,50 +106,50 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                     )}
                                 </div>
                                 {partner.businessName && (
-                                    <p className="text-xs font-medium text-slate-400">{partner.businessName}</p>
+                                    <p className="text-xs font-medium text-[var(--text-muted)]">{partner.businessName}</p>
                                 )}
                             </div>
                             <Link
                                 href={`/projects?partnerId=${partner.id}&status=All`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm"
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-muted)] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm"
                             >
                                 <ArrowRight className="h-4 w-4" />
                             </Link>
                         </div>
 
-                        <div className="mt-8 -mx-6 bg-slate-50/50 border-y border-slate-100/60 p-3 grid grid-cols-3 divide-x divide-slate-200/60">
+                        <div className="mt-8 -mx-6 bg-[var(--surface-low)]/50 border-y border-[var(--line-subtle)]/60 p-3 grid grid-cols-3 divide-x divide-slate-200/60">
                             <div className="flex items-center justify-center gap-2.5">
                                 <Globe className="h-3.5 w-3.5 text-blue-500/70 shrink-0" />
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{partner._count.sites}</span>
-                                    <span className="text-[11px] font-medium text-slate-500 leading-none">Domains</span>
+                                    <span className="text-sm font-black text-[var(--text-primary)] tabular-nums leading-none">{partner._count.sites}</span>
+                                    <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-none">Domains</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-center gap-2.5">
                                 <Briefcase className="h-3.5 w-3.5 text-indigo-500/70 shrink-0" />
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{totalProjects}</span>
-                                    <span className="text-[11px] font-medium text-slate-500 leading-none">Projects</span>
+                                    <span className="text-sm font-black text-[var(--text-primary)] tabular-nums leading-none">{totalProjects}</span>
+                                    <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-none">Projects</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-center gap-2.5">
                                 <CheckSquare className="h-3.5 w-3.5 text-emerald-500/70 shrink-0" />
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-sm font-black text-slate-900 tabular-nums leading-none">{partner.totalTasks || 0}</span>
-                                    <span className="text-[11px] font-medium text-slate-500 leading-none">Tasks</span>
+                                    <span className="text-sm font-black text-[var(--text-primary)] tabular-nums leading-none">{partner.totalTasks || 0}</span>
+                                    <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-none">Tasks</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Mid Section: Highlights */}
-                    <div className="px-6 py-4 flex items-center justify-between border-y border-slate-50 bg-slate-50/30">
+                    <div className="flex items-center justify-between border-y border-[var(--line-subtle)] px-6 py-4 bg-[var(--surface-low)]/30">
                         <div className="space-y-1">
-                            <span className="block text-[11px] font-medium text-slate-500">Lifetime revenue</span>
+                            <span className="block text-[11px] font-medium text-[var(--text-secondary)]">Lifetime revenue</span>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-base font-black text-slate-900 tabular-nums">{formatNumber(totalRevenue)}</span>
-                                <span className="text-[11px] font-medium text-slate-400">RON</span>
+                                <span className="text-base font-black text-[var(--text-primary)] tabular-nums">{formatNumber(totalRevenue)}</span>
+                                <span className="text-[11px] font-medium text-[var(--text-muted)]">RON</span>
                             </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
@@ -170,9 +170,9 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                     </div>
 
                     {/* Bottom Section: Mini Ledger */}
-                    <div className="p-6 pt-5 bg-white space-y-4">
+                    <div className="p-6 pt-5 bg-[var(--surface-lowest)] space-y-4">
                         <div className="flex items-center justify-between">
-                            <h4 className="text-[11px] font-semibold tracking-[0.04em] text-slate-500">Unpaid projects</h4>
+                            <h4 className="text-[11px] font-semibold tracking-[0.04em] text-[var(--text-secondary)]">Unpaid projects</h4>
                             {optimisticUnpaidProjects.length > 0 && (
                                 <Button
                                     type="button"
@@ -199,22 +199,22 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                         key={project.id}
                                         href={`/projects/${project.id}`}
                                         onClick={(e) => e.stopPropagation()}
-                                        className="group/item flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-3 hover:border-blue-200 hover:bg-blue-50/50 transition-all shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
+                                        className="group/item flex items-center justify-between gap-3 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 hover:border-blue-200 hover:bg-blue-50/50 transition-all shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
                                     >
-                                        <span className="min-w-0 truncate text-xs font-bold text-slate-700 group-hover/item:text-blue-700 transition-colors">
+                                        <span className="min-w-0 truncate text-xs font-bold text-[var(--text-secondary)] group-hover/item:text-blue-700 transition-colors">
                                             {project.name}
                                         </span>
                                         <div className="flex items-center gap-2 shrink-0">
                                             <span className="text-xs font-black tabular-nums text-rose-600">
                                                 {formatNumber(project.amount)}
                                             </span>
-                                            <span className="text-[11px] font-medium text-slate-300">RON</span>
+                                            <span className="text-[11px] font-medium text-[var(--text-muted)]">RON</span>
                                         </div>
                                     </Link>
                                 ))}
                                 {optimisticUnpaidProjects.length > 3 && (
                                     <div className="text-center pt-2">
-                                        <span className="text-[11px] font-medium text-slate-400 italic">
+                                        <span className="text-[11px] font-medium text-[var(--text-muted)] italic">
                                             + {optimisticUnpaidProjects.length - 3} more outstanding
                                         </span>
                                     </div>

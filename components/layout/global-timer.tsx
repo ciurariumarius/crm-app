@@ -33,7 +33,7 @@ export function GlobalTimer() {
                     <div
                         className={timerState.isRunning
                             ? "timer-heartbeat absolute inset-0 rounded-full"
-                            : "absolute inset-0 rounded-full bg-slate-400 shadow-[0_4px_12px_-4px_rgba(100,116,139,0.6)]"
+                            : "absolute inset-0 rounded-full bg-[var(--text-muted)] shadow-[0_4px_12px_-4px_rgba(100,116,139,0.6)]"
                         }
                         style={
                             timerState.isRunning

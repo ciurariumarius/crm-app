@@ -207,7 +207,7 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                         onClick={(e) => { e.stopPropagation(); onClose(); }}
                         variant="ghost"
                         size="icon"
-                        className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                        className="h-10 w-10 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
                         aria-label="Close partner"
                     >
                         <X className="h-4 w-4" />
@@ -238,23 +238,23 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                             setIsEditingName(false)
                                         }
                                     }}
-                                    className="text-[28px] font-black leading-none tracking-tight text-slate-900 h-auto p-0 border-none bg-transparent focus-visible:ring-0 md:text-3xl"
+                                    className="text-[28px] font-black leading-none tracking-tight text-[var(--text-primary)] h-auto p-0 border-none bg-transparent focus-visible:ring-0 md:text-3xl"
                                     autoFocus
                                 />
                             ) : (
                                 <div className="group flex items-center gap-2 cursor-pointer" onClick={() => setIsEditingName(true)}>
-                                    <h2 className="ui-text-title text-slate-900 group-hover:text-primary transition-colors md:text-[30px]">{partner.name}</h2>
-                                    <Pencil className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <h2 className="ui-text-title text-[var(--text-primary)] group-hover:text-primary transition-colors md:text-[30px]">{partner.name}</h2>
+                                    <Pencil className="h-4 w-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                             )}
                             {partner.businessName && !isEditingName && (
-                                <p className="mt-2 ui-overline text-slate-400">{partner.businessName}</p>
+                                <p className="mt-2 ui-overline text-[var(--text-muted)]">{partner.businessName}</p>
                             )}
                         </div>
 
                         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-9 gap-2 shadow-sm rounded-lg font-semibold text-slate-700 bg-white hover:bg-slate-50">
+                                <Button variant="outline" size="sm" className="h-9 gap-2 shadow-sm rounded-lg font-semibold text-[var(--text-primary)] bg-[var(--surface-lowest)] hover:bg-[var(--surface-low)]">
                                     <Plus className="h-4 w-4" />
                                     Add Payment
                                 </Button>
@@ -318,7 +318,7 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
 
                     <div className="space-y-8 animate-in fade-in-0 duration-300">
                         <form ref={formRef} onSubmit={handleSavePartner} className="space-y-6">
-                            <Card className="shadow-sm border-slate-200 bg-white">
+                            <Card className="shadow-sm border-[var(--line-subtle)] bg-[var(--surface-lowest)]">
                                 <CardContent className="pt-6 space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2 md:col-span-1">
@@ -329,15 +329,15 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                                 onChange={(e) => setEditForm({ ...editForm, businessName: e.target.value })}
                                                 onBlur={submitEditForm}
                                                 placeholder="Corporate LLC"
-                                                className="h-9 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                                                className="h-9 bg-[var(--surface-low)] border-[var(--line-subtle)] focus:bg-[var(--surface-lowest)] transition-all"
                                             />
                                         </div>
-                                        <div className="flex items-center justify-between border p-3 rounded-xl shadow-sm bg-slate-50/50 h-[64px]">
+                                        <div className="flex items-center justify-between border p-3 rounded-xl shadow-sm bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] h-[64px]">
                                             <Label htmlFor="edit-type" className="flex flex-col gap-1 cursor-pointer">
-                                                <span className="ui-text-caption font-semibold text-slate-700">Partner type</span>
+                                                <span className="ui-text-caption font-semibold text-[var(--text-primary)]">Partner type</span>
                                             </Label>
                                             <div className="flex items-center gap-2">
-                                                <span className={`text-xs ${!editForm.isMainJob ? "font-bold text-slate-900" : "text-slate-400 font-medium"}`}>Freelance</span>
+                                                <span className={`text-xs ${!editForm.isMainJob ? "font-bold text-[var(--text-primary)]" : "text-[var(--text-muted)] font-medium"}`}>Freelance</span>
                                                 <Switch
                                                     id="edit-type"
                                                     checked={editForm.isMainJob}
@@ -347,7 +347,7 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                                         updatePartner(partnerId, { ...editForm, isMainJob: checked }).then(() => setIsSavingPartner(false))
                                                     }}
                                                 />
-                                                <span className={`text-xs ${editForm.isMainJob ? "font-bold text-slate-900" : "text-slate-400 font-medium"}`}>Main Job</span>
+                                                <span className={`text-xs ${editForm.isMainJob ? "font-bold text-[var(--text-primary)]" : "text-[var(--text-muted)] font-medium"}`}>Main Job</span>
                                             </div>
                                         </div>
                                     </div>
@@ -362,7 +362,7 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                                 onChange={(e) => setEditForm({ ...editForm, emailPrimary: e.target.value })}
                                                 onBlur={submitEditForm}
                                                 placeholder="primary@example.com"
-                                                className="h-9 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                                                className="h-9 bg-[var(--surface-low)] border-[var(--line-subtle)] focus:bg-[var(--surface-lowest)] transition-all"
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -374,24 +374,24 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                                 onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                                                 onBlur={submitEditForm}
                                                 placeholder="+40..."
-                                                className="h-9 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                                                className="h-9 bg-[var(--surface-low)] border-[var(--line-subtle)] focus:bg-[var(--surface-lowest)] transition-all"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                                        <Label htmlFor="edit-notes" className="ui-overline text-slate-500">Internal notes</Label>
+                                    <div className="space-y-2 pt-2 border-t border-[var(--line-subtle)]">
+                                        <Label htmlFor="edit-notes" className="ui-overline text-[var(--text-secondary)]">Internal notes</Label>
                                         <Textarea
                                             id="edit-notes"
                                             value={editForm.internalNotes}
                                             onChange={(e) => setEditForm({ ...editForm, internalNotes: e.target.value })}
                                             onBlur={submitEditForm}
                                             placeholder="Invoicing details, contact info..."
-                                            className="min-h-[100px] bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm"
+                                            className="min-h-[100px] bg-[var(--surface-low)] border-[var(--line-subtle)] focus:bg-[var(--surface-lowest)] transition-all text-sm"
                                         />
                                     </div>
                                     {isSavingPartner && (
-                                        <div className="flex items-center gap-2 text-xs text-slate-400 italic">
+                                        <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] italic">
                                             <Loader2 className="h-3 w-3 animate-spin" />
                                             Saving changes...
                                         </div>
@@ -402,7 +402,7 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
 
                         <div>
                             <SidePanelSectionTitle title="Partner domains" className="mb-4" />
-                            <div className="rounded-2xl border border-slate-200/60 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                            <div className="rounded-2xl border border-[var(--line-subtle)]/60 bg-[var(--surface-lowest)] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
                                 <SitesListView sites={partner.sites || []} partnerId={partner.id} />
                             </div>
                         </div>

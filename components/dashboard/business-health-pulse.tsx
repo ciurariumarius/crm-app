@@ -114,14 +114,14 @@ export function BusinessHealthPulse({
                     <div className="sm:border-l sm:pl-6 border-border/50 flex flex-col justify-between py-1">
                         <div>
                             <div className="flex items-baseline gap-2">
-                                <h4 className="text-2xl font-bold tracking-tight text-slate-800">{activeTasks}</h4>
+                                <h4 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">{activeTasks}</h4>
                                 <span className="text-[11px] font-semibold tracking-[0.03em] text-muted-foreground">Active tasks</span>
                             </div>
                         </div>
 
                         <div className="pt-3 border-t border-dashed border-border/80 mt-4">
                             <div className="flex items-baseline gap-1.5">
-                                <span className="text-lg font-bold text-slate-700">{billableHours.toFixed(1)}h</span>
+                                <span className="text-lg font-bold text-[var(--text-secondary)]">{billableHours.toFixed(1)}h</span>
                                 <span className="text-[11px] font-medium italic text-muted-foreground">worked in {currentMonthName}</span>
                             </div>
                         </div>

@@ -151,7 +151,7 @@ export default async function VaultPage({
                     <div className="flex h-10 items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <MobileMenuTrigger />
-                            <h1 className="ui-text-title text-slate-900 flex items-center h-full">
+                            <h1 className="ui-text-title text-[var(--text-primary)] flex items-center h-full">
                                 Partners
                             </h1>
                         </div>

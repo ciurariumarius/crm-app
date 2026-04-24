@@ -99,14 +99,14 @@ export function ProjectTasks({
                     onChange={(e) => setNewTaskName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
                     placeholder="Type a task..."
-                    className="h-14 rounded-2xl border-slate-200 bg-slate-50/70 pr-16 text-base placeholder:text-slate-400"
+                    className="h-14 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-low)]/70 pr-16 text-base placeholder:text-[var(--text-muted)]"
                 />
                 <Button
                     type="button"
                     size="icon"
                     onClick={handleAddTask}
                     disabled={loading === "add" || !newTaskName.trim()}
-                    className="absolute right-2 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm hover:bg-slate-50 hover:text-slate-600"
+                    className="absolute right-2 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-sm hover:bg-[var(--surface-low)] hover:text-[var(--text-secondary)]"
                 >
                     {loading === "add" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 </Button>
@@ -114,7 +114,7 @@ export function ProjectTasks({
 
             <div className="space-y-2">
                 {sortedTasks.length === 0 && (
-                    <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-sm text-slate-500">
+                    <div className="rounded-3xl border border-dashed border-[var(--line-subtle)] bg-[var(--surface-low)]/70 px-4 py-5 text-center text-sm text-[var(--text-secondary)]">
                         No tasks yet. Add your first task above.
                     </div>
                 )}
@@ -130,15 +130,15 @@ export function ProjectTasks({
                             className={cn(
                                 "group flex items-center gap-3 rounded-2xl border px-4 py-2.5 transition",
                                 isCompleted
-                                    ? "border-slate-200 bg-slate-50/60"
-                                    : "border-slate-200 bg-white hover:border-slate-300"
+                                    ? "border-[var(--line-subtle)] bg-[var(--surface-low)]/60"
+                                    : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                             )}
                         >
                             <Checkbox
                                 checked={isCompleted}
                                 disabled={loading === task.id}
                                 onCheckedChange={() => handleToggle(task.id, task.status)}
-                                className="h-5 w-5 rounded-md border-slate-300"
+                                className="h-5 w-5 rounded-md border-[var(--line-subtle)]"
                             />
 
                             <button
@@ -148,8 +148,8 @@ export function ProjectTasks({
                             >
                                 <p
                                     className={cn(
-                                        "truncate text-base font-semibold leading-tight text-slate-800",
-                                        isCompleted && "text-slate-400 line-through"
+                                        "truncate text-base font-semibold leading-tight text-[var(--text-primary)]",
+                                        isCompleted && "text-[var(--text-muted)] line-through"
                                     )}
                                 >
                                     {task.name}
@@ -157,11 +157,11 @@ export function ProjectTasks({
                             </button>
 
                             <div className="hidden items-center gap-2 sm:flex">
-                                <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                <span className="rounded-lg bg-[var(--surface-low)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                     {urgencyLabel}
                                 </span>
                                 {dueDate && (
-                                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500">
+                                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)]">
                                         <CalendarDays className="h-3.5 w-3.5" />
                                         {format(dueDate, "MMM d")}
                                     </span>
@@ -174,7 +174,7 @@ export function ProjectTasks({
                                     size="icon"
                                     variant="ghost"
                                     onClick={() => startTimer(projectId, task.id, task.name)}
-                                    className="h-8 w-8 rounded-xl text-slate-400 opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600"
+                                    className="h-8 w-8 rounded-xl text-[var(--text-muted)] opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600"
                                 >
                                     <Play className="h-4 w-4 fill-current" />
                                 </Button>

@@ -354,7 +354,7 @@ export function InlineQuickAddRow({
     }
 
     return (
-        <div className={cn("w-full rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-3 shadow-[var(--shadow-apple)]", rowMinWidthClass)}>
+        <div className={cn("w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)]/85 px-4 py-3 shadow-[var(--shadow-apple)]", rowMinWidthClass)}>
             <div className="overflow-x-auto hidescrollbar">
                 <div className="min-w-[1180px]">
                     <div className="grid grid-cols-[300px_300px_250px_170px_auto_auto] items-end gap-3">
@@ -364,7 +364,7 @@ export function InlineQuickAddRow({
                                 <select
                                     value={selectedPartnerId}
                                     onChange={(event) => setSelectedPartnerId(event.target.value)}
-                                    className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 pr-10 text-[13px] font-medium text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                    className="h-10 w-full appearance-none rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 pr-10 text-[13px] font-medium text-[var(--text-secondary)] outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
                                     aria-label="Partner"
                                 >
                                     <option value="">Select partner</option>
@@ -374,7 +374,7 @@ export function InlineQuickAddRow({
                                         </option>
                                     ))}
                                 </select>
-                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
                             </div>
                         </label>
 
@@ -390,8 +390,8 @@ export function InlineQuickAddRow({
                                     list={domainListId}
                                     placeholder={selectedPartnerId ? "domain.com" : "Select partner first"}
                                     className={cn(
-                                        "h-10 rounded-xl border bg-white pr-16 text-[13px] font-medium",
-                                        !selectedPartnerId && "cursor-not-allowed bg-slate-50 text-slate-400",
+                                        "h-10 rounded-xl border bg-[var(--surface-lowest)] pr-16 text-[13px] font-medium",
+                                        !selectedPartnerId && "cursor-not-allowed bg-[var(--surface-low)] text-[var(--text-muted)]",
                                         domainValue && !domainLooksValid && "border-rose-300",
                                         domainLooksValid && !matchedSite && "border-blue-300",
                                         matchedSite && "border-emerald-300"
@@ -403,7 +403,7 @@ export function InlineQuickAddRow({
                                     ))}
                                 </datalist>
                                 {selectedPartnerId ? (
-                                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                         {sitesForPartner.length} {sitesForPartner.length === 1 ? "site" : "sites"}
                                     </span>
                                 ) : null}
@@ -434,7 +434,7 @@ export function InlineQuickAddRow({
                                         }
                                         setServicePickerValue("")
                                     }}
-                                    className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 pr-10 text-[13px] font-medium text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                    className="h-10 w-full appearance-none rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 pr-10 text-[13px] font-medium text-[var(--text-secondary)] outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
                                     aria-label="Add service"
                                 >
                                     <option value="">Add service</option>
@@ -444,14 +444,14 @@ export function InlineQuickAddRow({
                                         </option>
                                     ))}
                                 </select>
-                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
                             </div>
                         </label>
 
                         <label className="flex flex-col gap-1.5">
                             <span className="caption-caps">Amount</span>
                             <div className="relative">
-                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                     RON
                                 </span>
                                 <Input
@@ -464,7 +464,7 @@ export function InlineQuickAddRow({
                                         if (amount.trim() === "") setAmount("0")
                                     }}
                                     placeholder="0"
-                                    className="h-10 rounded-xl border-slate-200 bg-white pl-11 pr-3 text-right font-mono text-[13px] tabular-nums"
+                                    className="h-10 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-11 pr-3 text-right font-mono text-[13px] tabular-nums"
                                 />
                             </div>
                         </label>
@@ -483,7 +483,7 @@ export function InlineQuickAddRow({
                         <Button
                             type="button"
                             variant="ghost"
-                            className="h-10 rounded-xl px-2.5 text-slate-500 hover:bg-slate-100"
+                            className="h-10 rounded-xl px-2.5 text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             onClick={onCancel}
                         >
                             <X className="h-4 w-4" />
@@ -493,7 +493,7 @@ export function InlineQuickAddRow({
             </div>
 
             <div className="mt-4 flex flex-wrap items-start gap-3">
-                <div className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
+                <div className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] p-1">
                     {(["Active", "Paused", "Completed", "Closed"] as ProjectStatus[]).map((option) => {
                         const isActive = status === option
                         return (
@@ -510,8 +510,8 @@ export function InlineQuickAddRow({
                                                 ? "bg-[var(--warning-surface)] text-[var(--warning-foreground)] shadow-sm"
                                             : option === "Completed"
                                                 ? "bg-[var(--success-surface)] text-[var(--success-foreground)] shadow-sm"
-                                                : "bg-slate-700 text-white shadow-sm"
-                                        : "text-slate-500 hover:bg-white/80"
+                                                : "bg-[var(--text-secondary)] text-[var(--surface-lowest)] shadow-sm"
+                                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)]/80"
                                 )}
                             >
                                 {option === "Active" ? <Play className="h-3 w-3 fill-current" /> : option === "Paused" ? <Pause className="h-3 w-3" /> : option === "Completed" ? <Check className="h-3.5 w-3.5" /> : <Square className="h-3 w-3 fill-current" />}
@@ -521,7 +521,7 @@ export function InlineQuickAddRow({
                     })}
                 </div>
 
-                <div className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
+                <div className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] p-1">
                     {(["Paid", "Unpaid"] as PaymentStatus[]).map((option) => {
                         const isActive = paymentStatus === option
                         return (
@@ -535,7 +535,7 @@ export function InlineQuickAddRow({
                                         ? option === "Paid"
                                             ? "bg-[var(--success-surface)] text-[var(--success-foreground)] shadow-sm"
                                             : "bg-[var(--debt-surface)] text-[var(--debt)] shadow-sm"
-                                        : "text-slate-500 hover:bg-white/80"
+                                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)]/80"
                                 )}
                             >
                                 {option}
@@ -557,7 +557,7 @@ export function InlineQuickAddRow({
                     </button>
                 ))}
 
-                <span className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-[10px] font-medium tracking-[0.01em] text-slate-600">
+                <span className="inline-flex h-7 items-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2.5 text-[10px] font-medium tracking-[0.01em] text-[var(--text-secondary)]">
                     {!selectedPartnerId ? (
                         <span>Choose a partner to unlock domain suggestions.</span>
                     ) : !domainValue ? (

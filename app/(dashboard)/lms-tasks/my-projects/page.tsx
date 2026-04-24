@@ -55,7 +55,7 @@ export default function LmsMyProjectsPage() {
             <select
               value={selectedExecutant}
               onChange={(event) => handleExecutantChange(event.target.value)}
-              className="h-10 min-w-[220px] rounded-xl border border-[var(--line-subtle)] bg-white px-3 text-sm"
+              className="h-10 min-w-[220px] rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-sm"
             >
               <option value="all">All</option>
               {executantOptions.map((name) => (

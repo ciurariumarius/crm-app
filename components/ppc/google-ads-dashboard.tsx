@@ -41,7 +41,7 @@ export function GoogleAdsDashboard({ accounts }: GoogleAdsProps) {
     const [viewMode, setViewMode] = React.useState<"grid" | "list">("list")
 
     return (
-        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 p-6 space-y-6">
+        <div className="flex h-full flex-col bg-[var(--surface-low)]/50 p-6 space-y-6">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-black text-foreground uppercase tracking-tight">

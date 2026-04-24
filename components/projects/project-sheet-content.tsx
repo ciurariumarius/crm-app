@@ -801,13 +801,13 @@ export function ProjectSheetContent({
             onOpenProject={() => undefined}
             onOpenSite={openTaskSiteFromTaskPanel}
         >
-            <div className="relative flex h-full flex-col overflow-hidden bg-[#f8fafc]">
+            <div className="relative flex h-full flex-col overflow-hidden bg-[var(--bg-surface)]">
                 <div className="absolute right-8 top-8 z-20 flex items-center gap-2">
                     {!standalone && onClose && (
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
+                            className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-sm transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                             aria-label="Close project"
                         >
                             <X className="h-4 w-4" />
@@ -822,7 +822,7 @@ export function ProjectSheetContent({
                                 <Textarea
                                     value={localName}
                                     onChange={(event) => setLocalName(event.target.value)}
-                                    className="min-h-[48px] resize-none !rounded-none !border-0 !border-b !border-slate-200 !bg-transparent !px-0 !pt-0 !pb-2 text-2xl font-bold leading-tight tracking-[-0.03em] text-slate-900 !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0 md:text-3xl"
+                                    className="min-h-[48px] resize-none !rounded-none !border-0 !border-b !border-[var(--line-subtle)] !bg-transparent !px-0 !pb-2 !pt-0 text-2xl font-bold leading-tight tracking-[-0.03em] text-[var(--text-primary)] !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0 md:text-3xl"
                                     rows={1}
                                     autoFocus
                                     onBlur={commitTitle}
@@ -845,7 +845,7 @@ export function ProjectSheetContent({
                             ) : (
                                 <div className="group flex w-full items-start gap-3 py-1">
                                     <div className="min-w-0 flex-1">
-                                        <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-slate-900 md:text-2xl">
+                                        <h1 className="text-xl font-bold leading-tight tracking-[-0.03em] text-[var(--text-primary)] md:text-2xl">
                                             {localName || formatProjectName(project)}
                                         </h1>
                                     </div>
@@ -854,7 +854,7 @@ export function ProjectSheetContent({
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => setIsEditingTitle(true)}
-                                        className="mt-0.5 h-8 w-8 shrink-0 rounded-lg text-slate-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-slate-100 hover:text-slate-700"
+                                        className="mt-0.5 h-8 w-8 shrink-0 rounded-lg text-[var(--text-muted)] opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                         aria-label="Edit project title"
                                         title="Edit project title"
                                     >
@@ -864,7 +864,7 @@ export function ProjectSheetContent({
                             )}
 
                             {updatingId === project.id && (
-                                <div className="text-xs font-medium text-slate-400">
+                                <div className="text-xs font-medium text-[var(--text-muted)]">
                                     <Loader2 className="mr-1.5 inline h-3.5 w-3.5 animate-spin" />
                                     Updating...
                                 </div>
@@ -882,7 +882,7 @@ export function ProjectSheetContent({
                                                 project.status === "Active" && "border-[#0b8fa8/20] bg-[#edf9fb] text-[#0b8fa8] hover:bg-[#e4f6f8]",
                                                 project.status === "Paused" && "border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100/50",
                                                 project.status === "Completed" && "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100/50",
-                                                project.status === "Closed" && "border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200/50"
+                                                project.status === "Closed" && "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                                             )}
                                         >
                                             {project.status === "Active" && <Play className="h-3 w-3 fill-current" />}
@@ -892,22 +892,22 @@ export function ProjectSheetContent({
                                             <span>{project.status}</span>
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                         {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
                                             <DropdownMenuItem
                                                 key={statusOption}
                                                 onSelect={() => updateProjectStatus(statusOption)}
-                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                             >
                                                 <span className={cn(
                                                     "mr-2 h-2 w-2 rounded-full",
                                                     statusOption === "Active" && "bg-blue-500",
                                                     statusOption === "Paused" && "bg-amber-500",
                                                     statusOption === "Completed" && "bg-emerald-500",
-                                                    statusOption === "Closed" && "bg-slate-500"
+                                                    statusOption === "Closed" && "bg-[var(--text-muted)]"
                                                 )} />
                                                 {statusOption}
-                                                {project.status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                {project.status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
@@ -942,16 +942,16 @@ export function ProjectSheetContent({
                                             <span>{project.paymentStatus}</span>
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                    <DropdownMenuContent align="start" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                         {(["Paid", "Unpaid"] as const).map((paymentOption) => (
                                             <DropdownMenuItem
                                                 key={paymentOption}
                                                 onSelect={() => updateProjectPaymentStatus(paymentOption)}
-                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                             >
                                                 <span className={cn("mr-2 h-2 w-2 rounded-full", paymentOption === "Paid" ? "bg-emerald-500" : "bg-rose-500")} />
                                                 {paymentOption}
-                                                {project.paymentStatus === paymentOption && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                {project.paymentStatus === paymentOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
@@ -959,22 +959,22 @@ export function ProjectSheetContent({
                             </div>
 
                             <div className="flex flex-col justify-center">
-                                <div className="group/amount relative flex h-10 items-center overflow-hidden rounded-full border border-slate-200/80 bg-white px-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-blue-200 hover:shadow-[0_4px_12px_-4px_rgba(37,99,235,0.08)] sm:h-11 sm:px-5">
+                                <div className="group/amount relative flex h-10 items-center overflow-hidden rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-blue-200 hover:shadow-[0_4px_12px_-4px_rgba(37,99,235,0.08)] sm:h-11 sm:px-5">
                                     <Input
                                         type="number"
                                         step={1}
                                         value={amountInput}
                                         onChange={(event) => setAmountInput(event.target.value)}
                                         onBlur={handleAmountBlur}
-                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-lg font-black tracking-[-0.02em] text-slate-900 shadow-none focus-visible:ring-0 sm:text-xl md:text-[24px]"
+                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-lg font-black tracking-[-0.02em] text-[var(--text-primary)] shadow-none focus-visible:ring-0 sm:text-xl md:text-[24px]"
                                         placeholder="0"
                                     />
-                                    <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-slate-100/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-slate-500 transition-colors group-hover/amount:bg-blue-50 group-hover/amount:text-blue-600 sm:ml-3 sm:px-2.5 sm:py-1 sm:text-[10px]">RON</span>
+                                    <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors group-hover/amount:bg-blue-50 group-hover/amount:text-blue-600 sm:ml-3 sm:px-2.5 sm:py-1 sm:text-[10px]">RON</span>
                                 </div>
                             </div>
                         </div>
 
-                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
+                        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-3">
                             <SidePanelSectionTitle title="Project tasks" icon={<ListTodo className="h-3.5 w-3.5" />} />
                             <ProjectTasks projectId={project.id} initialTasks={project.tasks || []} />
                         </section>
@@ -1016,7 +1016,7 @@ export function ProjectSheetContent({
                                     size="icon"
                                     onClick={exportNotesAsPdf}
                                     disabled={isExportingNotes}
-                                    className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                    className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                     aria-label="Export notes as PDF"
                                     title="Export notes as PDF"
                                 >
@@ -1029,7 +1029,7 @@ export function ProjectSheetContent({
                             }
                         />
 
-                        <section className="space-y-2 border-t border-slate-200/80 pt-3">
+                        <section className="space-y-2 border-t border-[var(--line-subtle)] pt-3">
                             <div className="flex items-center justify-between">
                                 <SidePanelSectionTitle title="Hour Recommendation" icon={<Target className="h-3.5 w-3.5" />} />
                                 {budgetInsights.hasHourlyRate && budgetInsights.hasFee && (
@@ -1047,9 +1047,9 @@ export function ProjectSheetContent({
                             </div>
 
                             {!budgetInsights.hasHourlyRate ? (
-                                <div className="rounded-[26px] border border-dashed border-slate-200 bg-white px-4 py-2.5">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hourly Budget</p>
-                                    <p className="mt-1 text-sm font-medium text-slate-600">
+                                <div className="rounded-[26px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-2.5">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Hourly Budget</p>
+                                    <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
                                         Set your hourly rate to enable fee based hour recommendations.
                                     </p>
                                     <Link href="/settings" className="mt-2 inline-flex text-xs font-semibold text-blue-600 hover:text-blue-500">
@@ -1057,14 +1057,14 @@ export function ProjectSheetContent({
                                     </Link>
                                 </div>
                             ) : !budgetInsights.hasFee ? (
-                                <div className="rounded-[26px] border border-dashed border-slate-200 bg-white px-4 py-2.5">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hourly Budget</p>
-                                    <p className="mt-1 text-sm font-medium text-slate-600">
+                                <div className="rounded-[26px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-2.5">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Hourly Budget</p>
+                                    <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
                                         Set project amount to compute recommended hours.
                                     </p>
                                 </div>
                             ) : (
-                                <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                                <div className="rounded-[26px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                     <div className="grid w-full grid-cols-1 gap-2 lg:grid-cols-4">
                                         <div className="grid grid-cols-3 gap-1.5 lg:col-span-3 lg:gap-2">
                                             <div className="rounded-2xl border border-blue-100 bg-blue-50/50 px-2.5 py-2 sm:px-3 sm:py-2.5">
@@ -1074,9 +1074,9 @@ export function ProjectSheetContent({
                                                 </p>
                                             </div>
 
-                                            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 px-2.5 py-2 sm:px-3 sm:py-2.5">
-                                                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500 sm:text-[10px]">Tracked</p>
-                                                <p className="mt-1 font-mono text-lg font-black tabular-nums text-slate-800 sm:text-xl">
+                                            <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2.5 py-2 sm:px-3 sm:py-2.5">
+                                                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] sm:text-[10px]">Tracked</p>
+                                                <p className="mt-1 font-mono text-lg font-black tabular-nums text-[var(--text-primary)] sm:text-xl">
                                                     {formatHoursWithMinutes(budgetInsights.trackedHoursNow)}
                                                 </p>
                                             </div>
@@ -1102,12 +1102,12 @@ export function ProjectSheetContent({
                                             </div>
                                         </div>
 
-                                        <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 lg:col-span-1">
-                                            <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                        <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2.5 lg:col-span-1">
+                                            <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                                 <span>Progress</span>
                                                 <span>{budgetInsights.progressPercent.toFixed(0)}%</span>
                                             </div>
-                                            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                                            <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-low)]">
                                                 <div
                                                     className={cn(
                                                         "h-full transition-all duration-500",
@@ -1120,7 +1120,7 @@ export function ProjectSheetContent({
                                                     style={{ width: `${budgetInsights.progressBarPercent}%` }}
                                                 />
                                             </div>
-                                            <p className="mt-1 text-right text-[11px] font-medium text-slate-500">
+                                            <p className="mt-1 text-right text-[11px] font-medium text-[var(--text-secondary)]">
                                                 {new Intl.NumberFormat("ro-RO", {
                                                     style: "currency",
                                                     currency: "RON",
@@ -1134,9 +1134,9 @@ export function ProjectSheetContent({
                         </section>
 
 
-                        <section className="space-y-2 border-t border-slate-200/80 pt-3">
+                        <section className="space-y-2 border-t border-[var(--line-subtle)] pt-3">
                             <div className="flex items-center justify-between">
-                                <h2 className="ui-overline inline-flex items-center gap-2 text-slate-500">
+                                <h2 className="ui-overline inline-flex items-center gap-2 text-[var(--text-secondary)]">
                                     <Clock3 className="h-3.5 w-3.5" />
                                     Recent Time
                                 </h2>
@@ -1144,7 +1144,7 @@ export function ProjectSheetContent({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setIsManualTimeOpen((current) => !current)}
-                                    className="h-8 rounded-full border border-slate-200 bg-white px-3 ui-text-caption text-slate-600 hover:bg-slate-50"
+                                    className="h-8 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 ui-text-caption text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                                 >
                                     <Plus className="mr-1 h-3.5 w-3.5" />
                                     Add Time
@@ -1239,7 +1239,7 @@ export function ProjectSheetContent({
                                             type="datetime-local"
                                             value={createdAtInput}
                                             onChange={(e) => setCreatedAtInput(e.target.value)}
-                                            className="h-7 w-[210px] border-slate-200 bg-white px-2 py-1 text-[11px]"
+                                            className="h-7 w-[210px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 py-1 text-[11px]"
                                         />
                                         <button
                                             type="button"
@@ -1254,7 +1254,7 @@ export function ProjectSheetContent({
                                                 setCreatedAtInput(toDateTimeLocalValue(toDate(project.createdAt)))
                                                 setIsEditingCreatedAt(false)
                                             }}
-                                            className="text-slate-500 hover:text-slate-700"
+                                            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                         >
                                             Cancel
                                         </button>
@@ -1265,7 +1265,7 @@ export function ProjectSheetContent({
                                         <button
                                             type="button"
                                             onClick={() => setIsEditingCreatedAt(true)}
-                                            className="text-slate-400 transition hover:text-slate-700"
+                                            className="text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
                                             aria-label="Edit created date"
                                             title="Edit created date"
                                         >
@@ -1303,10 +1303,10 @@ export function ProjectSheetContent({
                         <DialogHeader className={SIDE_PANEL_DIALOG_HEADER_CLASS}>
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
-                                    <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-slate-900">
+                                    <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
                                         Project Notes - {formatProjectName(project)}
                                     </DialogTitle>
-                                    <span className="mt-2 inline-flex min-w-[140px] items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                                    <span className="mt-2 inline-flex min-w-[140px] items-center gap-1.5 text-[11px] font-semibold text-[var(--text-secondary)]">
                                         {notesSaveState === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />}
                                         {notesSaveState === "saved" && <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />}
                                         {notesSaveState === "error" && <AlertCircle className="h-3.5 w-3.5 text-rose-500" />}
@@ -1324,7 +1324,7 @@ export function ProjectSheetContent({
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            className="h-11 rounded-xl border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                                            className="h-11 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 text-sm font-semibold text-[var(--text-secondary)] shadow-sm hover:bg-[var(--surface-low)]"
                                         >
                                             <X className="mr-2 h-4 w-4" />
                                             Close
@@ -1351,7 +1351,7 @@ export function ProjectSheetContent({
                                             variant="ghost"
                                             size="icon"
                                             onClick={appendRequirementsTemplate}
-                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                             aria-label="Add template"
                                             title="Add template"
                                         >
@@ -1363,7 +1363,7 @@ export function ProjectSheetContent({
                                             size="icon"
                                             onClick={exportNotesAsPdf}
                                             disabled={isExportingNotes}
-                                            className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                             aria-label="Export notes as PDF"
                                             title="Export notes as PDF"
                                         >

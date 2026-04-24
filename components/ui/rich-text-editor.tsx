@@ -53,7 +53,7 @@ const ScreenshotImage = Node.create({
         return [
             "img",
             mergeAttributes(HTMLAttributes, {
-                class: "max-w-[70%] h-auto rounded-lg border border-slate-200 shadow-sm my-3 cursor-zoom-in",
+                class: "max-w-[70%] h-auto rounded-lg border border-[var(--line-subtle)] shadow-sm my-3 cursor-zoom-in",
             }),
         ]
     },
@@ -478,7 +478,7 @@ export function RichTextEditor({
         editorProps: {
             attributes: {
                 class:
-                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-slate-200 [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-amber-200 [&_pre]:bg-amber-50/60 [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-slate-800 [&_pre]:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-amber-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-slate-700 [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-slate-200 [&_table]:rounded-lg [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-slate-200 [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-amber-200 [&_pre]:bg-amber-50/60 [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-amber-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
             },
             handleKeyDown(_, event) {
                 if (
@@ -647,7 +647,7 @@ export function RichTextEditor({
                         mode === "panel" &&
                         (isBorderlessPanel
                             ? "border-0 bg-transparent shadow-none"
-                            : "border border-slate-200 bg-white shadow-[0_1px_2px_0_rgba(15,23,42,0.04),0_8px_24px_-20px_rgba(15,23,42,0.35)]"),
+                            : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_1px_2px_0_rgba(15,23,42,0.04),0_8px_24px_-20px_rgba(15,23,42,0.35)]"),
                     variant === "plain" &&
                         mode === "document" &&
                         "border border-transparent bg-transparent shadow-none",
@@ -669,7 +669,7 @@ export function RichTextEditor({
                                 mode === "panel" &&
                                 (isBorderlessPanel
                                     ? "border-b-0 bg-transparent px-0 py-0.5"
-                                    : "border-b border-slate-200 bg-white/95"),
+                                    : "border-b border-[var(--line-subtle)] bg-[var(--surface-lowest)]"),
                             variant === "plain" &&
                                 mode === "document" &&
                                 (isDocumentLeft
@@ -677,14 +677,14 @@ export function RichTextEditor({
                                         "mx-1 mt-3 mb-4 rounded-xl px-3 pt-2 pb-2 backdrop-blur-sm",
                                         isReadingWidth ? "w-[calc(100%-0.5rem)] max-w-[860px]" : "w-[calc(100%-0.5rem)]",
                                         isQuietToolbar
-                                            ? "border border-slate-200/65 bg-white/82 shadow-[0_10px_22px_-22px_rgba(15,23,42,0.45)]"
-                                            : "border border-slate-200/80 bg-white/92 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)]"
+                                            ? "border border-[var(--line-subtle)]/65 bg-[var(--surface-lowest)] shadow-[0_10px_22px_-22px_rgba(15,23,42,0.45)]"
+                                            : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)]"
                                     )
                                     : cn(
                                         "mx-4 md:mx-auto mt-4 mb-6 w-full md:w-[calc(100%-2rem)] max-w-4xl rounded-xl px-3 pt-2 pb-2 backdrop-blur-sm",
                                         isQuietToolbar
-                                            ? "border border-slate-200/65 bg-white/82 shadow-[0_10px_22px_-22px_rgba(15,23,42,0.45)]"
-                                            : "border border-slate-200/80 bg-white/92 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)]"
+                                            ? "border border-[var(--line-subtle)]/65 bg-[var(--surface-lowest)] shadow-[0_10px_22px_-22px_rgba(15,23,42,0.45)]"
+                                            : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)]"
                                     ))
                         )}
                     >
@@ -764,7 +764,7 @@ export function RichTextEditor({
                             type="button"
                             onClick={() => imageInputRef.current?.click()}
                             className={cn(
-                                "inline-flex items-center justify-center rounded-md border border-transparent text-slate-600 transition hover:bg-slate-100 hover:text-slate-900",
+                                "inline-flex items-center justify-center rounded-md border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
                                 isMinimalToolbar ? "h-7 w-7" : "h-8 w-8"
                             )}
                             aria-label="Upload image"
@@ -784,7 +784,7 @@ export function RichTextEditor({
                                             .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
                                             .run()
                                     }
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                     aria-label="Insert table"
                                     title="Insert table"
                                 >
@@ -794,7 +794,7 @@ export function RichTextEditor({
                         ) : null}
                         {toolbarActions && (
                             <div className={cn("ml-auto flex items-center gap-1", isQuietToolbar && "pl-2")}>
-                                {isQuietToolbar ? <div className="mr-1 h-4 w-px bg-slate-200/80" /> : null}
+                                {isQuietToolbar ? <div className="mr-1 h-4 w-px bg-[var(--line-subtle)]" /> : null}
                                 {toolbarActions}
                             </div>
                         )}
@@ -817,32 +817,32 @@ export function RichTextEditor({
                             !Boolean(resolveActiveCodeBlockElement(currentEditor))
                         }
                     >
-                        <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 p-1 shadow-md">
+                        <div className="flex items-center gap-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1 shadow-md">
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().addColumnBefore().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             >
                                 + Col
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().addColumnAfter().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             >
                                 Col +
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().addRowBefore().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             >
                                 + Row
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().addRowAfter().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             >
                                 Row +
                             </button>
@@ -881,12 +881,12 @@ export function RichTextEditor({
                             }}
                             style={{ top: codeCopyAnchor.top, left: codeCopyAnchor.left }}
                             className={cn(
-                                "absolute z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-200 bg-white/95 shadow-sm transition",
+                                "absolute z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-200 bg-[var(--surface-lowest)] shadow-sm transition",
                                 codeCopyState === "copied"
                                     ? "text-emerald-600"
                                     : codeCopyState === "error"
                                         ? "text-rose-600"
-                                        : "text-slate-700 hover:bg-amber-50"
+                                        : "text-[var(--text-secondary)] hover:bg-amber-50"
                             )}
                             aria-label="Copy code"
                             title="Copy code"
@@ -923,7 +923,7 @@ export function RichTextEditor({
                         "relative min-h-[150px] flex-1 overflow-y-auto p-4",
                         variant === "plain" &&
                             mode === "panel" &&
-                            (isBorderlessPanel ? "bg-transparent px-0 py-2" : "bg-white p-5"),
+                            (isBorderlessPanel ? "bg-transparent px-0 py-2" : "bg-[var(--surface-lowest)] p-5"),
                         variant === "plain" && mode === "document" && "bg-transparent px-0 py-2",
                         minHeightClassName
                     )}
@@ -943,10 +943,10 @@ export function RichTextEditor({
                 {imageSources.length > 0 && (
                     <div
                         className={cn(
-                            "border-t border-slate-200/80 bg-slate-50/70 px-4 py-3",
+                            "border-t border-[var(--line-subtle)] bg-[var(--surface-low)]/70 px-4 py-3",
                             isBorderlessPanel && "border-t-0 bg-transparent px-0 py-2",
                             mode === "document" &&
-                                "border-slate-200/70 bg-transparent px-0 py-3"
+                                "border-[var(--line-subtle)] bg-transparent px-0 py-3"
                         )}
                     >
                         <div
@@ -957,7 +957,7 @@ export function RichTextEditor({
                                         : "mx-auto w-full max-w-4xl px-6")
                             )}
                         >
-                            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-400">
+                            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
                                 Screenshot Gallery ({imageSources.length})
                             </div>
                             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -966,7 +966,7 @@ export function RichTextEditor({
                                         key={`${src}-${index}`}
                                         type="button"
                                         onClick={() => openImageViewerAtIndex(index)}
-                                        className="group relative h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-blue-300"
+                                        className="group relative h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-sm transition hover:border-blue-300"
                                         title={`Open screenshot ${index + 1}`}
                                         aria-label={`Open screenshot ${index + 1}`}
                                     >
@@ -1010,7 +1010,7 @@ export function RichTextEditor({
                                                     : 0,
                                         }))
                                     }
-                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-white/10"
+                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-[var(--surface-lowest)]/10"
                                     aria-label="Previous image"
                                 >
                                     <ArrowLeft className="h-4 w-4" />
@@ -1026,7 +1026,7 @@ export function RichTextEditor({
                                                     : 0,
                                         }))
                                     }
-                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-white/10"
+                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-[var(--surface-lowest)]/10"
                                     aria-label="Next image"
                                 >
                                     <ArrowRight className="h-4 w-4" />
@@ -1046,7 +1046,7 @@ export function RichTextEditor({
                                             zoom: Math.max(0.4, Number((current.zoom - 0.1).toFixed(2))),
                                         }))
                                     }
-                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-white/10"
+                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-[var(--surface-lowest)]/10"
                                     aria-label="Zoom out"
                                 >
                                     <Minus className="h-4 w-4" />
@@ -1062,7 +1062,7 @@ export function RichTextEditor({
                                             zoom: Math.min(3, Number((current.zoom + 0.1).toFixed(2))),
                                         }))
                                     }
-                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-white/10"
+                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-[var(--surface-lowest)]/10"
                                     aria-label="Zoom in"
                                 >
                                     <Plus className="h-4 w-4" />
@@ -1073,7 +1073,7 @@ export function RichTextEditor({
                                         href={currentViewerSrc}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="rounded-md border border-white/20 p-1.5 transition hover:bg-white/10"
+                                        className="rounded-md border border-white/20 p-1.5 transition hover:bg-[var(--surface-lowest)]/10"
                                         aria-label="Download image"
                                     >
                                         <Download className="h-4 w-4" />
@@ -1108,7 +1108,7 @@ export function RichTextEditor({
                                 <button
                                     type="button"
                                     onClick={() => setViewer(INITIAL_VIEWER_STATE)}
-                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-white/10"
+                                    className="rounded-md border border-white/20 p-1.5 transition hover:bg-[var(--surface-lowest)]/10"
                                     aria-label="Close image viewer"
                                 >
                                     <X className="h-4 w-4" />

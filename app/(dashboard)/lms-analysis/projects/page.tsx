@@ -96,9 +96,9 @@ function formatDateLabel(value: string | null) {
 
 function getServiceBadgeClass(status: ServiceStatus) {
   if (status === "Active") return "border-emerald-500 bg-emerald-100 text-emerald-900 shadow-sm"
-  if (status === "Inactive") return "border-slate-400 bg-slate-100 text-slate-700"
+  if (status === "Inactive") return "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]"
   if (status === "Stopped") return "border-rose-500 bg-rose-100 text-rose-900"
-  return "border-slate-200 bg-white text-slate-400"
+  return "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)]"
 }
 
 function getBucketByMonths(months: number | null): AgeOption | "unknown" {
@@ -175,7 +175,7 @@ function FilterMultiSelectDropdown<T extends string>({
           className={cn(
             "inline-flex h-10 w-full items-center justify-between gap-1 rounded-lg border pl-2.5 pr-2 text-xs font-semibold outline-none",
             selectedValues.length > 0
-              ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+              ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
               : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]"
           )}
         >
@@ -718,7 +718,7 @@ export default function LmsAnalysisProjectsPage() {
                   className={cn(
                     "inline-flex h-10 min-w-[120px] flex-1 items-center gap-2 rounded-lg border px-2.5 text-xs font-semibold transition-colors",
                     activeOnly
-                      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                      ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                       : "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--text-secondary)]"
                   )}
                 >
@@ -780,13 +780,13 @@ export default function LmsAnalysisProjectsPage() {
             {activeFilters.map((filter) => (
               <span
                 key={filter.id}
-                className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,white)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,white)] px-2.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
+                className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
               >
                 <span>{filter.label}</span>
                 <button
                   type="button"
                   onClick={filter.onRemove}
-                  className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--brand-primary)]/80 transition-colors hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_20%,white)] hover:text-[var(--brand-primary)]"
+                  className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--brand-primary)]/80 transition-colors hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_20%,var(--surface-lowest))] hover:text-[var(--brand-primary)]"
                   aria-label={`Remove ${filter.label} filter`}
                 >
                   <X className="h-3 w-3" />
@@ -797,7 +797,7 @@ export default function LmsAnalysisProjectsPage() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 transition-colors hover:text-slate-800"
+                className="inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
               >
                 Clear all
               </button>
@@ -853,7 +853,7 @@ export default function LmsAnalysisProjectsPage() {
                     <Badge
                       className={cn(
                         "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
-                        row.workVolumeStatus === "No Work" && "border-slate-300 bg-slate-100 text-slate-700",
+                        row.workVolumeStatus === "No Work" && "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]",
                         row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
                         row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
                         row.workVolumeStatus === "High" && "border-rose-300 bg-rose-50 text-rose-700",
@@ -1034,7 +1034,7 @@ export default function LmsAnalysisProjectsPage() {
                             className={cn(
                               "truncate rounded px-1.5 py-0.5 text-sm font-medium",
                               normalizeExecutantKey(member) === normalizeExecutantKey(selectedEmployee)
-                                ? "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                                ? "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                                 : "text-[var(--text-primary)]"
                             )}
                             title={member}
@@ -1050,7 +1050,7 @@ export default function LmsAnalysisProjectsPage() {
                       className={cn(
                         "inline-flex rounded px-1 py-0.5 text-sm font-medium",
                         normalizeExecutantKey(row.delegatedPerson) === normalizeExecutantKey(selectedEmployee)
-                          ? "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,white)] text-[var(--brand-primary)]"
+                          ? "bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                           : "text-[var(--text-primary)]"
                       )}
                     >
@@ -1090,7 +1090,7 @@ export default function LmsAnalysisProjectsPage() {
                     <Badge
                       className={cn(
                         "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em]",
-                        row.workVolumeStatus === "No Work" && "border-slate-300 bg-slate-100 text-slate-700",
+                        row.workVolumeStatus === "No Work" && "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]",
                         row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
                         row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
                         row.workVolumeStatus === "High" && "border-rose-300 bg-rose-50 text-rose-700",

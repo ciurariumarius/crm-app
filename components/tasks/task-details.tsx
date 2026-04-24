@@ -432,7 +432,7 @@ export function TaskDetails({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:text-slate-700"
+                            className="h-10 w-10 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                             onClick={() => onOpenChange(false)}
                         >
                             <X className="h-5 w-5" />
@@ -457,7 +457,7 @@ export function TaskDetails({
                                                 }
                                             }}
                                             onBlur={commitTitle}
-                                            className="min-h-[44px] resize-none !rounded-none !border-0 !border-b !border-slate-200 !bg-transparent !px-0 !pt-0 !pb-1 text-2xl md:text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900 !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0"
+                                            className="min-h-[44px] resize-none !rounded-none !border-0 !border-b !border-[var(--line-subtle)] !bg-transparent !px-0 !pb-1 !pt-0 text-2xl font-semibold leading-tight tracking-[-0.02em] text-[var(--text-primary)] !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0 md:text-2xl"
                                             placeholder="Task Name"
                                             rows={1}
                                             autoFocus
@@ -469,14 +469,14 @@ export function TaskDetails({
                                         />
                                     ) : (
                                         <div className="group flex w-full items-start gap-3 py-1">
-                                            <h1 className="min-w-0 flex-1 text-2xl font-semibold leading-tight tracking-[-0.02em] text-slate-900">
+                                            <h1 className="min-w-0 flex-1 text-2xl font-semibold leading-tight tracking-[-0.02em] text-[var(--text-primary)]">
                                                 {name || task.name || "Untitled task"}
                                             </h1>
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8 shrink-0 rounded-lg text-slate-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-slate-100 hover:text-slate-700"
+                                                className="h-8 w-8 shrink-0 rounded-lg text-[var(--text-muted)] opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                                 onClick={() => setIsEditingTitle(true)}
                                                 aria-label="Edit task title"
                                                 title="Edit task title"
@@ -512,21 +512,21 @@ export function TaskDetails({
                                                     : "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60"
                                             )}
                                         >
-                                            <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover/status:translate-y-0" />
+                                            <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_22%,transparent)] transition-transform duration-300 group-hover/status:translate-y-0" />
                                             {status === "Active" ? <Play className="relative z-10 h-3.5 w-3.5 fill-current" /> : <Check className="relative z-10 h-3.5 w-3.5" />}
                                             <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{status}</span>
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                         {(["Active", "Completed"] as const).map((statusOption) => (
                                             <DropdownMenuItem
                                                 key={statusOption}
                                                 onSelect={() => setStatus(statusOption)}
-                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                             >
                                                 <span className={cn("mr-2 h-2 w-2 rounded-full", statusOption === "Active" ? "bg-blue-500" : "bg-emerald-500")} />
                                                 {statusOption}
-                                                {status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                {status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
@@ -545,7 +545,7 @@ export function TaskDetails({
                                                 urgency === "Idea" && "border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-100/50 text-blue-600 shadow-[0_2px_10px_-4px_rgba(37,99,235,0.15)] hover:border-blue-300/60"
                                             )}
                                         >
-                                            <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover/priority:translate-y-0" />
+                                            <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_22%,transparent)] transition-transform duration-300 group-hover/priority:translate-y-0" />
                                             <span className={cn(
                                                 "relative z-10 h-2.5 w-2.5 rounded-full shadow-sm",
                                                 urgency === "Urgent" && "bg-rose-500",
@@ -555,12 +555,12 @@ export function TaskDetails({
                                             <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{urgency}</span>
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                    <DropdownMenuContent align="start" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                         {(["Urgent", "Normal", "Idea"] as const).map((urgencyOption) => (
                                             <DropdownMenuItem
                                                 key={urgencyOption}
                                                 onSelect={() => setUrgency(urgencyOption)}
-                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-slate-700"
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                             >
                                                 <span className={cn(
                                                     "mr-2 h-2 w-2 rounded-full",
@@ -569,7 +569,7 @@ export function TaskDetails({
                                                     urgencyOption === "Idea" && "bg-blue-500"
                                                 )} />
                                                 {urgencyOption}
-                                                {urgency === urgencyOption && <Check className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                                                {urgency === urgencyOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
@@ -585,7 +585,7 @@ export function TaskDetails({
                                                 "group/deadline relative flex h-10 w-full items-center justify-between overflow-hidden rounded-full border px-3 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
                                                 deadline
                                                     ? "border-blue-200/70 bg-blue-50/40 text-blue-700 hover:border-blue-300/70"
-                                                    : "border-slate-200/80 bg-white text-slate-500 hover:border-slate-300"
+                                                    : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                                             )}
                                         >
                                             <span className="flex min-w-0 items-center gap-2">
@@ -594,7 +594,7 @@ export function TaskDetails({
                                                     {deadline ? format(deadline, "dd MMM yyyy") : "Set deadline"}
                                                 </span>
                                             </span>
-                                            <span className="ml-2 inline-flex shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                                            <span className="ml-2 inline-flex shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_80%,transparent)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                                 {deadline ? format(deadline, "EEE") : "None"}
                                             </span>
                                         </button>
@@ -633,7 +633,7 @@ export function TaskDetails({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setIsManualTimeOpen((current) => !current)}
-                                    className="h-8 rounded-full border border-slate-200 bg-white px-3 ui-text-caption text-slate-600 hover:bg-slate-50"
+                                    className="h-8 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 ui-text-caption text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                                 >
                                     <Plus className="mr-1 h-3.5 w-3.5" />
                                     Add Time
@@ -659,7 +659,7 @@ export function TaskDetails({
                                     onNotesChange={setManualNotes}
                                     onSave={handleManualLog}
                                     isSaving={isLoggingTime}
-                                    className="rounded-2xl border border-slate-200 bg-white p-3 premium-card shadow-sm"
+                                    className="premium-card rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-sm"
                                 />
                             )}
                         </div>
@@ -667,7 +667,7 @@ export function TaskDetails({
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <SidePanelSectionTitle title="Time history" icon={<Clock className="h-3.5 w-3.5" />} />
-                                <div className="text-[11px] font-semibold text-slate-400">
+                                <div className="text-[11px] font-semibold text-[var(--text-muted)]">
                                     {sortedTimeLogs.length} Sessions
                                 </div>
                             </div>
@@ -679,7 +679,7 @@ export function TaskDetails({
                         </div>
                     </section>
 
-                        <section className="space-y-3 border-t border-slate-200/80 pt-3">
+                        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-3">
                             <SidePanelSectionTitle title="Task info" icon={<Info className="h-3.5 w-3.5" />} />
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <button
@@ -689,20 +689,20 @@ export function TaskDetails({
                                     className={cn(
                                         "text-left",
                                         task.projectId
-                                            ? "hover:border-slate-300"
+                                            ? "hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                                             : "cursor-not-allowed opacity-60"
                                     )}
                                 >
                                     <SidePanelInfoCard
                                         title="Project"
                                         subtitle={(
-                                            <p className="truncate text-base font-black leading-tight tracking-tight text-slate-800 sm:text-lg">
+                                            <p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">
                                                 {projectLabel}
                                             </p>
                                         )}
-                                        action={<FolderOpen className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />}
+                                        action={<FolderOpen className="h-4 w-4 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]" />}
                                     >
-                                        <p className="truncate text-[11px] font-medium text-slate-500">{projectPartnerLabel}</p>
+                                        <p className="truncate text-[11px] font-medium text-[var(--text-secondary)]">{projectPartnerLabel}</p>
                                     </SidePanelInfoCard>
                                 </button>
 
@@ -716,8 +716,8 @@ export function TaskDetails({
                                             className={cn(
                                                 "truncate text-left text-base font-black leading-tight tracking-tight transition sm:text-lg",
                                                 projectSitePanelHref || onOpenSite
-                                                    ? "text-slate-800 hover:text-blue-600"
-                                                    : "cursor-not-allowed text-slate-400"
+                                                    ? "text-[var(--text-primary)] hover:text-blue-600"
+                                                    : "cursor-not-allowed text-[var(--text-muted)]"
                                             )}
                                             title="Open site panel"
                                         >
@@ -725,7 +725,7 @@ export function TaskDetails({
                                         </button>
                                     )}
                                     action={
-                                        <span className="inline-flex items-center gap-1 text-slate-300 transition group-hover:text-slate-500">
+                                        <span className="inline-flex items-center gap-1 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]">
                                             <Globe className="h-4 w-4" />
                                             <ArrowUpRight className="h-4 w-4" />
                                         </span>
@@ -775,7 +775,7 @@ export function TaskDetails({
                         <DialogHeader className={SIDE_PANEL_DIALOG_HEADER_CLASS}>
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
-                                    <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-slate-900">
+                                    <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
                                         Task Notes - {name || "Untitled Task"}
                                     </DialogTitle>
                                 </div>
@@ -783,7 +783,7 @@ export function TaskDetails({
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        className="h-11 rounded-xl border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                                        className="h-11 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 text-sm font-semibold text-[var(--text-secondary)] shadow-sm hover:bg-[var(--surface-low)]"
                                     >
                                         <X className="mr-2 h-4 w-4" />
                                         Close
@@ -791,7 +791,7 @@ export function TaskDetails({
                                 </DialogClose>
                             </div>
                         </DialogHeader>
-                        <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-[#FCFCFB] px-8 pb-8 pt-6">
+                        <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-[var(--surface-lowest)] px-8 pb-8 pt-6">
                             <RichTextEditor
                                 value={description}
                                 onChange={setDescription}
@@ -808,7 +808,7 @@ export function TaskDetails({
                                         variant="ghost"
                                         size="icon"
                                         onClick={appendTaskNotesTemplate}
-                                        className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                        className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                         aria-label="Add template"
                                         title="Add template"
                                     >

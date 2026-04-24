@@ -203,15 +203,15 @@ function ProjectsGridSkeleton() {
                 >
                     <div className="animate-pulse space-y-3">
                         <div className="flex items-start gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-slate-200" />
+                            <div className="h-10 w-10 rounded-xl bg-[var(--surface-low)]" />
                             <div className="min-w-0 flex-1 space-y-2">
-                                <div className="h-4 w-3/4 rounded bg-slate-200" />
-                                <div className="h-3 w-1/2 rounded bg-slate-200" />
+                                <div className="h-4 w-3/4 rounded bg-[var(--surface-low)]" />
+                                <div className="h-3 w-1/2 rounded bg-[var(--surface-low)]" />
                             </div>
-                            <div className="h-6 w-20 rounded-full bg-slate-200" />
+                            <div className="h-6 w-20 rounded-full bg-[var(--surface-low)]" />
                         </div>
-                        <div className="h-8 w-full rounded-full bg-slate-200" />
-                        <div className="h-8 w-4/5 rounded-full bg-slate-200" />
+                        <div className="h-8 w-full rounded-full bg-[var(--surface-low)]" />
+                        <div className="h-8 w-4/5 rounded-full bg-[var(--surface-low)]" />
                     </div>
                 </div>
             ))}
@@ -229,8 +229,8 @@ function ProjectsListSkeleton() {
                         className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4"
                     >
                         <div className="mb-3 flex items-center gap-3">
-                            <span className="h-5 w-1 rounded-full bg-slate-200" />
-                            <div className="h-5 w-40 animate-pulse rounded bg-slate-200" />
+                            <span className="h-5 w-1 rounded-full bg-[var(--surface-low)]" />
+                            <div className="h-5 w-40 animate-pulse rounded bg-[var(--surface-low)]" />
                         </div>
 
                         <div className="space-y-2">
@@ -864,7 +864,7 @@ export function ProjectsBoardRows({
                                                                 option === "Active" && "bg-blue-500",
                                                                 option === "Paused" && "bg-amber-500",
                                                                 option === "Completed" && "bg-emerald-500",
-                                                                option === "Closed" && "bg-slate-500"
+                                                                option === "Closed" && "bg-[var(--text-muted)]"
                                                             )} />
                                                             {option}
                                                             {projectStatus === option && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
@@ -1154,7 +1154,7 @@ export function ProjectsBoardRows({
                                                                 option === "Active" && "bg-blue-500",
                                                                 option === "Paused" && "bg-amber-500",
                                                                 option === "Completed" && "bg-emerald-500",
-                                                                option === "Closed" && "bg-slate-500"
+                                                                option === "Closed" && "bg-[var(--text-muted)]"
                                                             )} />
                                                             {option}
                                                             {projectStatus === option && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
