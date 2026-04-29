@@ -73,6 +73,8 @@ interface RichTextEditorProps {
     toolbarPlacement?: "bar" | "top-right"
     toolbarActions?: React.ReactNode
     documentHeader?: React.ReactNode
+    notesMode?: boolean
+    focusToken?: string | number
     className?: string
     mode?: "panel" | "document"
     panelStyle?: "default" | "borderless"
@@ -134,6 +136,8 @@ export function RichTextEditor({
     toolbarPlacement = "bar",
     toolbarActions,
     documentHeader,
+    notesMode = false,
+    focusToken,
     className,
     mode = "panel",
     panelStyle = "default",
@@ -151,6 +155,7 @@ export function RichTextEditor({
     const lastEditorHtmlRef = React.useRef(value)
     const [codeCopyAnchor, setCodeCopyAnchor] = React.useState<{ top: number; left: number } | null>(null)
     const [activeCodeBlockElement, setActiveCodeBlockElement] = React.useState<HTMLElement | null>(null)
+    const lastFocusTokenRef = React.useRef<string | number | undefined>(undefined)
 
     const syncImageSources = React.useCallback((nextSources: string[]) => {
         setImageSources((current) => {
@@ -464,6 +469,10 @@ export function RichTextEditor({
         setTimeout(() => setCodeCopyState("idle"), 1400)
     }, [activeCodeBlockElement, copyTextToClipboard])
 
+    const notesFirstLineClass = notesMode
+        ? "[&>*:first-child]:mt-0 [&>*:first-child]:mb-1 [&>*:first-child]:text-[1.2rem] [&>*:first-child]:font-medium [&>*:first-child]:tracking-[-0.012em] [&>*:first-child]:leading-[1.3] [&>*:first-child]:text-[var(--text-primary)] md:[&>*:first-child]:text-[1.3rem]"
+        : ""
+
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -483,8 +492,10 @@ export function RichTextEditor({
         content: value,
         editorProps: {
             attributes: {
-                class:
+                class: cn(
                     "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-amber-200 [&_pre]:bg-amber-50/60 [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-amber-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    notesFirstLineClass
+                ),
             },
             handleKeyDown(_, event) {
                 if (
@@ -630,20 +641,42 @@ export function RichTextEditor({
         return () => window.removeEventListener("keydown", handleKeyDown)
     }, [viewer.open])
 
+    React.useEffect(() => {
+        if (focusToken === undefined || focusToken === null) return
+        if (!editor) return
+        if (lastFocusTokenRef.current === focusToken) return
+        lastFocusTokenRef.current = focusToken
+
+        const rafId = window.requestAnimationFrame(() => {
+            editor.chain().focus("start").run()
+        })
+        return () => window.cancelAnimationFrame(rafId)
+    }, [editor, focusToken])
+
     if (!editor) {
         return null
     }
 
     const currentViewerSrc = viewer.sources[viewer.index] || ""
-    const isToolbarPinned = toolbarPinned
-    const showToolbar = isToolbarPinned || toolbarVisibility === "always" || isFocused
-    const isMinimalToolbar = toolbarPreset === "minimal"
+    const resolvedToolbarPinned = notesMode ? false : toolbarPinned
+    const resolvedToolbarVisibility = notesMode ? "always" : toolbarVisibility
+    const resolvedToolbarPreset = notesMode ? "minimal" : toolbarPreset
+    const resolvedToolbarTone = notesMode ? "quiet" : toolbarTone
+    const resolvedToolbarPlacement = notesMode ? "top-right" : toolbarPlacement
+    const isToolbarPinned = resolvedToolbarPinned
+    const showToolbar = isToolbarPinned || resolvedToolbarVisibility === "always" || isFocused
+    const isMinimalToolbar = resolvedToolbarPreset === "minimal"
     const isCompactToolbar = isMinimalToolbar || isToolbarPinned
-    const isTopRightToolbar = toolbarPlacement === "top-right"
+    const isTopRightToolbar = resolvedToolbarPlacement === "top-right"
     const isBorderlessPanel = variant === "plain" && mode === "panel" && panelStyle === "borderless"
     const isDocumentLeft = mode === "document" && documentLayout === "left"
-    const isQuietToolbar = toolbarTone === "quiet"
+    const isQuietToolbar = resolvedToolbarTone === "quiet"
     const isReadingWidth = mode === "document" && documentWidth === "reading"
+    const compactControlClass = notesMode ? "h-10 w-10 lg:h-8 lg:w-8" : "h-8 w-8"
+    const compactIconClass = notesMode ? "h-[1.1rem] w-[1.1rem] lg:h-4 lg:w-4" : "h-4 w-4"
+    const notesControlClass = notesMode
+        ? "rounded-full border border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+        : ""
 
     return (
         <>
@@ -674,7 +707,7 @@ export function RichTextEditor({
                         className={cn(
                             "flex items-center",
                             isTopRightToolbar &&
-                                "absolute right-2 top-2 z-30 max-w-[calc(100%-1rem)] rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3",
+                                "absolute right-2 top-2 z-30 max-w-[calc(100%-1rem)] rounded-full border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] shadow-[0_8px_20px_-18px_rgba(15,23,42,0.42)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3",
                             isCompactToolbar ? "gap-1.5 px-2 py-1.5 md:px-2.5" : "gap-1.5 p-1.5",
                             isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",
                             !isTopRightToolbar && variant === "default" && "border-b bg-muted/20",
@@ -760,40 +793,42 @@ export function RichTextEditor({
                                     ? editor.chain().focus().setBold().run()
                                     : editor.chain().focus().unsetBold().run()
                             }
-                            className="h-8 w-8 p-0"
+                            className={cn(compactControlClass, "p-0", notesControlClass)}
                             aria-label="Bold"
                         >
-                            <Bold className="h-4 w-4" />
+                            <Bold className={compactIconClass} />
                         </Toggle>
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("bulletList")}
                             onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
-                            className="h-8 w-8 p-0"
+                            className={cn(compactControlClass, "p-0", notesControlClass)}
                             aria-label="Bullet list"
                         >
-                            <List className="h-4 w-4" />
+                            <List className={compactIconClass} />
                         </Toggle>
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("codeBlock")}
                             onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
-                            className="h-8 w-8 p-0"
+                            className={cn(compactControlClass, "p-0", notesControlClass)}
                             aria-label="Code snippet"
                             title="Code snippet"
                         >
-                            <Code2 className="h-4 w-4" />
+                            <Code2 className={compactIconClass} />
                         </Toggle>
                         <button
                             type="button"
                             onClick={() => imageInputRef.current?.click()}
                             className={cn(
-                                "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                "inline-flex items-center justify-center rounded-md border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
+                                compactControlClass,
+                                notesMode && "rounded-full"
                             )}
                             aria-label="Upload image"
                             title="Upload image"
                         >
-                            <ImagePlus className="h-4 w-4" />
+                            <ImagePlus className={compactIconClass} />
                         </button>
                         {!isMinimalToolbar ? (
                             <>
@@ -944,7 +979,7 @@ export function RichTextEditor({
                     ref={editorViewportRef}
                     className={cn(
                         "relative min-h-[150px] flex-1 overflow-y-auto p-4",
-                        isTopRightToolbar && "pt-[3.8rem] md:pt-[4.1rem]",
+                        isTopRightToolbar && "pt-2",
                         variant === "plain" &&
                             mode === "panel" &&
                             (isBorderlessPanel ? "bg-transparent px-0 py-2" : "bg-[var(--surface-lowest)] p-5"),
@@ -956,7 +991,7 @@ export function RichTextEditor({
                         className={cn(
                             mode === "document" &&
                                 (isDocumentLeft
-                                    ? cn("w-full px-3 pb-7", isReadingWidth && "max-w-[860px]")
+                                    ? cn("w-full px-3 pb-7", isReadingWidth && "max-w-[860px]", isTopRightToolbar && "pr-36 sm:pr-44")
                                     : "mx-auto w-full max-w-4xl px-6 pb-8")
                         )}
                     >

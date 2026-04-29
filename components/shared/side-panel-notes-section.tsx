@@ -65,13 +65,10 @@ export function SidePanelNotesSection({
                 placeholder=""
                 variant="plain"
                 mode="document"
+                notesMode
                 className={editorClassName}
                 minHeightClassName={minHeightClassName}
                 uploadProjectId={uploadProjectId}
-                toolbarVisibility="always"
-                toolbarPinned
-                toolbarPreset="minimal"
-                toolbarTone="quiet"
                 toolbarActions={
                     <>
                         {onAddTemplate ? (
@@ -80,11 +77,11 @@ export function SidePanelNotesSection({
                                 variant="ghost"
                                 size="icon"
                                 onClick={onAddTemplate}
-                                className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                className="h-11 w-11 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] lg:h-8 lg:w-8"
                                 aria-label="Add template"
                                 title="Add template"
                             >
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
                             </Button>
                         ) : null}
                         {extraToolbarActions}
@@ -94,11 +91,11 @@ export function SidePanelNotesSection({
                                 variant="ghost"
                                 size="icon"
                                 onClick={onExpand}
-                                className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                className="h-11 w-11 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] lg:h-8 lg:w-8"
                                 aria-label={expandLabel}
                                 title={expandLabel}
                             >
-                                <Expand className="h-4 w-4" />
+                                <Expand className="h-5 w-5 lg:h-4 lg:w-4" />
                             </Button>
                         ) : null}
                     </>

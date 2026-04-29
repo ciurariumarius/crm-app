@@ -6,6 +6,7 @@ import { z } from "zod"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { revalidatePath } from "next/cache"
+import { DEFAULT_NOTE_TITLE, deriveNoteTitleFromContent } from "@/lib/notes/derived-note-text"
 
 export type NoteRecord = {
   id: string
@@ -77,17 +78,11 @@ const ListNotesSchema = z.object({
   limit: z.number().int().min(1).max(500).optional(),
 })
 
-const DEFAULT_NOTE_TITLE = "New note"
-
-function getDefaultNoteTitle() {
-  return DEFAULT_NOTE_TITLE
-}
-
 function normalizeNoteTitle(value: string | null | undefined) {
   const title = (value || "").trim()
-  if (!title) return getDefaultNoteTitle()
+  if (!title) return DEFAULT_NOTE_TITLE
   if (title.toLowerCase() === "untitled" || title.toLowerCase() === "untitled note") {
-    return getDefaultNoteTitle()
+    return DEFAULT_NOTE_TITLE
   }
   return title
 }
@@ -159,8 +154,8 @@ export async function createNote(input?: { title?: string; content?: string; pin
       return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR }
     }
     const validated = CreateNoteSchema.parse(input || {})
-    const title = normalizeNoteTitle(validated.title)
     const content = validated.content || ""
+    const title = deriveNoteTitleFromContent(content, normalizeNoteTitle(validated.title))
     const contentText = toNoteContentText(content)
 
     const note = (await noteDelegate.create({
@@ -216,10 +211,12 @@ export async function updateNote(
       archived?: boolean
     } = {}
 
-    if (validated.title !== undefined) updateData.title = normalizeNoteTitle(validated.title)
     if (validated.content !== undefined) {
       updateData.content = validated.content
       updateData.contentText = toNoteContentText(validated.content)
+      updateData.title = deriveNoteTitleFromContent(validated.content, normalizeNoteTitle(validated.title))
+    } else if (validated.title !== undefined) {
+      updateData.title = normalizeNoteTitle(validated.title)
     }
     if (validated.pinned !== undefined) updateData.pinned = validated.pinned
     if (validated.archived !== undefined) updateData.archived = validated.archived
