@@ -67,18 +67,17 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!selectedProjectId) return
 
         setIsLoading(true)
         try {
-            const result = await addTask(selectedProjectId, name, {
+            const result = await addTask(selectedProjectId || undefined, name, {
                 status,
                 urgency,
                 deadline,
                 estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined
             })
             if (result.success) {
-                toast.success("Task created")
+                toast.success(result.data?.projectId ? "Task created" : "Global task created")
                 setName("")
                 setSelectedProjectId("")
                 setStatus("Active")
@@ -130,7 +129,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                         <span className="truncate pr-4">
                                             {selectedProjectId
                                                 ? formatProjectName(projects.find((p) => p.id === selectedProjectId)!)
-                                                : "Select a project..."}
+                                                : "No project selected"}
                                         </span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
@@ -141,6 +140,26 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                         <CommandList className="max-h-[200px] overflow-y-auto">
                                             <CommandEmpty>No project found.</CommandEmpty>
                                             <CommandGroup>
+                                                <CommandItem
+                                                    value="No project selected"
+                                                    onSelect={() => {
+                                                        setSelectedProjectId("")
+                                                        setOpenCombobox(false)
+                                                    }}
+                                                    className="flex items-center justify-between py-3"
+                                                >
+                                                    <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
+                                                        <Check
+                                                            className={cn(
+                                                                "h-4 w-4 shrink-0",
+                                                                !selectedProjectId ? "opacity-100" : "opacity-0"
+                                                            )}
+                                                        />
+                                                        <span className="truncate leading-tight font-medium">
+                                                            No project selected
+                                                        </span>
+                                                    </div>
+                                                </CommandItem>
                                                 {displayProjects.map((p) => (
                                                     <CommandItem
                                                         key={p.id}

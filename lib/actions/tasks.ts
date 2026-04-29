@@ -35,7 +35,7 @@ function formatAuditDateToken(value: Date | null | undefined) {
 }
 
 const AddTaskSchema = z.object({
-    projectId: z.string().uuid(),
+    projectId: z.string().uuid().optional().nullable(),
     name: z.string().trim().min(1, "Task name is required").max(255),
     options: z.object({
         deadline: z.date().optional(),
@@ -56,51 +56,106 @@ const UpdateTaskSchema = z.object({
     estimatedMinutes: z.union([z.number().int().min(0).max(100000), z.null()]).optional(),
 })
 
-export async function addTask(projectId: string, name: string, options?: { deadline?: Date, status?: string, urgency?: string, estimatedMinutes?: number }) {
+export async function addTask(
+    projectId: string | null | undefined,
+    name: string,
+    options?: {
+        deadline?: Date
+        status?: string
+        urgency?: string
+        estimatedMinutes?: number
+    }
+) {
     try {
         const session = await requireTenantContext()
         const validated = AddTaskSchema.parse({ projectId, name, options })
-        const project = await prisma.project.findFirst({
-            where: { id: validated.projectId, tenantId: session.tenantId },
-            select: { id: true },
+
+        const taskResult = await prisma.$transaction(async (tx) => {
+            const selectedProjectId = validated.projectId?.trim()
+            let targetProject: { id: string; siteId: string; site: { partnerId: string } } | null = null
+
+            if (selectedProjectId) {
+                targetProject = await tx.project.findFirst({
+                    where: { id: selectedProjectId, tenantId: session.tenantId },
+                    select: {
+                        id: true,
+                        siteId: true,
+                        site: {
+                            select: {
+                                partnerId: true,
+                            },
+                        },
+                    },
+                })
+                if (!targetProject) {
+                    return {
+                        ok: false as const,
+                        reason: "project_not_found",
+                    }
+                }
+            }
+
+            const task = await tx.task.create({
+                data: {
+                    tenantId: session.tenantId,
+                    projectId: targetProject?.id ?? null,
+                    name: validated.name,
+                    status: validated.options?.status || "Active",
+                    urgency: normalizeTaskUrgency(validated.options?.urgency),
+                    deadline: validated.options?.deadline,
+                    estimatedMinutes: validated.options?.estimatedMinutes,
+                },
+                include: {
+                    project: {
+                        include: {
+                            site: true,
+                        },
+                    },
+                },
+            })
+
+            return {
+                ok: true as const,
+                projectId: targetProject?.id ?? null,
+                task,
+            }
         })
-        if (!project) {
+
+        if (!taskResult.ok) {
             await logSessionAuditEvent(session, {
                 action: "TASK_CREATE_FAILED",
                 success: false,
-                details: `projectId=${validated.projectId}; reason=project_not_found`,
+                details: `projectId=${validated.projectId || "none"}; reason=${taskResult.reason}`,
             })
             return { success: false, error: "Project not found" }
         }
-        const task = await prisma.task.create({
-            data: {
-                tenantId: session.tenantId,
-                projectId: validated.projectId,
-                name: validated.name,
-                status: validated.options?.status || "Active",
-                urgency: normalizeTaskUrgency(validated.options?.urgency),
-                deadline: validated.options?.deadline,
-                estimatedMinutes: validated.options?.estimatedMinutes
-            },
-            include: { project: { include: { site: true } } }
-        })
+
+        const task = taskResult.task
         await logSessionAuditEvent(session, {
             action: "TASK_CREATED",
-            details: `taskId=${task.id}; projectId=${validated.projectId}; status=${task.status}; priority=${task.urgency}; deadline=${formatAuditDateToken(task.deadline)}`,
+            details: `taskId=${task.id}; projectId=${taskResult.projectId || "none"}; status=${task.status}; priority=${task.urgency}; deadline=${formatAuditDateToken(task.deadline)}`,
         })
-        revalidateTaskPaths(validated.projectId, task.project?.site?.partnerId, task.project?.siteId)
-        return { success: true }
+        revalidateTaskPaths(taskResult.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
+        return {
+            success: true,
+            data: {
+                taskId: task.id,
+                projectId: taskResult.projectId,
+                projectName: task.project?.name || null,
+                projectDomain: task.project?.site?.domainName || null,
+            },
+        }
     } catch (error) {
         console.error("Add task failed:", error)
         return { success: false, error: getActionErrorMessage(error, "Failed to add task") }
     }
 }
 
-export async function toggleTaskStatus(taskId: string, currentStatus: string, projectId: string) {
+export async function toggleTaskStatus(taskId: string, currentStatus: string, projectId?: string | null) {
     try {
         const session = await requireTenantContext()
         const validatedTaskId = TaskIdSchema.parse(taskId)
-        const validatedProjectId = ProjectIdSchema.parse(projectId)
+        const validatedProjectId = projectId ? ProjectIdSchema.parse(projectId) : undefined
         const validatedCurrentStatus = LegacyTaskStatusSchema.parse(currentStatus)
         const normalizedCurrentStatus = normalizeTaskStatus(validatedCurrentStatus)
         const isCompleted = normalizedCurrentStatus === "Completed"
@@ -132,9 +187,13 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
         })
         await logSessionAuditEvent(session, {
             action: "TASK_STATUS_CHANGED",
-            details: `taskId=${validatedTaskId}; projectId=${validatedProjectId}; from=${normalizedCurrentStatus}; to=${newStatus}; source=toggle_status`,
+            details: `taskId=${validatedTaskId}; projectId=${validatedProjectId || task.projectId || "none"}; from=${normalizedCurrentStatus}; to=${newStatus}; source=toggle_status`,
         })
-        revalidateTaskPaths(validatedProjectId, task.project.site.partnerId, task.project.siteId)
+        revalidateTaskPaths(
+            validatedProjectId || task.projectId || undefined,
+            task.project?.site?.partnerId,
+            task.project?.siteId
+        )
         return { success: true }
     } catch (error) {
         console.error("Toggle task status failed:", error)
@@ -212,9 +271,9 @@ export async function updateTask(taskId: string, data: {
 
         await logSessionAuditEvent(session, {
             action: "TASK_UPDATED",
-            details: `taskId=${task.id}; projectId=${task.projectId}`,
+            details: `taskId=${task.id}; projectId=${task.projectId || "none"}`,
         })
-        revalidateTaskPaths(task.projectId, task.project.site.partnerId, task.project.siteId)
+        revalidateTaskPaths(task.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
         return { success: true }
     } catch (error) {
         console.error("Update task failed:", error)
@@ -222,11 +281,11 @@ export async function updateTask(taskId: string, data: {
     }
 }
 
-export async function deleteTask(taskId: string, projectId: string) {
+export async function deleteTask(taskId: string, projectId?: string | null) {
     try {
         const session = await requireTenantContext()
         const validatedTaskId = TaskIdSchema.parse(taskId)
-        const validatedProjectId = ProjectIdSchema.parse(projectId)
+        const validatedProjectId = projectId ? ProjectIdSchema.parse(projectId) : undefined
         const task = await prisma.task.findFirst({
             where: { id: validatedTaskId, tenantId: session.tenantId },
             include: { project: { include: { site: true } } }
@@ -242,9 +301,9 @@ export async function deleteTask(taskId: string, projectId: string) {
         await prisma.task.delete({ where: { id: task.id } })
         await logSessionAuditEvent(session, {
             action: "TASK_DELETED",
-            details: `taskId=${task.id}; projectId=${task.projectId}`,
+            details: `taskId=${task.id}; projectId=${task.projectId || "none"}`,
         })
-        revalidateTaskPaths(validatedProjectId, task.project.site.partnerId, task.project.siteId)
+        revalidateTaskPaths(validatedProjectId || task.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
         return { success: true }
     } catch (error) {
         console.error("Delete task failed:", error)

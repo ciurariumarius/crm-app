@@ -38,24 +38,32 @@ type NoteSection = {
   notes: NoteRecord[]
 }
 
-function getDefaultNoteTitle(dateLike: Date | string = new Date()) {
-  return format(new Date(dateLike), "dd.MM.yyyy")
+const FALLBACK_NOTE_TITLE = "New note"
+const TITLE_PLACEHOLDER = "Title"
+
+function getDefaultNoteTitle() {
+  return FALLBACK_NOTE_TITLE
 }
 
 function getMeaningfulTitle(value: string) {
   const trimmed = value.trim()
   if (!trimmed) return ""
-  if (trimmed.toLowerCase() === "untitled" || trimmed.toLowerCase() === "untitled note") return ""
+  const normalized = trimmed.toLowerCase()
+  if (normalized === "untitled" || normalized === "untitled note" || normalized === "new note") return ""
   return trimmed
 }
 
-function normalizeTitle(value: string, dateLike?: Date | string) {
+function normalizeTitle(value: string) {
   const meaningful = getMeaningfulTitle(value)
-  return meaningful.length > 0 ? meaningful : getDefaultNoteTitle(dateLike)
+  return meaningful.length > 0 ? meaningful : getDefaultNoteTitle()
 }
 
 function getNoteDisplayTitle(note: Pick<NoteRecord, "title" | "createdAt">) {
-  return normalizeTitle(note.title, note.createdAt)
+  return normalizeTitle(note.title)
+}
+
+function getNoteEditableTitle(note: Pick<NoteRecord, "title">) {
+  return getMeaningfulTitle(note.title)
 }
 
 function getNotePreview(note: NoteRecord) {
@@ -95,6 +103,22 @@ const TASK_NOTES_TEMPLATE = [
 
 function toContentText(content: string) {
   return content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function extractTitleCandidateFromContent(content: string) {
+  if (!content.trim()) return ""
+  const normalized = content
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|h1|h2|h3|h4|h5|h6|li)>/gi, "\n")
+    .replace(/<[^>]*>/g, " ")
+
+  const firstLine =
+    normalized
+      .split(/\n+/)
+      .map((line) => line.replace(/\s+/g, " ").trim())
+      .find((line) => line.length > 0) || ""
+
+  return firstLine.slice(0, 240)
 }
 
 function getNoteSourceType(note: NoteRecord | null | undefined) {
@@ -219,13 +243,13 @@ export function NotesWorkspace({
       return
     }
 
-    const displayTitle = getNoteDisplayTitle(selectedNote)
+    const editableTitle = getNoteEditableTitle(selectedNote)
     const normalizedContent = normalizeNoteContentForEditor(selectedNote.content || "")
-    setTitleDraft(displayTitle)
+    setTitleDraft(editableTitle)
     setContentDraft(normalizedContent)
     lastSyncedRef.current = {
       id: selectedNote.id,
-      title: displayTitle,
+      title: normalizeTitle(editableTitle),
       content: normalizedContent,
     }
   }, [selectedNote])
@@ -253,7 +277,7 @@ export function NotesWorkspace({
       const existingNote = notes.find((item) => item.id === noteId) ?? null
       if (!existingNote) return false
       const sourceType = getNoteSourceType(existingNote)
-      const normalizedTitle = normalizeTitle(titleValue, existingNote?.createdAt)
+      const normalizedTitle = normalizeTitle(titleValue)
       const snapshot = lastSyncedRef.current
       if (snapshot.id === noteId && snapshot.title === normalizedTitle && snapshot.content === contentValue) {
         return true
@@ -353,9 +377,8 @@ export function NotesWorkspace({
       }
       setIsCreating(true)
       try {
-        const defaultTitle = getDefaultNoteTitle()
         const result = await createNote({
-          title: normalizeTitle(prefill?.title || "", defaultTitle),
+          title: normalizeTitle(prefill?.title || ""),
           content: prefill?.content || "",
         })
         if (!result.success || !result.data) {
@@ -379,7 +402,7 @@ export function NotesWorkspace({
     if (bootstrappedRef.current) return
     bootstrappedRef.current = true
     if (notes.length === 0 && !storageUnavailable) {
-      void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })
+      void handleCreateNote({ title: "", content: "" })
     } else if (!selectedNoteId) {
       const firstActive = notes.find((note) => !note.archived) ?? notes[0]
       if (firstActive) setSelectedNoteId(firstActive.id)
@@ -389,7 +412,7 @@ export function NotesWorkspace({
   React.useEffect(() => {
     if (!selectedNoteId) return
     if (selectedNoteSourceType === "note" && storageUnavailable) return
-    const normalizedTitle = normalizeTitle(titleDraft, selectedNote?.createdAt)
+    const normalizedTitle = normalizeTitle(titleDraft)
     const currentSnapshot = lastSyncedRef.current
     if (
       currentSnapshot.id === selectedNoteId &&
@@ -410,11 +433,20 @@ export function NotesWorkspace({
   }, [contentDraft, persistNote, selectedNote?.createdAt, selectedNoteId, selectedNoteSourceType, storageUnavailable, titleDraft])
 
   React.useEffect(() => {
+    if (selectedNoteSourceType !== "note") return
+    if (getMeaningfulTitle(titleDraft).length > 0) return
+
+    const candidate = extractTitleCandidateFromContent(contentDraft)
+    if (!candidate) return
+    setTitleDraft(candidate)
+  }, [contentDraft, selectedNoteSourceType, titleDraft])
+
+  React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
         if (storageUnavailable) return
         event.preventDefault()
-        void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })
+        void handleCreateNote({ title: "", content: "" })
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         if (!selectedNoteId) return
@@ -537,10 +569,26 @@ export function NotesWorkspace({
           )}
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {showArchived ? "Archived" : "All notes"}
-            </p>
-            <span className="text-[11px] font-medium text-[var(--text-muted)]">{visibleNotes.length}</span>
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                {showArchived ? "Archived" : "All notes"}
+              </p>
+              <span className="text-[11px] font-medium text-[var(--text-muted)]">{visibleNotes.length}</span>
+            </div>
+            {!isMobile ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="h-7 w-7 rounded-lg border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
+                onClick={() => void handleCreateNote({ title: "", content: "" })}
+                disabled={isCreating || storageUnavailable}
+                aria-label="Quick add note"
+                title="Quick add note"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
           </div>
         </div>
         <div className={cn("ui-scrollbar ui-scrollbar-inset mr-1 flex-1 overflow-y-auto", isMobile ? "p-2.5 pr-2" : "px-2.5 pb-2.5 pt-2 pr-2")}>
@@ -697,7 +745,7 @@ export function NotesWorkspace({
         </div>
       </div>
     ),
-    [handleArchiveToggle, handleDelete, handlePinToggle, selectedNoteId, showArchived, visibleNotes.length, visibleSections]
+    [handleArchiveToggle, handleCreateNote, handleDelete, handlePinToggle, isCreating, selectedNoteId, showArchived, storageUnavailable, visibleNotes.length, visibleSections]
   )
 
   return (
@@ -735,7 +783,7 @@ export function NotesWorkspace({
             <Button
               type="button"
               className="header-action-button !h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
-              onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
+              onClick={() => void handleCreateNote({ title: "", content: "" })}
               disabled={isCreating || storageUnavailable}
             >
               <FilePlus2 className="h-5 w-5 xl:mr-1.5 xl:h-4 xl:w-4" />
@@ -746,7 +794,7 @@ export function NotesWorkspace({
             <Button
               type="button"
               className="header-action-button !h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
-              onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
+              onClick={() => void handleCreateNote({ title: "", content: "" })}
               disabled={isCreating || storageUnavailable}
             >
               <FilePlus2 className="h-5 w-5 xl:h-4 xl:w-4" />
@@ -781,7 +829,7 @@ export function NotesWorkspace({
                             type="button"
                             size="sm"
                             className="h-8 rounded-xl px-3"
-                            onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
+                            onClick={() => void handleCreateNote({ title: "", content: "" })}
                             disabled={isCreating || storageUnavailable}
                           >
                             <FilePlus2 className="mr-1.5 h-3.5 w-3.5" />
@@ -822,16 +870,6 @@ export function NotesWorkspace({
               {selectedNote ? (
                 <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
                   <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 space-y-3 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-3.5 lg:pr-3">
-                    <input
-                      value={titleDraft}
-                      onChange={(event) => setTitleDraft(event.target.value)}
-                      readOnly={selectedNoteIsLinked}
-                      placeholder={getDefaultNoteTitle(selectedNote.createdAt)}
-                      className={cn(
-                        "w-full border-0 bg-transparent px-1 py-0 text-[28px] font-semibold tracking-[-0.03em] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:ring-0 sm:text-[32px]",
-                        selectedNoteIsLinked && "cursor-default text-[var(--text-secondary)]"
-                      )}
-                    />
                     <RichTextEditor
                       value={contentDraft}
                       onChange={setContentDraft}
@@ -840,10 +878,23 @@ export function NotesWorkspace({
                       mode="document"
                       documentLayout="left"
                       uploadProjectId={editorUploadContextId}
-                      toolbarVisibility="focus"
+                      toolbarVisibility="always"
                       toolbarPreset="minimal"
                       toolbarTone="quiet"
+                      toolbarPlacement="top-right"
                       documentWidth="reading"
+                      documentHeader={
+                        <input
+                          value={titleDraft}
+                          onChange={(event) => setTitleDraft(event.target.value)}
+                          readOnly={selectedNoteIsLinked}
+                          placeholder={TITLE_PLACEHOLDER}
+                          className={cn(
+                            "w-full border-0 bg-transparent px-1 py-0 pr-36 text-[28px] font-semibold tracking-[-0.03em] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:ring-0 sm:pr-44 sm:text-[32px]",
+                            selectedNoteIsLinked && "cursor-default text-[var(--text-secondary)]"
+                          )}
+                        />
+                      }
                       toolbarActions={
                         selectedNoteIsLinked ? (
                           <Button
@@ -851,11 +902,11 @@ export function NotesWorkspace({
                             variant="ghost"
                             size="icon"
                             onClick={appendTemplate}
-                            className="h-7 w-7 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                            className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                             aria-label="Add template"
                             title="Add template"
                           >
-                            <Plus className="h-3.5 w-3.5" />
+                            <Plus className="h-4 w-4" />
                           </Button>
                         ) : undefined
                       }
@@ -896,18 +947,18 @@ export function NotesWorkspace({
                       <div className="space-y-1 text-left">
                         <p className="text-[16px] font-semibold text-[var(--text-primary)]">Start a fresh note</p>
                         <p className="text-[13px] leading-6 text-[var(--text-secondary)]">
-                          New notes open with today&apos;s date as the title, so you can begin writing right away.
+                          New notes open with a blank title, so you can name them the way you want.
                         </p>
                       </div>
                       <div className="pt-1">
                         <Button
                           type="button"
                           className="h-10 rounded-xl"
-                          onClick={() => void handleCreateNote({ title: getDefaultNoteTitle(), content: "" })}
+                          onClick={() => void handleCreateNote({ title: "", content: "" })}
                           disabled={isCreating}
                         >
                           <FilePlus2 className="mr-1.5 h-4 w-4" />
-                          New note for today
+                          New note
                         </Button>
                       </div>
                     </div>

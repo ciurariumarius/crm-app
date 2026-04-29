@@ -39,7 +39,6 @@ import { SidePanelNotesSection } from "@/components/shared/side-panel-notes-sect
 import { SidePanelTimeLogHistoryList } from "@/components/shared/side-panel-time-log-history-list"
 import { TimeLogSheet } from "@/components/time/time-log-sheet"
 import { TimeTrackerWidget } from "@/components/shared/time-tracker-widget"
-import { StatusChip } from "@/components/ui/status-chip"
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ProjectWithDetails } from "@/types"
@@ -49,6 +48,7 @@ import { SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-pa
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
 import { ProjectHistoryLogSections, type ProjectPaymentHistoryEntry, type ProjectStatusHistoryEntry } from "@/components/projects/project-history-log-sections"
 import { ProjectSheetInfoSection } from "@/components/projects/project-sheet-info-section"
+import { CloseProjectDialog } from "@/components/projects/close-project-dialog"
 
 type UpdateProjectPayload = {
     name?: string
@@ -56,6 +56,8 @@ type UpdateProjectPayload = {
     status?: "Active" | "Paused" | "Completed" | "Closed"
     paymentStatus?: "Paid" | "Unpaid"
     paidAt?: Date | string | null
+    closedAt?: Date | string | null
+    isHeavyRevenueMonth?: boolean
     createdAt?: Date | string
     currentFee?: number | null
     serviceIds?: string[]
@@ -157,6 +159,12 @@ function toDateTimeLocalValue(value: Date | null) {
     return format(value, "yyyy-MM-dd'T'HH:mm")
 }
 
+function toDateInputValue(value: Date | string | null | undefined) {
+    const parsed = toDate(value)
+    if (!parsed) return undefined
+    return format(parsed, "yyyy-MM-dd")
+}
+
 export function ProjectSheetContent({
     project: initialProject,
     allServices,
@@ -182,6 +190,8 @@ export function ProjectSheetContent({
     const [createdAtInput, setCreatedAtInput] = React.useState("")
     const [manualMinutes, setManualMinutes] = React.useState("")
     const [manualNotes, setManualNotes] = React.useState("")
+    const [isCloseProjectDialogOpen, setIsCloseProjectDialogOpen] = React.useState(false)
+    const [isSubmittingCloseProject, setIsSubmittingCloseProject] = React.useState(false)
 
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [selectedTimeLog, setSelectedTimeLog] = React.useState<ProjectTimeLogWithTask | null>(null)
@@ -326,6 +336,12 @@ export function ProjectSheetContent({
                         ...(data.status !== undefined ? { status: data.status } : {}),
                         ...(data.paymentStatus !== undefined ? { paymentStatus: data.paymentStatus } : {}),
                         ...(data.paidAt !== undefined ? { paidAt: nextPaidAt } : {}),
+                        ...(data.closedAt !== undefined
+                            ? { closedAt: data.closedAt ? toDate(data.closedAt) : null }
+                            : {}),
+                        ...(data.isHeavyRevenueMonth !== undefined
+                            ? { isHeavyRevenueMonth: data.isHeavyRevenueMonth }
+                            : {}),
                         ...(data.createdAt !== undefined ? { createdAt: data.createdAt } : {}),
                         ...(data.currentFee !== undefined ? { currentFee: data.currentFee } : {}),
                         updatedAt: new Date(),
@@ -509,8 +525,31 @@ export function ProjectSheetContent({
 
     const updateProjectStatus = (value: UpdateProjectPayload["status"]) => {
         if (!value || value === project.status) return
+        if (value === "Closed") {
+            setIsCloseProjectDialogOpen(true)
+            return
+        }
         void handleUpdate({ status: value })
     }
+
+    const handleCloseProjectConfirm = React.useCallback(
+        async ({ closedOn, isHeavyRevenueMonth }: { closedOn: string; isHeavyRevenueMonth: boolean }) => {
+            setIsSubmittingCloseProject(true)
+            try {
+                const success = await handleUpdate({
+                    status: "Closed",
+                    closedAt: closedOn,
+                    isHeavyRevenueMonth,
+                })
+                if (success) {
+                    setIsCloseProjectDialogOpen(false)
+                }
+            } finally {
+                setIsSubmittingCloseProject(false)
+            }
+        },
+        [handleUpdate]
+    )
 
     const exportNotesAsPdf = React.useCallback(async () => {
         if (isExportingNotes) return
@@ -871,25 +910,26 @@ export function ProjectSheetContent({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-4 md:gap-3">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-3">
                             <div className="flex items-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
                                             className={cn(
-                                                "group/status relative flex h-10 w-full items-center justify-center gap-2 rounded-[8px] border transition-all duration-300 active:scale-[0.98] sm:h-11 px-4 text-[11px] font-black uppercase tracking-[0.05em]",
-                                                project.status === "Active" && "border-[#0b8fa8/20] bg-[#edf9fb] text-[#0b8fa8] hover:bg-[#e4f6f8]",
-                                                project.status === "Paused" && "border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100/50",
-                                                project.status === "Completed" && "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100/50",
-                                                project.status === "Closed" && "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                                                "group/status relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
+                                                project.status === "Active" && "border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_14%,var(--surface-lowest))] text-[var(--brand-primary)] shadow-[0_2px_10px_-4px_rgba(11,143,168,0.22)]",
+                                                project.status === "Paused" && "border-[color:color-mix(in_srgb,var(--state-warning)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-warning)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-warning)_84%,var(--text-primary))] shadow-[0_2px_10px_-4px_rgba(245,158,11,0.2)]",
+                                                project.status === "Completed" && "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-success)_84%,var(--text-primary))] shadow-[0_2px_10px_-4px_rgba(16,185,129,0.2)]",
+                                                project.status === "Closed" && "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--text-secondary)]"
                                             )}
                                         >
-                                            {project.status === "Active" && <Play className="h-3 w-3 fill-current" />}
-                                            {project.status === "Paused" && <Pause className="h-3 w-3" />}
-                                            {project.status === "Completed" && <Check className="h-3 w-3" />}
-                                            {project.status === "Closed" && <Square className="h-3 w-3 fill-current" />}
-                                            <span>{project.status}</span>
+                                            <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_20%,transparent)] transition-transform duration-300 group-hover/status:translate-y-0" />
+                                            {project.status === "Active" && <Play className="relative z-10 h-3.5 w-3.5 fill-current" />}
+                                            {project.status === "Paused" && <Pause className="relative z-10 h-3.5 w-3.5" />}
+                                            {project.status === "Completed" && <Check className="relative z-10 h-3.5 w-3.5" />}
+                                            {project.status === "Closed" && <Square className="relative z-10 h-3.5 w-3.5 fill-current" />}
+                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.status}</span>
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-40 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
@@ -915,31 +955,23 @@ export function ProjectSheetContent({
                             </div>
 
                             <div className="flex items-center">
-                                <StatusChip 
-                                    tone={project.services?.[0]?.isRecurring ? "recurring" : "oneTime"} 
-                                    className="h-10 w-full justify-center rounded-[8px] sm:h-11"
-                                >
-                                    {project.services?.[0]?.isRecurring ? "Recurring" : "One-Time"}
-                                </StatusChip>
-                            </div>
-
-                            <div className="flex items-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
                                             className={cn(
-                                                "group/payment relative flex h-10 w-full items-center justify-center gap-2 rounded-[8px] border transition-all duration-300 active:scale-[0.98] sm:h-11 px-4 text-[11px] font-black uppercase tracking-[0.05em]",
+                                                "group/payment relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
                                                 project.paymentStatus === "Paid" 
-                                                    ? "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100/50" 
-                                                    : "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100/50"
+                                                    ? "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-success)_84%,var(--text-primary))] shadow-[0_2px_10px_-4px_rgba(16,185,129,0.2)]"
+                                                    : "border-[color:color-mix(in_srgb,var(--state-urgent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-urgent)_84%,var(--text-primary))] shadow-[0_2px_10px_-4px_rgba(225,29,72,0.2)]"
                                             )}
                                         >
+                                            <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_20%,transparent)] transition-transform duration-300 group-hover/payment:translate-y-0" />
                                             <span className={cn(
-                                                "h-2 w-2 rounded-full", 
+                                                "relative z-10 h-2.5 w-2.5 rounded-full", 
                                                 project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
                                             )} />
-                                            <span>{project.paymentStatus}</span>
+                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.paymentStatus}</span>
                                         </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
@@ -959,7 +991,7 @@ export function ProjectSheetContent({
                             </div>
 
                             <div className="flex flex-col justify-center">
-                                <div className="group/amount relative flex h-10 items-center overflow-hidden rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-blue-200 hover:shadow-[0_4px_12px_-4px_rgba(37,99,235,0.08)] sm:h-11 sm:px-5">
+                                <div className="group/amount relative flex h-10 items-center overflow-hidden rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] sm:h-11 sm:px-5">
                                     <Input
                                         type="number"
                                         step={1}
@@ -969,10 +1001,28 @@ export function ProjectSheetContent({
                                         className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-lg font-black tracking-[-0.02em] text-[var(--text-primary)] shadow-none focus-visible:ring-0 sm:text-xl md:text-[24px]"
                                         placeholder="0"
                                     />
-                                    <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors group-hover/amount:bg-blue-50 group-hover/amount:text-blue-600 sm:ml-3 sm:px-2.5 sm:py-1 sm:text-[10px]">RON</span>
+                                    <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors group-hover/amount:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] group-hover/amount:text-[var(--brand-primary)] sm:ml-3 sm:px-2.5 sm:py-1 sm:text-[10px]">RON</span>
                                 </div>
                             </div>
                         </div>
+
+                        {project.status === "Closed" && (
+                            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] px-3 py-2">
+                                <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                                    Closed on {project.closedAt ? format(new Date(project.closedAt), "dd MMM yyyy") : "—"}
+                                </span>
+                                <span
+                                    className={cn(
+                                        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                                        project.isHeavyRevenueMonth
+                                            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
+                                    )}
+                                >
+                                    {project.isHeavyRevenueMonth ? "Heavy revenue month" : "Normal revenue month"}
+                                </span>
+                            </div>
+                        )}
 
                         <section className="space-y-3 border-t border-[var(--line-subtle)] pt-3">
                             <SidePanelSectionTitle title="Project tasks" icon={<ListTodo className="h-3.5 w-3.5" />} />
@@ -1379,6 +1429,16 @@ export function ProjectSheetContent({
                         </div>
                     </DialogContent>
                 </Dialog>
+
+                <CloseProjectDialog
+                    open={isCloseProjectDialogOpen}
+                    onOpenChange={setIsCloseProjectDialogOpen}
+                    onConfirm={handleCloseProjectConfirm}
+                    projectName={localName || formatProjectName(project)}
+                    isSubmitting={isSubmittingCloseProject}
+                    initialClosedOn={toDateInputValue(project.closedAt)}
+                    initialIsHeavyRevenueMonth={Boolean(project.isHeavyRevenueMonth)}
+                />
             </div>
         </TaskSheetWrapper>
     )

@@ -9,6 +9,7 @@ import { logSessionAuditEvent } from "@/lib/audit"
 import { PROJECT_STATUS_VALUES, taskStatusSortOrder } from "@/lib/status"
 import { formatProjectName } from "@/lib/utils"
 import { z } from "zod"
+import { format } from "date-fns"
 
 function revalidateProjectPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/projects")
@@ -35,6 +36,8 @@ const UpdateProjectSchema = z.object({
     status: z.enum(PROJECT_STATUS_VALUES).optional(),
     paymentStatus: z.enum(["Paid", "Unpaid"]).optional(),
     paidAt: z.union([z.date(), z.string(), z.null()]).optional(),
+    closedAt: z.union([z.date(), z.string(), z.null()]).optional(),
+    isHeavyRevenueMonth: z.boolean().optional(),
     createdAt: z.union([z.date(), z.string()]).optional(),
     currentFee: z.number().nullable().optional(),
     serviceIds: z.array(z.string().trim().min(1, "Invalid service id")).optional(),
@@ -43,6 +46,30 @@ const UpdateProjectSchema = z.object({
 const ProjectIdSchema = z.string().trim().min(1, "Invalid project id")
 const ProjectIdsSchema = z.array(ProjectIdSchema).max(200)
 const PaymentStatusSchema = z.enum(["Paid", "Unpaid"])
+
+function parseClosureDateInput(value: Date | string) {
+    if (value instanceof Date) return value
+
+    const trimmed = value.trim()
+    const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (dateOnlyMatch) {
+        const [, yearRaw, monthRaw, dayRaw] = dateOnlyMatch
+        const year = Number(yearRaw)
+        const month = Number(monthRaw)
+        const day = Number(dayRaw)
+        const localDate = new Date(year, month - 1, day, 12, 0, 0, 0)
+        if (
+            localDate.getFullYear() === year &&
+            localDate.getMonth() === month - 1 &&
+            localDate.getDate() === day
+        ) {
+            return localDate
+        }
+        return new Date(Number.NaN)
+    }
+
+    return new Date(trimmed)
+}
 
 export async function createProject(data: {
     siteId: string
@@ -194,6 +221,8 @@ export async function updateProject(projectId: string, data: {
     status?: string
     paymentStatus?: string
     paidAt?: Date | string | null
+    closedAt?: Date | string | null
+    isHeavyRevenueMonth?: boolean
     createdAt?: Date | string
     currentFee?: number | null
     serviceIds?: string[]
@@ -207,6 +236,8 @@ export async function updateProject(projectId: string, data: {
         if (data.status !== undefined) updateData.status = data.status
         if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus
         if (data.paidAt !== undefined) updateData.paidAt = data.paidAt
+        if (data.closedAt !== undefined) updateData.closedAt = data.closedAt
+        if (data.isHeavyRevenueMonth !== undefined) updateData.isHeavyRevenueMonth = data.isHeavyRevenueMonth
         if (data.createdAt !== undefined) updateData.createdAt = data.createdAt
         if (data.currentFee !== undefined) updateData.currentFee = data.currentFee
         if (data.serviceIds !== undefined) updateData.serviceIds = data.serviceIds
@@ -252,7 +283,14 @@ export async function updateProject(projectId: string, data: {
 
         const existingProject = await prisma.project.findFirst({
             where: { id: validatedProjectId, tenantId: session.tenantId },
-            select: { id: true, status: true, paymentStatus: true },
+            select: {
+                id: true,
+                status: true,
+                paymentStatus: true,
+                closedAt: true,
+                closedMonthKey: true,
+                isHeavyRevenueMonth: true,
+            },
         })
         if (!existingProject) {
             await logSessionAuditEvent(session, {
@@ -261,6 +299,48 @@ export async function updateProject(projectId: string, data: {
                 details: `projectId=${validatedProjectId}; reason=not_found`,
             })
             return { success: false, error: "Project not found" }
+        }
+
+        if (
+            validated.status !== "Closed" &&
+            (validated.closedAt !== undefined || validated.isHeavyRevenueMonth !== undefined)
+        ) {
+            return {
+                success: false,
+                error: "Closure details can only be set when status is Closed",
+            }
+        }
+
+        const isClosing = validated.status === "Closed"
+        const isReopening =
+            validated.status !== undefined &&
+            validated.status !== "Closed" &&
+            existingProject.status === "Closed"
+
+        if (isClosing) {
+            if (validated.closedAt === undefined || validated.closedAt === null) {
+                return { success: false, error: "Please provide the project close date" }
+            }
+            if (validated.isHeavyRevenueMonth === undefined) {
+                return { success: false, error: "Please specify heavy revenue for the close month" }
+            }
+
+            const parsedClosedAt =
+                validated.closedAt instanceof Date
+                    ? validated.closedAt
+                    : parseClosureDateInput(validated.closedAt)
+
+            if (Number.isNaN(parsedClosedAt.getTime())) {
+                return { success: false, error: "Invalid close date" }
+            }
+
+            prismaUpdateData.closedAt = parsedClosedAt
+            prismaUpdateData.closedMonthKey = format(parsedClosedAt, "yyyy-MM")
+            prismaUpdateData.isHeavyRevenueMonth = validated.isHeavyRevenueMonth
+        } else if (isReopening) {
+            prismaUpdateData.closedAt = null
+            prismaUpdateData.closedMonthKey = null
+            prismaUpdateData.isHeavyRevenueMonth = false
         }
 
         const project = await prisma.project.update({
@@ -273,6 +353,20 @@ export async function updateProject(projectId: string, data: {
             await logSessionAuditEvent(session, {
                 action: "PROJECT_STATUS_CHANGED",
                 details: `projectId=${validatedProjectId}; from=${existingProject.status}; to=${validated.status}; source=manual_update`,
+            })
+        }
+
+        if (validated.status === "Closed" && project.closedAt) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_CLOSED",
+                details: `projectId=${validatedProjectId}; closedAt=${project.closedAt.toISOString()}; closedMonth=${project.closedMonthKey || "n/a"}; heavyRevenue=${project.isHeavyRevenueMonth ? "yes" : "no"}; source=${existingProject.status === "Closed" ? "closure_update" : "manual_close"}`,
+            })
+        }
+
+        if (isReopening) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_REOPENED",
+                details: `projectId=${validatedProjectId}; previousClosedAt=${existingProject.closedAt?.toISOString() || "n/a"}; previousClosedMonth=${existingProject.closedMonthKey || "n/a"}`,
             })
         }
 

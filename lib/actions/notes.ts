@@ -6,7 +6,6 @@ import { z } from "zod"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { revalidatePath } from "next/cache"
-import { format } from "date-fns"
 
 export type NoteRecord = {
   id: string
@@ -78,15 +77,17 @@ const ListNotesSchema = z.object({
   limit: z.number().int().min(1).max(500).optional(),
 })
 
-function getDefaultNoteTitle(dateLike: Date = new Date()) {
-  return format(dateLike, "dd.MM.yyyy")
+const DEFAULT_NOTE_TITLE = "New note"
+
+function getDefaultNoteTitle() {
+  return DEFAULT_NOTE_TITLE
 }
 
-function normalizeNoteTitle(value: string | null | undefined, dateLike: Date = new Date()) {
+function normalizeNoteTitle(value: string | null | undefined) {
   const title = (value || "").trim()
-  if (!title) return getDefaultNoteTitle(dateLike)
+  if (!title) return getDefaultNoteTitle()
   if (title.toLowerCase() === "untitled" || title.toLowerCase() === "untitled note") {
-    return getDefaultNoteTitle(dateLike)
+    return getDefaultNoteTitle()
   }
   return title
 }
@@ -158,7 +159,7 @@ export async function createNote(input?: { title?: string; content?: string; pin
       return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR }
     }
     const validated = CreateNoteSchema.parse(input || {})
-    const title = normalizeNoteTitle(validated.title, new Date())
+    const title = normalizeNoteTitle(validated.title)
     const content = validated.content || ""
     const contentText = toNoteContentText(content)
 
@@ -215,7 +216,7 @@ export async function updateNote(
       archived?: boolean
     } = {}
 
-    if (validated.title !== undefined) updateData.title = normalizeNoteTitle(validated.title, existing.createdAt)
+    if (validated.title !== undefined) updateData.title = normalizeNoteTitle(validated.title)
     if (validated.content !== undefined) {
       updateData.content = validated.content
       updateData.contentText = toNoteContentText(validated.content)

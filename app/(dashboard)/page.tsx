@@ -395,6 +395,21 @@ export default async function HomePage() {
             })),
         }))
     )
+    const quickCaptureProjects = serialize(
+        allProjects
+            .filter((project) => (project.status || "Active") === "Active")
+            .map((project) => ({
+                id: project.id,
+                label: formatProjectName(project),
+                domainName: project.site?.domainName || null,
+                createdAt: project.createdAt,
+                services: project.services.map((service) => ({
+                    serviceName: service.serviceName || "",
+                    isRecurring: service.isRecurring,
+                })),
+            }))
+            .sort((left, right) => left.label.localeCompare(right.label))
+    )
     const homeDialogPartners = serialize(partnersForDialogsRaw)
     const homeDialogServices = serialize(allServicesRaw)
     const unpaidProjectsHref = "/projects?status=All&payment=Unpaid"
@@ -558,6 +573,7 @@ export default async function HomePage() {
                     urgentTasks={serialize(urgentTasksRaw)}
                     overdueTasks={serialize(overdueTasksRaw)}
                     normalTasks={serialize(normalTasksRaw)}
+                    quickCaptureProjects={quickCaptureProjects}
                     allServices={serialize(allServicesRaw)}
                     hourlyRate={hourlyRate}
                 />

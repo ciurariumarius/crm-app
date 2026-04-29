@@ -44,6 +44,10 @@ export function BulkActionsBar({ selectedIds, onClearSelection, totalProjects }:
             toast.error("Please select a status or payment option")
             return
         }
+        if (bulkStatus === "Closed") {
+            toast.error("Bulk close is disabled. Close projects individually to set closure details.")
+            return
+        }
 
         setIsUpdating(true)
         try {
@@ -109,7 +113,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, totalProjects }:
                     <SelectItem value="Active">Active</SelectItem>
                     <SelectItem value="Paused">Paused</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Closed">Closed</SelectItem>
                 </SelectContent>
             </Select>
 

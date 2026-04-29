@@ -28,6 +28,7 @@ import {
 import { ProjectBoardHeaderRow } from "@/components/projects/project-board-header-row"
 import { ProjectBoardSummaryCards } from "@/components/projects/project-board-summary-cards"
 import { StatusChip, statusToneFromLabel } from "@/components/ui/status-chip"
+import { CloseProjectDialog } from "@/components/projects/close-project-dialog"
 import type { ProjectWithDetails } from "@/types"
 import type { SearchPaginationState } from "@/types/search-pagination"
 
@@ -61,6 +62,16 @@ function formatDateTimeParts(value: Date | string | null | undefined) {
         dateLabel: format(date, "dd/MM/yy"),
         dateTimeLabel: format(date, "dd/MM/yy, HH:mm"),
     }
+}
+
+function toDateInputValue(value: Date | string | null | undefined) {
+    if (!value) return undefined
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return undefined
+    const year = parsed.getFullYear()
+    const month = `${parsed.getMonth() + 1}`.padStart(2, "0")
+    const day = `${parsed.getDate()}`.padStart(2, "0")
+    return `${year}-${month}-${day}`
 }
 
 function normalizeDomain(domain: string | null | undefined) {
@@ -260,6 +271,8 @@ type BoardProject = {
     completedTasks: number
     createdAt: string | Date
     updatedAt: string | Date
+    closedAt?: string | Date | null
+    isHeavyRevenueMonth?: boolean
     isRecurring: boolean
     serviceLabel: string
     site: {
@@ -326,6 +339,8 @@ export function ProjectsBoardRows({
     const [inlineEdits, setInlineEdits] = React.useState<Record<string, { status?: string; paymentStatus?: string; amount?: number }>>({})
     const [amountEditorProjectId, setAmountEditorProjectId] = React.useState<string | null>(null)
     const [amountDraft, setAmountDraft] = React.useState("")
+    const [closeDialogProject, setCloseDialogProject] = React.useState<BoardProject | null>(null)
+    const [isSubmittingCloseDialog, setIsSubmittingCloseDialog] = React.useState(false)
     const [remoteProjects, setRemoteProjects] = React.useState<BoardProject[] | null>(null)
     const searchCacheRef = React.useRef<
         Map<string, { projects: BoardProject[]; total: number; pagination: SearchPaginationState }>
@@ -577,19 +592,56 @@ export function ProjectsBoardRows({
         return "text-[var(--text-secondary)]"
     }
 
-    const setProjectStatus = async (project: BoardProject, nextStatus: "Active" | "Paused" | "Completed" | "Closed") => {
+    const setProjectStatus = async (
+        project: BoardProject,
+        nextStatus: "Active" | "Paused" | "Completed" | "Closed",
+        closePayload?: { closedOn: string; isHeavyRevenueMonth: boolean }
+    ) => {
+        if (nextStatus === "Closed" && !closePayload) {
+            setCloseDialogProject(project)
+            return false
+        }
+
+        const previousStatus = inlineEdits[project.id]?.status ?? project.status
         setInlineEdits((prev) => ({
             ...prev,
             [project.id]: { ...prev[project.id], status: nextStatus },
         }))
 
-        const result = await updateProject(project.id, { status: nextStatus })
+        const result = await updateProject(project.id, {
+            status: nextStatus,
+            ...(closePayload
+                ? {
+                    closedAt: closePayload.closedOn,
+                    isHeavyRevenueMonth: closePayload.isHeavyRevenueMonth,
+                }
+                : {}),
+        })
         if (!result.success) {
             setInlineEdits((prev) => ({
                 ...prev,
-                [project.id]: { ...prev[project.id], status: project.status },
+                [project.id]: { ...prev[project.id], status: previousStatus },
             }))
             toast.error(result.error || "Failed to update status")
+            return false
+        }
+
+        return true
+    }
+
+    const handleConfirmCloseProject = async ({ closedOn, isHeavyRevenueMonth }: { closedOn: string; isHeavyRevenueMonth: boolean }) => {
+        if (!closeDialogProject) return
+        setIsSubmittingCloseDialog(true)
+        try {
+            const success = await setProjectStatus(closeDialogProject, "Closed", {
+                closedOn,
+                isHeavyRevenueMonth,
+            })
+            if (success) {
+                setCloseDialogProject(null)
+            }
+        } finally {
+            setIsSubmittingCloseDialog(false)
         }
     }
 
@@ -639,106 +691,124 @@ export function ProjectsBoardRows({
         }
     }
 
+    const closeProjectDialog = (
+        <CloseProjectDialog
+            open={Boolean(closeDialogProject)}
+            onOpenChange={(open) => {
+                if (!open) setCloseDialogProject(null)
+            }}
+            onConfirm={handleConfirmCloseProject}
+            projectName={closeDialogProject?.site?.domainName || closeDialogProject?.name || undefined}
+            isSubmitting={isSubmittingCloseDialog}
+            initialClosedOn={toDateInputValue(closeDialogProject?.closedAt)}
+            initialIsHeavyRevenueMonth={Boolean(closeDialogProject?.isHeavyRevenueMonth)}
+        />
+    )
+
     if (showSearchSkeleton) {
         return layout === "grid" ? <ProjectsGridSkeleton /> : <ProjectsListSkeleton />
     }
 
     if (layout === "grid") {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {orderedProjects.map((project) => {
-                    const projectStatus = getDisplayStatus(project)
-                    const projectPayment = getDisplayPayment(project)
-                    const overAllocated = isTimeOverAllocated(project)
-                    const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
-                    const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
-                    const createdDate = formatDateTimeParts(project.createdAt)
+            <>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {orderedProjects.map((project) => {
+                        const projectStatus = getDisplayStatus(project)
+                        const projectPayment = getDisplayPayment(project)
+                        const overAllocated = isTimeOverAllocated(project)
+                        const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
+                        const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
+                        const createdDate = formatDateTimeParts(project.createdAt)
 
-                    return (
-                        <button
-                            key={project.id}
-                            type="button"
-                            onClick={() => openDetails(project)}
-                            className={cn(
-                                "text-left rounded-2xl border border-border/60 bg-card p-4 premium-card transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]",
-                                getProjectToneClass(projectStatus)
-                            )}
-                        >
-                            <div className="flex items-start gap-3">
-                                <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                            <p className={cn("truncate text-[17px] font-bold tracking-tight", getProjectTitleClass(projectStatus))}>
-                                                {project.site.domainName}
-                                            </p>
-                                            <p className={cn("mt-0.5 truncate text-sm", getProjectMetaClass(projectStatus))}>
-                                                {project.serviceLabel}
-                                            </p>
+                        return (
+                            <button
+                                key={project.id}
+                                type="button"
+                                onClick={() => openDetails(project)}
+                                className={cn(
+                                    "text-left rounded-2xl border border-border/60 bg-card p-4 premium-card transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]",
+                                    getProjectToneClass(projectStatus)
+                                )}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className={cn("truncate text-[17px] font-bold tracking-tight", getProjectTitleClass(projectStatus))}>
+                                                    {project.site.domainName}
+                                                </p>
+                                                <p className={cn("mt-0.5 truncate text-sm", getProjectMetaClass(projectStatus))}>
+                                                    {project.serviceLabel}
+                                                </p>
+                                            </div>
+                                            <div className="flex shrink-0 flex-col items-end gap-1.5">
+                                                <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs" className="min-w-[78px]">
+                                                    {projectStatus}
+                                                </StatusChip>
+                                                <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs" className="min-w-[78px]">
+                                                    {projectPayment}
+                                                </StatusChip>
+                                            </div>
                                         </div>
-                                        <div className="flex shrink-0 flex-col items-end gap-1.5">
-                                            <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs" className="min-w-[78px]">
-                                                {projectStatus}
-                                            </StatusChip>
-                                            <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs" className="min-w-[78px]">
-                                                {projectPayment}
-                                            </StatusChip>
-                                        </div>
-                                    </div>
 
-                                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                        <StatusChip
-                                            tone={project.isRecurring ? "recurring" : "oneTime"}
-                                            size="xs"
-                                            className="min-w-[92px]"
-                                            icon={project.isRecurring ? <RefreshCcw className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5 fill-current" />}
-                                        >
-                                            {project.isRecurring ? "Recurring" : "One-Time"}
-                                        </StatusChip>
+                                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                            <StatusChip
+                                                tone={project.isRecurring ? "recurring" : "oneTime"}
+                                                size="xs"
+                                                className="min-w-[92px]"
+                                                icon={project.isRecurring ? <RefreshCcw className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5 fill-current" />}
+                                            >
+                                                {project.isRecurring ? "Recurring" : "One-Time"}
+                                            </StatusChip>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <ProjectMetaPill
-                                    icon={<Banknote className="h-3.5 w-3.5" />}
-                                    label="Amount"
-                                    value={`${currencyFormatter.format(getDisplayAmount(project))} RON`}
-                                />
-                                <ProjectMetaPill
-                                    icon={<Clock3 className="h-3.5 w-3.5" />}
-                                    label="Time logged"
-                                    value={formatDuration(project.secondsLogged)}
-                                    className={cn(
-                                        overAllocated && "border-rose-300 bg-rose-50 text-rose-800"
-                                    )}
-                                />
-                                <ProjectMetaPill
-                                    icon={<ListTodo className="h-3.5 w-3.5" />}
-                                    label="Tasks"
-                                    value={`${project.completedTasks}/${totalTasks} (${Math.round(progress)}%)`}
-                                />
-                                <ProjectMetaPill
-                                    icon={<Building2 className="h-3.5 w-3.5" />}
-                                    label="Partner"
-                                    value={project.site.partner.name}
-                                />
-                                <ProjectMetaPill
-                                    icon={<CalendarDays className="h-3.5 w-3.5" />}
-                                    label="Created"
-                                    value={createdDate.dateLabel}
-                                />
-                            </div>
-                        </button>
-                    )
-                })}
-            </div>
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                    <ProjectMetaPill
+                                        icon={<Banknote className="h-3.5 w-3.5" />}
+                                        label="Amount"
+                                        value={`${currencyFormatter.format(getDisplayAmount(project))} RON`}
+                                    />
+                                    <ProjectMetaPill
+                                        icon={<Clock3 className="h-3.5 w-3.5" />}
+                                        label="Time logged"
+                                        value={formatDuration(project.secondsLogged)}
+                                        className={cn(
+                                            overAllocated && "border-rose-300 bg-rose-50 text-rose-800"
+                                        )}
+                                    />
+                                    <ProjectMetaPill
+                                        icon={<ListTodo className="h-3.5 w-3.5" />}
+                                        label="Tasks"
+                                        value={`${project.completedTasks}/${totalTasks} (${Math.round(progress)}%)`}
+                                    />
+                                    <ProjectMetaPill
+                                        icon={<Building2 className="h-3.5 w-3.5" />}
+                                        label="Partner"
+                                        value={project.site.partner.name}
+                                    />
+                                    <ProjectMetaPill
+                                        icon={<CalendarDays className="h-3.5 w-3.5" />}
+                                        label="Created"
+                                        value={createdDate.dateLabel}
+                                    />
+                                </div>
+                            </button>
+                        )
+                    })}
+                </div>
+                {closeProjectDialog}
+            </>
         )
     }
 
     return (
-        <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
-            <div className="space-y-6 md:min-w-[1240px] xl:min-w-[1320px]">
+        <>
+            <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
+                <div className="space-y-6 md:min-w-[1240px] xl:min-w-[1320px]">
                 <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
                     <div className="mb-3 flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-emerald-500" />
@@ -1346,13 +1416,15 @@ export function ProjectsBoardRows({
                     totalDurationLabel={formatDuration(totals.totalSeconds)}
                 />
 
-                <GlobalCreateProjectDialog
-                    open={createProjectOpen}
-                    onOpenChange={setCreateProjectOpen}
-                    partners={partners}
-                    services={services}
-                />
+                    <GlobalCreateProjectDialog
+                        open={createProjectOpen}
+                        onOpenChange={setCreateProjectOpen}
+                        partners={partners}
+                        services={services}
+                    />
+                </div>
             </div>
-        </div>
+            {closeProjectDialog}
+        </>
     )
 }

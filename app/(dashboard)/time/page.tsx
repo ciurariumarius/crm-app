@@ -58,6 +58,9 @@ export default async function TimePage({
             services: p.services
         }
     })
+    const tasksForTime = tasks
+        .filter((task): task is { id: string; name: string; projectId: string } => Boolean(task.projectId))
+        .map((task) => ({ id: task.id, name: task.name, projectId: task.projectId }))
 
     const logs = logsResult.success && logsResult.data ? logsResult.data : []
     const totalLogs = logsResult.success ? logsResult.total ?? logs.length : 0
@@ -94,7 +97,7 @@ export default async function TimePage({
                     actions={(
                         <CreateTimeLogDialog
                             projects={formattedProjects}
-                            tasks={tasks}
+                            tasks={tasksForTime}
                             label="Add"
                             showLabelOnMobile
                             className="!h-11 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white xl:!px-9"
@@ -103,7 +106,7 @@ export default async function TimePage({
                     mobileActions={(
                         <CreateTimeLogDialog
                             projects={formattedProjects}
-                            tasks={tasks}
+                            tasks={tasksForTime}
                             label="Add"
                             showLabelOnMobile
                             className="!h-11 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white xl:!px-9"
@@ -159,7 +162,7 @@ export default async function TimePage({
                 <TimeLogsTable
                     logs={serializedLogs}
                     projects={formattedProjects}
-                    tasks={tasks}
+                    tasks={tasksForTime}
                 />
 
                 <div className="mt-4 flex items-center justify-between rounded-[18px] border border-[var(--line-subtle)]/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">

@@ -69,6 +69,9 @@ export function SidePanelNotesSection({
                 minHeightClassName={minHeightClassName}
                 uploadProjectId={uploadProjectId}
                 toolbarVisibility="always"
+                toolbarPinned
+                toolbarPreset="minimal"
+                toolbarTone="quiet"
                 toolbarActions={
                     <>
                         {onAddTemplate ? (

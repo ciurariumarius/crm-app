@@ -25,6 +25,7 @@ import { Service, Site } from "@prisma/client"
 import type { PartnerWithSites, ProjectWithDetails } from "@/types"
 import { sidePanelClass } from "@/lib/ui/side-panels"
 import { StatusChip, statusToneFromLabel } from "@/components/ui/status-chip"
+import { CloseProjectDialog } from "@/components/projects/close-project-dialog"
 
 import {
     DropdownMenu,
@@ -54,6 +55,8 @@ type ProjectUpdatePayload = {
     paymentStatus?: "Paid" | "Unpaid"
     currentFee?: number
     serviceIds?: string[]
+    closedAt?: Date | string | null
+    isHeavyRevenueMonth?: boolean
     [key: string]: unknown
 }
 
@@ -74,6 +77,16 @@ function toFeeNumber(value: ProjectTableProject["currentFee"]) {
     return Number.isFinite(parsed) ? parsed : 0
 }
 
+function toDateInputValue(value: Date | string | null | undefined) {
+    if (!value) return undefined
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return undefined
+    const year = parsed.getFullYear()
+    const month = `${parsed.getMonth() + 1}`.padStart(2, "0")
+    const day = `${parsed.getDate()}`.padStart(2, "0")
+    return `${year}-${month}-${day}`
+}
+
 interface ProjectTableProps {
     projects: ProjectTableProject[]
     allServices: Service[]
@@ -90,6 +103,8 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
     const [quickAddOpen, setQuickAddOpen] = React.useState(false)
     const [createProjectDialogOpen, setCreateProjectDialogOpen] = React.useState(false)
+    const [closeDialogProject, setCloseDialogProject] = React.useState<ProjectTableProject | null>(null)
+    const [isSubmittingCloseDialog, setIsSubmittingCloseDialog] = React.useState(false)
 
 
 
@@ -162,14 +177,63 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                         const newServices = allServices.filter((service) => data.serviceIds?.includes(service.id))
                         setSelectedProject((prev) => (prev ? { ...prev, services: newServices } : prev))
                     } else {
-                        setSelectedProject((prev) => (prev ? { ...prev, ...data } : prev))
+                        setSelectedProject((prev) => {
+                            if (!prev) return prev
+                            const nextProject: ProjectTableProject = { ...prev }
+                            if (data.status !== undefined) nextProject.status = data.status
+                            if (data.paymentStatus !== undefined) nextProject.paymentStatus = data.paymentStatus
+                            if (data.currentFee !== undefined) nextProject.currentFee = data.currentFee
+                            if (data.closedAt !== undefined) {
+                                nextProject.closedAt = data.closedAt ? new Date(data.closedAt) : null
+                            }
+                            if (data.isHeavyRevenueMonth !== undefined) {
+                                nextProject.isHeavyRevenueMonth = data.isHeavyRevenueMonth
+                            }
+                            return {
+                                ...nextProject,
+                            }
+                        })
                     }
                 }
+                return true
             } else {
                 toast.error(result.error || "Update failed")
+                return false
             }
         } catch {
             toast.error("Update failed")
+            return false
+        }
+    }
+
+    const requestStatusChange = (project: ProjectTableProject, nextStatus: "Active" | "Paused" | "Completed" | "Closed") => {
+        if (nextStatus === "Closed") {
+            setCloseDialogProject(project)
+            return
+        }
+        void handleUpdate(project.id, { status: nextStatus })
+    }
+
+    const handleConfirmCloseProject = async ({
+        closedOn,
+        isHeavyRevenueMonth,
+    }: {
+        closedOn: string
+        isHeavyRevenueMonth: boolean
+    }) => {
+        if (!closeDialogProject) return
+        setIsSubmittingCloseDialog(true)
+        try {
+            const success = await handleUpdate(closeDialogProject.id, {
+                status: "Closed",
+                closedAt: closedOn,
+                isHeavyRevenueMonth,
+            })
+            if (success) {
+                setCloseDialogProject(null)
+            }
+        } finally {
+            setIsSubmittingCloseDialog(false)
         }
     }
 
@@ -246,10 +310,10 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="rounded-xl">
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => requestStatusChange(project, "Active")} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => requestStatusChange(project, "Paused")} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => requestStatusChange(project, "Completed")} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => requestStatusChange(project, "Closed")} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
@@ -354,10 +418,10 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="rounded-xl">
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Active" })} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Paused" })} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Completed" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { status: "Closed" })} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => requestStatusChange(project, "Active")} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => requestStatusChange(project, "Paused")} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => requestStatusChange(project, "Completed")} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => requestStatusChange(project, "Closed")} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -637,6 +701,18 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                     )}
                 </SheetContent>
             </Sheet>
+
+            <CloseProjectDialog
+                open={Boolean(closeDialogProject)}
+                onOpenChange={(open) => {
+                    if (!open) setCloseDialogProject(null)
+                }}
+                onConfirm={handleConfirmCloseProject}
+                projectName={closeDialogProject ? formatProjectName(closeDialogProject) : undefined}
+                isSubmitting={isSubmittingCloseDialog}
+                initialClosedOn={toDateInputValue(closeDialogProject?.closedAt)}
+                initialIsHeavyRevenueMonth={Boolean(closeDialogProject?.isHeavyRevenueMonth)}
+            />
 
             <BulkActionsBar
                 selectedIds={selectedIds}

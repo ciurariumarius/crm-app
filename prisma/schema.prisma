@@ -119,6 +119,9 @@ model Project {
   paymentStatus String    @default("Unpaid") @map("payment_status") // Paid, Unpaid
   paidAt        DateTime? @map("paid_at")
   currentFee    Decimal?  @map("current_fee")
+  closedAt      DateTime? @map("closed_at")
+  closedMonthKey String?  @map("closed_month_key")
+  isHeavyRevenueMonth Boolean @default(false) @map("is_heavy_revenue_month")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -142,13 +145,16 @@ model Project {
   @@index([tenantId, currentFee])
   @@index([tenantId, status, updatedAt])
   @@index([tenantId, paymentStatus, updatedAt])
+  @@index([tenantId, closedMonthKey])
+  @@index([tenantId, isHeavyRevenueMonth, closedMonthKey])
+  @@index([tenantId, status, closedAt])
   @@map("projects")
 }
 
 model Task {
   id               String    @id @default(uuid())
   tenantId         String    @map("tenant_id")
-  projectId        String    @map("project_id")
+  projectId        String?   @map("project_id")
   name             String
   description      String?
   status           String    @default("Active") // Active, Completed
@@ -160,7 +166,7 @@ model Task {
   updatedAt DateTime @default(now()) @updatedAt
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  project  Project   @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade)
+  project  Project?  @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade)
   timeLogs TimeLog[]
 
   @@unique([tenantId, id])

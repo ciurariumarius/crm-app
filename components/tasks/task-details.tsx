@@ -250,10 +250,6 @@ export function TaskDetails({
     const handleDelete = async () => {
         if (!task) return
         try {
-            if (!task.projectId) {
-                toast.error("Task has no project")
-                return
-            }
             const result = await deleteTask(task.id, task.projectId)
             if (result.success) {
                 toast.success("Task deleted")

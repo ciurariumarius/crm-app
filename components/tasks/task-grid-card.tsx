@@ -5,12 +5,9 @@ import { format, isBefore, startOfDay } from "date-fns"
 import { cn } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import {
-    ArrowUpRight,
     CheckCheck,
     MoreVertical,
-    Pause,
     Play,
-    Square,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
@@ -19,7 +16,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
@@ -94,12 +90,11 @@ export function TaskGridCard({
     task,
     onOpen,
     onComplete,
-    renderMenu,
     isSelected,
     className,
     compact = true,
 }: TaskGridCardProps) {
-    const { timerState, startTimer, stopTimer, pauseTimer, resumeTimer } = useTimer()
+    const { timerState, startTimer, resumeTimer } = useTimer()
 
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isRunning = isActiveTimerThisTask && timerState.isRunning
@@ -160,24 +155,25 @@ export function TaskGridCard({
                             <MoreVertical className={cn(compact ? "h-3 w-3" : "h-4 w-4")} />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
-                        {task.status !== "Completed" ? (
-                            <>
-                                <DropdownMenuItem
-                                    onClick={() => onComplete(task.id)}
-                                    className="gap-2 rounded-xl cursor-pointer text-sm font-semibold"
-                                >
-                                    <CheckCheck className="h-4 w-4 text-[var(--text-secondary)]" />
-                                    Mark completed
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                            </>
-                        ) : null}
+                    <DropdownMenuContent align="end" className="w-56 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-2 shadow-xl">
+                        <DropdownMenuItem
+                            onClick={() => {
+                                if (task.status === "Completed") {
+                                    return
+                                }
+                                onComplete(task.id)
+                            }}
+                            disabled={task.status === "Completed"}
+                            className="min-h-11 gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-55"
+                        >
+                            <CheckCheck className="h-4.5 w-4.5 text-[var(--text-secondary)]" />
+                            Complete task
+                        </DropdownMenuItem>
 
                         <DropdownMenuItem
                             onClick={() => {
                                 if (isRunning) {
-                                    pauseTimer()
+                                    toast.message("Timer already running")
                                     return
                                 }
                                 if (isPaused) {
@@ -190,38 +186,11 @@ export function TaskGridCard({
                                 }
                                 startTimer(task.projectId, task.id, task.name || "Task")
                             }}
-                            className="gap-2 rounded-xl cursor-pointer text-sm font-semibold"
+                            className="min-h-11 gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer"
                         >
-                            {isRunning ? <Pause className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" /> : <Play className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />}
-                            {isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
+                            <Play className="h-4.5 w-4.5 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />
+                            Start timer
                         </DropdownMenuItem>
-
-                        {isActiveTimerThisTask ? (
-                            <DropdownMenuItem
-                                onClick={() => stopTimer()}
-                                className="gap-2 rounded-xl cursor-pointer text-sm font-semibold"
-                            >
-                                <Square className="h-4 w-4 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />
-                                Stop timer
-                            </DropdownMenuItem>
-                        ) : null}
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem
-                            onClick={() => onOpen(task.id)}
-                            className="gap-2 rounded-xl cursor-pointer text-sm font-semibold"
-                        >
-                            <ArrowUpRight className="h-4 w-4 text-[var(--text-secondary)]" />
-                            Open panel
-                        </DropdownMenuItem>
-
-                        {renderMenu ? (
-                            <>
-                                <DropdownMenuSeparator />
-                                {renderMenu(task)}
-                            </>
-                        ) : null}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>

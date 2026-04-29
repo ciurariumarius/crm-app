@@ -69,7 +69,10 @@ interface RichTextEditorProps {
     toolbarVisibility?: "focus" | "always"
     toolbarPreset?: "full" | "minimal"
     toolbarTone?: "default" | "quiet"
+    toolbarPinned?: boolean
+    toolbarPlacement?: "bar" | "top-right"
     toolbarActions?: React.ReactNode
+    documentHeader?: React.ReactNode
     className?: string
     mode?: "panel" | "document"
     panelStyle?: "default" | "borderless"
@@ -127,7 +130,10 @@ export function RichTextEditor({
     toolbarVisibility = "focus",
     toolbarPreset = "full",
     toolbarTone = "default",
+    toolbarPinned = false,
+    toolbarPlacement = "bar",
     toolbarActions,
+    documentHeader,
     className,
     mode = "panel",
     panelStyle = "default",
@@ -629,8 +635,11 @@ export function RichTextEditor({
     }
 
     const currentViewerSrc = viewer.sources[viewer.index] || ""
-    const showToolbar = toolbarVisibility === "always" || isFocused
+    const isToolbarPinned = toolbarPinned
+    const showToolbar = isToolbarPinned || toolbarVisibility === "always" || isFocused
     const isMinimalToolbar = toolbarPreset === "minimal"
+    const isCompactToolbar = isMinimalToolbar || isToolbarPinned
+    const isTopRightToolbar = toolbarPlacement === "top-right"
     const isBorderlessPanel = variant === "plain" && mode === "panel" && panelStyle === "borderless"
     const isDocumentLeft = mode === "document" && documentLayout === "left"
     const isQuietToolbar = toolbarTone === "quiet"
@@ -641,6 +650,7 @@ export function RichTextEditor({
             <div
                 className={cn(
                     "flex flex-col overflow-hidden rounded-xl transition-colors",
+                    isTopRightToolbar && "relative",
                     variant === "default" &&
                         "border border-input bg-transparent focus-within:ring-1 focus-within:ring-ring",
                     variant === "plain" &&
@@ -663,22 +673,27 @@ export function RichTextEditor({
                         }}
                         className={cn(
                             "flex items-center",
-                            isMinimalToolbar ? "gap-1 px-1.5 py-1" : "gap-1.5 p-1.5",
-                            variant === "default" && "border-b bg-muted/20",
-                            variant === "plain" &&
+                            isTopRightToolbar &&
+                                "absolute right-2 top-2 z-30 max-w-[calc(100%-1rem)] rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3",
+                            isCompactToolbar ? "gap-1.5 px-2 py-1.5 md:px-2.5" : "gap-1.5 p-1.5",
+                            isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",
+                            !isTopRightToolbar && variant === "default" && "border-b bg-muted/20",
+                            !isTopRightToolbar &&
+                                variant === "plain" &&
                                 mode === "panel" &&
                                 (isBorderlessPanel
                                     ? "border-b-0 bg-transparent px-0 py-0.5"
                                     : "border-b border-[var(--line-subtle)] bg-[var(--surface-lowest)]"),
-                            variant === "plain" &&
+                            !isTopRightToolbar &&
+                                variant === "plain" &&
                                 mode === "document" &&
                                 (isDocumentLeft
                                     ? cn(
-                                        "mx-1 mt-3 mb-4 rounded-xl px-3 pt-2 pb-2 backdrop-blur-sm",
+                                        "mx-1 mt-1 mb-2 rounded-xl px-2 py-1.5 md:px-2.5 md:py-2 supports-[backdrop-filter]:backdrop-blur-xl",
                                         isReadingWidth ? "w-[calc(100%-0.5rem)] max-w-[860px]" : "w-[calc(100%-0.5rem)]",
                                         isQuietToolbar
-                                            ? "border border-[var(--line-subtle)]/65 bg-[var(--surface-lowest)] shadow-[0_10px_22px_-22px_rgba(15,23,42,0.45)]"
-                                            : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)]"
+                                            ? "border border-[var(--line-subtle)]/65 bg-[color:color-mix(in_srgb,var(--surface-lowest)_84%,var(--surface-low)_16%)] shadow-[0_10px_22px_-22px_rgba(15,23,42,0.45)]"
+                                            : "border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)]"
                                     )
                                     : cn(
                                         "mx-4 md:mx-auto mt-4 mb-6 w-full md:w-[calc(100%-2rem)] max-w-4xl rounded-xl px-3 pt-2 pb-2 backdrop-blur-sm",
@@ -694,7 +709,10 @@ export function RichTextEditor({
                                     size="sm"
                                     pressed={editor.isActive("paragraph")}
                                     onPressedChange={() => editor.chain().focus().setParagraph().run()}
-                                    className="h-8 px-3 text-xs font-semibold"
+                                    className={cn(
+                                        "text-xs font-semibold",
+                                        isCompactToolbar ? "h-8 px-2.5" : "h-8 px-3"
+                                    )}
                                     aria-label="Paragraph"
                                 >
                                     P
@@ -707,7 +725,10 @@ export function RichTextEditor({
                                             ? editor.chain().focus().setHeading({ level: 1 }).run()
                                             : editor.chain().focus().setParagraph().run()
                                     }
-                                    className="h-8 px-3 text-xs font-semibold"
+                                    className={cn(
+                                        "text-xs font-semibold",
+                                        isCompactToolbar ? "h-8 px-2.5" : "h-8 px-3"
+                                    )}
                                     aria-label="Heading 1"
                                 >
                                     H1
@@ -720,7 +741,10 @@ export function RichTextEditor({
                                             ? editor.chain().focus().setHeading({ level: 2 }).run()
                                             : editor.chain().focus().setParagraph().run()
                                     }
-                                    className="h-8 px-3 text-xs font-semibold"
+                                    className={cn(
+                                        "text-xs font-semibold",
+                                        isCompactToolbar ? "h-8 px-2.5" : "h-8 px-3"
+                                    )}
                                     aria-label="Heading 2"
                                 >
                                     H2
@@ -736,41 +760,40 @@ export function RichTextEditor({
                                     ? editor.chain().focus().setBold().run()
                                     : editor.chain().focus().unsetBold().run()
                             }
-                            className={cn("p-0", isMinimalToolbar ? "h-7 w-7" : "h-8 w-8")}
+                            className="h-8 w-8 p-0"
                             aria-label="Bold"
                         >
-                            <Bold className={isMinimalToolbar ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                            <Bold className="h-4 w-4" />
                         </Toggle>
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("bulletList")}
                             onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
-                            className={cn("p-0", isMinimalToolbar ? "h-7 w-7" : "h-8 w-8")}
+                            className="h-8 w-8 p-0"
                             aria-label="Bullet list"
                         >
-                            <List className={isMinimalToolbar ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                            <List className="h-4 w-4" />
                         </Toggle>
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("codeBlock")}
                             onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
-                            className={cn("p-0", isMinimalToolbar ? "h-7 w-7" : "h-8 w-8")}
+                            className="h-8 w-8 p-0"
                             aria-label="Code snippet"
                             title="Code snippet"
                         >
-                            <Code2 className={isMinimalToolbar ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                            <Code2 className="h-4 w-4" />
                         </Toggle>
                         <button
                             type="button"
                             onClick={() => imageInputRef.current?.click()}
                             className={cn(
-                                "inline-flex items-center justify-center rounded-md border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
-                                isMinimalToolbar ? "h-7 w-7" : "h-8 w-8"
+                                "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                             )}
                             aria-label="Upload image"
                             title="Upload image"
                         >
-                            <ImagePlus className={isMinimalToolbar ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                            <ImagePlus className="h-4 w-4" />
                         </button>
                         {!isMinimalToolbar ? (
                             <>
@@ -921,6 +944,7 @@ export function RichTextEditor({
                     ref={editorViewportRef}
                     className={cn(
                         "relative min-h-[150px] flex-1 overflow-y-auto p-4",
+                        isTopRightToolbar && "pt-[3.8rem] md:pt-[4.1rem]",
                         variant === "plain" &&
                             mode === "panel" &&
                             (isBorderlessPanel ? "bg-transparent px-0 py-2" : "bg-[var(--surface-lowest)] p-5"),
@@ -936,6 +960,9 @@ export function RichTextEditor({
                                     : "mx-auto w-full max-w-4xl px-6 pb-8")
                         )}
                     >
+                        {mode === "document" && documentHeader ? (
+                            <div className="pb-2.5">{documentHeader}</div>
+                        ) : null}
                         <EditorContent editor={editor} />
                     </div>
                 </div>

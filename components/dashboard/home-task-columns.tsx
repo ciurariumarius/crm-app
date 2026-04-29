@@ -2,26 +2,42 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowRight, Check, FolderSearch } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { updateTask } from "@/lib/actions/tasks"
+import { addTask, updateTask } from "@/lib/actions/tasks"
 import { getProjectById } from "@/lib/actions/projects"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
 import { TaskDetails, type TaskDetailsTask } from "@/components/tasks/task-details"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { sidePanelClass } from "@/lib/ui/side-panels"
 import type { ProjectWithDetails } from "@/types"
 import type { Service, Site } from "@prisma/client"
 
 type HomeTaskColumnsTask = TaskDetailsTask
+type HomeQuickCaptureProject = {
+    id: string
+    label: string
+    domainName?: string | null
+    createdAt?: Date | string | null
+    services?: Array<{
+        serviceName?: string | null
+        isRecurring?: boolean | null
+    }>
+}
 
 interface HomeTaskColumnsProps {
     urgentTasks: HomeTaskColumnsTask[]
     overdueTasks: HomeTaskColumnsTask[]
     normalTasks: HomeTaskColumnsTask[]
+    quickCaptureProjects: HomeQuickCaptureProject[]
     allServices: Service[]
     hourlyRate?: number
 }
@@ -43,10 +59,23 @@ function toTimestamp(value: Date | string | number | null | undefined, fallback:
     return Number.isNaN(parsed) ? fallback : parsed
 }
 
-export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allServices, hourlyRate = 0 }: HomeTaskColumnsProps) {
+export function HomeTaskColumns({
+    urgentTasks,
+    overdueTasks,
+    normalTasks,
+    quickCaptureProjects,
+    allServices,
+    hourlyRate = 0,
+}: HomeTaskColumnsProps) {
+    const router = useRouter()
     const [urgentState, setUrgentState] = React.useState<HomeTaskColumnsTask[]>(urgentTasks)
     const [overdueState, setOverdueState] = React.useState<HomeTaskColumnsTask[]>(overdueTasks)
     const [normalState, setNormalState] = React.useState<HomeTaskColumnsTask[]>(normalTasks)
+    const [quickTaskTitle, setQuickTaskTitle] = React.useState("")
+    const [quickProjectId, setQuickProjectId] = React.useState("")
+    const [quickProjectPickerOpen, setQuickProjectPickerOpen] = React.useState(false)
+    const [isCreatingQuickTask, setIsCreatingQuickTask] = React.useState(false)
+    const [recentTaskId, setRecentTaskId] = React.useState<string | null>(null)
     const [selectedTask, setSelectedTask] = React.useState<HomeTaskColumnsTask | null>(null)
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
     const [selectedSite, setSelectedSite] = React.useState<Site & { partner?: { id: string; name: string } } | null>(null)
@@ -124,13 +153,20 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
         () => [...urgentOrdered, ...overdueOnlyOrdered],
         [overdueOnlyOrdered, urgentOrdered]
     )
-    const visibleTasks = React.useMemo(() => {
+    const baseVisibleTasks = React.useMemo(() => {
         if (orderedTasks.length >= HOME_MAX_VISIBLE_TASKS) {
             return orderedTasks.slice(0, HOME_MAX_VISIBLE_TASKS)
         }
         const fillCount = HOME_MAX_VISIBLE_TASKS - orderedTasks.length
         return [...orderedTasks, ...normalOnlyOrdered.slice(0, fillCount)]
     }, [normalOnlyOrdered, orderedTasks])
+    const visibleTasks = React.useMemo(() => {
+        if (!recentTaskId) return baseVisibleTasks
+        const recentTask = mergedById.get(recentTaskId)
+        if (!recentTask) return baseVisibleTasks
+        if (baseVisibleTasks.some((task) => task.id === recentTaskId)) return baseVisibleTasks
+        return [recentTask, ...baseVisibleTasks.slice(0, HOME_MAX_VISIBLE_TASKS - 1)]
+    }, [baseVisibleTasks, mergedById, recentTaskId])
 
     const handleOpenTask = React.useCallback(
         (taskId: string) => {
@@ -160,6 +196,92 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
             toast.error("Failed to update task")
         }
     }, [])
+
+    const quickCaptureProjectMap = React.useMemo(() => {
+        const map = new Map<string, HomeQuickCaptureProject>()
+        for (const project of quickCaptureProjects) {
+            map.set(project.id, project)
+        }
+        return map
+    }, [quickCaptureProjects])
+
+    React.useEffect(() => {
+        if (!quickProjectId) return
+        if (quickCaptureProjectMap.has(quickProjectId)) return
+        setQuickProjectId("")
+    }, [quickCaptureProjectMap, quickProjectId])
+
+    const handleQuickCaptureSubmit = React.useCallback(async (event?: React.FormEvent<HTMLFormElement>) => {
+        event?.preventDefault()
+
+        if (isCreatingQuickTask) return
+
+        const title = quickTaskTitle.trim()
+        if (!title) {
+            toast.error("Task title is required")
+            return
+        }
+        const selectedProject = quickProjectId ? quickCaptureProjectMap.get(quickProjectId) : null
+        if (quickProjectId && !selectedProject) {
+            toast.error("Selected project is no longer available")
+            return
+        }
+
+        setIsCreatingQuickTask(true)
+        try {
+            const result = await addTask(quickProjectId || undefined, title)
+            if (!result.success) {
+                toast.error(result.error || "Failed to create task")
+                return
+            }
+
+            const isGlobalTask = !result.data?.projectId
+            const effectiveProjectId = result.data?.projectId || quickProjectId || null
+            const effectiveProjectLabel = selectedProject?.label || result.data?.projectName || (isGlobalTask ? "Global task" : "Project")
+            const effectiveDomainName = selectedProject?.domainName || result.data?.projectDomain || "No domain"
+            const effectiveCreatedAt = selectedProject?.createdAt || new Date().toISOString()
+            const effectiveServices = selectedProject?.services || []
+            const temporaryTaskId = `quick-${crypto.randomUUID()}`
+            const optimisticTask: HomeTaskColumnsTask = {
+                id: temporaryTaskId,
+                projectId: effectiveProjectId || undefined,
+                name: title,
+                description: "",
+                status: "Active",
+                urgency: "Normal",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                timeLogs: [],
+                project: isGlobalTask
+                    ? null
+                    : {
+                        id: effectiveProjectId || "global-task",
+                        name: effectiveProjectLabel,
+                        createdAt: effectiveCreatedAt,
+                        site: {
+                            domainName: effectiveDomainName,
+                            partner: null,
+                        },
+                        services: effectiveServices.map((service) => ({
+                            serviceName: service.serviceName || "",
+                            isRecurring: service.isRecurring || false,
+                        })),
+                        tasks: [],
+                        timeLogs: [],
+                    },
+            }
+
+            setNormalState((prev) => [optimisticTask, ...prev.filter((task) => task.id !== temporaryTaskId)])
+            setRecentTaskId(temporaryTaskId)
+            setQuickTaskTitle("")
+            toast.success(isGlobalTask ? "Global task created" : "Task created")
+            router.refresh()
+        } catch {
+            toast.error("Failed to create task")
+        } finally {
+            setIsCreatingQuickTask(false)
+        }
+    }, [isCreatingQuickTask, quickTaskTitle, quickProjectId, quickCaptureProjectMap, router])
 
     const handleOpenProjectFromTask = React.useCallback(async (project: { id?: string }) => {
         if (!project?.id) {
@@ -231,22 +353,99 @@ export function HomeTaskColumns({ urgentTasks, overdueTasks, normalTasks, allSer
                     </div>
                 </div>
 
-                {visibleTasks.length === 0 ? (
-                    <div className="mt-4 rounded-[24px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_78%,transparent)] px-4 py-5 text-sm text-[var(--text-secondary)]">
-                        No active tasks.
-                    </div>
-                ) : (
-                    <div className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-                        {visibleTasks.map((task) => (
-                            <TaskGridCard
-                                key={task.id}
-                                task={task}
-                                onOpen={handleOpenTask}
-                                onComplete={handleComplete}
-                                compact
-                                className="h-full"
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+                    {visibleTasks.map((task) => (
+                        <TaskGridCard
+                            key={task.id}
+                            task={task}
+                            onOpen={handleOpenTask}
+                            onComplete={handleComplete}
+                            compact
+                            className="h-full"
+                        />
+                    ))}
+
+                    <form
+                        onSubmit={(event) => {
+                            void handleQuickCaptureSubmit(event)
+                        }}
+                        className="flex h-full flex-col rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_86%,transparent)] p-2.5 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Input
+                                value={quickTaskTitle}
+                                onChange={(event) => setQuickTaskTitle(event.target.value)}
+                                placeholder="Task title"
+                                className="h-11 flex-1 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[15px] font-semibold"
+                                disabled={isCreatingQuickTask}
                             />
-                        ))}
+                            <Popover open={quickProjectPickerOpen} onOpenChange={setQuickProjectPickerOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        disabled={isCreatingQuickTask}
+                                        className="h-9 w-9 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
+                                        aria-label="Select project (optional)"
+                                    >
+                                        <FolderSearch className="h-4 w-4" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" className="w-[280px] rounded-xl p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search project..." />
+                                        <CommandList className="max-h-[240px]">
+                                            <CommandEmpty>No project found.</CommandEmpty>
+                                            <CommandGroup>
+                                                <CommandItem
+                                                    value="No project selected"
+                                                    onSelect={() => {
+                                                        setQuickProjectId("")
+                                                        setQuickProjectPickerOpen(false)
+                                                    }}
+                                                    className="text-sm"
+                                                >
+                                                    <Check className={cn("mr-2 h-4 w-4", quickProjectId ? "opacity-0" : "opacity-100")} />
+                                                    <span className="truncate">No project selected</span>
+                                                </CommandItem>
+                                                {quickCaptureProjects.map((project) => (
+                                                    <CommandItem
+                                                        key={project.id}
+                                                        value={project.label}
+                                                        onSelect={() => {
+                                                            setQuickProjectId(project.id)
+                                                            setQuickProjectPickerOpen(false)
+                                                        }}
+                                                        className="text-sm"
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", quickProjectId === project.id ? "opacity-100" : "opacity-0")} />
+                                                        <span className="truncate">{project.label}</span>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="mt-2 h-9 rounded-xl text-sm font-semibold"
+                            disabled={
+                                isCreatingQuickTask ||
+                                !quickTaskTitle.trim().length
+                            }
+                        >
+                            {isCreatingQuickTask ? "Creating..." : "Create task"}
+                        </Button>
+                    </form>
+                </div>
+
+                {visibleTasks.length === 0 && (
+                    <div className="mt-3 rounded-[18px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_78%,transparent)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+                        No active tasks yet. Use quick capture to add one.
                     </div>
                 )}
             </section>

@@ -50,7 +50,7 @@ export async function getProjectStatusHistory(projectId: string) {
         const logs = await prisma.auditLog.findMany({
             where: {
                 tenantId: session.tenantId,
-                action: { in: ["PROJECT_STATUS_CHANGED", "PROJECT_CREATED"] },
+                action: { in: ["PROJECT_STATUS_CHANGED", "PROJECT_CREATED", "PROJECT_CLOSED", "PROJECT_REOPENED"] },
                 details: { contains: `projectId=${projectId}` },
             },
             orderBy: { createdAt: "desc" },
@@ -68,6 +68,34 @@ export async function getProjectStatusHistory(projectId: string) {
                         fromStatus: null,
                         toStatus: "Created",
                         source: "initial_create",
+                    }
+                }
+
+                if (log.action === "PROJECT_CLOSED") {
+                    const details = log.details || ""
+                    const sourceMatch = details.match(/(?:^|;\s*)source=([^;]+)/)
+
+                    return {
+                        id: log.id,
+                        action: log.action,
+                        date: log.createdAt,
+                        fromStatus: null,
+                        toStatus: "Closed",
+                        source: sourceMatch?.[1]?.trim() || null,
+                    }
+                }
+
+                if (log.action === "PROJECT_REOPENED") {
+                    const details = log.details || ""
+                    const sourceMatch = details.match(/(?:^|;\s*)source=([^;]+)/)
+
+                    return {
+                        id: log.id,
+                        action: log.action,
+                        date: log.createdAt,
+                        fromStatus: "Closed",
+                        toStatus: "Reopened",
+                        source: sourceMatch?.[1]?.trim() || "manual_reopen",
                     }
                 }
 

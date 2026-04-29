@@ -30,17 +30,17 @@ type TaskTableTimeLog = {
 }
 
 type TaskTableTask = TaskDetailsTask & {
-    projectId: string
+    projectId?: string | null
     name: string
     status: string
-    project: {
-        site: {
-            domainName: string
-            partner: {
-                name: string
-            }
-        }
-    }
+    project?: {
+        site?: {
+            domainName?: string | null
+            partner?: {
+                name?: string | null
+            } | null
+        } | null
+    } | null
     timeLogs?: TaskTableTimeLog[] | null
     estimatedMinutes?: number | null
     deadline?: string | Date | null
@@ -56,7 +56,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
     const [selectedTask, setSelectedTask] = React.useState<TaskTableTask | null>(null)
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
 
-    const handleStatusChange = async (taskId: string, currentStatus: string, projectId: string) => {
+    const handleStatusChange = async (taskId: string, currentStatus: string, projectId?: string | null) => {
         setUpdatingId(taskId)
         try {
             await toggleTaskStatus(taskId, currentStatus, projectId)
@@ -128,11 +128,11 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                     <div className="flex flex-col gap-1 max-w-[200px]">
                                         <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/70">
                                             <Users className="h-3 w-3 opacity-50 shrink-0" />
-                                            <span className="truncate">{task.project.site.partner.name}</span>
+                                            <span className="truncate">{task.project?.site?.partner?.name || "No partner"}</span>
                                         </div>
                                         <div className="text-xs text-muted-foreground/60 font-medium flex items-center gap-2">
                                             <Globe className="h-3 w-3 opacity-40 shrink-0" />
-                                            <span className="truncate">{task.project.site.domainName}</span>
+                                            <span className="truncate">{task.project?.site?.domainName || "No domain"}</span>
                                         </div>
                                     </div>
                                 </TableCell>

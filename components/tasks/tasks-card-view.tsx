@@ -1,18 +1,21 @@
 "use client"
 
 import * as React from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { format, isToday, isPast } from "date-fns"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { useDebounce } from "@/hooks/use-debounce"
-import { deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
+import { addTask, deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Square, Target, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Square, Target, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle, Check, FolderSearch } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 import { TaskGridCard } from "./task-grid-card"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
@@ -111,6 +114,7 @@ export function TasksCardView({
     searchApiFilters,
 }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
+    const router = useRouter()
     const searchParams = useSearchParams()
     const searchParamsString = searchParams.toString()
     const searchContext = useTasksSearchContext()
@@ -122,6 +126,10 @@ export function TasksCardView({
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
     const [isBulkOperating, setIsBulkOperating] = React.useState(false)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
+    const [quickTaskTitle, setQuickTaskTitle] = React.useState("")
+    const [quickProjectId, setQuickProjectId] = React.useState("")
+    const [quickProjectPickerOpen, setQuickProjectPickerOpen] = React.useState(false)
+    const [isCreatingQuickTask, setIsCreatingQuickTask] = React.useState(false)
     const [remoteTasks, setRemoteTasks] = React.useState<TaskCardViewTask[] | null>(null)
     const searchCacheRef = React.useRef<
         Map<string, { tasks: TaskCardViewTask[]; total: number; pagination: SearchPaginationState }>
@@ -241,6 +249,64 @@ export function TasksCardView({
         3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
         4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
     }[cols] ?? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+
+    const quickCaptureProjects = React.useMemo(() => {
+        return projects
+            .filter((project) => project.status === "Active")
+            .map((project) => ({
+                id: project.id,
+                label: formatProjectName(project),
+            }))
+            .sort((left, right) => left.label.localeCompare(right.label))
+    }, [projects])
+
+    const quickCaptureProjectMap = React.useMemo(() => {
+        const map = new Map<string, { id: string; label: string }>()
+        for (const project of quickCaptureProjects) {
+            map.set(project.id, project)
+        }
+        return map
+    }, [quickCaptureProjects])
+
+    React.useEffect(() => {
+        if (!quickProjectId) return
+        if (quickCaptureProjectMap.has(quickProjectId)) return
+        setQuickProjectId("")
+    }, [quickCaptureProjectMap, quickProjectId])
+
+    const handleQuickCaptureSubmit = React.useCallback(async (event?: React.FormEvent<HTMLFormElement>) => {
+        event?.preventDefault()
+        if (isCreatingQuickTask) return
+
+        const title = quickTaskTitle.trim()
+        if (!title) {
+            toast.error("Task title is required")
+            return
+        }
+
+        const selectedProject = quickProjectId ? quickCaptureProjectMap.get(quickProjectId) : null
+        if (quickProjectId && !selectedProject) {
+            toast.error("Selected project is no longer available")
+            return
+        }
+
+        setIsCreatingQuickTask(true)
+        try {
+            const result = await addTask(quickProjectId || undefined, title)
+            if (!result.success) {
+                toast.error(result.error || "Failed to create task")
+                return
+            }
+
+            setQuickTaskTitle("")
+            toast.success(result.data?.projectId ? "Task created" : "Global task created")
+            router.refresh()
+        } catch {
+            toast.error("Failed to create task")
+        } finally {
+            setIsCreatingQuickTask(false)
+        }
+    }, [isCreatingQuickTask, quickTaskTitle, quickProjectId, quickCaptureProjectMap, router])
 
     const normalizedSearch = (searchContext?.searchTerm || "").trim().toLowerCase()
     const debouncedSearch = useDebounce(normalizedSearch, 250)
@@ -395,19 +461,82 @@ export function TasksCardView({
                 />
             ))}
 
-            <div
-                className="group self-start cursor-pointer rounded-[22px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-4 py-6 text-center transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-50/30 hover:shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
-                onClick={() => setCreateTaskOpen(true)}
+            <form
+                onSubmit={(event) => {
+                    void handleQuickCaptureSubmit(event)
+                }}
+                className="flex h-full flex-col rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_86%,transparent)] p-2.5 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
             >
-                <div className="flex h-full flex-col items-center justify-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-500 group-hover:bg-emerald-500">
-                        <Plus className="h-5 w-5 text-[var(--text-muted)] group-hover:text-white" strokeWidth={2} />
-                    </div>
-                    <p className="mt-3 text-[13px] font-semibold text-[var(--text-secondary)] transition-colors group-hover:text-emerald-700">
-                        Quick add task...
-                    </p>
+                <div className="flex items-center gap-2">
+                    <Input
+                        value={quickTaskTitle}
+                        onChange={(event) => setQuickTaskTitle(event.target.value)}
+                        placeholder="Task title"
+                        className="h-11 flex-1 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[15px] font-semibold"
+                        disabled={isCreatingQuickTask}
+                    />
+                    <Popover open={quickProjectPickerOpen} onOpenChange={setQuickProjectPickerOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                disabled={isCreatingQuickTask}
+                                className="h-9 w-9 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
+                                aria-label="Select project (optional)"
+                            >
+                                <FolderSearch className="h-4 w-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-[280px] rounded-xl p-0">
+                            <Command>
+                                <CommandInput placeholder="Search project..." />
+                                <CommandList className="max-h-[240px]">
+                                    <CommandEmpty>No project found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="No project selected"
+                                            onSelect={() => {
+                                                setQuickProjectId("")
+                                                setQuickProjectPickerOpen(false)
+                                            }}
+                                            className="text-sm"
+                                        >
+                                            <Check className={cn("mr-2 h-4 w-4", quickProjectId ? "opacity-0" : "opacity-100")} />
+                                            <span className="truncate">No project selected</span>
+                                        </CommandItem>
+                                        {quickCaptureProjects.map((project) => (
+                                            <CommandItem
+                                                key={project.id}
+                                                value={project.label}
+                                                onSelect={() => {
+                                                    setQuickProjectId(project.id)
+                                                    setQuickProjectPickerOpen(false)
+                                                }}
+                                                className="text-sm"
+                                            >
+                                                <Check className={cn("mr-2 h-4 w-4", quickProjectId === project.id ? "opacity-100" : "opacity-0")} />
+                                                <span className="truncate">{project.label}</span>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
-            </div>
+
+                <Button
+                    type="submit"
+                    className="mt-2 h-9 rounded-xl text-sm font-semibold"
+                    disabled={
+                        isCreatingQuickTask ||
+                        !quickTaskTitle.trim().length
+                    }
+                >
+                    {isCreatingQuickTask ? "Creating..." : "Create task"}
+                </Button>
+            </form>
         </div>
     )
 
