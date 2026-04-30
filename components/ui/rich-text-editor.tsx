@@ -470,7 +470,7 @@ export function RichTextEditor({
     }, [activeCodeBlockElement, copyTextToClipboard])
 
     const notesFirstLineClass = notesMode
-        ? "[&>*:first-child]:mt-0 [&>*:first-child]:mb-1 [&>*:first-child]:text-[1.2rem] [&>*:first-child]:font-medium [&>*:first-child]:tracking-[-0.012em] [&>*:first-child]:leading-[1.3] [&>*:first-child]:text-[var(--text-primary)] md:[&>*:first-child]:text-[1.3rem]"
+        ? "[&>*:first-child]:mt-0 [&>*:first-child]:mb-0.5 [&>*:first-child]:text-[1.08rem] [&>*:first-child]:font-medium [&>*:first-child]:tracking-[-0.01em] [&>*:first-child]:leading-[1.34] [&>*:first-child]:text-[var(--text-primary)] md:[&>*:first-child]:text-[1.15rem]"
         : ""
 
     const editor = useEditor({
@@ -672,10 +672,10 @@ export function RichTextEditor({
     const isDocumentLeft = mode === "document" && documentLayout === "left"
     const isQuietToolbar = resolvedToolbarTone === "quiet"
     const isReadingWidth = mode === "document" && documentWidth === "reading"
-    const compactControlClass = notesMode ? "h-10 w-10 lg:h-8 lg:w-8" : "h-8 w-8"
-    const compactIconClass = notesMode ? "h-[1.1rem] w-[1.1rem] lg:h-4 lg:w-4" : "h-4 w-4"
+    const compactControlClass = notesMode ? "h-10 w-10 md:h-9 md:w-9 lg:h-7 lg:w-7" : "h-8 w-8"
+    const compactIconClass = notesMode ? "h-[1.05rem] w-[1.05rem] md:h-[1rem] md:w-[1rem] lg:h-[0.86rem] lg:w-[0.86rem]" : "h-4 w-4"
     const notesControlClass = notesMode
-        ? "rounded-full border border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+        ? "rounded-full border border-transparent text-[var(--text-secondary)] data-[state=on]:border-[var(--line-subtle)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
         : ""
 
     return (
@@ -707,8 +707,8 @@ export function RichTextEditor({
                         className={cn(
                             "flex items-center",
                             isTopRightToolbar &&
-                                "absolute right-2 top-2 z-30 max-w-[calc(100%-1rem)] rounded-full border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] shadow-[0_8px_20px_-18px_rgba(15,23,42,0.42)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3",
-                            isCompactToolbar ? "gap-1.5 px-2 py-1.5 md:px-2.5" : "gap-1.5 p-1.5",
+                                "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_10px_20px_-18px_rgba(15,23,42,0.46)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3",
+                            isCompactToolbar ? "gap-1 px-1.5 py-1 md:px-2" : "gap-1.5 p-1.5",
                             isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",
                             !isTopRightToolbar && variant === "default" && "border-b bg-muted/20",
                             !isTopRightToolbar &&

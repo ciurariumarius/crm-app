@@ -29,6 +29,7 @@ model Tenant {
   lmsTaskLogs      LmsTaskLog[]
   lmsAllocations   LmsAllocation[]
   notes            Note[]
+  noteFolders      NoteFolder[]
 
   @@map("tenants")
 }
@@ -237,6 +238,7 @@ model User {
   authSessions AuthSession[]
   timeLogs     TimeLog[]
   notes        Note[]
+  noteFolders  NoteFolder[]
 
   @@index([tenantId])
   @@map("users")
@@ -281,6 +283,7 @@ model Note {
   id          String   @id @default(uuid())
   tenantId    String   @map("tenant_id")
   userId      String   @map("user_id")
+  folderId    String?  @map("folder_id")
   title       String   @default("Untitled")
   content     String   @default("")
   contentText String   @default("") @map("content_text")
@@ -291,13 +294,35 @@ model Note {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder NoteFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, id])
   @@index([tenantId])
   @@index([tenantId, userId])
+  @@index([tenantId, folderId, updatedAt])
   @@index([tenantId, archived, updatedAt])
   @@index([tenantId, pinned, updatedAt])
   @@map("notes")
+}
+
+model NoteFolder {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  name      String
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes  Note[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, userId])
+  @@index([tenantId, isDefault])
+  @@index([tenantId, createdAt])
+  @@map("note_folders")
 }
 
 model AuditLog {

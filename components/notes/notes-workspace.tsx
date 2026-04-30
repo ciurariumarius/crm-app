@@ -2,15 +2,17 @@
 
 import * as React from "react"
 import { format, formatDistanceToNow, isToday } from "date-fns"
-import { Archive, ArchiveRestore, ChevronDown, FilePlus2, FolderKanban, ListTodo, NotebookPen, Pin, PinOff, Plus, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, Check, ChevronRight, FilePlus2, Folder, FolderKanban, FolderPlus, ListTodo, NotebookPen, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
-import { createNote, deleteNote, setNoteArchived, setNotePinned, updateNote, type NoteRecord } from "@/lib/actions/notes"
+import { createNote, createNoteFolder, deleteNote, deleteNoteFolder, renameNoteFolder, setNoteArchived, setNotePinned, updateNote, type NoteFolderRecord, type NoteRecord } from "@/lib/actions/notes"
 import { updateProject } from "@/lib/actions/projects"
 import { updateTask } from "@/lib/actions/tasks"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import {
   AlertDialog,
@@ -35,6 +37,8 @@ import {
 type NotesWorkspaceProps = {
   initialNotes: NoteRecord[]
   initialSelectedNoteId: string | null
+  initialFolders: NoteFolderRecord[]
+  foldersEnabled?: boolean
   storageUnavailable?: boolean
 }
 
@@ -45,7 +49,12 @@ type NoteSection = {
 }
 
 const COLLAPSIBLE_NOTE_SECTION_KEYS = new Set(["projects", "tasks"])
-const DEFAULT_COLLAPSED_NOTE_SECTION_KEYS = new Set(["projects", "tasks"])
+const NO_FOLDER_VALUE = "__none__"
+
+function getFolderIdFromSectionKey(sectionKey: string) {
+  if (!sectionKey.startsWith("folder:")) return null
+  return sectionKey.slice("folder:".length) || null
+}
 
 function getNoteDisplayTitle(note: NoteRecord) {
   if (getNoteSourceType(note) !== "note") return note.title?.trim() || DEFAULT_NOTE_TITLE
@@ -144,39 +153,60 @@ function upsertNote(items: NoteRecord[], next: NoteRecord) {
   return sortNotes([next, ...withoutCurrent])
 }
 
-function buildVisibleNoteSections(items: NoteRecord[], showArchived: boolean) {
+function buildVisibleNoteSections(
+  items: NoteRecord[],
+  folders: NoteFolderRecord[],
+  showArchived: boolean,
+  foldersEnabled: boolean
+) {
   if (showArchived) {
     return items.length ? [{ key: "archived", label: "Archived", notes: items }] : []
   }
 
   const pinned = items.filter((note) => getNoteSourceType(note) === "note" && note.pinned)
-  const today = items.filter(
+  const personalUnpinned = items.filter(
     (note) =>
       getNoteSourceType(note) === "note" &&
-      !note.pinned &&
-      isToday(new Date(note.updatedAt))
+      !note.pinned
   )
-  const earlier = items.filter(
-    (note) =>
-      getNoteSourceType(note) === "note" &&
-      !note.pinned &&
-      !isToday(new Date(note.updatedAt))
-  )
+  const unfiled = foldersEnabled ? personalUnpinned.filter((note) => !note.folderId) : personalUnpinned
   const projectNotes = items.filter((note) => getNoteSourceType(note) === "project")
   const taskNotes = items.filter((note) => getNoteSourceType(note) === "task")
 
-  return [
+  const folderSections = foldersEnabled
+    ? folders.map((folder) => ({
+    key: `folder:${folder.id}`,
+    label: folder.name,
+    notes: personalUnpinned.filter((note) => note.folderId === folder.id),
+    }))
+    : []
+
+  const personalByDay = unfiled.reduce(
+    (acc, note) => {
+      if (isToday(new Date(note.updatedAt))) acc.today.push(note)
+      else acc.earlier.push(note)
+      return acc
+    },
+    { today: [] as NoteRecord[], earlier: [] as NoteRecord[] }
+  )
+
+  const sections = [
     { key: "pinned", label: "Pinned", notes: pinned },
-    { key: "today", label: "Today", notes: today },
-    { key: "earlier", label: "Earlier", notes: earlier },
+    ...folderSections,
+    { key: "today", label: "Today", notes: personalByDay.today },
+    { key: "earlier", label: "Earlier", notes: personalByDay.earlier },
     { key: "projects", label: "Project Notes", notes: projectNotes },
     { key: "tasks", label: "Task Notes", notes: taskNotes },
-  ].filter((section) => section.notes.length > 0)
+  ]
+
+  return sections.filter((section) => section.notes.length > 0 || section.key.startsWith("folder:"))
 }
 
 export function NotesWorkspace({
   initialNotes,
   initialSelectedNoteId,
+  initialFolders,
+  foldersEnabled = true,
   storageUnavailable = false,
 }: NotesWorkspaceProps) {
   const [notes, setNotes] = React.useState<NoteRecord[]>(() => sortNotes(initialNotes))
@@ -189,12 +219,25 @@ export function NotesWorkspace({
   const [pendingDeleteNote, setPendingDeleteNote] = React.useState<NoteRecord | null>(null)
   const [isDeletingNote, setIsDeletingNote] = React.useState(false)
   const [editorFocusToken, setEditorFocusToken] = React.useState(0)
+  const [folders, setFolders] = React.useState<NoteFolderRecord[]>(initialFolders)
+  const [isAddingFolder, setIsAddingFolder] = React.useState(false)
+  const [newFolderName, setNewFolderName] = React.useState("")
+  const [isCreatingFolder, setIsCreatingFolder] = React.useState(false)
+  const [editingFolderId, setEditingFolderId] = React.useState<string | null>(null)
+  const [editingFolderName, setEditingFolderName] = React.useState("")
+  const [isRenamingFolder, setIsRenamingFolder] = React.useState(false)
+  const [pendingDeleteFolder, setPendingDeleteFolder] = React.useState<NoteFolderRecord | null>(null)
+  const [isDeletingFolder, setIsDeletingFolder] = React.useState(false)
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
     projects: true,
     tasks: true,
   })
+  const [touchFolderMenuId, setTouchFolderMenuId] = React.useState<string | null>(null)
 
   const searchRef = React.useRef<HTMLInputElement | null>(null)
+  const folderLongPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const folderLongPressTriggeredRef = React.useRef(false)
+  const folderLongPressIdRef = React.useRef<string | null>(null)
   const lastSyncedRef = React.useRef<{ id: string | null; title: string; content: string }>({
     id: null,
     title: "",
@@ -207,6 +250,17 @@ export function NotesWorkspace({
     () => notes.find((item) => item.id === selectedNoteId) ?? null,
     [notes, selectedNoteId]
   )
+
+  React.useEffect(() => {
+    setCollapsedSections((current) => {
+      const next = { ...current }
+      for (const folder of folders) {
+        const key = `folder:${folder.id}`
+        if (next[key] === undefined) next[key] = true
+      }
+      return next
+    })
+  }, [folders])
   const selectedNoteSourceType = React.useMemo(() => getNoteSourceType(selectedNote), [selectedNote])
   const selectedNoteIsLinked = selectedNoteSourceType !== "note"
   const editorUploadContextId = React.useMemo(() => {
@@ -265,8 +319,12 @@ export function NotesWorkspace({
   }, [notes, search, showArchived])
 
   const visibleSections = React.useMemo<NoteSection[]>(
-    () => buildVisibleNoteSections(visibleNotes, showArchived),
-    [showArchived, visibleNotes]
+    () => buildVisibleNoteSections(visibleNotes, folders, showArchived, foldersEnabled),
+    [folders, foldersEnabled, showArchived, visibleNotes]
+  )
+  const defaultFolder = React.useMemo(
+    () => folders.find((folder) => folder.isDefault) ?? null,
+    [folders]
   )
 
   const persistNote = React.useCallback(
@@ -397,6 +455,160 @@ export function NotesWorkspace({
     [storageUnavailable]
   )
 
+  const handleCreateFolder = React.useCallback(async () => {
+    const name = newFolderName.trim()
+    if (!name) {
+      toast.error("Folder name is required")
+      return
+    }
+    setIsCreatingFolder(true)
+    try {
+      const result = await createNoteFolder({ name })
+      if (!result.success || !result.data) {
+        toast.error(result.error || "Failed to create folder")
+        return
+      }
+      setFolders((current) => {
+        const exists = current.some((folder) => folder.id === result.data.id)
+        if (exists) return current
+        return [...current, result.data].sort((a, b) => {
+          if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1
+          return a.name.localeCompare(b.name)
+        })
+      })
+      setNewFolderName("")
+      setIsAddingFolder(false)
+      toast.success("Folder created")
+    } finally {
+      setIsCreatingFolder(false)
+    }
+  }, [newFolderName])
+
+  const startRenameFolder = React.useCallback((folder: NoteFolderRecord) => {
+    setEditingFolderId(folder.id)
+    setEditingFolderName(folder.name)
+  }, [])
+
+  const cancelRenameFolder = React.useCallback(() => {
+    setEditingFolderId(null)
+    setEditingFolderName("")
+  }, [])
+
+  const commitRenameFolder = React.useCallback(async () => {
+    if (!editingFolderId) return
+    const nextName = editingFolderName.trim()
+    if (!nextName) {
+      toast.error("Folder name is required")
+      return
+    }
+
+    setIsRenamingFolder(true)
+    try {
+      const result = await renameNoteFolder(editingFolderId, { name: nextName })
+      if (!result.success || !result.data) {
+        toast.error(result.error || "Failed to rename folder")
+        return
+      }
+
+      setFolders((current) =>
+        current
+          .map((folder) => (folder.id === result.data.id ? result.data : folder))
+          .sort((a, b) => {
+            if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1
+            return a.name.localeCompare(b.name)
+          })
+      )
+      setNotes((current) =>
+        current.map((note) =>
+          getNoteSourceType(note) === "note" && note.folderId === result.data.id
+            ? { ...note, folderName: result.data.name }
+            : note
+        )
+      )
+      setEditingFolderId(null)
+      setEditingFolderName("")
+      toast.success("Folder renamed")
+    } finally {
+      setIsRenamingFolder(false)
+    }
+  }, [editingFolderId, editingFolderName])
+
+  const confirmDeleteFolder = React.useCallback(async () => {
+    if (!pendingDeleteFolder) return
+    setIsDeletingFolder(true)
+    try {
+      const result = await deleteNoteFolder(pendingDeleteFolder.id)
+      if (!result.success || !result.data) {
+        toast.error(result.error || "Failed to delete folder")
+        return
+      }
+
+      setFolders((current) => current.filter((folder) => folder.id !== pendingDeleteFolder.id))
+      setNotes((current) =>
+        current.map((note) =>
+          getNoteSourceType(note) === "note" && note.folderId === result.data.deletedFolderId
+            ? {
+                ...note,
+                folderId: result.data.defaultFolderId,
+                folderName: result.data.defaultFolderName,
+              }
+            : note
+        )
+      )
+      setPendingDeleteFolder(null)
+      toast.success(`Folder deleted. Notes moved to ${result.data.defaultFolderName}.`)
+    } finally {
+      setIsDeletingFolder(false)
+    }
+  }, [pendingDeleteFolder])
+
+  const handleAssignFolder = React.useCallback(
+    async (note: NoteRecord, folderId: string | null) => {
+      if (!foldersEnabled) return
+      if (getNoteSourceType(note) !== "note") return
+      if (note.folderId === folderId) return
+
+      const previousFolderId = note.folderId ?? null
+      const previousFolderName = note.folderName ?? null
+      const nextFolderName =
+        folderId === null
+          ? "Unfiled"
+          : folders.find((folder) => folder.id === folderId)?.name || "Folder"
+
+      setNotes((current) =>
+        current.map((item) =>
+          item.id === note.id
+            ? {
+                ...item,
+                folderId,
+                folderName: nextFolderName,
+              }
+            : item
+        )
+      )
+
+      const result = await updateNote(note.id, { folderId })
+      if (!result.success || !result.data) {
+        setNotes((current) =>
+          current.map((item) =>
+            item.id === note.id
+              ? {
+                  ...item,
+                  folderId: previousFolderId,
+                  folderName: previousFolderName,
+                }
+              : item
+          )
+        )
+        toast.error(result.error || "Failed to move note")
+        return
+      }
+      setNotes((current) => upsertNote(current, result.data as NoteRecord))
+      toast.success(`Moved to ${nextFolderName}`)
+    },
+    [folders, foldersEnabled]
+  )
+
   React.useEffect(() => {
     if (bootstrappedRef.current) return
     bootstrappedRef.current = true
@@ -465,8 +677,23 @@ export function NotesWorkspace({
   React.useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      if (folderLongPressTimerRef.current) clearTimeout(folderLongPressTimerRef.current)
     }
   }, [])
+
+  React.useEffect(() => {
+    if (!touchFolderMenuId) return
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target) return
+      if (target.closest("[data-touch-folder-menu='true']")) return
+      if (target.closest(`[data-folder-row-id='${touchFolderMenuId}']`)) return
+      setTouchFolderMenuId(null)
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown)
+    return () => document.removeEventListener("pointerdown", handlePointerDown)
+  }, [touchFolderMenuId])
 
   const handleArchiveToggle = React.useCallback(
     async (note: NoteRecord) => {
@@ -555,78 +782,312 @@ export function NotesWorkspace({
       >
         <div
           className={cn(
-            "sticky top-0 z-10 border-b border-[var(--line-subtle)] px-3 py-2.5 backdrop-blur-sm",
+            "group/notes-head sticky top-0 z-10 border-b border-[var(--line-subtle)] px-3 py-2 backdrop-blur-sm",
             isMobile
               ? "bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)]"
-              : "bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_88%,var(--bg-surface)_12%)]/95"
+              : "bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_92%,var(--bg-surface)_8%)]/95"
           )}
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
                 {showArchived ? "Archived" : "All notes"}
               </p>
-              <span className="text-[11px] font-medium text-[var(--text-muted)]">{visibleNotes.length}</span>
+              <span className="text-[11px] font-medium tabular-nums text-[var(--text-muted)]">{visibleNotes.length}</span>
             </div>
-            {!isMobile ? (
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                className="h-7 w-7 rounded-lg border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
-                onClick={() => void handleCreateNote({ content: "" })}
-                disabled={isCreating || storageUnavailable}
-                aria-label="Quick add note"
-                title="Quick add note"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
+            {!showArchived && foldersEnabled ? (
+              <div className="flex items-center gap-1.5 transition-opacity duration-150 md:opacity-0 md:group-hover/notes-head:opacity-100 md:group-focus-within/notes-head:opacity-100">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8 rounded-xl border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,transparent)] text-[var(--text-secondary)] shadow-none hover:bg-[var(--surface-low)]"
+                  onClick={() => setIsAddingFolder((current) => !current)}
+                  disabled={isCreatingFolder || storageUnavailable}
+                  aria-label="Add folder"
+                  title="Add folder"
+                >
+                  <FolderPlus className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8 rounded-xl border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,transparent)] text-[var(--text-secondary)] shadow-none hover:bg-[var(--surface-low)]"
+                  onClick={() => void handleCreateNote({ content: "" })}
+                  disabled={isCreating || storageUnavailable}
+                  aria-label="Quick add note"
+                  title="Quick add note"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             ) : null}
           </div>
+          {isAddingFolder && !showArchived && foldersEnabled ? (
+            <div className="mt-2 flex items-center gap-1.5">
+              <Input
+                value={newFolderName}
+                onChange={(event) => setNewFolderName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault()
+                    void handleCreateFolder()
+                  }
+                }}
+                placeholder="Folder name"
+                className="h-8 rounded-lg border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_97%,transparent)] text-xs"
+              />
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 rounded-lg px-2.5 text-xs shadow-none"
+                onClick={() => void handleCreateFolder()}
+                disabled={isCreatingFolder || storageUnavailable}
+              >
+                Add
+              </Button>
+            </div>
+          ) : null}
         </div>
-        <div className={cn("ui-scrollbar ui-scrollbar-inset mr-1 flex-1 overflow-y-auto", isMobile ? "p-2.5 pr-2" : "px-2.5 pb-2.5 pt-2 pr-2")}>
+        <div className={cn("ui-scrollbar ui-scrollbar-inset mr-1 flex-1 overflow-y-auto", isMobile ? "p-2.5 pr-2" : "px-2.5 pb-2 pt-1.5 pr-2")}>
           {visibleSections.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-1.5">
               {visibleSections.map((section) => (
-                <div key={section.key} className="space-y-1">
-                  {COLLAPSIBLE_NOTE_SECTION_KEYS.has(section.key) ? (
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-[var(--surface-low)]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,transparent)]"
-                      onClick={() =>
-                        setCollapsedSections((current) => ({
-                          ...current,
-                          [section.key]: !current[section.key],
-                        }))
-                      }
-                      aria-expanded={!collapsedSections[section.key]}
-                    >
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {section.label}
-                      </p>
-                      <div className="h-px flex-1 bg-[var(--surface-low)]/70" />
-                      <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] px-1.5 text-[9px] font-semibold text-[var(--text-muted)] shadow-[inset_0_0_0_1px_rgba(148,163,184,0.14)]">
+                <div key={section.key} className="group/section space-y-0.5">
+                  {(() => {
+                    const isFolderSection = foldersEnabled && section.key.startsWith("folder:")
+                    const folderId = isFolderSection ? getFolderIdFromSectionKey(section.key) : null
+                    const folder = folderId ? folders.find((item) => item.id === folderId) ?? null : null
+                    const isDefaultFolder = Boolean(folder?.isDefault)
+                    const isEditingThisFolder = Boolean(folder && editingFolderId === folder.id)
+                    const isCollapsibleSection = COLLAPSIBLE_NOTE_SECTION_KEYS.has(section.key) || isFolderSection
+                    const isCollapsed = Boolean(collapsedSections[section.key])
+                    const rowIcon = <Folder className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+
+                    return isCollapsibleSection ? (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        data-folder-row-id={folder?.id}
+                        className="group/folder-row relative grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-1.5 rounded-md px-1.5 py-1.5 text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-low)_26%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,transparent)]"
+                        onClick={(event) => {
+                          if (
+                            folder &&
+                            folderLongPressTriggeredRef.current &&
+                            folderLongPressIdRef.current === folder.id
+                          ) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            folderLongPressTriggeredRef.current = false
+                            return
+                          }
+                          if (folder && touchFolderMenuId === folder.id) {
+                            setTouchFolderMenuId(null)
+                            return
+                          }
+                          setCollapsedSections((current) => ({
+                            ...current,
+                            [section.key]: !current[section.key],
+                          }))
+                        }}
+                        onPointerDown={(event) => {
+                          if (!folder || event.pointerType === "mouse") return
+                          folderLongPressTriggeredRef.current = false
+                          folderLongPressIdRef.current = folder.id
+                          if (folderLongPressTimerRef.current) {
+                            clearTimeout(folderLongPressTimerRef.current)
+                          }
+                          folderLongPressTimerRef.current = setTimeout(() => {
+                            folderLongPressTriggeredRef.current = true
+                            setTouchFolderMenuId(folder.id)
+                          }, 450)
+                        }}
+                        onPointerUp={() => {
+                          if (folderLongPressTimerRef.current) {
+                            clearTimeout(folderLongPressTimerRef.current)
+                            folderLongPressTimerRef.current = null
+                          }
+                        }}
+                        onPointerLeave={() => {
+                          if (folderLongPressTimerRef.current) {
+                            clearTimeout(folderLongPressTimerRef.current)
+                            folderLongPressTimerRef.current = null
+                          }
+                        }}
+                        onPointerCancel={() => {
+                          if (folderLongPressTimerRef.current) {
+                            clearTimeout(folderLongPressTimerRef.current)
+                            folderLongPressTimerRef.current = null
+                          }
+                        }}
+                        aria-expanded={!collapsedSections[section.key]}
+                      >
+                        <div className="flex min-w-0 items-start gap-1.5">
+                          {rowIcon}
+                          {isEditingThisFolder ? (
+                            <Input
+                              value={editingFolderName}
+                              onChange={(event) => setEditingFolderName(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  void commitRenameFolder()
+                                }
+                                if (event.key === "Escape") {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  cancelRenameFolder()
+                                }
+                              }}
+                              onClick={(event) => event.stopPropagation()}
+                              className="h-7 min-w-0 rounded-md border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-[11px]"
+                              autoFocus
+                            />
+                          ) : (
+                            <p className="min-w-0 whitespace-normal break-words text-[12px] font-medium leading-5 text-[var(--text-secondary)] line-clamp-2">
+                              {section.label}
+                            </p>
+                          )}
+                        </div>
+                        <span className="inline-flex h-6 min-w-7 shrink-0 items-center justify-end px-0.5 text-right text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
+                          {section.notes.length}
+                        </span>
+                        <ChevronRight
+                          className={cn(
+                            "h-[17px] w-[17px] shrink-0 justify-self-end text-[var(--text-muted)] transition-all duration-200 md:group-hover/section:opacity-0 md:group-focus-within/section:opacity-0",
+                            isCollapsed ? "rotate-0" : "rotate-90"
+                          )}
+                        />
+                      </button>
+                      {isFolderSection && folder ? (
+                        <div className="pointer-events-none absolute right-1 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-lg bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] px-1 py-0.5 opacity-0 shadow-[0_6px_16px_-14px_rgba(15,23,42,0.4)] transition-all duration-150 md:flex md:translate-x-1 md:scale-95 md:group-hover/section:pointer-events-auto md:group-hover/section:translate-x-0 md:group-hover/section:scale-100 md:group-hover/section:opacity-100 md:group-focus-within/section:pointer-events-auto md:group-focus-within/section:translate-x-0 md:group-focus-within/section:scale-100 md:group-focus-within/section:opacity-100">
+                          {isEditingThisFolder ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  void commitRenameFolder()
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]/55 hover:text-[var(--text-primary)]"
+                                aria-label="Save folder name"
+                                title="Save folder name"
+                                disabled={isRenamingFolder}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  cancelRenameFolder()
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]/55 hover:text-[var(--text-primary)]"
+                                aria-label="Cancel folder rename"
+                                title="Cancel folder rename"
+                                disabled={isRenamingFolder}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  startRenameFolder(folder)
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]/55 hover:text-[var(--text-primary)]"
+                                aria-label="Rename folder"
+                                title="Rename folder"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              {!isDefaultFolder ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    setPendingDeleteFolder(folder)
+                                  }}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-500/90 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                                  aria-label="Delete folder"
+                                  title="Delete folder"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
+                      ) : null}
+                      {isFolderSection && folder && touchFolderMenuId === folder.id ? (
+                        <div
+                          data-touch-folder-menu="true"
+                          className="absolute right-1 top-[calc(100%+2px)] z-20 w-44 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl md:hidden"
+                        >
+                          <button
+                            type="button"
+                            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]"
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              startRenameFolder(folder)
+                              setTouchFolderMenuId(null)
+                            }}
+                          >
+                            Rename folder
+                          </button>
+                          {!isDefaultFolder ? (
+                            <button
+                              type="button"
+                              className="mt-0.5 w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-500 transition-colors hover:bg-rose-500/10"
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                setPendingDeleteFolder(folder)
+                                setTouchFolderMenuId(null)
+                              }}
+                            >
+                              Delete folder
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-1.5 rounded-md px-1.5 py-1.5 transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-low)_26%,transparent)]">
+                      <div className="flex min-w-0 items-start gap-1.5">
+                        {rowIcon}
+                        <p className="min-w-0 whitespace-normal break-words text-[12px] font-medium leading-5 text-[var(--text-secondary)] line-clamp-2">
+                          {section.label}
+                        </p>
+                      </div>
+                      <span className="inline-flex h-6 min-w-7 shrink-0 items-center justify-end px-0.5 text-right text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
                         {section.notes.length}
                       </span>
-                      <ChevronDown
+                      <ChevronRight
                         className={cn(
-                          "h-3.5 w-3.5 text-[var(--text-muted)] transition-transform duration-200",
-                          collapsedSections[section.key] ? "-rotate-90" : "rotate-0"
+                          "h-[17px] w-[17px] shrink-0 justify-self-end text-[var(--text-muted)] transition-transform duration-200",
+                          Boolean(collapsedSections[section.key]) ? "rotate-0" : "rotate-90"
                         )}
                       />
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2 px-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        {section.label}
-                      </p>
-                      <div className="h-px flex-1 bg-[var(--surface-low)]/70" />
-                      <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] px-1.5 text-[9px] font-semibold text-[var(--text-muted)] shadow-[inset_0_0_0_1px_rgba(148,163,184,0.14)]">
-                        {section.notes.length}
-                      </span>
                     </div>
-                  )}
-                  {!collapsedSections[section.key] || !DEFAULT_COLLAPSED_NOTE_SECTION_KEYS.has(section.key) ? (
+                  )
+                  })()}
+                  {(() => {
+                    const isFolderSection = foldersEnabled && section.key.startsWith("folder:")
+                    const isCollapsibleSection = COLLAPSIBLE_NOTE_SECTION_KEYS.has(section.key) || isFolderSection
+                    const isCollapsed = Boolean(collapsedSections[section.key])
+                    const shouldRenderNotes = !isCollapsibleSection || !isCollapsed
+                    return shouldRenderNotes ? (
                     <div className="space-y-1">
                       {section.notes.map((note) => {
                       const selected = note.id === selectedNoteId
@@ -750,7 +1211,8 @@ export function NotesWorkspace({
                       )
                       })}
                     </div>
-                  ) : null}
+                    ) : null
+                  })()}
                 </div>
               ))}
             </div>
@@ -768,7 +1230,32 @@ export function NotesWorkspace({
         </div>
       </div>
     ),
-    [collapsedSections, handleArchiveToggle, handleCreateNote, handleDelete, handlePinToggle, isCreating, selectedNoteId, showArchived, storageUnavailable, visibleNotes.length, visibleSections]
+    [
+      cancelRenameFolder,
+      collapsedSections,
+      commitRenameFolder,
+      editingFolderId,
+      editingFolderName,
+      folders,
+      foldersEnabled,
+      handleArchiveToggle,
+      handleCreateFolder,
+      handleCreateNote,
+      handleDelete,
+      handlePinToggle,
+      isAddingFolder,
+      isCreating,
+      isCreatingFolder,
+      isRenamingFolder,
+      newFolderName,
+      selectedNoteId,
+      showArchived,
+      startRenameFolder,
+      storageUnavailable,
+      touchFolderMenuId,
+      visibleNotes.length,
+      visibleSections,
+    ]
   )
 
   return (
@@ -926,6 +1413,32 @@ export function NotesWorkspace({
                   <div className="relative shrink-0 overflow-hidden bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] px-3 py-2.5 sm:px-4 lg:px-6">
                     <div className="absolute inset-x-0 top-0 h-px bg-[var(--surface-low)]/80" aria-hidden="true" />
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium text-[var(--text-muted)]">
+                      {!selectedNoteIsLinked && foldersEnabled ? (
+                        <>
+                          <span className="text-[var(--text-secondary)]">Folder</span>
+                          <Select
+                            value={selectedNote.folderId || (defaultFolder?.id ?? NO_FOLDER_VALUE)}
+                            onValueChange={(value) => {
+                              void handleAssignFolder(selectedNote, value === NO_FOLDER_VALUE ? null : value)
+                            }}
+                          >
+                            <SelectTrigger className="h-7 min-w-[160px] rounded-lg border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-[10px] font-medium text-[var(--text-secondary)] shadow-none focus:ring-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-[var(--line-subtle)]">
+                              {!foldersEnabled || !defaultFolder ? (
+                                <SelectItem value={NO_FOLDER_VALUE}>Unfiled</SelectItem>
+                              ) : null}
+                              {folders.map((folder) => (
+                                <SelectItem key={folder.id} value={folder.id}>
+                                  {folder.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="text-[var(--text-muted)]">•</span>
+                        </>
+                      ) : null}
                       {selectedNoteIsLinked ? (
                         <>
                           <span className="text-[var(--text-secondary)]">
@@ -1005,6 +1518,37 @@ export function NotesWorkspace({
               disabled={isDeletingNote}
             >
               {isDeletingNote ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(pendingDeleteFolder)}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingFolder) setPendingDeleteFolder(null)
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-rose-50 text-rose-600">
+              <Trash2 className="h-7 w-7" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete folder?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteFolder
+                ? `All notes from "${pendingDeleteFolder.name}" will be moved to "${defaultFolder?.name || "General"}".`
+                : "All notes from this folder will be moved to the default folder."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingFolder}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={confirmDeleteFolder}
+              disabled={isDeletingFolder}
+            >
+              {isDeletingFolder ? "Deleting..." : "Delete folder"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

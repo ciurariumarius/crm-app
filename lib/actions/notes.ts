@@ -12,6 +12,8 @@ export type NoteRecord = {
   id: string
   tenantId: string
   userId: string
+  folderId?: string | null
+  folderName?: string | null
   title: string
   content: string
   contentText: string
@@ -25,10 +27,21 @@ export type NoteRecord = {
   sourceLabel?: string
 }
 
+export type NoteFolderRecord = {
+  id: string
+  tenantId: string
+  userId: string
+  name: string
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 type NoteEntity = {
   id: string
   tenantId: string
   userId: string
+  folderId: string | null
   title: string
   content: string
   contentText: string
@@ -43,6 +56,26 @@ type NoteDelegate = {
   create: (args: unknown) => Promise<unknown>
   findFirst: (args: unknown) => Promise<unknown>
   update: (args: unknown) => Promise<unknown>
+  updateMany: (args: unknown) => Promise<unknown>
+  delete: (args: unknown) => Promise<unknown>
+}
+
+type NoteFolderEntity = {
+  id: string
+  tenantId: string
+  userId: string
+  name: string
+  isDefault: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+type NoteFolderDelegate = {
+  findMany: (args: unknown) => Promise<unknown>
+  create: (args: unknown) => Promise<unknown>
+  findFirst: (args: unknown) => Promise<unknown>
+  update: (args: unknown) => Promise<unknown>
+  updateMany: (args: unknown) => Promise<unknown>
   delete: (args: unknown) => Promise<unknown>
 }
 
@@ -53,8 +86,16 @@ function getNoteDelegate() {
   return delegate
 }
 
+function getNoteFolderDelegate() {
+  const delegate = (prisma as unknown as { noteFolder?: NoteFolderDelegate }).noteFolder
+
+  if (!delegate || typeof delegate.findMany !== "function") return null
+  return delegate
+}
+
 const NOTES_STORAGE_NOT_READY_ERROR =
   "Notes storage is not ready yet. Run `npx prisma generate` + `npx prisma migrate deploy`, then restart the app."
+const DEFAULT_NOTES_FOLDER_NAME = "General"
 
 const NoteIdSchema = z.string().trim().min(1, "Invalid note id")
 
@@ -63,6 +104,7 @@ const CreateNoteSchema = z.object({
   content: z.string().max(200000).optional(),
   pinned: z.boolean().optional(),
   archived: z.boolean().optional(),
+  folderId: z.string().trim().min(1).max(120).nullable().optional(),
 })
 
 const UpdateNoteSchema = z.object({
@@ -70,12 +112,21 @@ const UpdateNoteSchema = z.object({
   content: z.string().max(200000).optional(),
   pinned: z.boolean().optional(),
   archived: z.boolean().optional(),
+  folderId: z.string().trim().min(1).max(120).nullable().optional(),
 })
 
 const ListNotesSchema = z.object({
   query: z.string().trim().max(200).optional(),
   archived: z.boolean().optional(),
   limit: z.number().int().min(1).max(500).optional(),
+})
+
+const CreateFolderSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+})
+
+const RenameFolderSchema = z.object({
+  name: z.string().trim().min(1).max(80),
 })
 
 function normalizeNoteTitle(value: string | null | undefined) {
@@ -97,6 +148,7 @@ function serializeNote(note: NoteEntity): NoteRecord {
     id: note.id,
     tenantId: note.tenantId,
     userId: note.userId,
+    folderId: note.folderId,
     title: note.title,
     content: note.content,
     contentText: note.contentText,
@@ -105,6 +157,114 @@ function serializeNote(note: NoteEntity): NoteRecord {
     createdAt: note.createdAt.toISOString(),
     updatedAt: note.updatedAt.toISOString(),
   }
+}
+
+function serializeFolder(folder: NoteFolderEntity): NoteFolderRecord {
+  return {
+    id: folder.id,
+    tenantId: folder.tenantId,
+    userId: folder.userId,
+    name: folder.name,
+    isDefault: folder.isDefault,
+    createdAt: folder.createdAt.toISOString(),
+    updatedAt: folder.updatedAt.toISOString(),
+  }
+}
+
+function isUnknownFolderFieldError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "")
+  return message.includes("Unknown argument `folderId`") || message.includes("Unknown field `folderId`")
+}
+
+async function resolveDefaultFolderId(
+  folderDelegate: NoteFolderDelegate,
+  tenantId: string,
+  userId: string
+) {
+  const folders = (await folderDelegate.findMany({
+    where: { tenantId },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, name: true, isDefault: true },
+  })) as Array<{ id: string; name: string; isDefault: boolean }>
+
+  const existingDefault = folders.find((folder) => folder.isDefault)
+  if (existingDefault) return existingDefault.id
+
+  const generalFolder = folders.find(
+    (folder) => folder.name.trim().toLocaleLowerCase() === DEFAULT_NOTES_FOLDER_NAME.toLocaleLowerCase()
+  )
+  if (generalFolder) {
+    await folderDelegate.update({
+      where: { id: generalFolder.id },
+      data: { isDefault: true },
+    })
+    return generalFolder.id
+  }
+
+  const created = (await folderDelegate.create({
+    data: {
+      tenantId,
+      userId,
+      name: DEFAULT_NOTES_FOLDER_NAME,
+      isDefault: true,
+    },
+    select: { id: true },
+  })) as { id: string }
+  return created.id
+}
+
+async function assertUniqueFolderName(
+  folderDelegate: NoteFolderDelegate,
+  tenantId: string,
+  name: string,
+  excludeFolderId?: string
+) {
+  const normalizedName = name.trim().toLocaleLowerCase()
+  const existingFolders = (await folderDelegate.findMany({
+    where: { tenantId },
+    select: { id: true, name: true },
+  })) as Array<{ id: string; name: string }>
+
+  const duplicate = existingFolders.find(
+    (folder) =>
+      folder.id !== excludeFolderId &&
+      folder.name.trim().toLocaleLowerCase() === normalizedName
+  )
+  return !duplicate
+}
+
+async function ensureSingleDefaultFolder(
+  folderDelegate: NoteFolderDelegate,
+  tenantId: string,
+  userId: string
+) {
+  const defaultFolderId = await resolveDefaultFolderId(folderDelegate, tenantId, userId)
+  await folderDelegate.updateMany({
+    where: {
+      tenantId,
+      isDefault: true,
+      id: { not: defaultFolderId },
+    },
+    data: { isDefault: false },
+  })
+  return defaultFolderId
+}
+
+async function resolveFolderId(
+  folderDelegate: NoteFolderDelegate,
+  tenantId: string,
+  folderId: string | null | undefined
+): Promise<{ ok: true; folderId: string | null } | { ok: false; error: string }> {
+  if (folderId === undefined) return { ok: true, folderId: null }
+  if (folderId === null) return { ok: true, folderId: null }
+
+  const folder = (await folderDelegate.findFirst({
+    where: { id: folderId, tenantId },
+    select: { id: true },
+  })) as { id: string } | null
+
+  if (!folder) return { ok: false, error: "Folder not found" }
+  return { ok: true, folderId: folder.id }
 }
 
 export async function listNotes(input?: { query?: string; archived?: boolean; limit?: number }) {
@@ -146,10 +306,11 @@ export async function listNotes(input?: { query?: string; archived?: boolean; li
   }
 }
 
-export async function createNote(input?: { title?: string; content?: string; pinned?: boolean; archived?: boolean }) {
+export async function createNote(input?: { title?: string; content?: string; pinned?: boolean; archived?: boolean; folderId?: string | null }) {
   try {
     const session = await requireTenantContext()
     const noteDelegate = getNoteDelegate()
+    const folderDelegate = getNoteFolderDelegate()
     if (!noteDelegate) {
       return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR }
     }
@@ -158,17 +319,53 @@ export async function createNote(input?: { title?: string; content?: string; pin
     const title = deriveNoteTitleFromContent(content, normalizeNoteTitle(validated.title))
     const contentText = toNoteContentText(content)
 
-    const note = (await noteDelegate.create({
-      data: {
-        tenantId: session.tenantId,
-        userId: session.userId,
-        title,
-        content,
-        contentText,
-        pinned: validated.pinned ?? false,
-        archived: validated.archived ?? false,
-      },
-    })) as NoteEntity
+    let resolvedFolderId: string | null = null
+    let shouldWriteFolderId = false
+    if (validated.folderId !== undefined) {
+      if (!folderDelegate) {
+        return {
+          success: false,
+          error: "Note folders are not ready yet. Run `npx prisma migrate deploy` and `npx prisma generate`.",
+        }
+      }
+      const folderResolution = await resolveFolderId(folderDelegate, session.tenantId, validated.folderId)
+      if (!folderResolution.ok) {
+        return { success: false, error: folderResolution.error }
+      }
+      resolvedFolderId = folderResolution.folderId
+      shouldWriteFolderId = true
+    } else if (folderDelegate) {
+      try {
+        resolvedFolderId = await ensureSingleDefaultFolder(folderDelegate, session.tenantId, session.userId)
+        shouldWriteFolderId = true
+      } catch {
+        shouldWriteFolderId = false
+      }
+    }
+
+    const baseData = {
+      tenantId: session.tenantId,
+      userId: session.userId,
+      title,
+      content,
+      contentText,
+      pinned: validated.pinned ?? false,
+      archived: validated.archived ?? false,
+    }
+
+    let note: NoteEntity
+    try {
+      note = (await noteDelegate.create({
+        data: shouldWriteFolderId ? { ...baseData, folderId: resolvedFolderId } : baseData,
+      })) as NoteEntity
+    } catch (error) {
+      if (!shouldWriteFolderId || !isUnknownFolderFieldError(error)) {
+        throw error
+      }
+      note = (await noteDelegate.create({
+        data: baseData,
+      })) as NoteEntity
+    }
 
     await logSessionAuditEvent(session, {
       action: "NOTE_CREATED",
@@ -184,11 +381,12 @@ export async function createNote(input?: { title?: string; content?: string; pin
 
 export async function updateNote(
   noteId: string,
-  input: { title?: string; content?: string; pinned?: boolean; archived?: boolean }
+  input: { title?: string; content?: string; pinned?: boolean; archived?: boolean; folderId?: string | null }
 ) {
   try {
     const session = await requireTenantContext()
     const noteDelegate = getNoteDelegate()
+    const folderDelegate = getNoteFolderDelegate()
     if (!noteDelegate) {
       return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR }
     }
@@ -209,6 +407,7 @@ export async function updateNote(
       contentText?: string
       pinned?: boolean
       archived?: boolean
+      folderId?: string | null
     } = {}
 
     if (validated.content !== undefined) {
@@ -220,6 +419,19 @@ export async function updateNote(
     }
     if (validated.pinned !== undefined) updateData.pinned = validated.pinned
     if (validated.archived !== undefined) updateData.archived = validated.archived
+    if (validated.folderId !== undefined) {
+      if (!folderDelegate) {
+        return {
+          success: false,
+          error: "Note folders are not ready yet. Run `npx prisma migrate deploy` and `npx prisma generate`.",
+        }
+      }
+      const folderResolution = await resolveFolderId(folderDelegate, session.tenantId, validated.folderId)
+      if (!folderResolution.ok) {
+        return { success: false, error: folderResolution.error }
+      }
+      updateData.folderId = folderResolution.folderId
+    }
 
     if (Object.keys(updateData).length === 0) {
       const unchangedNote = (await noteDelegate.findFirst({
@@ -281,4 +493,178 @@ export async function setNoteArchived(noteId: string, archived: boolean) {
 
 export async function setNotePinned(noteId: string, pinned: boolean) {
   return updateNote(noteId, { pinned })
+}
+
+export async function listNoteFolders() {
+  try {
+    const session = await requireTenantContext()
+    const folderDelegate = getNoteFolderDelegate()
+    if (!folderDelegate) {
+      return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR, data: [] as NoteFolderRecord[] }
+    }
+
+    await ensureSingleDefaultFolder(folderDelegate, session.tenantId, session.userId)
+
+    const folders = (await folderDelegate.findMany({
+      where: { tenantId: session.tenantId },
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    })) as NoteFolderEntity[]
+
+    return { success: true, data: folders.map(serializeFolder) as NoteFolderRecord[] }
+  } catch (error) {
+    return {
+      success: false,
+      error: getActionErrorMessage(error, "Failed to list note folders"),
+      data: [] as NoteFolderRecord[],
+    }
+  }
+}
+
+export async function createNoteFolder(input: { name: string }) {
+  try {
+    const session = await requireTenantContext()
+    const folderDelegate = getNoteFolderDelegate()
+    if (!folderDelegate) {
+      return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR }
+    }
+    const validated = CreateFolderSchema.parse(input)
+    const normalizedName = validated.name.trim()
+    await ensureSingleDefaultFolder(folderDelegate, session.tenantId, session.userId)
+
+    const uniqueName = await assertUniqueFolderName(folderDelegate, session.tenantId, normalizedName)
+    if (!uniqueName) {
+      return { success: false, error: "Folder name already exists" }
+    }
+
+    const folder = (await folderDelegate.create({
+      data: {
+        tenantId: session.tenantId,
+        userId: session.userId,
+        name: normalizedName,
+        isDefault: false,
+      },
+    })) as NoteFolderEntity
+
+    await logSessionAuditEvent(session, {
+      action: "NOTE_FOLDER_CREATED",
+      details: `folderId=${folder.id}`,
+    })
+    revalidatePath("/notes")
+
+    return { success: true, data: serializeFolder(folder) as NoteFolderRecord }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to create folder") }
+  }
+}
+
+export async function renameNoteFolder(folderId: string, input: { name: string }) {
+  try {
+    const session = await requireTenantContext()
+    const folderDelegate = getNoteFolderDelegate()
+    if (!folderDelegate) {
+      return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR }
+    }
+    const validatedFolderId = NoteIdSchema.parse(folderId)
+    const validated = RenameFolderSchema.parse(input)
+    const normalizedName = validated.name.trim()
+
+    const folder = (await folderDelegate.findFirst({
+      where: { id: validatedFolderId, tenantId: session.tenantId },
+    })) as NoteFolderEntity | null
+    if (!folder) {
+      return { success: false, error: "Folder not found" }
+    }
+
+    const uniqueName = await assertUniqueFolderName(
+      folderDelegate,
+      session.tenantId,
+      normalizedName,
+      validatedFolderId
+    )
+    if (!uniqueName) {
+      return { success: false, error: "Folder name already exists" }
+    }
+
+    const updated = (await folderDelegate.update({
+      where: { id: validatedFolderId },
+      data: { name: normalizedName },
+    })) as NoteFolderEntity
+
+    await logSessionAuditEvent(session, {
+      action: "NOTE_FOLDER_RENAMED",
+      details: `folderId=${updated.id}`,
+    })
+    revalidatePath("/notes")
+
+    return { success: true, data: serializeFolder(updated) as NoteFolderRecord }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to rename folder") }
+  }
+}
+
+export async function deleteNoteFolder(folderId: string) {
+  try {
+    const session = await requireTenantContext()
+    const folderDelegate = getNoteFolderDelegate()
+    const noteDelegate = getNoteDelegate()
+    if (!folderDelegate || !noteDelegate) {
+      return { success: false, error: NOTES_STORAGE_NOT_READY_ERROR }
+    }
+    const validatedFolderId = NoteIdSchema.parse(folderId)
+
+    const folder = (await folderDelegate.findFirst({
+      where: { id: validatedFolderId, tenantId: session.tenantId },
+    })) as NoteFolderEntity | null
+    if (!folder) {
+      return { success: false, error: "Folder not found" }
+    }
+    if (folder.isDefault) {
+      return { success: false, error: "Default folder cannot be deleted" }
+    }
+
+    const defaultFolderId = await ensureSingleDefaultFolder(folderDelegate, session.tenantId, session.userId)
+    const defaultFolder = (await folderDelegate.findFirst({
+      where: { id: defaultFolderId, tenantId: session.tenantId },
+    })) as NoteFolderEntity | null
+    if (!defaultFolder) {
+      return { success: false, error: "Default folder not found" }
+    }
+
+    await (prisma as unknown as {
+      $transaction: (fn: (tx: { note: NoteDelegate; noteFolder: NoteFolderDelegate }) => Promise<void>) => Promise<void>
+    }).$transaction(async (tx) => {
+      await tx.note.updateMany({
+        where: {
+          tenantId: session.tenantId,
+          folderId: validatedFolderId,
+        },
+        data: {
+          folderId: defaultFolderId,
+        },
+      })
+
+      await tx.noteFolder.delete({
+        where: {
+          id: validatedFolderId,
+        },
+      })
+    })
+
+    await logSessionAuditEvent(session, {
+      action: "NOTE_FOLDER_DELETED",
+      details: `folderId=${validatedFolderId};movedTo=${defaultFolderId}`,
+    })
+    revalidatePath("/notes")
+
+    return {
+      success: true,
+      data: {
+        deletedFolderId: validatedFolderId,
+        defaultFolderId,
+        defaultFolderName: defaultFolder.name,
+      },
+    }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to delete folder") }
+  }
 }

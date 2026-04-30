@@ -1,9 +1,10 @@
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { NotesWorkspace } from "@/components/notes/notes-workspace"
-import type { NoteRecord } from "@/lib/actions/notes"
+import type { NoteFolderRecord, NoteRecord } from "@/lib/actions/notes"
 
 export const dynamic = "force-dynamic"
+const DEFAULT_NOTES_FOLDER_NAME = "General"
 
 function toContentText(content: string) {
   return content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
@@ -29,6 +30,7 @@ export default async function NotesPage({
         id: string
         tenantId: string
         userId: string
+        folderId?: string | null
         title: string
         content: string
         contentText: string
@@ -38,9 +40,71 @@ export default async function NotesPage({
         updatedAt: Date
       }>>
     }
+    noteFolder?: {
+      findMany: (...args: unknown[]) => Promise<Array<{
+        id: string
+        tenantId: string
+        userId: string
+        name: string
+        isDefault: boolean
+        createdAt: Date
+        updatedAt: Date
+      }>>
+      create?: (...args: unknown[]) => Promise<{
+        id: string
+        tenantId: string
+        userId: string
+        name: string
+        isDefault: boolean
+        createdAt: Date
+        updatedAt: Date
+      }>
+      update?: (...args: unknown[]) => Promise<{
+        id: string
+        tenantId: string
+        userId: string
+        name: string
+        isDefault: boolean
+        createdAt: Date
+        updatedAt: Date
+      }>
+      updateMany?: (...args: unknown[]) => Promise<unknown>
+    }
   }).note
+  const noteFolderDelegate = (prisma as unknown as {
+    noteFolder?: {
+      findMany: (...args: unknown[]) => Promise<Array<{
+        id: string
+        tenantId: string
+        userId: string
+        name: string
+        isDefault: boolean
+        createdAt: Date
+        updatedAt: Date
+      }>>
+      create?: (...args: unknown[]) => Promise<{
+        id: string
+        tenantId: string
+        userId: string
+        name: string
+        isDefault: boolean
+        createdAt: Date
+        updatedAt: Date
+      }>
+      update?: (...args: unknown[]) => Promise<{
+        id: string
+        tenantId: string
+        userId: string
+        name: string
+        isDefault: boolean
+        createdAt: Date
+        updatedAt: Date
+      }>
+      updateMany?: (...args: unknown[]) => Promise<unknown>
+    }
+  }).noteFolder
 
-  const [notes, projectNotesRaw, taskNotesRaw] = await Promise.all([
+  const [notes, foldersRawMaybe, projectNotesRaw, taskNotesRaw] = await Promise.all([
     noteDelegate && typeof noteDelegate.findMany === "function"
       ? await noteDelegate.findMany({
           where: { tenantId: session.tenantId },
@@ -48,6 +112,18 @@ export default async function NotesPage({
           take: 400,
         })
       : [],
+    noteFolderDelegate && typeof noteFolderDelegate.findMany === "function"
+      ? await (async () => {
+          try {
+            return await noteFolderDelegate.findMany({
+              where: { tenantId: session.tenantId },
+              orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+            })
+          } catch {
+            return null
+          }
+        })()
+      : null,
     prisma.project.findMany({
       where: { tenantId: session.tenantId, description: { not: null } },
       select: {
@@ -82,10 +158,92 @@ export default async function NotesPage({
     }),
   ])
 
+  const folderFeatureReady = Boolean(noteFolderDelegate) && Array.isArray(foldersRawMaybe)
+  const foldersRaw = Array.isArray(foldersRawMaybe) ? [...foldersRawMaybe] : []
+  if (
+    folderFeatureReady &&
+    foldersRaw.length === 0 &&
+    noteFolderDelegate &&
+    typeof noteFolderDelegate.create === "function"
+  ) {
+    try {
+      const createdDefault = await noteFolderDelegate.create({
+        data: {
+          tenantId: session.tenantId,
+          userId: session.userId,
+          name: DEFAULT_NOTES_FOLDER_NAME,
+          isDefault: true,
+        },
+      })
+      foldersRaw.push(createdDefault)
+    } catch {
+      // Non-blocking: notes still render even if default folder bootstrap fails.
+    }
+  }
+  if (folderFeatureReady && foldersRaw.length > 0) {
+    const defaultFolders = foldersRaw.filter((folder) => folder.isDefault)
+    const candidateDefault =
+      defaultFolders[0] ??
+      foldersRaw.find((folder) => folder.name.trim().toLocaleLowerCase() === DEFAULT_NOTES_FOLDER_NAME.toLocaleLowerCase()) ??
+      foldersRaw[0]
+
+    if (candidateDefault && noteFolderDelegate && typeof noteFolderDelegate.update === "function") {
+      if (defaultFolders.length === 0) {
+        try {
+          const updated = await noteFolderDelegate.update({
+            where: { id: candidateDefault.id },
+            data: { isDefault: true },
+          })
+          const idx = foldersRaw.findIndex((folder) => folder.id === updated.id)
+          if (idx >= 0) foldersRaw[idx] = updated
+        } catch {
+          // Non-blocking
+        }
+      } else if (defaultFolders.length > 1 && noteFolderDelegate && typeof noteFolderDelegate.updateMany === "function") {
+        try {
+          await noteFolderDelegate.updateMany({
+            where: {
+              tenantId: session.tenantId,
+              isDefault: true,
+              id: { not: candidateDefault.id },
+            },
+            data: { isDefault: false },
+          })
+          const candidateId = candidateDefault.id
+          for (let index = 0; index < foldersRaw.length; index += 1) {
+            const folder = foldersRaw[index]
+            foldersRaw[index] = {
+              ...folder,
+              isDefault: folder.id === candidateId,
+            }
+          }
+        } catch {
+          // Non-blocking
+        }
+      }
+    }
+  }
+
+  const folders: NoteFolderRecord[] = foldersRaw.map((folder) => ({
+    id: folder.id,
+    tenantId: folder.tenantId,
+    userId: folder.userId,
+    name: folder.name,
+    isDefault: folder.isDefault,
+    createdAt: folder.createdAt.toISOString(),
+    updatedAt: folder.updatedAt.toISOString(),
+  }))
+  const defaultFolder = folders.find((folder) => folder.isDefault) ?? null
+
   const personalNotes: NoteRecord[] = notes.map((note) => ({
     id: note.id,
     tenantId: note.tenantId,
     userId: note.userId,
+    folderId: note.folderId ?? defaultFolder?.id ?? null,
+    folderName:
+      foldersRaw.find((folder) => folder.id === (note.folderId ?? null))?.name ||
+      defaultFolder?.name ||
+      null,
     title: note.title,
     content: note.content,
     contentText: note.contentText,
@@ -161,6 +319,8 @@ export default async function NotesPage({
     <NotesWorkspace
       initialNotes={initialNotes}
       initialSelectedNoteId={initialSelectedNoteId}
+      initialFolders={folders}
+      foldersEnabled={folderFeatureReady}
       storageUnavailable={!noteDelegate}
     />
   )
