@@ -287,6 +287,9 @@ export function NotesWorkspace({
     title: "",
     content: "",
   })
+  const transientEmptyNoteIdsRef = React.useRef<Set<string>>(new Set())
+  const discardingNoteIdsRef = React.useRef<Set<string>>(new Set())
+  const previousSelectedNoteIdRef = React.useRef<string | null>(initialSelectedNoteId)
   const bootstrappedRef = React.useRef(false)
   const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const draftCreateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -508,6 +511,8 @@ export function NotesWorkspace({
         }
 
         setNotes((current) => upsertNote(current, result.data as NoteRecord))
+        if (hasMeaningfulContent(prefill?.content || "")) transientEmptyNoteIdsRef.current.delete(result.data.id)
+        else transientEmptyNoteIdsRef.current.add(result.data.id)
         if (activeFolderId) {
           const createdFolderId = result.data.folderId || activeFolderId
           setActiveRailKey(folderRailKey(createdFolderId))
@@ -686,13 +691,42 @@ export function NotesWorkspace({
   React.useEffect(() => {
     if (bootstrappedRef.current) return
     bootstrappedRef.current = true
-    if (notes.length === 0 && !storageUnavailable) {
-      void handleCreateNote({ content: "" })
-    } else if (!selectedNoteId) {
+    if (!selectedNoteId) {
       const firstActive = notes.find((note) => !(getNoteSourceType(note) === "note" && note.archived)) ?? notes[0]
       if (firstActive) setSelectedNoteId(firstActive.id)
     }
-  }, [handleCreateNote, notes, selectedNoteId, storageUnavailable])
+  }, [notes, selectedNoteId])
+
+  React.useEffect(() => {
+    const currentSelectedId = selectedNoteId
+    const previousSelectedId = previousSelectedNoteIdRef.current
+    if (previousSelectedId && previousSelectedId !== currentSelectedId) {
+      if (
+        transientEmptyNoteIdsRef.current.has(previousSelectedId) &&
+        !discardingNoteIdsRef.current.has(previousSelectedId)
+      ) {
+        transientEmptyNoteIdsRef.current.delete(previousSelectedId)
+        discardingNoteIdsRef.current.add(previousSelectedId)
+        void deleteNote(previousSelectedId)
+          .then((result) => {
+            if (result.success) {
+              setNotes((current) => current.filter((item) => item.id !== previousSelectedId))
+            }
+          })
+          .finally(() => {
+            discardingNoteIdsRef.current.delete(previousSelectedId)
+          })
+      }
+    }
+    previousSelectedNoteIdRef.current = currentSelectedId
+  }, [selectedNoteId])
+
+  React.useEffect(() => {
+    if (!selectedNoteId) return
+    if (!transientEmptyNoteIdsRef.current.has(selectedNoteId)) return
+    if (!hasMeaningfulContent(contentDraft)) return
+    transientEmptyNoteIdsRef.current.delete(selectedNoteId)
+  }, [contentDraft, selectedNoteId])
 
   React.useEffect(() => {
     if (!selectedNoteId) return

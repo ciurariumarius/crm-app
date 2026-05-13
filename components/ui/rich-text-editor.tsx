@@ -6,6 +6,7 @@ import { BubbleMenu } from "@tiptap/react/menus"
 import { mergeAttributes, Node } from "@tiptap/core"
 import type { Editor as TiptapEditor } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
+import Link from "@tiptap/extension-link"
 import Placeholder from "@tiptap/extension-placeholder"
 import { Table } from "@tiptap/extension-table"
 import { TableRow } from "@tiptap/extension-table-row"
@@ -487,6 +488,12 @@ export function RichTextEditor({
             TableHeader,
             TableCell,
             ScreenshotImage,
+            Link.configure({
+                autolink: false,
+                linkOnPaste: false,
+                openOnClick: false,
+                defaultProtocol: "https",
+            }),
             Placeholder.configure({
                 placeholder: placeholder ?? "Start writing...",
                 emptyEditorClass:
