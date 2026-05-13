@@ -710,11 +710,11 @@ export function RichTextEditor({
     const isQuietToolbar = resolvedToolbarTone === "quiet"
     const isReadingWidth = mode === "document" && documentWidth === "reading"
     const isAppleNotesAppearance = notesMode && notesAppearance === "apple"
-    const compactControlClass = notesMode ? "h-10 w-10 md:h-9 md:w-9 lg:h-7 lg:w-7" : "h-8 w-8"
-    const compactIconClass = notesMode ? "h-[1.05rem] w-[1.05rem] md:h-[1rem] md:w-[1rem] lg:h-[0.86rem] lg:w-[0.86rem]" : "h-4 w-4"
+    const compactControlClass = notesMode ? "h-9 w-9 md:h-8 md:w-8 lg:h-7 lg:w-7" : "h-8 w-8"
+    const compactIconClass = notesMode ? "h-[1rem] w-[1rem] md:h-[0.94rem] md:w-[0.94rem] lg:h-[0.86rem] lg:w-[0.86rem]" : "h-4 w-4"
     const notesControlClass = notesMode
         ? isAppleNotesAppearance
-            ? "rounded-full border border-transparent text-[#667085] data-[state=on]:border-[#d5dbe5] data-[state=on]:bg-[#f1f3f7] data-[state=on]:text-[#1f2937] hover:bg-[#f1f3f7] hover:text-[#1f2937]"
+            ? "rounded-full border border-transparent text-[#6b7280] data-[state=on]:border-[#d8dee8] data-[state=on]:bg-[#f2f4f8] data-[state=on]:text-[#1f2937] hover:bg-[#f2f4f8] hover:text-[#1f2937]"
             : "rounded-full border border-transparent text-[var(--text-secondary)] data-[state=on]:border-[var(--line-subtle)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
         : ""
 
@@ -750,7 +750,7 @@ export function RichTextEditor({
                             "flex items-center",
                             isTopRightToolbar &&
                                 (isAppleNotesAppearance
-                                    ? "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[#e3e7ef] bg-[color:color-mix(in_srgb,#f8f9fb_94%,white)] shadow-[0_5px_12px_-13px_rgba(15,23,42,0.34)] supports-[backdrop-filter]:backdrop-blur-xl"
+                                    ? "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[#e3e7ef] bg-[color:color-mix(in_srgb,#f8f9fb_95%,white)] shadow-[0_4px_10px_-12px_rgba(15,23,42,0.34)] supports-[backdrop-filter]:backdrop-blur-xl"
                                     : "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_10px_20px_-18px_rgba(15,23,42,0.46)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3"),
                             isCompactToolbar ? "gap-1 px-1.5 py-1 md:px-2" : "gap-1.5 p-1.5",
                             isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",

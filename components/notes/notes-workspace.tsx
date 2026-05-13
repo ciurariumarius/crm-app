@@ -260,7 +260,6 @@ export function NotesWorkspace({
   const [contentDraft, setContentDraft] = React.useState("")
   const [search, setSearch] = React.useState("")
   const [isMobileRailOpen, setIsMobileRailOpen] = React.useState(false)
-  const [isMobileListOpen, setIsMobileListOpen] = React.useState(false)
   const [isCreating, setIsCreating] = React.useState(false)
   const [pendingDeleteNote, setPendingDeleteNote] = React.useState<NoteRecord | null>(null)
   const [isDeletingNote, setIsDeletingNote] = React.useState(false)
@@ -500,7 +499,7 @@ export function NotesWorkspace({
         setActiveRailKey("all")
         setSelectedNoteId(result.data.id)
         setEditorFocusToken((current) => current + 1)
-        setIsMobileListOpen(false)
+        setIsMobileRailOpen(false)
         return result.data.id
       } finally {
         setIsCreating(false)
@@ -811,48 +810,55 @@ export function NotesWorkspace({
       "group flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-all",
       NOTE_SURFACE_FONT,
       active
-        ? "bg-[rgba(255,255,255,0.14)] text-[#f7f9fc]"
-        : "text-[#c9d0dc] hover:bg-[rgba(255,255,255,0.08)] hover:text-[#f4f7fb]"
+        ? "bg-[color:color-mix(in_srgb,#e7ebf2_76%,white)] text-[#1e1f23]"
+        : "text-[#4b5563] hover:bg-[color:color-mix(in_srgb,#f4f6f9_92%,white)]"
     )
 
-  const renderLeftRail = (isMobile = false) => (
-    <div className={cn("flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className="border-b border-[rgba(255,255,255,0.12)] px-3 py-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9ea8b8]">Collections</p>
+  const renderLeftRail = (isMobile = false, compact = false) => (
+    <div className={cn(compact ? "flex shrink-0 flex-col" : "flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
+      <div className="border-b border-[#e8eaee] px-3 py-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b95a3]">Collections</p>
       </div>
-      <div className={cn("ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5") }>
+      <div
+        className={cn(
+          compact
+            ? cn("ui-scrollbar overflow-y-auto", isMobile ? "max-h-[42vh]" : "max-h-[320px]")
+            : "ui-scrollbar flex-1 overflow-y-auto",
+          isMobile ? "p-3" : "p-2.5"
+        )}
+      >
         <div className="space-y-1">
           <button type="button" onClick={() => setActiveRailKey("all")} className={railButtonClass(activeRailKey === "all") }>
             <span className="inline-flex items-center gap-2"><NotebookPen className="h-4 w-4" />All Notes</span>
-            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.all}</span>
+            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.all}</span>
           </button>
           <button type="button" onClick={() => setActiveRailKey("pinned")} className={railButtonClass(activeRailKey === "pinned") }>
             <span className="inline-flex items-center gap-2"><Pin className="h-4 w-4" />Pinned</span>
-            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.pinned}</span>
+            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.pinned}</span>
           </button>
           <button type="button" onClick={() => setActiveRailKey("archived")} className={railButtonClass(activeRailKey === "archived") }>
             <span className="inline-flex items-center gap-2"><Archive className="h-4 w-4" />Archived</span>
-            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.archived}</span>
+            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.archived}</span>
           </button>
           <button type="button" onClick={() => setActiveRailKey("projects")} className={railButtonClass(activeRailKey === "projects") }>
             <span className="inline-flex items-center gap-2"><FolderKanban className="h-4 w-4" />Project Notes</span>
-            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.projects}</span>
+            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.projects}</span>
           </button>
           <button type="button" onClick={() => setActiveRailKey("tasks")} className={railButtonClass(activeRailKey === "tasks") }>
             <span className="inline-flex items-center gap-2"><ListTodo className="h-4 w-4" />Task Notes</span>
-            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.tasks}</span>
+            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.tasks}</span>
           </button>
         </div>
 
         {foldersEnabled ? (
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between px-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9ea8b8]">Folders</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b95a3]">Folders</p>
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 rounded-md text-[#b9c2d1] hover:bg-[rgba(255,255,255,0.1)] hover:text-[#eef2f8]"
+                className="h-7 w-7 rounded-md text-[#6b7280] hover:bg-[#edf1f6]"
                 onClick={() => setIsAddingFolder((current) => !current)}
                 disabled={isCreatingFolder || storageUnavailable}
               >
@@ -871,12 +877,12 @@ export function NotesWorkspace({
                     }
                   }}
                   placeholder="Folder name"
-                  className="h-8 rounded-lg border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-xs text-[#eef2f8] placeholder:text-[#9ba7b9]"
+                  className="h-8 rounded-lg border-[#d8dde6] bg-white text-xs"
                 />
                 <Button
                   type="button"
                   size="sm"
-                  className="h-8 rounded-lg border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.12)] px-2.5 text-xs text-[#edf2f9] hover:bg-[rgba(255,255,255,0.18)]"
+                  className="h-8 rounded-lg px-2.5 text-xs"
                   onClick={() => void handleCreateFolder()}
                   disabled={isCreatingFolder || storageUnavailable}
                 >
@@ -890,14 +896,14 @@ export function NotesWorkspace({
                 const active = activeRailKey === key
                 const isEditing = editingFolderId === folder.id
                 return (
-                  <div key={folder.id} className={cn("rounded-xl px-2 py-1", active ? "bg-[rgba(255,255,255,0.1)]" : "") }>
+                  <div key={folder.id} className={cn("rounded-xl px-2 py-1", active ? "bg-[#eef2f7]" : "") }>
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => setActiveRailKey(key)}
                         className={cn(
                           "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1.5 text-left text-[13px]",
-                          active ? "text-[#f2f5fb]" : "text-[#b8c1d1]"
+                          active ? "text-[#111827]" : "text-[#556171]"
                         )}
                       >
                         <Folder className="h-4 w-4 shrink-0" />
@@ -915,20 +921,20 @@ export function NotesWorkspace({
                                 cancelRenameFolder()
                               }
                             }}
-                            className="h-7 min-w-0 rounded-md border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.1)] px-2 text-[11px] text-[#eef2f8]"
+                            className="h-7 min-w-0 rounded-md border-[#d8dde6] bg-white px-2 text-[11px]"
                             autoFocus
                           />
                         ) : (
                           <span className="truncate">{folder.name}</span>
                         )}
                       </button>
-                      <span className="text-[11px] tabular-nums text-[#95a0b2]">{folderCounts.get(folder.id) || 0}</span>
+                      <span className="text-[11px] tabular-nums text-[#7b8796]">{folderCounts.get(folder.id) || 0}</span>
                       {isEditing ? (
                         <>
                           <button
                             type="button"
                             onClick={() => void commitRenameFolder()}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#b5bfce] hover:bg-[rgba(255,255,255,0.1)]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
                             disabled={isRenamingFolder}
                           >
                             <Check className="h-3.5 w-3.5" />
@@ -936,7 +942,7 @@ export function NotesWorkspace({
                           <button
                             type="button"
                             onClick={cancelRenameFolder}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#b5bfce] hover:bg-[rgba(255,255,255,0.1)]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
                             disabled={isRenamingFolder}
                           >
                             <X className="h-3.5 w-3.5" />
@@ -947,7 +953,7 @@ export function NotesWorkspace({
                           <button
                             type="button"
                             onClick={() => startRenameFolder(folder)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#b5bfce] hover:bg-[rgba(255,255,255,0.1)]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -975,10 +981,10 @@ export function NotesWorkspace({
 
   const renderMiddleList = (isMobile = false) => (
     <div className={cn("flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className="border-b border-[rgba(255,255,255,0.12)] px-3 py-3">
+      <div className="border-b border-[#e8eaee] px-3 py-3">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#98a4b7]">{searchQuery ? "Search Results" : "Notes"}</p>
-          <span className="text-[11px] tabular-nums text-[#98a4b7]">{filteredNotes.length}</span>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b95a3]">{searchQuery ? "Search Results" : "Notes"}</p>
+          <span className="text-[11px] tabular-nums text-[#8b95a3]">{filteredNotes.length}</span>
         </div>
       </div>
       <div className={cn("ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5") }>
@@ -986,7 +992,7 @@ export function NotesWorkspace({
           <div className="space-y-4">
             {groupedNotes.map((group) => (
               <div key={group.key}>
-                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8f9bae]">{group.label}</p>
+                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#98a2b3]">{group.label}</p>
                 <div className="mt-1.5 space-y-1">
                   {group.notes.map((note) => {
                     const selected = note.id === selectedNoteId
@@ -998,7 +1004,7 @@ export function NotesWorkspace({
                         key={note.id}
                         onClick={() => {
                           setSelectedNoteId(note.id)
-                          if (isMobile) setIsMobileListOpen(false)
+                          if (isMobile) setIsMobileRailOpen(false)
                         }}
                         role="button"
                         tabIndex={0}
@@ -1006,18 +1012,16 @@ export function NotesWorkspace({
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault()
                             setSelectedNoteId(note.id)
-                            if (isMobile) setIsMobileListOpen(false)
+                            if (isMobile) setIsMobileRailOpen(false)
                           }
                         }}
                         className={cn(
-                          "group rounded-xl border border-transparent px-2.5 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9aa6ba]",
-                          selected
-                            ? "bg-[rgba(255,255,255,0.14)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)]"
-                            : "hover:bg-[rgba(255,255,255,0.07)]"
+                          "group rounded-[10px] border border-transparent px-2.5 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b6becb]",
+                          selected ? "bg-[#e9edf3]" : "hover:bg-[#f3f5f8]"
                         )}
                       >
                         <div className="flex items-start gap-2.5">
-                          <div className="mt-0.5 h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[rgba(255,255,255,0.12)]">
+                          <div className="mt-0.5 h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#e9edf2]">
                             {imageSrc ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={imageSrc} alt="Note preview" className="h-full w-full object-cover" />
@@ -1026,10 +1030,10 @@ export function NotesWorkspace({
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="line-clamp-1 text-[14px] font-semibold tracking-[-0.01em] text-[#f2f5fb]">{getNoteDisplayTitle(note)}</p>
-                            <p className="mt-0.5 line-clamp-1 text-[12px] text-[#a8b3c2]">{getNotePreview(note)}</p>
+                            <p className="line-clamp-1 text-[14px] font-semibold tracking-[-0.01em] text-[#1f2937]">{getNoteDisplayTitle(note)}</p>
+                            <p className="mt-0.5 line-clamp-1 text-[12px] text-[#667085]">{getNotePreview(note)}</p>
                             <div className="mt-1.5 flex items-center justify-between gap-2">
-                              <p className="truncate text-[11px] text-[#8f9bae]">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</p>
+                              <p className="truncate text-[11px] text-[#98a2b3]">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</p>
                               <div className="flex items-center gap-0.5">
                                 {!isLinked ? (
                                   <>
@@ -1040,7 +1044,7 @@ export function NotesWorkspace({
                                         event.stopPropagation()
                                         void handlePinToggle(note)
                                       }}
-                                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#aeb7c7] hover:bg-[rgba(255,255,255,0.12)] hover:text-[#eef3fb]"
+                                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#6b7280] hover:bg-white"
                                       aria-label={note.pinned ? "Unpin note" : "Pin note"}
                                     >
                                       {note.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -1052,7 +1056,7 @@ export function NotesWorkspace({
                                         event.stopPropagation()
                                         void handleArchiveToggle(note)
                                       }}
-                                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#aeb7c7] hover:bg-[rgba(255,255,255,0.12)] hover:text-[#eef3fb]"
+                                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#6b7280] hover:bg-white"
                                       aria-label={note.archived ? "Restore note" : "Archive note"}
                                     >
                                       {note.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
@@ -1071,7 +1075,7 @@ export function NotesWorkspace({
                                     </button>
                                   </>
                                 ) : (
-                                  <span className="rounded-md bg-[rgba(255,255,255,0.12)] px-1.5 py-0.5 text-[10px] text-[#c3ccda]">
+                                  <span className="rounded-md bg-[#eef1f6] px-1.5 py-0.5 text-[10px] text-[#667085]">
                                     {sourceType === "project" ? "Project" : "Task"}
                                   </span>
                                 )}
@@ -1087,11 +1091,11 @@ export function NotesWorkspace({
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.06)] p-5 text-center">
-            <p className="text-sm font-medium text-[#e6ebf4]">
+          <div className="rounded-xl border border-dashed border-[#d8dee8] bg-[#f7f8fa] p-5 text-center">
+            <p className="text-sm font-medium text-[#4b5563]">
               {searchQuery ? `No results for "${searchQuery}"` : "No notes in this view"}
             </p>
-            <p className="mt-1 text-[12px] text-[#a4afc0]">
+            <p className="mt-1 text-[12px] text-[#8b95a3]">
               {searchQuery ? "Try another keyword or clear search." : "Create a note or switch collection."}
             </p>
             {searchQuery ? (
@@ -1131,7 +1135,7 @@ export function NotesWorkspace({
               <Button
                 type="button"
                 variant={showArchivedMode ? "default" : "outline"}
-                className="h-10 rounded-[12px] border-[#d7dce4] bg-white px-4 text-[14px] font-semibold text-[#4b5563]"
+                className="h-10 rounded-[12px] border-[#d7dce4] bg-white px-4 text-[13px] font-semibold text-[#4b5563]"
                 onClick={() => setActiveRailKey(showArchivedMode ? "all" : "archived")}
               >
                 {showArchivedMode ? "Archived" : "Active"}
@@ -1166,9 +1170,15 @@ export function NotesWorkspace({
 
       <Card className="flex-1 min-h-0 gap-0 overflow-hidden rounded-[20px] border border-[#e7eaf0] bg-[#fbfbfc] py-0 shadow-[0_12px_28px_-30px_rgba(15,23,42,0.52)]">
         <CardContent className="flex-1 min-h-0 p-0">
-          <div className="hidden h-full min-h-0 md:grid md:grid-cols-[196px_292px_minmax(0,1fr)] xl:grid-cols-[214px_326px_minmax(0,1fr)]">
-            <aside className="min-h-0 border-r border-[#1c2433] bg-[linear-gradient(180deg,#181c26_0%,#131824_100%)]">{renderLeftRail(false)}</aside>
-            <aside className="min-h-0 border-r border-[#232c3d] bg-[linear-gradient(180deg,#1f2533_0%,#1a2130_100%)]">{renderMiddleList(false)}</aside>
+          <div className="hidden h-full min-h-0 md:grid md:grid-cols-[312px_minmax(0,1fr)] xl:grid-cols-[336px_minmax(0,1fr)]">
+            <aside className="min-h-0 border-r border-[#e8eaee] bg-[#f7f8fa]">
+              <div className="flex h-full min-h-0 flex-col">
+                {renderLeftRail(false, true)}
+                <div className="min-h-0 flex-1 border-t border-[#e8eaee]">
+                  {renderMiddleList(false)}
+                </div>
+              </div>
+            </aside>
 
             <section className="min-w-0 min-h-0 overflow-hidden bg-white">
               {selectedNote ? (
@@ -1176,11 +1186,11 @@ export function NotesWorkspace({
                   <div className="border-b border-[#e8eaee] px-5 py-4 lg:px-7">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[#1f2937]">{getNoteDisplayTitle(selectedNote)}</p>
+                        <p className="truncate text-[30px] font-semibold leading-tight tracking-[-0.025em] text-[#1f2937]">{getNoteDisplayTitle(selectedNote)}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-[#98a2b3]">
-                          <span>{activeRailLabel}</span>
-                          <span>•</span>
                           <span>{format(new Date(selectedNote.updatedAt), "d MMMM yyyy 'at' HH:mm")}</span>
+                          <span>•</span>
+                          <span>{activeRailLabel}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1268,31 +1278,24 @@ export function NotesWorkspace({
                 <SheetTrigger asChild>
                   <Button type="button" variant="outline" size="sm" className="h-8 rounded-[12px] border-[#d7dce4] bg-white">
                     <Folder className="mr-1.5 h-4 w-4" />
-                    Collections
+                    Sidebar
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[86vw] border-r border-[#1c2433] bg-[linear-gradient(180deg,#181c26_0%,#131824_100%)] p-0 sm:max-w-md">
-                  <SheetHeader className="border-b border-[rgba(255,255,255,0.12)] bg-transparent px-4 py-3">
-                    <SheetTitle className={cn(NOTE_SURFACE_FONT, "text-[#e8edf6]")}>Collections</SheetTitle>
+                <SheetContent side="left" className="w-[90vw] border-r border-[#e8eaee] bg-[#f7f8fa] p-0 sm:max-w-md">
+                  <SheetHeader className="border-b border-[#e8eaee] bg-[#f7f8fa] px-4 py-3">
+                    <SheetTitle className={NOTE_SURFACE_FONT}>Notes</SheetTitle>
                   </SheetHeader>
-                  {renderLeftRail(true)}
+                  <div className="flex h-full min-h-0 flex-col">
+                    {renderLeftRail(true, true)}
+                    <div className="min-h-0 flex-1 border-t border-[#e8eaee]">
+                      {renderMiddleList(true)}
+                    </div>
+                  </div>
                 </SheetContent>
               </Sheet>
-
-              <Sheet open={isMobileListOpen} onOpenChange={setIsMobileListOpen}>
-                <SheetTrigger asChild>
-                  <Button type="button" variant="outline" size="sm" className="h-8 rounded-[12px] border-[#d7dce4] bg-white">
-                    <NotebookPen className="mr-1.5 h-4 w-4" />
-                    Notes ({filteredNotes.length})
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[92vw] border-r border-[#232c3d] bg-[linear-gradient(180deg,#1f2533_0%,#1a2130_100%)] p-0 sm:max-w-lg">
-                  <SheetHeader className="border-b border-[rgba(255,255,255,0.12)] bg-transparent px-4 py-3">
-                    <SheetTitle className={cn(NOTE_SURFACE_FONT, "text-[#e8edf6]")}>{activeRailLabel}</SheetTitle>
-                  </SheetHeader>
-                  {renderMiddleList(true)}
-                </SheetContent>
-              </Sheet>
+              <div className={cn("text-[12px] text-[#6b7280]", NOTE_SURFACE_FONT)}>
+                {activeRailLabel} ({filteredNotes.length})
+              </div>
             </div>
 
             <section className="h-[calc(100%-53px)] min-h-0 overflow-hidden bg-white">
