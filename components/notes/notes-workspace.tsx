@@ -11,8 +11,8 @@ import {
   FolderKanban,
   FolderPlus,
   ListTodo,
+  MoreHorizontal,
   NotebookPen,
-  Pencil,
   Pin,
   PinOff,
   Plus,
@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -270,6 +271,7 @@ export function NotesWorkspace({
   const [isCreatingFolder, setIsCreatingFolder] = React.useState(false)
   const [editingFolderId, setEditingFolderId] = React.useState<string | null>(null)
   const [editingFolderName, setEditingFolderName] = React.useState("")
+  const [folderMenuOpenId, setFolderMenuOpenId] = React.useState<string | null>(null)
   const [isRenamingFolder, setIsRenamingFolder] = React.useState(false)
   const [pendingDeleteFolder, setPendingDeleteFolder] = React.useState<NoteFolderRecord | null>(null)
   const [isDeletingFolder, setIsDeletingFolder] = React.useState(false)
@@ -485,10 +487,12 @@ export function NotesWorkspace({
         toast.error("Notes storage is not ready yet")
         return null
       }
+      const activeFolderId = getFolderIdFromRailKey(activeRailKey)
       setIsCreating(true)
       try {
         const result = await createNote({
           content: prefill?.content || "",
+          folderId: activeFolderId ?? undefined,
         })
         if (!result.success || !result.data) {
           toast.error(result.error || "Failed to create note")
@@ -496,7 +500,12 @@ export function NotesWorkspace({
         }
 
         setNotes((current) => upsertNote(current, result.data as NoteRecord))
-        setActiveRailKey("all")
+        if (activeFolderId) {
+          const createdFolderId = result.data.folderId || activeFolderId
+          setActiveRailKey(folderRailKey(createdFolderId))
+        } else {
+          setActiveRailKey("all")
+        }
         setSelectedNoteId(result.data.id)
         setEditorFocusToken((current) => current + 1)
         setIsMobileRailOpen(false)
@@ -505,7 +514,7 @@ export function NotesWorkspace({
         setIsCreating(false)
       }
     },
-    [storageUnavailable]
+    [activeRailKey, storageUnavailable]
   )
 
   const handleCreateFolder = React.useCallback(async () => {
@@ -541,6 +550,7 @@ export function NotesWorkspace({
   const startRenameFolder = React.useCallback((folder: NoteFolderRecord) => {
     setEditingFolderId(folder.id)
     setEditingFolderName(folder.name)
+    setFolderMenuOpenId(null)
   }, [])
 
   const cancelRenameFolder = React.useCallback(() => {
@@ -612,6 +622,7 @@ export function NotesWorkspace({
       if (activeRailKey === folderRailKey(pendingDeleteFolder.id)) {
         setActiveRailKey(folderRailKey(result.data.defaultFolderId))
       }
+      setFolderMenuOpenId(null)
       setPendingDeleteFolder(null)
       toast.success(`Folder deleted. Notes moved to ${result.data.defaultFolderName}.`)
     } finally {
@@ -816,9 +827,6 @@ export function NotesWorkspace({
 
   const renderLeftRail = (isMobile = false, compact = false) => (
     <div className={cn(compact ? "flex shrink-0 flex-col" : "flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className="border-b border-[#e8eaee] px-3 py-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8b95a3]">Collections</p>
-      </div>
       <div
         className={cn(
           compact
@@ -848,55 +856,64 @@ export function NotesWorkspace({
             <span className="inline-flex items-center gap-1.5"><ListTodo className="h-3.5 w-3.5" />Task Notes</span>
             <span className="text-[10px] tabular-nums text-[#7b8796]">{smartCollectionCounts.tasks}</span>
           </button>
-        </div>
-
-        {foldersEnabled ? (
-          <div className="mt-3.5">
-            <div className="mb-1.5 flex items-center justify-between px-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8b95a3]">Folders</p>
+          {foldersEnabled ? (
+            <button
+              type="button"
+              onClick={() => setIsAddingFolder((current) => !current)}
+              className={cn(
+                railButtonClass(false),
+                "mt-1 border border-dashed border-[#d7dde7] text-[#5f6c7d] hover:border-[#c9d1de]"
+              )}
+              disabled={isCreatingFolder || storageUnavailable}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <FolderPlus className="h-3.5 w-3.5" />
+                New Folder
+              </span>
+            </button>
+          ) : null}
+          {isAddingFolder ? (
+            <div className="mt-1.5 flex items-center gap-1.5 px-1">
+              <Input
+                value={newFolderName}
+                onChange={(event) => setNewFolderName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault()
+                    void handleCreateFolder()
+                  }
+                }}
+                placeholder="Folder name"
+                className="h-7 rounded-lg border-[#d8dde6] bg-white text-[11px]"
+              />
               <Button
                 type="button"
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 rounded-md text-[#6b7280] hover:bg-[#edf1f6]"
-                onClick={() => setIsAddingFolder((current) => !current)}
+                size="sm"
+                className="h-7 rounded-lg px-2 text-[11px]"
+                onClick={() => void handleCreateFolder()}
                 disabled={isCreatingFolder || storageUnavailable}
               >
-                <FolderPlus className="h-3.5 w-3.5" />
+                Add
               </Button>
             </div>
-            {isAddingFolder ? (
-              <div className="mb-1.5 flex items-center gap-1.5">
-                <Input
-                  value={newFolderName}
-                  onChange={(event) => setNewFolderName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault()
-                      void handleCreateFolder()
-                    }
-                  }}
-                  placeholder="Folder name"
-                  className="h-7 rounded-lg border-[#d8dde6] bg-white text-[11px]"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-7 rounded-lg px-2 text-[11px]"
-                  onClick={() => void handleCreateFolder()}
-                  disabled={isCreatingFolder || storageUnavailable}
-                >
-                  Add
-                </Button>
-              </div>
-            ) : null}
-            <div className="space-y-0.5">
+          ) : null}
+          {foldersEnabled ? (
+            <div className="mt-1.5 space-y-0.5">
               {folders.map((folder) => {
                 const key = folderRailKey(folder.id)
                 const active = activeRailKey === key
                 const isEditing = editingFolderId === folder.id
+                const isMenuOpen = folderMenuOpenId === folder.id
                 return (
-                  <div key={folder.id} className={cn("rounded-lg px-1.5 py-0.5", active ? "bg-[#eef2f7]" : "") }>
+                  <div
+                    key={folder.id}
+                    className={cn("group rounded-lg px-1.5 py-0.5", active ? "bg-[#eef2f7]" : "")}
+                    onContextMenu={(event) => {
+                      if (isEditing) return
+                      event.preventDefault()
+                      setFolderMenuOpenId(folder.id)
+                    }}
+                  >
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -949,32 +966,53 @@ export function NotesWorkspace({
                           </button>
                         </>
                       ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => startRenameFolder(folder)}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                          {!folder.isDefault ? (
+                        <DropdownMenu
+                          open={isMenuOpen}
+                          onOpenChange={(open) => setFolderMenuOpenId(open ? folder.id : null)}
+                        >
+                          <DropdownMenuTrigger asChild>
                             <button
                               type="button"
-                              onClick={() => setPendingDeleteFolder(folder)}
-                              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50"
+                              className={cn(
+                                "inline-flex h-6 w-6 items-center justify-center rounded-md text-[#5b6573] transition-opacity hover:bg-[#e9edf2]",
+                                isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                              )}
+                              onClick={(event) => event.stopPropagation()}
+                              aria-label={`Folder actions for ${folder.name}`}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <MoreHorizontal className="h-3.5 w-3.5" />
                             </button>
-                          ) : null}
-                        </>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-lg">
+                            <DropdownMenuItem
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                startRenameFolder(folder)
+                              }}
+                            >
+                              Rename folder
+                            </DropdownMenuItem>
+                            {!folder.isDefault ? (
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setPendingDeleteFolder(folder)
+                                }}
+                              >
+                                Delete folder
+                              </DropdownMenuItem>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
                   </div>
                 )
               })}
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   )
@@ -1184,14 +1222,7 @@ export function NotesWorkspace({
               {selectedNote ? (
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="border-b border-[#e8eaee] px-5 py-4 lg:px-7">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#98a2b3]">
-                          <span>{format(new Date(selectedNote.updatedAt), "d MMMM yyyy 'at' HH:mm")}</span>
-                          <span>•</span>
-                          <span>{activeRailLabel}</span>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-end gap-3">
                       <div className="flex items-center gap-2">
                         {!selectedNoteIsLinked && foldersEnabled ? (
                           <Select
@@ -1255,6 +1286,13 @@ export function NotesWorkspace({
                       minHeightClassName="min-h-[56vh]"
                     />
                   </div>
+                  <div className="border-t border-[#e8eaee] px-5 py-2 lg:px-7">
+                    <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#98a2b3]">
+                      <span>{format(new Date(selectedNote.updatedAt), "d MMMM yyyy 'at' HH:mm")}</span>
+                      <span>•</span>
+                      <span>{activeRailLabel}</span>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center p-6">
@@ -1300,13 +1338,6 @@ export function NotesWorkspace({
             <section className="h-[calc(100%-53px)] min-h-0 overflow-hidden bg-white">
               {selectedNote ? (
                 <div className="flex h-full min-h-0 flex-col">
-                  <div className="border-b border-[#e8eaee] px-4 py-3">
-                    <div className={cn("flex items-center gap-2 text-[12px] text-[#98a2b3]", NOTE_SURFACE_FONT)}>
-                      <span>{formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</span>
-                      <span>•</span>
-                      <span className="truncate">{activeRailLabel}</span>
-                    </div>
-                  </div>
                   <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2">
                     <RichTextEditor
                       value={contentDraft}
@@ -1338,6 +1369,13 @@ export function NotesWorkspace({
                       className="rounded-[16px] bg-transparent"
                       minHeightClassName="min-h-[60vh]"
                     />
+                  </div>
+                  <div className="border-t border-[#e8eaee] px-4 py-2">
+                    <div className={cn("flex items-center gap-2 text-[12px] text-[#98a2b3]", NOTE_SURFACE_FONT)}>
+                      <span>{formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</span>
+                      <span>•</span>
+                      <span className="truncate">{activeRailLabel}</span>
+                    </div>
                   </div>
                 </div>
               ) : (
