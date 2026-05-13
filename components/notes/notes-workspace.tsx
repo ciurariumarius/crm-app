@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format, formatDistanceToNow, isToday } from "date-fns"
-import { Archive, ArchiveRestore, Check, ChevronRight, FilePlus2, Folder, FolderKanban, FolderPlus, ListTodo, NotebookPen, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react"
+import { Archive, ArchiveRestore, Check, CheckCircle2, ChevronRight, CircleAlert, FilePlus2, Folder, FolderKanban, FolderPlus, ListTodo, Loader2, NotebookPen, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { createNote, createNoteFolder, deleteNote, deleteNoteFolder, renameNoteFolder, setNoteArchived, setNotePinned, updateNote, type NoteFolderRecord, type NoteRecord } from "@/lib/actions/notes"
 import { updateProject } from "@/lib/actions/projects"
@@ -233,6 +233,9 @@ export function NotesWorkspace({
     tasks: true,
   })
   const [touchFolderMenuId, setTouchFolderMenuId] = React.useState<string | null>(null)
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [lastSavedAt, setLastSavedAt] = React.useState<string | null>(null)
+  const [saveError, setSaveError] = React.useState<string | null>(null)
 
   const searchRef = React.useRef<HTMLInputElement | null>(null)
   const folderLongPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -281,12 +284,18 @@ export function NotesWorkspace({
   React.useEffect(() => {
     if (!selectedNote) {
       setContentDraft("")
+      setIsSaving(false)
+      setLastSavedAt(null)
+      setSaveError(null)
       lastSyncedRef.current = { id: null, title: "", content: "" }
       return
     }
 
     const normalizedContent = normalizeNoteContentForEditor(selectedNote.content || "")
     setContentDraft(normalizedContent)
+    setIsSaving(false)
+    setLastSavedAt(selectedNote.updatedAt)
+    setSaveError(null)
     lastSyncedRef.current = {
       id: selectedNote.id,
       title:
@@ -326,6 +335,58 @@ export function NotesWorkspace({
     () => folders.find((folder) => folder.isDefault) ?? null,
     [folders]
   )
+  const searchQuery = search.trim()
+  const hasSearchQuery = searchQuery.length > 0
+  const hasUnsavedChanges = React.useMemo(() => {
+    if (!selectedNoteId || !selectedNote) return false
+    const normalizedTitle =
+      selectedNoteSourceType === "note"
+        ? deriveNoteTitleFromContent(contentDraft, selectedNote.title || DEFAULT_NOTE_TITLE)
+        : selectedNote.title || DEFAULT_NOTE_TITLE
+    const snapshot = lastSyncedRef.current
+    return !(
+      snapshot.id === selectedNoteId &&
+      snapshot.title === normalizedTitle &&
+      snapshot.content === contentDraft
+    )
+  }, [contentDraft, selectedNote, selectedNoteId, selectedNoteSourceType])
+  const saveStatus = React.useMemo(() => {
+    if (!selectedNote) return null
+    if (saveError) {
+      return {
+        tone: "error" as const,
+        label: "Save failed",
+        detail: saveError,
+        icon: CircleAlert,
+      }
+    }
+    if (isSaving) {
+      return {
+        tone: "muted" as const,
+        label: "Saving...",
+        detail: "Saving changes",
+        icon: Loader2,
+      }
+    }
+    if (hasUnsavedChanges) {
+      return {
+        tone: "warning" as const,
+        label: "Unsaved changes",
+        detail: "Changes pending autosave",
+        icon: CircleAlert,
+      }
+    }
+    return {
+      tone: "success" as const,
+      label: lastSavedAt
+        ? `Saved ${formatDistanceToNow(new Date(lastSavedAt), { addSuffix: true })}`
+        : "Saved",
+      detail: lastSavedAt
+        ? `Saved ${formatDistanceToNow(new Date(lastSavedAt), { addSuffix: true })}`
+        : "All changes saved",
+      icon: CheckCircle2,
+    }
+  }, [hasUnsavedChanges, isSaving, lastSavedAt, saveError, selectedNote])
 
   const persistNote = React.useCallback(
     async (noteId: string, contentValue: string) => {
@@ -340,88 +401,105 @@ export function NotesWorkspace({
       if (snapshot.id === noteId && snapshot.title === normalizedTitle && snapshot.content === contentValue) {
         return true
       }
+      setIsSaving(true)
+      setSaveError(null)
 
-      if (sourceType === "project") {
-        const projectId = existingNote.sourceId || existingNote.id.replace(/^project:/, "")
-        const result = await updateProject(projectId, { description: contentValue })
-        if (!result.success) {
-          toast.error(result.error || "Failed to save project note")
-          return false
-        }
-        const nowIso = new Date().toISOString()
-        setNotes((current) =>
-          sortNotes(
-            current.map((item) =>
-              item.id === existingNote.id
-                ? {
-                    ...item,
-                    content: contentValue,
-                    contentText: toContentText(contentValue),
-                    updatedAt: nowIso,
-                  }
-                : item
+      try {
+        if (sourceType === "project") {
+          const projectId = existingNote.sourceId || existingNote.id.replace(/^project:/, "")
+          const result = await updateProject(projectId, { description: contentValue })
+          if (!result.success) {
+            const message = result.error || "Failed to save project note"
+            toast.error(message)
+            setSaveError(message)
+            return false
+          }
+          const nowIso = new Date().toISOString()
+          setNotes((current) =>
+            sortNotes(
+              current.map((item) =>
+                item.id === existingNote.id
+                  ? {
+                      ...item,
+                      content: contentValue,
+                      contentText: toContentText(contentValue),
+                      updatedAt: nowIso,
+                    }
+                  : item
+              )
             )
           )
-        )
-        lastSyncedRef.current = {
-          id: existingNote.id,
-          title: existingNote.title,
-          content: contentValue,
+          lastSyncedRef.current = {
+            id: existingNote.id,
+            title: existingNote.title,
+            content: contentValue,
+          }
+          setLastSavedAt(nowIso)
+          return true
         }
-        return true
-      }
 
-      if (sourceType === "task") {
-        const taskId = existingNote.sourceId || existingNote.id.replace(/^task:/, "")
-        const result = await updateTask(taskId, { description: contentValue })
-        if (!result.success) {
-          toast.error(result.error || "Failed to save task note")
-          return false
-        }
-        const nowIso = new Date().toISOString()
-        setNotes((current) =>
-          sortNotes(
-            current.map((item) =>
-              item.id === existingNote.id
-                ? {
-                    ...item,
-                    content: contentValue,
-                    contentText: toContentText(contentValue),
-                    updatedAt: nowIso,
-                  }
-                : item
+        if (sourceType === "task") {
+          const taskId = existingNote.sourceId || existingNote.id.replace(/^task:/, "")
+          const result = await updateTask(taskId, { description: contentValue })
+          if (!result.success) {
+            const message = result.error || "Failed to save task note"
+            toast.error(message)
+            setSaveError(message)
+            return false
+          }
+          const nowIso = new Date().toISOString()
+          setNotes((current) =>
+            sortNotes(
+              current.map((item) =>
+                item.id === existingNote.id
+                  ? {
+                      ...item,
+                      content: contentValue,
+                      contentText: toContentText(contentValue),
+                      updatedAt: nowIso,
+                    }
+                  : item
+              )
             )
           )
-        )
-        lastSyncedRef.current = {
-          id: existingNote.id,
-          title: existingNote.title,
-          content: contentValue,
+          lastSyncedRef.current = {
+            id: existingNote.id,
+            title: existingNote.title,
+            content: contentValue,
+          }
+          setLastSavedAt(nowIso)
+          return true
         }
+
+        if (storageUnavailable) {
+          const message = "Notes storage is not ready yet"
+          toast.error(message)
+          setSaveError(message)
+          return false
+        }
+
+        const result = await updateNote(noteId, {
+          content: contentValue,
+        })
+
+        if (!result.success || !result.data) {
+          const message = result.error || "Failed to save note"
+          toast.error(message)
+          setSaveError(message)
+          return false
+        }
+
+        setNotes((current) => upsertNote(current, result.data as NoteRecord))
+        lastSyncedRef.current = {
+          id: result.data.id,
+          title: result.data.title,
+          content: result.data.content,
+        }
+        setLastSavedAt(result.data.updatedAt)
         return true
+      } finally {
+        setIsSaving(false)
       }
-
-      if (storageUnavailable) {
-        toast.error("Notes storage is not ready yet")
-        return false
-      }
-
-      const result = await updateNote(noteId, {
-        content: contentValue,
-      })
-
-      if (!result.success || !result.data) {
-        toast.error(result.error || "Failed to save note")
-        return false
-      }
-
-      setNotes((current) => upsertNote(current, result.data as NoteRecord))
-      lastSyncedRef.current = {
-        id: result.data.id,
-        title: result.data.title,
-        content: result.data.content,
-      }
-      return true
     },
     [notes, storageUnavailable]
   )
@@ -1221,10 +1299,25 @@ export function NotesWorkspace({
               <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] shadow-[0_6px_18px_-14px_rgba(15,23,42,0.25)]">
                 <NotebookPen className="h-4 w-4 text-[var(--text-muted)]" />
               </div>
-              <p className="mt-3 text-sm font-semibold text-[var(--text-secondary)]">No notes in this view</p>
-              <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)]">
-                Try switching between active and archived notes or clear the current search.
+              <p className="mt-3 text-sm font-semibold text-[var(--text-secondary)]">
+                {hasSearchQuery ? `No results for "${searchQuery}"` : "No notes in this view"}
               </p>
+              <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)]">
+                {hasSearchQuery
+                  ? "Try a different keyword or clear search."
+                  : "Try switching between active and archived notes."}
+              </p>
+              {hasSearchQuery ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 h-8 rounded-lg px-3 text-xs"
+                  onClick={() => setSearch("")}
+                >
+                  Clear search
+                </Button>
+              ) : null}
             </div>
           )}
         </div>
@@ -1252,6 +1345,8 @@ export function NotesWorkspace({
       showArchived,
       startRenameFolder,
       storageUnavailable,
+      hasSearchQuery,
+      searchQuery,
       touchFolderMenuId,
       visibleNotes.length,
       visibleSections,
@@ -1287,6 +1382,7 @@ export function NotesWorkspace({
               ref={searchRef}
               value={search}
               onChange={setSearch}
+              showShortcutHint={false}
             />
           }
           actions={
@@ -1350,6 +1446,7 @@ export function NotesWorkspace({
                           ref={searchRef}
                           value={search}
                           onChange={setSearch}
+                          showShortcutHint={false}
                         />
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[11px] font-medium text-[var(--text-muted)]">
@@ -1413,6 +1510,27 @@ export function NotesWorkspace({
                   <div className="relative shrink-0 overflow-hidden bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] px-3 py-2.5 sm:px-4 lg:px-6">
                     <div className="absolute inset-x-0 top-0 h-px bg-[var(--surface-low)]/80" aria-hidden="true" />
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium text-[var(--text-muted)]">
+                      {saveStatus ? (
+                        <>
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                              saveStatus.tone === "success"
+                                ? "border-emerald-200/80 bg-emerald-50/75 text-emerald-700"
+                                : saveStatus.tone === "error"
+                                  ? "border-rose-200/80 bg-rose-50/75 text-rose-700"
+                                  : saveStatus.tone === "warning"
+                                    ? "border-amber-200/80 bg-amber-50/75 text-amber-700"
+                                    : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
+                            )}
+                            title={saveStatus.detail}
+                          >
+                            <saveStatus.icon className={cn("h-3 w-3", isSaving ? "animate-spin" : "")} />
+                            <span>{saveStatus.label}</span>
+                          </span>
+                          <span className="text-[var(--text-muted)]">•</span>
+                        </>
+                      ) : null}
                       {!selectedNoteIsLinked && foldersEnabled ? (
                         <>
                           <span className="text-[var(--text-secondary)]">Folder</span>

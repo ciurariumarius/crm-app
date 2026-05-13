@@ -310,10 +310,10 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="rounded-xl">
-                                <DropdownMenuItem onClick={() => requestStatusChange(project, "Active")} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => requestStatusChange(project, "Paused")} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => requestStatusChange(project, "Completed")} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => requestStatusChange(project, "Closed")} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); requestStatusChange(project, "Active") }} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); requestStatusChange(project, "Paused") }} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); requestStatusChange(project, "Completed") }} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); requestStatusChange(project, "Closed") }} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
@@ -328,8 +328,8 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="rounded-xl">
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-semibold text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleUpdate(project.id, { paymentStatus: "Paid" }) }} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleUpdate(project.id, { paymentStatus: "Unpaid" }) }} className="text-xs font-semibold text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
@@ -418,10 +418,10 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="rounded-xl">
-                            <DropdownMenuItem onClick={() => requestStatusChange(project, "Active")} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => requestStatusChange(project, "Paused")} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => requestStatusChange(project, "Completed")} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => requestStatusChange(project, "Closed")} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); requestStatusChange(project, "Active") }} className="text-xs font-semibold text-blue-600 p-2 cursor-pointer">Active</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); requestStatusChange(project, "Paused") }} className="text-xs font-semibold text-amber-600 p-2 cursor-pointer">Paused</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); requestStatusChange(project, "Completed") }} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Completed</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); requestStatusChange(project, "Closed") }} className="text-xs font-semibold text-[var(--text-secondary)] p-2 cursor-pointer">Closed</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -447,8 +447,8 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="rounded-xl">
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Paid" })} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdate(project.id, { paymentStatus: "Unpaid" })} className="text-xs font-semibold text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleUpdate(project.id, { paymentStatus: "Paid" }) }} className="text-xs font-semibold text-emerald-600 p-2 cursor-pointer">Paid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleUpdate(project.id, { paymentStatus: "Unpaid" }) }} className="text-xs font-semibold text-rose-600 p-2 cursor-pointer">Unpaid</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
