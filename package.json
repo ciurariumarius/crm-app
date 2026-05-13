@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:safe": "bash scripts/build-safe.sh",
     "start": "next start",
     "lint": "eslint app components lib hooks types proxy.ts next.config.ts prisma.config.ts",
     "lint:all": "eslint .",

@@ -256,7 +256,7 @@ export function NotesWorkspace({
       const next = { ...current }
       for (const folder of folders) {
         const key = `folder:${folder.id}`
-        if (next[key] === undefined) next[key] = true
+        if (next[key] === undefined) next[key] = false
       }
       return next
     })
@@ -1335,7 +1335,7 @@ export function NotesWorkspace({
 
       <Card className="flex-1 min-h-0 gap-0 overflow-hidden rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] py-0 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.35)]">
         <CardContent className="flex-1 min-h-0 p-0">
-          <div className="grid h-full min-h-0 lg:grid-cols-[300px_minmax(0,1fr)]">
+          <div className="grid h-full min-h-0 lg:grid-cols-[264px_minmax(0,1fr)]">
             <aside className="hidden min-h-0 overflow-hidden border-r border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_84%,var(--bg-surface)_16%)] lg:block">
               {renderNotesList(false)}
             </aside>
