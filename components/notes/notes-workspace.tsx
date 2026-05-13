@@ -807,7 +807,7 @@ export function NotesWorkspace({
 
   const railButtonClass = (active: boolean) =>
     cn(
-      "group flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-all",
+      "group flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-[12px] transition-all",
       NOTE_SURFACE_FONT,
       active
         ? "bg-[color:color-mix(in_srgb,#e7ebf2_76%,white)] text-[#1e1f23]"
@@ -816,57 +816,57 @@ export function NotesWorkspace({
 
   const renderLeftRail = (isMobile = false, compact = false) => (
     <div className={cn(compact ? "flex shrink-0 flex-col" : "flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className="border-b border-[#e8eaee] px-3 py-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b95a3]">Collections</p>
+      <div className="border-b border-[#e8eaee] px-3 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8b95a3]">Collections</p>
       </div>
       <div
         className={cn(
           compact
-            ? cn("ui-scrollbar overflow-y-auto", isMobile ? "max-h-[42vh]" : "max-h-[320px]")
+            ? cn("ui-scrollbar overflow-y-auto", isMobile ? "max-h-[36vh]" : "max-h-[280px]")
             : "ui-scrollbar flex-1 overflow-y-auto",
-          isMobile ? "p-3" : "p-2.5"
+          isMobile ? "p-2.5" : "p-2"
         )}
       >
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <button type="button" onClick={() => setActiveRailKey("all")} className={railButtonClass(activeRailKey === "all") }>
-            <span className="inline-flex items-center gap-2"><NotebookPen className="h-4 w-4" />All Notes</span>
-            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.all}</span>
+            <span className="inline-flex items-center gap-1.5"><NotebookPen className="h-3.5 w-3.5" />All Notes</span>
+            <span className="text-[10px] tabular-nums text-[#7b8796]">{smartCollectionCounts.all}</span>
           </button>
           <button type="button" onClick={() => setActiveRailKey("pinned")} className={railButtonClass(activeRailKey === "pinned") }>
-            <span className="inline-flex items-center gap-2"><Pin className="h-4 w-4" />Pinned</span>
-            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.pinned}</span>
+            <span className="inline-flex items-center gap-1.5"><Pin className="h-3.5 w-3.5" />Pinned</span>
+            <span className="text-[10px] tabular-nums text-[#7b8796]">{smartCollectionCounts.pinned}</span>
           </button>
           <button type="button" onClick={() => setActiveRailKey("archived")} className={railButtonClass(activeRailKey === "archived") }>
-            <span className="inline-flex items-center gap-2"><Archive className="h-4 w-4" />Archived</span>
-            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.archived}</span>
+            <span className="inline-flex items-center gap-1.5"><Archive className="h-3.5 w-3.5" />Archived</span>
+            <span className="text-[10px] tabular-nums text-[#7b8796]">{smartCollectionCounts.archived}</span>
           </button>
           <button type="button" onClick={() => setActiveRailKey("projects")} className={railButtonClass(activeRailKey === "projects") }>
-            <span className="inline-flex items-center gap-2"><FolderKanban className="h-4 w-4" />Project Notes</span>
-            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.projects}</span>
+            <span className="inline-flex items-center gap-1.5"><FolderKanban className="h-3.5 w-3.5" />Project Notes</span>
+            <span className="text-[10px] tabular-nums text-[#7b8796]">{smartCollectionCounts.projects}</span>
           </button>
           <button type="button" onClick={() => setActiveRailKey("tasks")} className={railButtonClass(activeRailKey === "tasks") }>
-            <span className="inline-flex items-center gap-2"><ListTodo className="h-4 w-4" />Task Notes</span>
-            <span className="text-[11px] tabular-nums text-[#7b8796]">{smartCollectionCounts.tasks}</span>
+            <span className="inline-flex items-center gap-1.5"><ListTodo className="h-3.5 w-3.5" />Task Notes</span>
+            <span className="text-[10px] tabular-nums text-[#7b8796]">{smartCollectionCounts.tasks}</span>
           </button>
         </div>
 
         {foldersEnabled ? (
-          <div className="mt-5">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b95a3]">Folders</p>
+          <div className="mt-3.5">
+            <div className="mb-1.5 flex items-center justify-between px-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8b95a3]">Folders</p>
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 rounded-md text-[#6b7280] hover:bg-[#edf1f6]"
+                className="h-6 w-6 rounded-md text-[#6b7280] hover:bg-[#edf1f6]"
                 onClick={() => setIsAddingFolder((current) => !current)}
                 disabled={isCreatingFolder || storageUnavailable}
               >
-                <FolderPlus className="h-4 w-4" />
+                <FolderPlus className="h-3.5 w-3.5" />
               </Button>
             </div>
             {isAddingFolder ? (
-              <div className="mb-2 flex items-center gap-1.5">
+              <div className="mb-1.5 flex items-center gap-1.5">
                 <Input
                   value={newFolderName}
                   onChange={(event) => setNewFolderName(event.target.value)}
@@ -877,12 +877,12 @@ export function NotesWorkspace({
                     }
                   }}
                   placeholder="Folder name"
-                  className="h-8 rounded-lg border-[#d8dde6] bg-white text-xs"
+                  className="h-7 rounded-lg border-[#d8dde6] bg-white text-[11px]"
                 />
                 <Button
                   type="button"
                   size="sm"
-                  className="h-8 rounded-lg px-2.5 text-xs"
+                  className="h-7 rounded-lg px-2 text-[11px]"
                   onClick={() => void handleCreateFolder()}
                   disabled={isCreatingFolder || storageUnavailable}
                 >
@@ -890,23 +890,23 @@ export function NotesWorkspace({
                 </Button>
               </div>
             ) : null}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {folders.map((folder) => {
                 const key = folderRailKey(folder.id)
                 const active = activeRailKey === key
                 const isEditing = editingFolderId === folder.id
                 return (
-                  <div key={folder.id} className={cn("rounded-xl px-2 py-1", active ? "bg-[#eef2f7]" : "") }>
-                    <div className="flex items-center gap-1.5">
+                  <div key={folder.id} className={cn("rounded-lg px-1.5 py-0.5", active ? "bg-[#eef2f7]" : "") }>
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => setActiveRailKey(key)}
                         className={cn(
-                          "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1.5 text-left text-[13px]",
+                          "flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-[12px]",
                           active ? "text-[#111827]" : "text-[#556171]"
                         )}
                       >
-                        <Folder className="h-4 w-4 shrink-0" />
+                        <Folder className="h-3.5 w-3.5 shrink-0" />
                         {isEditing ? (
                           <Input
                             value={editingFolderName}
@@ -921,31 +921,31 @@ export function NotesWorkspace({
                                 cancelRenameFolder()
                               }
                             }}
-                            className="h-7 min-w-0 rounded-md border-[#d8dde6] bg-white px-2 text-[11px]"
+                            className="h-6 min-w-0 rounded-md border-[#d8dde6] bg-white px-2 text-[11px]"
                             autoFocus
                           />
                         ) : (
                           <span className="truncate">{folder.name}</span>
                         )}
                       </button>
-                      <span className="text-[11px] tabular-nums text-[#7b8796]">{folderCounts.get(folder.id) || 0}</span>
+                      <span className="text-[10px] tabular-nums text-[#7b8796]">{folderCounts.get(folder.id) || 0}</span>
                       {isEditing ? (
                         <>
                           <button
                             type="button"
                             onClick={() => void commitRenameFolder()}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
                             disabled={isRenamingFolder}
                           >
-                            <Check className="h-3.5 w-3.5" />
+                            <Check className="h-3 w-3" />
                           </button>
                           <button
                             type="button"
                             onClick={cancelRenameFolder}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
                             disabled={isRenamingFolder}
                           >
-                            <X className="h-3.5 w-3.5" />
+                            <X className="h-3 w-3" />
                           </button>
                         </>
                       ) : (
@@ -953,17 +953,17 @@ export function NotesWorkspace({
                           <button
                             type="button"
                             onClick={() => startRenameFolder(folder)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#5b6573] hover:bg-[#e9edf2]"
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-3 w-3" />
                           </button>
                           {!folder.isDefault ? (
                             <button
                               type="button"
                               onClick={() => setPendingDeleteFolder(folder)}
-                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50"
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-3 w-3" />
                             </button>
                           ) : null}
                         </>
@@ -1186,8 +1186,7 @@ export function NotesWorkspace({
                   <div className="border-b border-[#e8eaee] px-5 py-4 lg:px-7">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-[30px] font-semibold leading-tight tracking-[-0.025em] text-[#1f2937]">{getNoteDisplayTitle(selectedNote)}</p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-[#98a2b3]">
+                        <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#98a2b3]">
                           <span>{format(new Date(selectedNote.updatedAt), "d MMMM yyyy 'at' HH:mm")}</span>
                           <span>•</span>
                           <span>{activeRailLabel}</span>
@@ -1302,8 +1301,11 @@ export function NotesWorkspace({
               {selectedNote ? (
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="border-b border-[#e8eaee] px-4 py-3">
-                    <p className={cn("truncate text-[20px] font-semibold tracking-[-0.02em] text-[#1f2937]", NOTE_SURFACE_FONT)}>{getNoteDisplayTitle(selectedNote)}</p>
-                    <p className={cn("mt-1 text-[12px] text-[#98a2b3]", NOTE_SURFACE_FONT)}>{formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</p>
+                    <div className={cn("flex items-center gap-2 text-[12px] text-[#98a2b3]", NOTE_SURFACE_FONT)}>
+                      <span>{formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</span>
+                      <span>•</span>
+                      <span className="truncate">{activeRailLabel}</span>
+                    </div>
                   </div>
                   <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2">
                     <RichTextEditor
