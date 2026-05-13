@@ -185,6 +185,10 @@ function normalizeNoteContentForEditor(content: string) {
     .join("")
 }
 
+function hasMeaningfulContent(content: string) {
+  return toContentText(content).trim().length > 0
+}
+
 function extractFirstImageSrc(content: string) {
   const match = content.match(/<img[^>]+src=["']([^"']+)["']/i)
   return match?.[1] || null
@@ -259,6 +263,7 @@ export function NotesWorkspace({
   const [selectedNoteId, setSelectedNoteId] = React.useState<string | null>(initialSelectedNoteId)
   const [activeRailKey, setActiveRailKey] = React.useState<RailKey>(DEFAULT_RAIL_KEY)
   const [contentDraft, setContentDraft] = React.useState("")
+  const [emptyEditorDraft, setEmptyEditorDraft] = React.useState("")
   const [search, setSearch] = React.useState("")
   const [isMobileRailOpen, setIsMobileRailOpen] = React.useState(false)
   const [isCreating, setIsCreating] = React.useState(false)
@@ -284,6 +289,8 @@ export function NotesWorkspace({
   })
   const bootstrappedRef = React.useRef(false)
   const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const draftCreateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const draftCreateInFlightRef = React.useRef(false)
 
   const selectedNote = React.useMemo(
     () => notes.find((item) => item.id === selectedNoteId) ?? null,
@@ -336,6 +343,7 @@ export function NotesWorkspace({
           : selectedNote.title,
       content: normalizedContent,
     }
+    setEmptyEditorDraft("")
   }, [selectedNote, selectedNoteSourceType])
 
   const railFilteredNotes = React.useMemo(() => {
@@ -743,8 +751,30 @@ export function NotesWorkspace({
   React.useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      if (draftCreateTimeoutRef.current) clearTimeout(draftCreateTimeoutRef.current)
     }
   }, [])
+
+  React.useEffect(() => {
+    if (selectedNoteId) return
+    if (storageUnavailable) return
+    if (!hasMeaningfulContent(emptyEditorDraft)) return
+    if (draftCreateInFlightRef.current) return
+
+    if (draftCreateTimeoutRef.current) clearTimeout(draftCreateTimeoutRef.current)
+    draftCreateTimeoutRef.current = setTimeout(() => {
+      if (draftCreateInFlightRef.current) return
+      if (!hasMeaningfulContent(emptyEditorDraft)) return
+      draftCreateInFlightRef.current = true
+      void handleCreateNote({ content: emptyEditorDraft }).finally(() => {
+        draftCreateInFlightRef.current = false
+      })
+    }, 550)
+
+    return () => {
+      if (draftCreateTimeoutRef.current) clearTimeout(draftCreateTimeoutRef.current)
+    }
+  }, [emptyEditorDraft, handleCreateNote, selectedNoteId, storageUnavailable])
 
   const handleArchiveToggle = React.useCallback(
     async (note: NoteRecord) => {
@@ -1221,39 +1251,6 @@ export function NotesWorkspace({
             <section className="min-w-0 min-h-0 overflow-hidden bg-white">
               {selectedNote ? (
                 <div className="flex h-full min-h-0 flex-col">
-                  <div className="border-b border-[#e8eaee] px-5 py-4 lg:px-7">
-                    <div className="flex items-center justify-end gap-3">
-                      <div className="flex items-center gap-2">
-                        {!selectedNoteIsLinked && foldersEnabled ? (
-                          <Select
-                            value={selectedNote.folderId || (defaultFolder?.id ?? NO_FOLDER_VALUE)}
-                            onValueChange={(value) => {
-                              void handleAssignFolder(selectedNote, value === NO_FOLDER_VALUE ? null : value)
-                            }}
-                          >
-                            <SelectTrigger className="h-9 min-w-[170px] rounded-[12px] border-[#d7dce4] bg-white px-2 text-xs font-medium text-[#4b5563] shadow-none">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-[#dde3eb]">
-                              {!foldersEnabled || !defaultFolder ? <SelectItem value={NO_FOLDER_VALUE}>Unfiled</SelectItem> : null}
-                              {folders.map((folder) => (
-                                <SelectItem key={folder.id} value={folder.id}>
-                                  {folder.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : null}
-                        {selectedNoteIsLinked ? (
-                          <span className="rounded-lg bg-[#eef1f6] px-2.5 py-1 text-[11px] font-medium text-[#667085]">
-                            {selectedNoteSourceType === "project" ? "Project" : "Task"}
-                            {selectedNote.sourceLabel ? ` · ${selectedNote.sourceLabel}` : ""}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-4 lg:pr-3">
                     <RichTextEditor
                       value={contentDraft}
@@ -1287,22 +1284,64 @@ export function NotesWorkspace({
                     />
                   </div>
                   <div className="border-t border-[#e8eaee] px-5 py-2 lg:px-7">
-                    <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#98a2b3]">
-                      <span>{format(new Date(selectedNote.updatedAt), "d MMMM yyyy 'at' HH:mm")}</span>
-                      <span>•</span>
-                      <span>{activeRailLabel}</span>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#98a2b3]">
+                        <span>{format(new Date(selectedNote.updatedAt), "d MMMM yyyy 'at' HH:mm")}</span>
+                        <span>•</span>
+                        <span>{activeRailLabel}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!selectedNoteIsLinked && foldersEnabled ? (
+                          <Select
+                            value={selectedNote.folderId || (defaultFolder?.id ?? NO_FOLDER_VALUE)}
+                            onValueChange={(value) => {
+                              void handleAssignFolder(selectedNote, value === NO_FOLDER_VALUE ? null : value)
+                            }}
+                          >
+                            <SelectTrigger className="h-8 min-w-[160px] rounded-[10px] border-[#d7dce4] bg-white px-2 text-xs font-medium text-[#4b5563] shadow-none">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-[#dde3eb]">
+                              {!foldersEnabled || !defaultFolder ? <SelectItem value={NO_FOLDER_VALUE}>Unfiled</SelectItem> : null}
+                              {folders.map((folder) => (
+                                <SelectItem key={folder.id} value={folder.id}>
+                                  {folder.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : null}
+                        {selectedNoteIsLinked ? (
+                          <span className="rounded-lg bg-[#eef1f6] px-2.5 py-1 text-[11px] font-medium text-[#667085]">
+                            {selectedNoteSourceType === "project" ? "Project" : "Task"}
+                            {selectedNote.sourceLabel ? ` · ${selectedNote.sourceLabel}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex h-full items-center justify-center p-6">
-                  <div className="max-w-md rounded-2xl border border-dashed border-[#d8dee8] bg-[#f8f9fb] p-7 text-left">
-                    <p className="text-[20px] font-semibold tracking-[-0.01em] text-[#1f2937]">No note selected</p>
-                    <p className="mt-2 text-[13px] leading-6 text-[#6b7280]">Choose a note from the list or create a new one.</p>
-                    <Button type="button" className="mt-4 h-10 rounded-[12px]" onClick={() => void handleCreateNote({ content: "" })} disabled={isCreating}>
-                      <FilePlus2 className="mr-1.5 h-4 w-4" />
-                      New note
-                    </Button>
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-4 lg:pr-3">
+                    <RichTextEditor
+                      value={emptyEditorDraft}
+                      onChange={setEmptyEditorDraft}
+                      placeholder="Start writing"
+                      variant="plain"
+                      mode="document"
+                      notesMode
+                      notesAppearance="apple"
+                      documentLayout="left"
+                      documentWidth="reading"
+                      className="rounded-[18px] bg-transparent"
+                      minHeightClassName="min-h-[56vh]"
+                    />
+                  </div>
+                  <div className="border-t border-[#e8eaee] px-5 py-2 lg:px-7">
+                    <div className="flex items-center gap-2 text-[12px] text-[#98a2b3]">
+                      <span>{activeRailLabel}</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1371,16 +1410,65 @@ export function NotesWorkspace({
                     />
                   </div>
                   <div className="border-t border-[#e8eaee] px-4 py-2">
-                    <div className={cn("flex items-center gap-2 text-[12px] text-[#98a2b3]", NOTE_SURFACE_FONT)}>
-                      <span>{formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</span>
-                      <span>•</span>
-                      <span className="truncate">{activeRailLabel}</span>
+                    <div className="space-y-2">
+                      <div className={cn("flex items-center gap-2 text-[12px] text-[#98a2b3]", NOTE_SURFACE_FONT)}>
+                        <span>{formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</span>
+                        <span>•</span>
+                        <span className="truncate">{activeRailLabel}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!selectedNoteIsLinked && foldersEnabled ? (
+                          <Select
+                            value={selectedNote.folderId || (defaultFolder?.id ?? NO_FOLDER_VALUE)}
+                            onValueChange={(value) => {
+                              void handleAssignFolder(selectedNote, value === NO_FOLDER_VALUE ? null : value)
+                            }}
+                          >
+                            <SelectTrigger className="h-8 min-w-[150px] rounded-[10px] border-[#d7dce4] bg-white px-2 text-xs font-medium text-[#4b5563] shadow-none">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-[#dde3eb]">
+                              {!foldersEnabled || !defaultFolder ? <SelectItem value={NO_FOLDER_VALUE}>Unfiled</SelectItem> : null}
+                              {folders.map((folder) => (
+                                <SelectItem key={folder.id} value={folder.id}>
+                                  {folder.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : null}
+                        {selectedNoteIsLinked ? (
+                          <span className="rounded-lg bg-[#eef1f6] px-2.5 py-1 text-[11px] font-medium text-[#667085]">
+                            {selectedNoteSourceType === "project" ? "Project" : "Task"}
+                            {selectedNote.sourceLabel ? ` · ${selectedNote.sourceLabel}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex h-full items-center justify-center p-6">
-                  <p className={cn("text-[13px] text-[#6b7280]", NOTE_SURFACE_FONT)}>Open a note to start editing.</p>
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2">
+                    <RichTextEditor
+                      value={emptyEditorDraft}
+                      onChange={setEmptyEditorDraft}
+                      placeholder="Start writing"
+                      variant="plain"
+                      mode="document"
+                      notesMode
+                      notesAppearance="apple"
+                      documentLayout="left"
+                      documentWidth="reading"
+                      className="rounded-[16px] bg-transparent"
+                      minHeightClassName="min-h-[60vh]"
+                    />
+                  </div>
+                  <div className="border-t border-[#e8eaee] px-4 py-2">
+                    <div className={cn("flex items-center gap-2 text-[12px] text-[#98a2b3]", NOTE_SURFACE_FONT)}>
+                      <span className="truncate">{activeRailLabel}</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </section>
