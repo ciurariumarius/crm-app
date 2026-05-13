@@ -494,6 +494,7 @@ export function RichTextEditor({
             attributes: {
                 class: cn(
                     "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-amber-200 [&_pre]:bg-amber-50/60 [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-amber-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    mode === "document" && "min-h-full",
                     notesFirstLineClass
                 ),
             },
@@ -652,6 +653,38 @@ export function RichTextEditor({
         })
         return () => window.cancelAnimationFrame(rafId)
     }, [editor, focusToken])
+    const handleEditorViewportMouseDown = React.useCallback(
+        (event: React.MouseEvent<HTMLDivElement>) => {
+            if (event.button !== 0) return
+            if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+
+            const target = event.target as HTMLElement | null
+            const currentEditor = editorRef.current
+            if (!target || !currentEditor) return
+            if (target.closest(".ProseMirror")) return
+            if (target.closest("button, a, input, textarea, select, summary, details, [role='button']")) return
+
+            event.preventDefault()
+            const positionAtClick = currentEditor.view.posAtCoords({
+                left: event.clientX,
+                top: event.clientY,
+            })
+
+            if (positionAtClick) {
+                currentEditor.chain().focus().setTextSelection(positionAtClick.pos).run()
+                return
+            }
+
+            const editorRect = currentEditor.view.dom.getBoundingClientRect()
+            if (event.clientY <= editorRect.top + 8) {
+                currentEditor.chain().focus("start").run()
+                return
+            }
+
+            currentEditor.chain().focus("end").run()
+        },
+        []
+    )
 
     if (!editor) {
         return null
@@ -977,6 +1010,7 @@ export function RichTextEditor({
 
                 <div
                     ref={editorViewportRef}
+                    onMouseDown={handleEditorViewportMouseDown}
                     className={cn(
                         "relative min-h-[150px] flex-1 overflow-y-auto p-4",
                         isTopRightToolbar && "pt-2",
@@ -991,7 +1025,7 @@ export function RichTextEditor({
                         className={cn(
                             mode === "document" &&
                                 (isDocumentLeft
-                                    ? cn("w-full px-3 pb-7", isReadingWidth && "max-w-[860px]", isTopRightToolbar && "pr-36 sm:pr-44")
+                                    ? cn("h-full w-full px-3 pb-7", isReadingWidth && "max-w-[860px]", isTopRightToolbar && "pr-36 sm:pr-44")
                                     : "mx-auto w-full max-w-4xl px-6 pb-8")
                         )}
                     >
