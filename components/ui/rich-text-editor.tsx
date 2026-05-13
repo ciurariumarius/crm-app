@@ -74,6 +74,7 @@ interface RichTextEditorProps {
     toolbarActions?: React.ReactNode
     documentHeader?: React.ReactNode
     notesMode?: boolean
+    notesAppearance?: "current" | "apple"
     focusToken?: string | number
     className?: string
     mode?: "panel" | "document"
@@ -137,6 +138,7 @@ export function RichTextEditor({
     toolbarActions,
     documentHeader,
     notesMode = false,
+    notesAppearance = "current",
     focusToken,
     className,
     mode = "panel",
@@ -470,7 +472,9 @@ export function RichTextEditor({
     }, [activeCodeBlockElement, copyTextToClipboard])
 
     const notesFirstLineClass = notesMode
-        ? "[&>*:first-child]:mt-0 [&>*:first-child]:mb-0.5 [&>*:first-child]:text-[1.08rem] [&>*:first-child]:font-medium [&>*:first-child]:tracking-[-0.01em] [&>*:first-child]:leading-[1.34] [&>*:first-child]:text-[var(--text-primary)] md:[&>*:first-child]:text-[1.15rem]"
+        ? notesAppearance === "apple"
+            ? "[&>*:first-child]:mt-0 [&>*:first-child]:mb-1 [&>*:first-child]:text-[1.45rem] [&>*:first-child]:font-semibold [&>*:first-child]:tracking-[-0.02em] [&>*:first-child]:leading-[1.2] [&>*:first-child]:text-[#1f2937] md:[&>*:first-child]:text-[1.62rem]"
+            : "[&>*:first-child]:mt-0 [&>*:first-child]:mb-0.5 [&>*:first-child]:text-[1.08rem] [&>*:first-child]:font-medium [&>*:first-child]:tracking-[-0.01em] [&>*:first-child]:leading-[1.34] [&>*:first-child]:text-[var(--text-primary)] md:[&>*:first-child]:text-[1.15rem]"
         : ""
 
     const editor = useEditor({
@@ -705,10 +709,13 @@ export function RichTextEditor({
     const isDocumentLeft = mode === "document" && documentLayout === "left"
     const isQuietToolbar = resolvedToolbarTone === "quiet"
     const isReadingWidth = mode === "document" && documentWidth === "reading"
+    const isAppleNotesAppearance = notesMode && notesAppearance === "apple"
     const compactControlClass = notesMode ? "h-10 w-10 md:h-9 md:w-9 lg:h-7 lg:w-7" : "h-8 w-8"
     const compactIconClass = notesMode ? "h-[1.05rem] w-[1.05rem] md:h-[1rem] md:w-[1rem] lg:h-[0.86rem] lg:w-[0.86rem]" : "h-4 w-4"
     const notesControlClass = notesMode
-        ? "rounded-full border border-transparent text-[var(--text-secondary)] data-[state=on]:border-[var(--line-subtle)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+        ? isAppleNotesAppearance
+            ? "rounded-full border border-transparent text-[#667085] data-[state=on]:border-[#d5dbe5] data-[state=on]:bg-[#f1f3f7] data-[state=on]:text-[#1f2937] hover:bg-[#f1f3f7] hover:text-[#1f2937]"
+            : "rounded-full border border-transparent text-[var(--text-secondary)] data-[state=on]:border-[var(--line-subtle)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
         : ""
 
     return (
@@ -726,7 +733,9 @@ export function RichTextEditor({
                             : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_1px_2px_0_rgba(15,23,42,0.04),0_8px_24px_-20px_rgba(15,23,42,0.35)]"),
                     variant === "plain" &&
                         mode === "document" &&
-                        "border border-transparent bg-transparent shadow-none",
+                        (isAppleNotesAppearance
+                            ? "border-0 bg-transparent shadow-none"
+                            : "border border-transparent bg-transparent shadow-none"),
                     className
                 )}
             >
@@ -740,7 +749,9 @@ export function RichTextEditor({
                         className={cn(
                             "flex items-center",
                             isTopRightToolbar &&
-                                "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_10px_20px_-18px_rgba(15,23,42,0.46)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3",
+                                (isAppleNotesAppearance
+                                    ? "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[#e3e7ef] bg-[color:color-mix(in_srgb,#f8f9fb_94%,white)] shadow-[0_5px_12px_-13px_rgba(15,23,42,0.34)] supports-[backdrop-filter]:backdrop-blur-xl"
+                                    : "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_10px_20px_-18px_rgba(15,23,42,0.46)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3"),
                             isCompactToolbar ? "gap-1 px-1.5 py-1 md:px-2" : "gap-1.5 p-1.5",
                             isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",
                             !isTopRightToolbar && variant === "default" && "border-b bg-muted/20",
@@ -1017,7 +1028,9 @@ export function RichTextEditor({
                         variant === "plain" &&
                             mode === "panel" &&
                             (isBorderlessPanel ? "bg-transparent px-0 py-2" : "bg-[var(--surface-lowest)] p-5"),
-                        variant === "plain" && mode === "document" && "bg-transparent px-0 py-2",
+                        variant === "plain" &&
+                            mode === "document" &&
+                            (isAppleNotesAppearance ? "bg-transparent px-0 py-1.5" : "bg-transparent px-0 py-2"),
                         minHeightClassName
                     )}
                 >

@@ -1,10 +1,37 @@
 "use client"
 
 import * as React from "react"
-import { format, formatDistanceToNow, isToday } from "date-fns"
-import { Archive, ArchiveRestore, Check, ChevronRight, FilePlus2, Folder, FolderKanban, FolderPlus, ListTodo, NotebookPen, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react"
+import { format, formatDistanceToNow, isAfter, isToday, isYesterday, subDays } from "date-fns"
+import {
+  Archive,
+  ArchiveRestore,
+  Check,
+  FilePlus2,
+  Folder,
+  FolderKanban,
+  FolderPlus,
+  ListTodo,
+  NotebookPen,
+  Pencil,
+  Pin,
+  PinOff,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react"
 import { toast } from "sonner"
-import { createNote, createNoteFolder, deleteNote, deleteNoteFolder, renameNoteFolder, setNoteArchived, setNotePinned, updateNote, type NoteFolderRecord, type NoteRecord } from "@/lib/actions/notes"
+import {
+  createNote,
+  createNoteFolder,
+  deleteNote,
+  deleteNoteFolder,
+  renameNoteFolder,
+  setNoteArchived,
+  setNotePinned,
+  updateNote,
+  type NoteFolderRecord,
+  type NoteRecord,
+} from "@/lib/actions/notes"
 import { updateProject } from "@/lib/actions/projects"
 import { updateTask } from "@/lib/actions/tasks"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
@@ -42,34 +69,17 @@ type NotesWorkspaceProps = {
   storageUnavailable?: boolean
 }
 
-type NoteSection = {
-  key: string
+type RailKey = "all" | "pinned" | "archived" | "projects" | "tasks" | `folder:${string}`
+
+type DateGroup = {
+  key: "today" | "yesterday" | "previous30" | "older"
   label: string
   notes: NoteRecord[]
 }
 
-const COLLAPSIBLE_NOTE_SECTION_KEYS = new Set(["projects", "tasks"])
 const NO_FOLDER_VALUE = "__none__"
-
-function getFolderIdFromSectionKey(sectionKey: string) {
-  if (!sectionKey.startsWith("folder:")) return null
-  return sectionKey.slice("folder:".length) || null
-}
-
-function getNoteDisplayTitle(note: NoteRecord) {
-  if (getNoteSourceType(note) !== "note") return note.title?.trim() || DEFAULT_NOTE_TITLE
-  return deriveNoteTitleFromContent(note.content || note.contentText || "", note.title || DEFAULT_NOTE_TITLE)
-}
-
-function getNotePreview(note: NoteRecord) {
-  if (getNoteSourceType(note) !== "note") {
-    const compact = (note.contentText || "").replace(/\s+/g, " ").trim()
-    if (!compact) return DEFAULT_NOTE_PREVIEW
-    return compact.length <= 80 ? compact : `${compact.slice(0, 80)}...`
-  }
-  const body = derivePreviewBodyFromContent(note.content || note.contentText || "", DEFAULT_NOTE_PREVIEW)
-  return body.length <= 80 ? body : `${body.slice(0, 80)}...`
-}
+const DEFAULT_RAIL_KEY: RailKey = "all"
+const NOTE_SURFACE_FONT = "[font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Segoe UI',sans-serif]"
 
 const PROJECT_REQUIREMENTS_TEMPLATE = [
   "<h2>Requirements</h2>",
@@ -96,8 +106,26 @@ const TASK_NOTES_TEMPLATE = [
   "<p></p>",
 ].join("")
 
+function folderRailKey(folderId: string): RailKey {
+  return `folder:${folderId}`
+}
+
+function getFolderIdFromRailKey(rail: RailKey) {
+  if (!rail.startsWith("folder:")) return null
+  return rail.slice("folder:".length) || null
+}
+
 function toContentText(content: string) {
   return content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function sortNotes(items: NoteRecord[]) {
+  return [...items].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+}
+
+function upsertNote(items: NoteRecord[], next: NoteRecord) {
+  const withoutCurrent = items.filter((item) => item.id !== next.id)
+  return sortNotes([next, ...withoutCurrent])
 }
 
 function scoreSearchMatch(note: NoteRecord, needle: string) {
@@ -122,6 +150,21 @@ function getNoteSourceType(note: NoteRecord | null | undefined) {
   return "note" as const
 }
 
+function getNoteDisplayTitle(note: NoteRecord) {
+  if (getNoteSourceType(note) !== "note") return note.title?.trim() || DEFAULT_NOTE_TITLE
+  return deriveNoteTitleFromContent(note.content || note.contentText || "", note.title || DEFAULT_NOTE_TITLE)
+}
+
+function getNotePreview(note: NoteRecord) {
+  if (getNoteSourceType(note) !== "note") {
+    const compact = (note.contentText || "").replace(/\s+/g, " ").trim()
+    if (!compact) return DEFAULT_NOTE_PREVIEW
+    return compact.length <= 80 ? compact : `${compact.slice(0, 80)}...`
+  }
+  const body = derivePreviewBodyFromContent(note.content || note.contentText || "", DEFAULT_NOTE_PREVIEW)
+  return body.length <= 80 ? body : `${body.slice(0, 80)}...`
+}
+
 function normalizeNoteContentForEditor(content: string) {
   const raw = (content || "").trim()
   if (!raw) return ""
@@ -132,7 +175,7 @@ function normalizeNoteContentForEditor(content: string) {
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
+      .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;")
 
   return raw
@@ -141,65 +184,67 @@ function normalizeNoteContentForEditor(content: string) {
     .join("")
 }
 
-function sortNotes(items: NoteRecord[]) {
-  return [...items].sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  })
+function extractFirstImageSrc(content: string) {
+  const match = content.match(/<img[^>]+src=["']([^"']+)["']/i)
+  return match?.[1] || null
 }
 
-function upsertNote(items: NoteRecord[], next: NoteRecord) {
-  const withoutCurrent = items.filter((item) => item.id !== next.id)
-  return sortNotes([next, ...withoutCurrent])
+function getFilteredByRail(notes: NoteRecord[], rail: RailKey) {
+  if (rail === "all") {
+    return notes.filter((note) => !(getNoteSourceType(note) === "note" && note.archived))
+  }
+  if (rail === "pinned") {
+    return notes.filter((note) => getNoteSourceType(note) === "note" && !note.archived && note.pinned)
+  }
+  if (rail === "archived") {
+    return notes.filter((note) => getNoteSourceType(note) === "note" && note.archived)
+  }
+  if (rail === "projects") {
+    return notes.filter((note) => getNoteSourceType(note) === "project")
+  }
+  if (rail === "tasks") {
+    return notes.filter((note) => getNoteSourceType(note) === "task")
+  }
+  const folderId = getFolderIdFromRailKey(rail)
+  if (!folderId) return []
+  return notes.filter(
+    (note) => getNoteSourceType(note) === "note" && !note.archived && note.folderId === folderId
+  )
 }
 
-function buildVisibleNoteSections(
-  items: NoteRecord[],
-  folders: NoteFolderRecord[],
-  showArchived: boolean,
-  foldersEnabled: boolean
-) {
-  if (showArchived) {
-    return items.length ? [{ key: "archived", label: "Archived", notes: items }] : []
+function groupNotesByDate(notes: NoteRecord[]) {
+  const now = new Date()
+  const thirtyDaysAgo = subDays(now, 30)
+  const groups: Record<DateGroup["key"], NoteRecord[]> = {
+    today: [],
+    yesterday: [],
+    previous30: [],
+    older: [],
   }
 
-  const pinned = items.filter((note) => getNoteSourceType(note) === "note" && note.pinned)
-  const personalUnpinned = items.filter(
-    (note) =>
-      getNoteSourceType(note) === "note" &&
-      !note.pinned
-  )
-  const unfiled = foldersEnabled ? personalUnpinned.filter((note) => !note.folderId) : personalUnpinned
-  const projectNotes = items.filter((note) => getNoteSourceType(note) === "project")
-  const taskNotes = items.filter((note) => getNoteSourceType(note) === "task")
+  for (const note of notes) {
+    const updated = new Date(note.updatedAt)
+    if (isToday(updated)) {
+      groups.today.push(note)
+      continue
+    }
+    if (isYesterday(updated)) {
+      groups.yesterday.push(note)
+      continue
+    }
+    if (isAfter(updated, thirtyDaysAgo)) {
+      groups.previous30.push(note)
+      continue
+    }
+    groups.older.push(note)
+  }
 
-  const folderSections = foldersEnabled
-    ? folders.map((folder) => ({
-    key: `folder:${folder.id}`,
-    label: folder.name,
-    notes: personalUnpinned.filter((note) => note.folderId === folder.id),
-    }))
-    : []
-
-  const personalByDay = unfiled.reduce(
-    (acc, note) => {
-      if (isToday(new Date(note.updatedAt))) acc.today.push(note)
-      else acc.earlier.push(note)
-      return acc
-    },
-    { today: [] as NoteRecord[], earlier: [] as NoteRecord[] }
-  )
-
-  const sections = [
-    { key: "pinned", label: "Pinned", notes: pinned },
-    ...folderSections,
-    { key: "today", label: "Today", notes: personalByDay.today },
-    { key: "earlier", label: "Earlier", notes: personalByDay.earlier },
-    { key: "projects", label: "Project Notes", notes: projectNotes },
-    { key: "tasks", label: "Task Notes", notes: taskNotes },
-  ]
-
-  return sections.filter((section) => section.notes.length > 0 || section.key.startsWith("folder:"))
+  return [
+    { key: "today", label: "Today", notes: groups.today },
+    { key: "yesterday", label: "Yesterday", notes: groups.yesterday },
+    { key: "previous30", label: "Previous 30 Days", notes: groups.previous30 },
+    { key: "older", label: "Older", notes: groups.older },
+  ].filter((group) => group.notes.length > 0)
 }
 
 export function NotesWorkspace({
@@ -211,9 +256,10 @@ export function NotesWorkspace({
 }: NotesWorkspaceProps) {
   const [notes, setNotes] = React.useState<NoteRecord[]>(() => sortNotes(initialNotes))
   const [selectedNoteId, setSelectedNoteId] = React.useState<string | null>(initialSelectedNoteId)
+  const [activeRailKey, setActiveRailKey] = React.useState<RailKey>(DEFAULT_RAIL_KEY)
   const [contentDraft, setContentDraft] = React.useState("")
   const [search, setSearch] = React.useState("")
-  const [showArchived, setShowArchived] = React.useState(false)
+  const [isMobileRailOpen, setIsMobileRailOpen] = React.useState(false)
   const [isMobileListOpen, setIsMobileListOpen] = React.useState(false)
   const [isCreating, setIsCreating] = React.useState(false)
   const [pendingDeleteNote, setPendingDeleteNote] = React.useState<NoteRecord | null>(null)
@@ -228,16 +274,8 @@ export function NotesWorkspace({
   const [isRenamingFolder, setIsRenamingFolder] = React.useState(false)
   const [pendingDeleteFolder, setPendingDeleteFolder] = React.useState<NoteFolderRecord | null>(null)
   const [isDeletingFolder, setIsDeletingFolder] = React.useState(false)
-  const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
-    projects: true,
-    tasks: true,
-  })
-  const [touchFolderMenuId, setTouchFolderMenuId] = React.useState<string | null>(null)
 
   const searchRef = React.useRef<HTMLInputElement | null>(null)
-  const folderLongPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-  const folderLongPressTriggeredRef = React.useRef(false)
-  const folderLongPressIdRef = React.useRef<string | null>(null)
   const lastSyncedRef = React.useRef<{ id: string | null; title: string; content: string }>({
     id: null,
     title: "",
@@ -251,32 +289,34 @@ export function NotesWorkspace({
     [notes, selectedNoteId]
   )
 
-  React.useEffect(() => {
-    setCollapsedSections((current) => {
-      const next = { ...current }
-      for (const folder of folders) {
-        const key = `folder:${folder.id}`
-        if (next[key] === undefined) next[key] = false
-      }
-      return next
-    })
-  }, [folders])
   const selectedNoteSourceType = React.useMemo(() => getNoteSourceType(selectedNote), [selectedNote])
   const selectedNoteIsLinked = selectedNoteSourceType !== "note"
-  const editorUploadContextId = React.useMemo(() => {
-    if (!selectedNote) return undefined
-    if (selectedNoteSourceType === "project") {
-      return selectedNote.sourceId || selectedNote.id.replace(/^project:/, "")
+
+  const defaultFolder = React.useMemo(
+    () => folders.find((folder) => folder.isDefault) ?? null,
+    [folders]
+  )
+
+  const smartCollectionCounts = React.useMemo(() => {
+    const personalNotes = notes.filter((note) => getNoteSourceType(note) === "note")
+    return {
+      all: notes.filter((note) => !(getNoteSourceType(note) === "note" && note.archived)).length,
+      pinned: personalNotes.filter((note) => !note.archived && note.pinned).length,
+      archived: personalNotes.filter((note) => note.archived).length,
+      projects: notes.filter((note) => getNoteSourceType(note) === "project").length,
+      tasks: notes.filter((note) => getNoteSourceType(note) === "task").length,
     }
-    if (selectedNoteSourceType === "task") {
-      return (
-        selectedNote.sourceProjectId ||
-        selectedNote.sourceId ||
-        selectedNote.id.replace(/^task:/, "")
-      )
+  }, [notes])
+
+  const folderCounts = React.useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const folder of folders) counts.set(folder.id, 0)
+    for (const note of notes) {
+      if (getNoteSourceType(note) !== "note" || note.archived || !note.folderId) continue
+      counts.set(note.folderId, (counts.get(note.folderId) || 0) + 1)
     }
-    return selectedNote.id
-  }, [selectedNote, selectedNoteSourceType])
+    return counts
+  }, [folders, notes])
 
   React.useEffect(() => {
     if (!selectedNote) {
@@ -297,10 +337,13 @@ export function NotesWorkspace({
     }
   }, [selectedNote, selectedNoteSourceType])
 
-  const visibleNotes = React.useMemo(() => {
+  const railFilteredNotes = React.useMemo(() => {
+    return getFilteredByRail(notes, activeRailKey)
+  }, [notes, activeRailKey])
+
+  const filteredNotes = React.useMemo(() => {
     const needle = search.trim().toLowerCase()
-    const filtered = notes.filter((note) => {
-      if (note.archived !== showArchived) return false
+    const visible = railFilteredNotes.filter((note) => {
       if (!needle) return true
       return (
         getNoteDisplayTitle(note).toLowerCase().includes(needle) ||
@@ -309,25 +352,34 @@ export function NotesWorkspace({
       )
     })
 
-    if (!needle) return filtered
-
-    return [...filtered].sort((a, b) => {
+    const sorted = [...visible].sort((a, b) => {
       const scoreDiff = scoreSearchMatch(b, needle) - scoreSearchMatch(a, needle)
-      if (scoreDiff !== 0) return scoreDiff
+      if (needle && scoreDiff !== 0) return scoreDiff
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     })
-  }, [notes, search, showArchived])
+    return sorted
+  }, [railFilteredNotes, search])
 
-  const visibleSections = React.useMemo<NoteSection[]>(
-    () => buildVisibleNoteSections(visibleNotes, folders, showArchived, foldersEnabled),
-    [folders, foldersEnabled, showArchived, visibleNotes]
-  )
-  const defaultFolder = React.useMemo(
-    () => folders.find((folder) => folder.isDefault) ?? null,
-    [folders]
-  )
-  const searchQuery = search.trim()
-  const hasSearchQuery = searchQuery.length > 0
+  const groupedNotes = React.useMemo(() => groupNotesByDate(filteredNotes), [filteredNotes])
+
+  React.useEffect(() => {
+    if (!selectedNoteId) return
+    const existsInRail = filteredNotes.some((note) => note.id === selectedNoteId)
+    if (existsInRail) return
+    const nextFallback = filteredNotes[0]?.id ?? null
+    setSelectedNoteId(nextFallback)
+  }, [filteredNotes, selectedNoteId])
+
+  const editorUploadContextId = React.useMemo(() => {
+    if (!selectedNote) return undefined
+    if (selectedNoteSourceType === "project") {
+      return selectedNote.sourceId || selectedNote.id.replace(/^project:/, "")
+    }
+    if (selectedNoteSourceType === "task") {
+      return selectedNote.sourceProjectId || selectedNote.sourceId || selectedNote.id.replace(/^task:/, "")
+    }
+    return selectedNote.id
+  }, [selectedNote, selectedNoteSourceType])
 
   const persistNote = React.useCallback(
     async (noteId: string, contentValue: string) => {
@@ -342,6 +394,7 @@ export function NotesWorkspace({
       if (snapshot.id === noteId && snapshot.title === normalizedTitle && snapshot.content === contentValue) {
         return true
       }
+
       if (sourceType === "project") {
         const projectId = existingNote.sourceId || existingNote.id.replace(/^project:/, "")
         const result = await updateProject(projectId, { description: contentValue })
@@ -444,7 +497,7 @@ export function NotesWorkspace({
         }
 
         setNotes((current) => upsertNote(current, result.data as NoteRecord))
-        setShowArchived(false)
+        setActiveRailKey("all")
         setSelectedNoteId(result.data.id)
         setEditorFocusToken((current) => current + 1)
         setIsMobileListOpen(false)
@@ -479,6 +532,7 @@ export function NotesWorkspace({
       })
       setNewFolderName("")
       setIsAddingFolder(false)
+      setActiveRailKey(folderRailKey(result.data.id))
       toast.success("Folder created")
     } finally {
       setIsCreatingFolder(false)
@@ -556,12 +610,15 @@ export function NotesWorkspace({
             : note
         )
       )
+      if (activeRailKey === folderRailKey(pendingDeleteFolder.id)) {
+        setActiveRailKey(folderRailKey(result.data.defaultFolderId))
+      }
       setPendingDeleteFolder(null)
       toast.success(`Folder deleted. Notes moved to ${result.data.defaultFolderName}.`)
     } finally {
       setIsDeletingFolder(false)
     }
-  }, [pendingDeleteFolder])
+  }, [activeRailKey, pendingDeleteFolder])
 
   const handleAssignFolder = React.useCallback(
     async (note: NoteRecord, folderId: string | null) => {
@@ -572,9 +629,7 @@ export function NotesWorkspace({
       const previousFolderId = note.folderId ?? null
       const previousFolderName = note.folderName ?? null
       const nextFolderName =
-        folderId === null
-          ? "Unfiled"
-          : folders.find((folder) => folder.id === folderId)?.name || "Folder"
+        folderId === null ? "Unfiled" : folders.find((folder) => folder.id === folderId)?.name || "Folder"
 
       setNotes((current) =>
         current.map((item) =>
@@ -616,7 +671,7 @@ export function NotesWorkspace({
     if (notes.length === 0 && !storageUnavailable) {
       void handleCreateNote({ content: "" })
     } else if (!selectedNoteId) {
-      const firstActive = notes.find((note) => !note.archived) ?? notes[0]
+      const firstActive = notes.find((note) => !(getNoteSourceType(note) === "note" && note.archived)) ?? notes[0]
       if (firstActive) setSelectedNoteId(firstActive.id)
     }
   }, [handleCreateNote, notes, selectedNoteId, storageUnavailable])
@@ -640,7 +695,7 @@ export function NotesWorkspace({
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
       void persistNote(selectedNoteId, contentDraft)
-    }, 750)
+    }, 700)
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
@@ -678,23 +733,8 @@ export function NotesWorkspace({
   React.useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      if (folderLongPressTimerRef.current) clearTimeout(folderLongPressTimerRef.current)
     }
   }, [])
-
-  React.useEffect(() => {
-    if (!touchFolderMenuId) return
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as HTMLElement | null
-      if (!target) return
-      if (target.closest("[data-touch-folder-menu='true']")) return
-      if (target.closest(`[data-folder-row-id='${touchFolderMenuId}']`)) return
-      setTouchFolderMenuId(null)
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown)
-    return () => document.removeEventListener("pointerdown", handlePointerDown)
-  }, [touchFolderMenuId])
 
   const handleArchiveToggle = React.useCallback(
     async (note: NoteRecord) => {
@@ -707,14 +747,11 @@ export function NotesWorkspace({
       }
 
       setNotes((current) => upsertNote(current, result.data as NoteRecord))
-      if (selectedNoteId === note.id && nextArchived !== showArchived) {
-        const fallback = notes.find(
-          (candidate) => candidate.id !== note.id && candidate.archived === showArchived
-        )
-        setSelectedNoteId(fallback?.id ?? null)
+      if (selectedNoteId === note.id && nextArchived) {
+        setSelectedNoteId(filteredNotes.find((candidate) => candidate.id !== note.id)?.id ?? null)
       }
     },
-    [notes, selectedNoteId, showArchived]
+    [filteredNotes, selectedNoteId]
   )
 
   const handlePinToggle = React.useCallback(async (note: NoteRecord) => {
@@ -727,14 +764,10 @@ export function NotesWorkspace({
     setNotes((current) => upsertNote(current, result.data as NoteRecord))
   }, [])
 
-  const handleDelete = React.useCallback(
-    async (note: NoteRecord) => {
-      if (getNoteSourceType(note) !== "note") return
-
-      setPendingDeleteNote(note)
-    },
-    []
-  )
+  const handleDelete = React.useCallback(async (note: NoteRecord) => {
+    if (getNoteSourceType(note) !== "note") return
+    setPendingDeleteNote(note)
+  }, [])
 
   const confirmDelete = React.useCallback(async () => {
     if (!pendingDeleteNote) return
@@ -749,664 +782,447 @@ export function NotesWorkspace({
 
       setNotes((current) => current.filter((item) => item.id !== pendingDeleteNote.id))
       if (selectedNoteId === pendingDeleteNote.id) {
-        const fallback = notes.find(
-          (candidate) =>
-            candidate.id !== pendingDeleteNote.id && candidate.archived === showArchived
-        )
-        setSelectedNoteId(fallback?.id ?? null)
+        setSelectedNoteId(filteredNotes.find((candidate) => candidate.id !== pendingDeleteNote.id)?.id ?? null)
       }
       setPendingDeleteNote(null)
     } finally {
       setIsDeletingNote(false)
     }
-  }, [notes, pendingDeleteNote, selectedNoteId, showArchived])
+  }, [filteredNotes, pendingDeleteNote, selectedNoteId])
 
   const appendTemplate = React.useCallback(() => {
     if (selectedNoteSourceType === "project") {
-      setContentDraft((current) => (current.trim() ? `${current}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}` : PROJECT_REQUIREMENTS_TEMPLATE))
+      setContentDraft((current) =>
+        current.trim() ? `${current}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}` : PROJECT_REQUIREMENTS_TEMPLATE
+      )
       return
     }
     if (selectedNoteSourceType === "task") {
-      setContentDraft((current) => (current.trim() ? `${current}<p></p>${TASK_NOTES_TEMPLATE}` : TASK_NOTES_TEMPLATE))
+      setContentDraft((current) =>
+        current.trim() ? `${current}<p></p>${TASK_NOTES_TEMPLATE}` : TASK_NOTES_TEMPLATE
+      )
     }
   }, [selectedNoteSourceType])
 
-  const renderNotesList = React.useCallback(
-    (isMobile = false) => (
-      <div
-        className={cn(
-          "flex h-full min-h-0 flex-col",
-          isMobile
-            ? "bg-[var(--surface-lowest)]"
-            : "bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_84%,var(--bg-surface)_16%)]"
-        )}
-      >
-        <div
-          className={cn(
-            "group/notes-head sticky top-0 z-10 border-b border-[var(--line-subtle)] px-3 py-2 backdrop-blur-sm",
-            isMobile
-              ? "bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)]"
-              : "bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_92%,var(--bg-surface)_8%)]/95"
-          )}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                {showArchived ? "Archived" : "All notes"}
-              </p>
-              <span className="text-[11px] font-medium tabular-nums text-[var(--text-muted)]">{visibleNotes.length}</span>
+  const searchQuery = search.trim()
+
+  const railButtonClass = (active: boolean) =>
+    cn(
+      "group flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-all",
+      NOTE_SURFACE_FONT,
+      active
+        ? "bg-[rgba(255,255,255,0.14)] text-[#f7f9fc]"
+        : "text-[#c9d0dc] hover:bg-[rgba(255,255,255,0.08)] hover:text-[#f4f7fb]"
+    )
+
+  const renderLeftRail = (isMobile = false) => (
+    <div className={cn("flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
+      <div className="border-b border-[rgba(255,255,255,0.12)] px-3 py-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9ea8b8]">Collections</p>
+      </div>
+      <div className={cn("ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5") }>
+        <div className="space-y-1">
+          <button type="button" onClick={() => setActiveRailKey("all")} className={railButtonClass(activeRailKey === "all") }>
+            <span className="inline-flex items-center gap-2"><NotebookPen className="h-4 w-4" />All Notes</span>
+            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.all}</span>
+          </button>
+          <button type="button" onClick={() => setActiveRailKey("pinned")} className={railButtonClass(activeRailKey === "pinned") }>
+            <span className="inline-flex items-center gap-2"><Pin className="h-4 w-4" />Pinned</span>
+            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.pinned}</span>
+          </button>
+          <button type="button" onClick={() => setActiveRailKey("archived")} className={railButtonClass(activeRailKey === "archived") }>
+            <span className="inline-flex items-center gap-2"><Archive className="h-4 w-4" />Archived</span>
+            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.archived}</span>
+          </button>
+          <button type="button" onClick={() => setActiveRailKey("projects")} className={railButtonClass(activeRailKey === "projects") }>
+            <span className="inline-flex items-center gap-2"><FolderKanban className="h-4 w-4" />Project Notes</span>
+            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.projects}</span>
+          </button>
+          <button type="button" onClick={() => setActiveRailKey("tasks")} className={railButtonClass(activeRailKey === "tasks") }>
+            <span className="inline-flex items-center gap-2"><ListTodo className="h-4 w-4" />Task Notes</span>
+            <span className="text-[11px] tabular-nums text-[#95a0b2]">{smartCollectionCounts.tasks}</span>
+          </button>
+        </div>
+
+        {foldersEnabled ? (
+          <div className="mt-5">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9ea8b8]">Folders</p>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 rounded-md text-[#b9c2d1] hover:bg-[rgba(255,255,255,0.1)] hover:text-[#eef2f8]"
+                onClick={() => setIsAddingFolder((current) => !current)}
+                disabled={isCreatingFolder || storageUnavailable}
+              >
+                <FolderPlus className="h-4 w-4" />
+              </Button>
             </div>
-            {!showArchived && foldersEnabled ? (
-              <div className="flex items-center gap-1.5 transition-opacity duration-150 md:opacity-0 md:group-hover/notes-head:opacity-100 md:group-focus-within/notes-head:opacity-100">
+            {isAddingFolder ? (
+              <div className="mb-2 flex items-center gap-1.5">
+                <Input
+                  value={newFolderName}
+                  onChange={(event) => setNewFolderName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault()
+                      void handleCreateFolder()
+                    }
+                  }}
+                  placeholder="Folder name"
+                  className="h-8 rounded-lg border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.08)] text-xs text-[#eef2f8] placeholder:text-[#9ba7b9]"
+                />
                 <Button
                   type="button"
-                  size="icon"
-                  variant="outline"
-                  className="h-8 w-8 rounded-xl border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,transparent)] text-[var(--text-secondary)] shadow-none hover:bg-[var(--surface-low)]"
-                  onClick={() => setIsAddingFolder((current) => !current)}
+                  size="sm"
+                  className="h-8 rounded-lg border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.12)] px-2.5 text-xs text-[#edf2f9] hover:bg-[rgba(255,255,255,0.18)]"
+                  onClick={() => void handleCreateFolder()}
                   disabled={isCreatingFolder || storageUnavailable}
-                  aria-label="Add folder"
-                  title="Add folder"
                 >
-                  <FolderPlus className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  className="h-8 w-8 rounded-xl border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,transparent)] text-[var(--text-secondary)] shadow-none hover:bg-[var(--surface-low)]"
-                  onClick={() => void handleCreateNote({ content: "" })}
-                  disabled={isCreating || storageUnavailable}
-                  aria-label="Quick add note"
-                  title="Quick add note"
-                >
-                  <Plus className="h-3.5 w-3.5" />
+                  Add
                 </Button>
               </div>
             ) : null}
-          </div>
-          {isAddingFolder && !showArchived && foldersEnabled ? (
-            <div className="mt-2 flex items-center gap-1.5">
-              <Input
-                value={newFolderName}
-                onChange={(event) => setNewFolderName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault()
-                    void handleCreateFolder()
-                  }
-                }}
-                placeholder="Folder name"
-                className="h-8 rounded-lg border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_97%,transparent)] text-xs"
-              />
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 rounded-lg px-2.5 text-xs shadow-none"
-                onClick={() => void handleCreateFolder()}
-                disabled={isCreatingFolder || storageUnavailable}
-              >
-                Add
-              </Button>
-            </div>
-          ) : null}
-        </div>
-        <div className={cn("ui-scrollbar ui-scrollbar-inset mr-1 flex-1 overflow-y-auto", isMobile ? "p-2.5 pr-2" : "px-2.5 pb-2 pt-1.5 pr-2")}>
-          {visibleSections.length > 0 ? (
-            <div className="space-y-1.5">
-              {visibleSections.map((section) => (
-                <div key={section.key} className="group/section space-y-0.5">
-                  {(() => {
-                    const isFolderSection = foldersEnabled && section.key.startsWith("folder:")
-                    const folderId = isFolderSection ? getFolderIdFromSectionKey(section.key) : null
-                    const folder = folderId ? folders.find((item) => item.id === folderId) ?? null : null
-                    const isDefaultFolder = Boolean(folder?.isDefault)
-                    const isEditingThisFolder = Boolean(folder && editingFolderId === folder.id)
-                    const isCollapsibleSection = COLLAPSIBLE_NOTE_SECTION_KEYS.has(section.key) || isFolderSection
-                    const isCollapsed = Boolean(collapsedSections[section.key])
-                    const rowIcon = <Folder className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
-
-                    return isCollapsibleSection ? (
-                    <div className="relative">
+            <div className="space-y-1">
+              {folders.map((folder) => {
+                const key = folderRailKey(folder.id)
+                const active = activeRailKey === key
+                const isEditing = editingFolderId === folder.id
+                return (
+                  <div key={folder.id} className={cn("rounded-xl px-2 py-1", active ? "bg-[rgba(255,255,255,0.1)]" : "") }>
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        data-folder-row-id={folder?.id}
-                        className="group/folder-row relative grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-1.5 rounded-md px-1.5 py-1.5 text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-low)_26%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,transparent)]"
-                        onClick={(event) => {
-                          if (
-                            folder &&
-                            folderLongPressTriggeredRef.current &&
-                            folderLongPressIdRef.current === folder.id
-                          ) {
-                            event.preventDefault()
-                            event.stopPropagation()
-                            folderLongPressTriggeredRef.current = false
-                            return
-                          }
-                          if (folder && touchFolderMenuId === folder.id) {
-                            setTouchFolderMenuId(null)
-                            return
-                          }
-                          setCollapsedSections((current) => ({
-                            ...current,
-                            [section.key]: !current[section.key],
-                          }))
-                        }}
-                        onPointerDown={(event) => {
-                          if (!folder || event.pointerType === "mouse") return
-                          folderLongPressTriggeredRef.current = false
-                          folderLongPressIdRef.current = folder.id
-                          if (folderLongPressTimerRef.current) {
-                            clearTimeout(folderLongPressTimerRef.current)
-                          }
-                          folderLongPressTimerRef.current = setTimeout(() => {
-                            folderLongPressTriggeredRef.current = true
-                            setTouchFolderMenuId(folder.id)
-                          }, 450)
-                        }}
-                        onPointerUp={() => {
-                          if (folderLongPressTimerRef.current) {
-                            clearTimeout(folderLongPressTimerRef.current)
-                            folderLongPressTimerRef.current = null
-                          }
-                        }}
-                        onPointerLeave={() => {
-                          if (folderLongPressTimerRef.current) {
-                            clearTimeout(folderLongPressTimerRef.current)
-                            folderLongPressTimerRef.current = null
-                          }
-                        }}
-                        onPointerCancel={() => {
-                          if (folderLongPressTimerRef.current) {
-                            clearTimeout(folderLongPressTimerRef.current)
-                            folderLongPressTimerRef.current = null
-                          }
-                        }}
-                        aria-expanded={!collapsedSections[section.key]}
+                        onClick={() => setActiveRailKey(key)}
+                        className={cn(
+                          "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1.5 text-left text-[13px]",
+                          active ? "text-[#f2f5fb]" : "text-[#b8c1d1]"
+                        )}
                       >
-                        <div className="flex min-w-0 items-start gap-1.5">
-                          {rowIcon}
-                          {isEditingThisFolder ? (
-                            <Input
-                              value={editingFolderName}
-                              onChange={(event) => setEditingFolderName(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  void commitRenameFolder()
-                                }
-                                if (event.key === "Escape") {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  cancelRenameFolder()
-                                }
-                              }}
-                              onClick={(event) => event.stopPropagation()}
-                              className="h-7 min-w-0 rounded-md border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-[11px]"
-                              autoFocus
-                            />
-                          ) : (
-                            <p className="min-w-0 whitespace-normal break-words text-[12px] font-medium leading-5 text-[var(--text-secondary)] line-clamp-2">
-                              {section.label}
-                            </p>
-                          )}
-                        </div>
-                        <span className="inline-flex h-6 min-w-7 shrink-0 items-center justify-end px-0.5 text-right text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
-                          {section.notes.length}
-                        </span>
-                        <ChevronRight
-                          className={cn(
-                            "h-[17px] w-[17px] shrink-0 justify-self-end text-[var(--text-muted)] transition-all duration-200 md:group-hover/section:opacity-0 md:group-focus-within/section:opacity-0",
-                            isCollapsed ? "rotate-0" : "rotate-90"
-                          )}
-                        />
+                        <Folder className="h-4 w-4 shrink-0" />
+                        {isEditing ? (
+                          <Input
+                            value={editingFolderName}
+                            onChange={(event) => setEditingFolderName(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault()
+                                void commitRenameFolder()
+                              }
+                              if (event.key === "Escape") {
+                                event.preventDefault()
+                                cancelRenameFolder()
+                              }
+                            }}
+                            className="h-7 min-w-0 rounded-md border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.1)] px-2 text-[11px] text-[#eef2f8]"
+                            autoFocus
+                          />
+                        ) : (
+                          <span className="truncate">{folder.name}</span>
+                        )}
                       </button>
-                      {isFolderSection && folder ? (
-                        <div className="pointer-events-none absolute right-1 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-lg bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] px-1 py-0.5 opacity-0 shadow-[0_6px_16px_-14px_rgba(15,23,42,0.4)] transition-all duration-150 md:flex md:translate-x-1 md:scale-95 md:group-hover/section:pointer-events-auto md:group-hover/section:translate-x-0 md:group-hover/section:scale-100 md:group-hover/section:opacity-100 md:group-focus-within/section:pointer-events-auto md:group-focus-within/section:translate-x-0 md:group-focus-within/section:scale-100 md:group-focus-within/section:opacity-100">
-                          {isEditingThisFolder ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  void commitRenameFolder()
-                                }}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]/55 hover:text-[var(--text-primary)]"
-                                aria-label="Save folder name"
-                                title="Save folder name"
-                                disabled={isRenamingFolder}
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  cancelRenameFolder()
-                                }}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]/55 hover:text-[var(--text-primary)]"
-                                aria-label="Cancel folder rename"
-                                title="Cancel folder rename"
-                                disabled={isRenamingFolder}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  startRenameFolder(folder)
-                                }}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]/55 hover:text-[var(--text-primary)]"
-                                aria-label="Rename folder"
-                                title="Rename folder"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                              {!isDefaultFolder ? (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.preventDefault()
-                                    event.stopPropagation()
-                                    setPendingDeleteFolder(folder)
-                                  }}
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-500/90 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
-                                  aria-label="Delete folder"
-                                  title="Delete folder"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              ) : null}
-                            </>
-                          )}
-                        </div>
-                      ) : null}
-                      {isFolderSection && folder && touchFolderMenuId === folder.id ? (
-                        <div
-                          data-touch-folder-menu="true"
-                          className="absolute right-1 top-[calc(100%+2px)] z-20 w-44 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl md:hidden"
-                        >
+                      <span className="text-[11px] tabular-nums text-[#95a0b2]">{folderCounts.get(folder.id) || 0}</span>
+                      {isEditing ? (
+                        <>
                           <button
                             type="button"
-                            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]"
-                            onClick={(event) => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              startRenameFolder(folder)
-                              setTouchFolderMenuId(null)
-                            }}
+                            onClick={() => void commitRenameFolder()}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#b5bfce] hover:bg-[rgba(255,255,255,0.1)]"
+                            disabled={isRenamingFolder}
                           >
-                            Rename folder
+                            <Check className="h-3.5 w-3.5" />
                           </button>
-                          {!isDefaultFolder ? (
+                          <button
+                            type="button"
+                            onClick={cancelRenameFolder}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#b5bfce] hover:bg-[rgba(255,255,255,0.1)]"
+                            disabled={isRenamingFolder}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startRenameFolder(folder)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#b5bfce] hover:bg-[rgba(255,255,255,0.1)]"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          {!folder.isDefault ? (
                             <button
                               type="button"
-                              className="mt-0.5 w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-500 transition-colors hover:bg-rose-500/10"
-                              onClick={(event) => {
-                                event.preventDefault()
-                                event.stopPropagation()
-                                setPendingDeleteFolder(folder)
-                                setTouchFolderMenuId(null)
-                              }}
+                              onClick={() => setPendingDeleteFolder(folder)}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50"
                             >
-                              Delete folder
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           ) : null}
-                        </div>
-                      ) : null}
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <div className="grid min-h-10 w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-1.5 rounded-md px-1.5 py-1.5 transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-low)_26%,transparent)]">
-                      <div className="flex min-w-0 items-start gap-1.5">
-                        {rowIcon}
-                        <p className="min-w-0 whitespace-normal break-words text-[12px] font-medium leading-5 text-[var(--text-secondary)] line-clamp-2">
-                          {section.label}
-                        </p>
-                      </div>
-                      <span className="inline-flex h-6 min-w-7 shrink-0 items-center justify-end px-0.5 text-right text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
-                        {section.notes.length}
-                      </span>
-                      <ChevronRight
-                        className={cn(
-                          "h-[17px] w-[17px] shrink-0 justify-self-end text-[var(--text-muted)] transition-transform duration-200",
-                          Boolean(collapsedSections[section.key]) ? "rotate-0" : "rotate-90"
-                        )}
-                      />
-                    </div>
-                  )
-                  })()}
-                  {(() => {
-                    const isFolderSection = foldersEnabled && section.key.startsWith("folder:")
-                    const isCollapsibleSection = COLLAPSIBLE_NOTE_SECTION_KEYS.has(section.key) || isFolderSection
-                    const isCollapsed = Boolean(collapsedSections[section.key])
-                    const shouldRenderNotes = !isCollapsibleSection || !isCollapsed
-                    return shouldRenderNotes ? (
-                    <div className="space-y-1">
-                      {section.notes.map((note) => {
-                      const selected = note.id === selectedNoteId
-                      const sourceType = getNoteSourceType(note)
-                      const isLinked = sourceType !== "note"
-
-                      return (
-                        <div
-                          key={note.id}
-                          onClick={() => {
-                            setSelectedNoteId(note.id)
-                            if (isMobile) setIsMobileListOpen(false)
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault()
-                              setSelectedNoteId(note.id)
-                              if (isMobile) setIsMobileListOpen(false)
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                          className={cn(
-                            "group relative w-full overflow-hidden rounded-[16px] border px-3 py-2.5 text-left transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_24%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-lowest)]",
-                            selected
-                              ? "translate-x-[1px] border-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_14%,var(--surface-lowest))] shadow-[0_12px_28px_-22px_rgba(15,23,42,0.42)]"
-                              : "border-transparent bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] hover:-translate-y-[1px] hover:border-[var(--line-subtle)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_76%,var(--surface-low)_24%)] hover:shadow-[0_10px_22px_-24px_rgba(15,23,42,0.35)]"
-                          )}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={cn(
-                              "absolute inset-y-2 left-0 w-[3px] rounded-full transition-all duration-200",
-                              selected ? "bg-[var(--brand-cyan)] opacity-100" : "bg-transparent opacity-0"
-                            )}
-                          />
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="line-clamp-1 text-[13px] font-semibold leading-5 text-[var(--text-primary)]">
-                                {getNoteDisplayTitle(note)}
-                              </p>
-                              <p className="mt-0.5 line-clamp-2 text-[11px] leading-[1.35rem] text-[var(--text-secondary)]">
-                                {getNotePreview(note)}
-                              </p>
-                            </div>
-                            {!isLinked && note.pinned ? (
-                              <Pin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-                            ) : null}
-                          </div>
-                          <div className="mt-2 flex items-center justify-between gap-2">
-                            <div className="min-w-0 flex items-center gap-1.5 text-[10px] font-medium text-[var(--text-muted)]">
-                              <span className="truncate">
-                                {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
-                              </span>
-                              {isLinked ? (
-                                <>
-                                  <span className="text-[var(--text-muted)]">•</span>
-                                  <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)] shadow-[inset_0_0_0_1px_rgba(148,163,184,0.16)]">
-                                    {sourceType === "project" ? (
-                                      <FolderKanban className="h-3 w-3 shrink-0" />
-                                    ) : (
-                                      <ListTodo className="h-3 w-3 shrink-0" />
-                                    )}
-                                    <span className="truncate normal-case text-[9px] font-medium tracking-normal">
-                                      {sourceType === "project" ? "Project" : "Task"}
-                                      {note.sourceLabel ? ` · ${note.sourceLabel}` : ""}
-                                    </span>
-                                  </span>
-                                </>
-                              ) : null}
-                            </div>
-                            {!isLinked ? (
-                              <div
-                                className={cn(
-                                  "flex items-center gap-0.5 transition-all duration-200",
-                                  isMobile || selected
-                                    ? "translate-x-0 opacity-100"
-                                    : "translate-x-0 opacity-100 lg:translate-x-1 lg:opacity-0 lg:group-hover:translate-x-0 lg:group-hover:opacity-100 lg:group-focus-within:translate-x-0 lg:group-focus-within:opacity-100"
-                                )}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.preventDefault()
-                                    event.stopPropagation()
-                                    void handlePinToggle(note)
-                                  }}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,transparent)]"
-                                  aria-label={note.pinned ? "Unpin note" : "Pin note"}
-                                >
-                                  {note.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.preventDefault()
-                                    event.stopPropagation()
-                                    void handleArchiveToggle(note)
-                                  }}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_26%,transparent)]"
-                                  aria-label={note.archived ? "Restore note" : "Archive note"}
-                                >
-                                  {note.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.preventDefault()
-                                    event.stopPropagation()
-                                    void handleDelete(note)
-                                  }}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
-                                  aria-label="Delete note"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      )
-                      })}
-                    </div>
-                    ) : null
-                  })()}
-                </div>
-              ))}
+                  </div>
+                )
+              })}
             </div>
-          ) : (
-            <div className="rounded-[18px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_84%,var(--surface-low)_16%)] p-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] shadow-[0_6px_18px_-14px_rgba(15,23,42,0.25)]">
-                <NotebookPen className="h-4 w-4 text-[var(--text-muted)]" />
-              </div>
-              <p className="mt-3 text-sm font-semibold text-[var(--text-secondary)]">
-                {hasSearchQuery ? `No results for "${searchQuery}"` : "No notes in this view"}
-              </p>
-              <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)]">
-                {hasSearchQuery
-                  ? "Try a different keyword or clear search."
-                  : "Try switching between active and archived notes."}
-              </p>
-              {hasSearchQuery ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-3 h-8 rounded-lg px-3 text-xs"
-                  onClick={() => setSearch("")}
-                >
-                  Clear search
-                </Button>
-              ) : null}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
-    ),
-    [
-      cancelRenameFolder,
-      collapsedSections,
-      commitRenameFolder,
-      editingFolderId,
-      editingFolderName,
-      folders,
-      foldersEnabled,
-      handleArchiveToggle,
-      handleCreateFolder,
-      handleCreateNote,
-      handleDelete,
-      handlePinToggle,
-      isAddingFolder,
-      isCreating,
-      isCreatingFolder,
-      isRenamingFolder,
-      newFolderName,
-      selectedNoteId,
-      showArchived,
-      startRenameFolder,
-      storageUnavailable,
-      hasSearchQuery,
-      searchQuery,
-      touchFolderMenuId,
-      visibleNotes.length,
-      visibleSections,
-    ]
+    </div>
   )
 
+  const renderMiddleList = (isMobile = false) => (
+    <div className={cn("flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
+      <div className="border-b border-[rgba(255,255,255,0.12)] px-3 py-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#98a4b7]">{searchQuery ? "Search Results" : "Notes"}</p>
+          <span className="text-[11px] tabular-nums text-[#98a4b7]">{filteredNotes.length}</span>
+        </div>
+      </div>
+      <div className={cn("ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5") }>
+        {groupedNotes.length ? (
+          <div className="space-y-4">
+            {groupedNotes.map((group) => (
+              <div key={group.key}>
+                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8f9bae]">{group.label}</p>
+                <div className="mt-1.5 space-y-1">
+                  {group.notes.map((note) => {
+                    const selected = note.id === selectedNoteId
+                    const sourceType = getNoteSourceType(note)
+                    const imageSrc = extractFirstImageSrc(note.content || "")
+                    const isLinked = sourceType !== "note"
+                    return (
+                      <div
+                        key={note.id}
+                        onClick={() => {
+                          setSelectedNoteId(note.id)
+                          if (isMobile) setIsMobileListOpen(false)
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault()
+                            setSelectedNoteId(note.id)
+                            if (isMobile) setIsMobileListOpen(false)
+                          }
+                        }}
+                        className={cn(
+                          "group rounded-xl border border-transparent px-2.5 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9aa6ba]",
+                          selected
+                            ? "bg-[rgba(255,255,255,0.14)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)]"
+                            : "hover:bg-[rgba(255,255,255,0.07)]"
+                        )}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div className="mt-0.5 h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[rgba(255,255,255,0.12)]">
+                            {imageSrc ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={imageSrc} alt="Note preview" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[#aab4c3]"><NotebookPen className="h-3.5 w-3.5" /></div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-1 text-[14px] font-semibold tracking-[-0.01em] text-[#f2f5fb]">{getNoteDisplayTitle(note)}</p>
+                            <p className="mt-0.5 line-clamp-1 text-[12px] text-[#a8b3c2]">{getNotePreview(note)}</p>
+                            <div className="mt-1.5 flex items-center justify-between gap-2">
+                              <p className="truncate text-[11px] text-[#8f9bae]">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</p>
+                              <div className="flex items-center gap-0.5">
+                                {!isLinked ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        void handlePinToggle(note)
+                                      }}
+                                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#aeb7c7] hover:bg-[rgba(255,255,255,0.12)] hover:text-[#eef3fb]"
+                                      aria-label={note.pinned ? "Unpin note" : "Pin note"}
+                                    >
+                                      {note.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        void handleArchiveToggle(note)
+                                      }}
+                                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#aeb7c7] hover:bg-[rgba(255,255,255,0.12)] hover:text-[#eef3fb]"
+                                      aria-label={note.archived ? "Restore note" : "Archive note"}
+                                    >
+                                      {note.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        void handleDelete(note)
+                                      }}
+                                      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50"
+                                      aria-label="Delete note"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="rounded-md bg-[rgba(255,255,255,0.12)] px-1.5 py-0.5 text-[10px] text-[#c3ccda]">
+                                    {sourceType === "project" ? "Project" : "Task"}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.06)] p-5 text-center">
+            <p className="text-sm font-medium text-[#e6ebf4]">
+              {searchQuery ? `No results for "${searchQuery}"` : "No notes in this view"}
+            </p>
+            <p className="mt-1 text-[12px] text-[#a4afc0]">
+              {searchQuery ? "Try another keyword or clear search." : "Create a note or switch collection."}
+            </p>
+            {searchQuery ? (
+              <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setSearch("")}>
+                Clear search
+              </Button>
+            ) : null}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const activeRailLabel = React.useMemo(() => {
+    if (activeRailKey === "all") return "All Notes"
+    if (activeRailKey === "pinned") return "Pinned"
+    if (activeRailKey === "archived") return "Archived"
+    if (activeRailKey === "projects") return "Project Notes"
+    if (activeRailKey === "tasks") return "Task Notes"
+    const folderId = getFolderIdFromRailKey(activeRailKey)
+    if (!folderId) return "Notes"
+    return folders.find((folder) => folder.id === folderId)?.name || "Folder"
+  }, [activeRailKey, folders])
+
+  const showArchivedMode = activeRailKey === "archived"
+
   return (
-    <div className="flex h-[calc(100dvh-7.25rem-env(safe-area-inset-bottom))] min-h-[calc(100dvh-7.25rem-env(safe-area-inset-bottom))] flex-col gap-3 overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:min-h-[calc(100dvh-3.5rem)]">
-      <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
+    <div className={cn("flex h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))] min-h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))] flex-col gap-3 overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:min-h-[calc(100dvh-3.5rem)]", NOTE_SURFACE_FONT)}>
+      <div className="rounded-[20px] border border-[#e7eaf0] bg-[#f8f9fb] p-3 shadow-[0_8px_18px_-20px_rgba(15,23,42,0.5)] sm:p-4 lg:p-4">
         <DashboardPageHeader
           title="Notes"
           showMobile
+          className={NOTE_SURFACE_FONT}
           search={
             <div className="flex items-center gap-2">
-              <NotesSearchInput
-                ref={searchRef}
-                value={search}
-                onChange={setSearch}
-              />
+              <NotesSearchInput ref={searchRef} value={search} onChange={setSearch} variant="apple" density="comfortable" />
               <Button
                 type="button"
-                variant={showArchived ? "default" : "outline"}
-                className="h-10 rounded-xl"
-                onClick={() => setShowArchived((current) => !current)}
-                disabled={false}
+                variant={showArchivedMode ? "default" : "outline"}
+                className="h-10 rounded-[12px] border-[#d7dce4] bg-white px-4 text-[14px] font-semibold text-[#4b5563]"
+                onClick={() => setActiveRailKey(showArchivedMode ? "all" : "archived")}
               >
-                {showArchived ? "Archived" : "Active"}
+                {showArchivedMode ? "Archived" : "Active"}
               </Button>
             </div>
           }
-          mobileSearch={
-            <NotesSearchInput
-              ref={searchRef}
-              value={search}
-              onChange={setSearch}
-              showShortcutHint={false}
-            />
-          }
+          mobileSearch={<NotesSearchInput ref={searchRef} value={search} onChange={setSearch} showShortcutHint={false} variant="apple" density="compact" />}
           actions={
             <Button
               type="button"
-              className="header-action-button !h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
+              className="!h-10 !w-auto !min-w-0 !rounded-[12px] !border !border-[#d5dae3] !bg-[color:color-mix(in_srgb,#f4f6fa_94%,white)] !px-5 !text-[#1f2937] hover:!bg-[#eceff4]"
               onClick={() => void handleCreateNote({ content: "" })}
               disabled={isCreating || storageUnavailable}
             >
-              <FilePlus2 className="h-5 w-5 xl:mr-1.5 xl:h-4 xl:w-4" />
+              <FilePlus2 className="h-4 w-4" />
               <span className="inline text-sm font-semibold">Add</span>
             </Button>
           }
           mobileActions={
             <Button
               type="button"
-              className="header-action-button !h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
+              className="!h-10 !w-auto !min-w-0 !rounded-[12px] !border !border-[#d5dae3] !bg-[color:color-mix(in_srgb,#f4f6fa_94%,white)] !px-5 !text-[#1f2937] hover:!bg-[#eceff4]"
               onClick={() => void handleCreateNote({ content: "" })}
               disabled={isCreating || storageUnavailable}
             >
-              <FilePlus2 className="h-5 w-5 xl:h-4 xl:w-4" />
+              <FilePlus2 className="h-4 w-4" />
               <span className="inline text-sm font-semibold">Add</span>
             </Button>
           }
         />
       </div>
 
-      <Card className="flex-1 min-h-0 gap-0 overflow-hidden rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] py-0 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.35)]">
+      <Card className="flex-1 min-h-0 gap-0 overflow-hidden rounded-[20px] border border-[#e7eaf0] bg-[#fbfbfc] py-0 shadow-[0_12px_28px_-30px_rgba(15,23,42,0.52)]">
         <CardContent className="flex-1 min-h-0 p-0">
-          <div className="grid h-full min-h-0 lg:grid-cols-[264px_minmax(0,1fr)]">
-            <aside className="hidden min-h-0 overflow-hidden border-r border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_84%,var(--bg-surface)_16%)] lg:block">
-              {renderNotesList(false)}
-            </aside>
+          <div className="hidden h-full min-h-0 md:grid md:grid-cols-[196px_292px_minmax(0,1fr)] xl:grid-cols-[214px_326px_minmax(0,1fr)]">
+            <aside className="min-h-0 border-r border-[#1c2433] bg-[linear-gradient(180deg,#181c26_0%,#131824_100%)]">{renderLeftRail(false)}</aside>
+            <aside className="min-h-0 border-r border-[#232c3d] bg-[linear-gradient(180deg,#1f2533_0%,#1a2130_100%)]">{renderMiddleList(false)}</aside>
 
-            <section className="min-w-0 min-h-0 overflow-hidden bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,var(--surface-low)_8%)] lg:flex lg:flex-col">
-              <div className="border-b border-[var(--line-subtle)] px-3 py-2.5 sm:px-3.5 sm:py-2.5 lg:hidden">
-                <div className="inline-flex items-center gap-2">
-                  <Sheet open={isMobileListOpen} onOpenChange={setIsMobileListOpen}>
-                    <SheetTrigger asChild>
-                      <Button type="button" variant="outline" size="sm" className="h-8 rounded-xl">
-                        <NotebookPen className="mr-1.5 h-4 w-4" />
-                        Notes ({visibleNotes.length})
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="w-[86vw] border-r border-[var(--line-subtle)] p-0 sm:max-w-md">
-                      <SheetHeader className="gap-3 border-b border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--bg-surface-soft)_90%,var(--bg-surface)_10%)] px-4 py-3">
-                        <div className="flex items-center justify-between gap-3 pr-10">
-                          <SheetTitle>Notes</SheetTitle>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-8 rounded-xl px-3"
-                            onClick={() => void handleCreateNote({ content: "" })}
-                            disabled={isCreating || storageUnavailable}
-                          >
-                            <FilePlus2 className="mr-1.5 h-3.5 w-3.5" />
-                            Add
-                          </Button>
-                        </div>
-                        <NotesSearchInput
-                          ref={searchRef}
-                          value={search}
-                          onChange={setSearch}
-                          showShortcutHint={false}
-                        />
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[11px] font-medium text-[var(--text-muted)]">
-                            {showArchived ? "Archived notes" : "Active notes"}
-                          </p>
-                          <Button
-                            type="button"
-                            variant={showArchived ? "default" : "outline"}
-                            size="sm"
-                            className="h-8 rounded-xl px-3"
-                            onClick={() => setShowArchived((current) => !current)}
-                          >
-                            {showArchived ? "Archived" : "Active"}
-                          </Button>
-                        </div>
-                      </SheetHeader>
-                      {renderNotesList(true)}
-                      <div className="border-t border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] px-4 py-3">
-                        <p className="text-[11px] font-medium text-[var(--text-muted)]">
-                          Tap a note to open it in the editor.
-                        </p>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
-                </div>
-              </div>
-
+            <section className="min-w-0 min-h-0 overflow-hidden bg-white">
               {selectedNote ? (
-                <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
-                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 space-y-3 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-3.5 lg:pr-3">
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="border-b border-[#e8eaee] px-5 py-4 lg:px-7">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[#1f2937]">{getNoteDisplayTitle(selectedNote)}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-[#98a2b3]">
+                          <span>{activeRailLabel}</span>
+                          <span>•</span>
+                          <span>{format(new Date(selectedNote.updatedAt), "d MMMM yyyy 'at' HH:mm")}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!selectedNoteIsLinked && foldersEnabled ? (
+                          <Select
+                            value={selectedNote.folderId || (defaultFolder?.id ?? NO_FOLDER_VALUE)}
+                            onValueChange={(value) => {
+                              void handleAssignFolder(selectedNote, value === NO_FOLDER_VALUE ? null : value)
+                            }}
+                          >
+                            <SelectTrigger className="h-9 min-w-[170px] rounded-[12px] border-[#d7dce4] bg-white px-2 text-xs font-medium text-[#4b5563] shadow-none">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-[#dde3eb]">
+                              {!foldersEnabled || !defaultFolder ? <SelectItem value={NO_FOLDER_VALUE}>Unfiled</SelectItem> : null}
+                              {folders.map((folder) => (
+                                <SelectItem key={folder.id} value={folder.id}>
+                                  {folder.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : null}
+                        {selectedNoteIsLinked ? (
+                          <span className="rounded-lg bg-[#eef1f6] px-2.5 py-1 text-[11px] font-medium text-[#667085]">
+                            {selectedNoteSourceType === "project" ? "Project" : "Task"}
+                            {selectedNote.sourceLabel ? ` · ${selectedNote.sourceLabel}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-4 lg:pr-3">
                     <RichTextEditor
                       value={contentDraft}
                       onChange={setContentDraft}
-                      placeholder="Write here..."
+                      placeholder="Start writing"
                       variant="plain"
                       mode="document"
                       notesMode
+                      notesAppearance="apple"
                       focusToken={editorFocusToken}
                       documentLayout="left"
                       uploadProjectId={editorUploadContextId}
@@ -1418,93 +1234,110 @@ export function NotesWorkspace({
                             variant="ghost"
                             size="icon"
                             onClick={appendTemplate}
-                            className="h-11 w-11 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] lg:h-8 lg:w-8"
+                            className="h-10 w-10 rounded-full text-[#6b7280] hover:bg-[#eef1f6] hover:text-[#1f2937] lg:h-8 lg:w-8"
                             aria-label="Add template"
                             title="Add template"
                           >
-                            <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
+                            <Plus className="h-4 w-4" />
                           </Button>
                         ) : undefined
                       }
-                      className="rounded-[22px] bg-transparent [&_.ProseMirror]:text-[14px] [&_.ProseMirror]:leading-7 [&_.ProseMirror]:text-[var(--text-secondary)]"
-                      minHeightClassName="min-h-[54vh] sm:min-h-[58vh] lg:min-h-[60vh]"
+                      className="rounded-[18px] bg-transparent"
+                      minHeightClassName="min-h-[56vh]"
                     />
-                  </div>
-                  <div className="relative shrink-0 overflow-hidden bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] px-3 py-2.5 sm:px-4 lg:px-6">
-                    <div className="absolute inset-x-0 top-0 h-px bg-[var(--surface-low)]/80" aria-hidden="true" />
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium text-[var(--text-muted)]">
-                      {!selectedNoteIsLinked && foldersEnabled ? (
-                        <>
-                          <span className="text-[var(--text-secondary)]">Folder</span>
-                          <Select
-                            value={selectedNote.folderId || (defaultFolder?.id ?? NO_FOLDER_VALUE)}
-                            onValueChange={(value) => {
-                              void handleAssignFolder(selectedNote, value === NO_FOLDER_VALUE ? null : value)
-                            }}
-                          >
-                            <SelectTrigger className="h-7 min-w-[160px] rounded-lg border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-[10px] font-medium text-[var(--text-secondary)] shadow-none focus:ring-0">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-[var(--line-subtle)]">
-                              {!foldersEnabled || !defaultFolder ? (
-                                <SelectItem value={NO_FOLDER_VALUE}>Unfiled</SelectItem>
-                              ) : null}
-                              {folders.map((folder) => (
-                                <SelectItem key={folder.id} value={folder.id}>
-                                  {folder.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <span className="text-[var(--text-muted)]">•</span>
-                        </>
-                      ) : null}
-                      {selectedNoteIsLinked ? (
-                        <>
-                          <span className="text-[var(--text-secondary)]">
-                            {selectedNoteSourceType === "project" ? "Project" : "Task"}: {selectedNote.title}
-                          </span>
-                          {selectedNote.sourceLabel ? (
-                            <>
-                              <span className="text-[var(--text-muted)]">•</span>
-                              <span>{selectedNote.sourceLabel}</span>
-                            </>
-                          ) : null}
-                          <span className="text-[var(--text-muted)]">•</span>
-                        </>
-                      ) : null}
-                      <span>Created {format(new Date(selectedNote.createdAt), "dd.MM.yyyy")}</span>
-                      <span className="text-[var(--text-muted)]">•</span>
-                      <span>Updated {formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</span>
-                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-4 pr-2 sm:p-5 sm:pr-3 lg:p-6 lg:pr-3">
-                  <div className="flex min-h-[320px] items-start justify-start rounded-[22px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_84%,var(--surface-low)_16%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] sm:p-7">
-                    <div className="max-w-md space-y-2.5">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_8px_20px_-16px_rgba(15,23,42,0.28)]">
-                        <NotebookPen className="h-5 w-5 text-[var(--text-muted)]" />
-                      </div>
-                      <div className="space-y-1 text-left">
-                        <p className="text-[16px] font-semibold text-[var(--text-primary)]">Start a fresh note</p>
-                        <p className="text-[13px] leading-6 text-[var(--text-secondary)]">
-                          Start typing right away. Your first line becomes the note title.
-                        </p>
-                      </div>
-                      <div className="pt-1">
-                        <Button
-                          type="button"
-                          className="h-10 rounded-xl"
-                          onClick={() => void handleCreateNote({ content: "" })}
-                          disabled={isCreating}
-                        >
-                          <FilePlus2 className="mr-1.5 h-4 w-4" />
-                          New note
-                        </Button>
-                      </div>
-                    </div>
+                <div className="flex h-full items-center justify-center p-6">
+                  <div className="max-w-md rounded-2xl border border-dashed border-[#d8dee8] bg-[#f8f9fb] p-7 text-left">
+                    <p className="text-[20px] font-semibold tracking-[-0.01em] text-[#1f2937]">No note selected</p>
+                    <p className="mt-2 text-[13px] leading-6 text-[#6b7280]">Choose a note from the list or create a new one.</p>
+                    <Button type="button" className="mt-4 h-10 rounded-[12px]" onClick={() => void handleCreateNote({ content: "" })} disabled={isCreating}>
+                      <FilePlus2 className="mr-1.5 h-4 w-4" />
+                      New note
+                    </Button>
                   </div>
+                </div>
+              )}
+            </section>
+          </div>
+
+          <div className="md:hidden h-full min-h-0">
+            <div className="flex items-center gap-2 border-b border-[#e8eaee] bg-white px-3 py-2.5">
+              <Sheet open={isMobileRailOpen} onOpenChange={setIsMobileRailOpen}>
+                <SheetTrigger asChild>
+                  <Button type="button" variant="outline" size="sm" className="h-8 rounded-[12px] border-[#d7dce4] bg-white">
+                    <Folder className="mr-1.5 h-4 w-4" />
+                    Collections
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[86vw] border-r border-[#1c2433] bg-[linear-gradient(180deg,#181c26_0%,#131824_100%)] p-0 sm:max-w-md">
+                  <SheetHeader className="border-b border-[rgba(255,255,255,0.12)] bg-transparent px-4 py-3">
+                    <SheetTitle className={cn(NOTE_SURFACE_FONT, "text-[#e8edf6]")}>Collections</SheetTitle>
+                  </SheetHeader>
+                  {renderLeftRail(true)}
+                </SheetContent>
+              </Sheet>
+
+              <Sheet open={isMobileListOpen} onOpenChange={setIsMobileListOpen}>
+                <SheetTrigger asChild>
+                  <Button type="button" variant="outline" size="sm" className="h-8 rounded-[12px] border-[#d7dce4] bg-white">
+                    <NotebookPen className="mr-1.5 h-4 w-4" />
+                    Notes ({filteredNotes.length})
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[92vw] border-r border-[#232c3d] bg-[linear-gradient(180deg,#1f2533_0%,#1a2130_100%)] p-0 sm:max-w-lg">
+                  <SheetHeader className="border-b border-[rgba(255,255,255,0.12)] bg-transparent px-4 py-3">
+                    <SheetTitle className={cn(NOTE_SURFACE_FONT, "text-[#e8edf6]")}>{activeRailLabel}</SheetTitle>
+                  </SheetHeader>
+                  {renderMiddleList(true)}
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            <section className="h-[calc(100%-53px)] min-h-0 overflow-hidden bg-white">
+              {selectedNote ? (
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="border-b border-[#e8eaee] px-4 py-3">
+                    <p className={cn("truncate text-[20px] font-semibold tracking-[-0.02em] text-[#1f2937]", NOTE_SURFACE_FONT)}>{getNoteDisplayTitle(selectedNote)}</p>
+                    <p className={cn("mt-1 text-[12px] text-[#98a2b3]", NOTE_SURFACE_FONT)}>{formatDistanceToNow(new Date(selectedNote.updatedAt), { addSuffix: true })}</p>
+                  </div>
+                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2">
+                    <RichTextEditor
+                      value={contentDraft}
+                      onChange={setContentDraft}
+                      placeholder="Start writing"
+                      variant="plain"
+                      mode="document"
+                      notesMode
+                      notesAppearance="apple"
+                      focusToken={editorFocusToken}
+                      documentLayout="left"
+                      uploadProjectId={editorUploadContextId}
+                      documentWidth="reading"
+                      toolbarActions={
+                        selectedNoteIsLinked ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={appendTemplate}
+                            className="h-10 w-10 rounded-full text-[#6b7280] hover:bg-[#eef1f6] hover:text-[#1f2937]"
+                            aria-label="Add template"
+                            title="Add template"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        ) : undefined
+                      }
+                      className="rounded-[16px] bg-transparent"
+                      minHeightClassName="min-h-[60vh]"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center p-6">
+                  <p className={cn("text-[13px] text-[#6b7280]", NOTE_SURFACE_FONT)}>Open a note to start editing.</p>
                 </div>
               )}
             </section>
@@ -1532,11 +1365,7 @@ export function NotesWorkspace({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeletingNote}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={isDeletingNote}
-            >
+            <AlertDialogAction variant="destructive" onClick={confirmDelete} disabled={isDeletingNote}>
               {isDeletingNote ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1563,11 +1392,7 @@ export function NotesWorkspace({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeletingFolder}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={confirmDeleteFolder}
-              disabled={isDeletingFolder}
-            >
+            <AlertDialogAction variant="destructive" onClick={confirmDeleteFolder} disabled={isDeletingFolder}>
               {isDeletingFolder ? "Deleting..." : "Delete folder"}
             </AlertDialogAction>
           </AlertDialogFooter>
