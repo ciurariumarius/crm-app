@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import ExcelJS from "exceljs"
 import { matchesLmsClientSearch } from "../lib/lms-work-entries/client-search"
+import { resolveLmsDataSection } from "../lib/lms-work-entries/data-section"
 import { isValidDateOnly, normalizeDateRange } from "../lib/lms-work-entries/date"
 import {
   buildLmsCrmExportBuffer,
@@ -23,6 +26,19 @@ async function run() {
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "CLIENT-800")).length, 1)
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "școala")).length, 1)
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "missing-client")).length, 0)
+  assert.equal(resolveLmsDataSection(undefined), "catalog")
+  assert.equal(resolveLmsDataSection("catalog"), "catalog")
+  assert.equal(resolveLmsDataSection("imports"), "imports")
+  assert.equal(resolveLmsDataSection("logs"), "logs")
+  assert.equal(resolveLmsDataSection("unknown"), "catalog")
+
+  const workLogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-log-workspace.tsx"), "utf8")
+  const dataWorkspaceSource = readFileSync(resolve(process.cwd(), "components/lms-tasks/lms-analysis-data-workspace.tsx"), "utf8")
+  assert.doesNotMatch(workLogSource, /Manage tasks|Manage predefined tasks/)
+  assert.match(workLogSource, /\/lms-analysis\/data\?section=catalog/)
+  assert.match(dataWorkspaceSource, /value="catalog"/)
+  assert.match(dataWorkspaceSource, /value="imports"/)
+  assert.match(dataWorkspaceSource, /value="logs"/)
 
   const buffer = await buildLmsCrmExportBuffer([
     {

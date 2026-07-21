@@ -25,9 +25,13 @@ function run() {
   assert.match(projectsPage, /hidden md:block/)
   assert.match(projectsPage, /md:hidden/)
 
-  const dataPage = read("app/(dashboard)/lms-analysis/data/page.tsx")
-  assert.match(dataPage, /hidden md:block/)
-  assert.match(dataPage, /md:hidden/)
+  const dataWorkspace = read("components/lms-tasks/lms-analysis-data-workspace.tsx")
+  assert.match(dataWorkspace, /hidden md:block/)
+  assert.match(dataWorkspace, /md:hidden/)
+
+  const workTaskCatalog = read("components/lms-work-entries/lms-work-task-catalog.tsx")
+  assert.match(workTaskCatalog, /flex flex-col gap-2 sm:flex-row/)
+  assert.match(workTaskCatalog, /sm:flex-row sm:items-center/)
 
   const dateFilter = read("components/lms-tasks/lms-tasks-date-range-filters.tsx")
   assert.match(dateFilter, /min\(96vw,640px\)/)

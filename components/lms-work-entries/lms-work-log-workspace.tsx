@@ -16,16 +16,13 @@ import {
   Loader2,
   Pencil,
   Plus,
-  Settings2,
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
   createLmsWorkEntry,
-  createLmsWorkTask,
   deleteLmsWorkEntry,
   updateLmsWorkEntry,
-  updateLmsWorkTask,
 } from "@/lib/actions/lms-work-entries"
 import { getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
 import { matchesLmsClientSearch } from "@/lib/lms-work-entries/client-search"
@@ -59,7 +56,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 
@@ -279,103 +275,6 @@ function EditEntryDialog({
   )
 }
 
-function ManageTasksDialog({
-  open,
-  onOpenChange,
-  tasks,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  tasks: LmsWorkTaskOption[]
-}) {
-  const router = useRouter()
-  const [newTask, setNewTask] = React.useState("")
-  const [drafts, setDrafts] = React.useState<Record<string, string>>({})
-  const [busyId, setBusyId] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    setDrafts(Object.fromEntries(tasks.map((task) => [task.id, task.name])))
-  }, [tasks])
-
-  async function addTask(event: React.FormEvent) {
-    event.preventDefault()
-    setBusyId("new")
-    const result = await createLmsWorkTask(newTask)
-    setBusyId(null)
-    if (!result.success) {
-      toast.error(result.error)
-      return
-    }
-    setNewTask("")
-    toast.success("Task added")
-    router.refresh()
-  }
-
-  async function saveTask(task: LmsWorkTaskOption, nextActive = task.isActive) {
-    setBusyId(task.id)
-    const result = await updateLmsWorkTask(task.id, {
-      name: drafts[task.id] ?? task.name,
-      isActive: nextActive,
-    })
-    setBusyId(null)
-    if (!result.success) {
-      toast.error(result.error)
-      return
-    }
-    toast.success(nextActive === task.isActive ? "Task updated" : nextActive ? "Task activated" : "Task deactivated")
-    router.refresh()
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Manage predefined tasks</DialogTitle>
-          <DialogDescription>Task changes affect new selections only; saved work entries keep their original task name.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={addTask} className="flex gap-2">
-          <Input value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="New task name" maxLength={255} required />
-          <Button type="submit" disabled={busyId === "new" || !newTask.trim()}>
-            {busyId === "new" ? <Loader2 className="animate-spin" /> : <Plus />}
-            Add
-          </Button>
-        </form>
-        <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
-          {tasks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[var(--line-subtle)] p-6 text-center text-sm text-[var(--text-muted)]">
-              No predefined tasks yet. Add the first one above.
-            </div>
-          ) : tasks.map((task) => (
-            <div key={task.id} className="flex flex-col gap-2 rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-3 sm:flex-row sm:items-center">
-              <Input
-                value={drafts[task.id] ?? task.name}
-                onChange={(event) => setDrafts((current) => ({ ...current, [task.id]: event.target.value }))}
-                maxLength={255}
-                disabled={busyId === task.id}
-              />
-              <div className="flex items-center justify-between gap-3 sm:justify-end">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={task.isActive}
-                    onCheckedChange={(checked) => saveTask(task, checked)}
-                    disabled={busyId === task.id}
-                    aria-label={`${task.isActive ? "Deactivate" : "Activate"} ${task.name}`}
-                  />
-                  <span className="w-14 text-xs text-[var(--text-muted)]">{task.isActive ? "Active" : "Inactive"}</span>
-                </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => saveTask(task)} disabled={busyId === task.id || !(drafts[task.id] ?? "").trim()}>
-                  {busyId === task.id ? <Loader2 className="animate-spin" /> : null}
-                  Save
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 export function LmsWorkLogWorkspace({
   data,
   activePeriod,
@@ -394,7 +293,6 @@ export function LmsWorkLogWorkspace({
   const [minutes, setMinutes] = React.useState("")
   const [saving, setSaving] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
-  const [manageTasksOpen, setManageTasksOpen] = React.useState(false)
   const [editingEntry, setEditingEntry] = React.useState<LmsWorkEntryRow | null>(null)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [period, setPeriod] = React.useState(activePeriod)
@@ -513,21 +411,14 @@ export function LmsWorkLogWorkspace({
 
   return (
     <div className="space-y-6 pb-8">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg"><Clock3 className="h-5 w-5 text-[var(--brand-primary)]" />Record work</CardTitle>
-              <CardDescription className="mt-2">Capture client work in a few fields, then export it to the company CRM format.</CardDescription>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => setManageTasksOpen(true)}>
-              <Settings2 /> Manage tasks
-            </Button>
-          </div>
+      <Card className="gap-4 py-5">
+        <CardHeader className="gap-1 px-5 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg"><Clock3 className="h-5 w-5 text-[var(--brand-primary)]" />Record work</CardTitle>
+          <CardDescription>Capture client work quickly. Entries can be exported below in the company CRM format.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.3fr)_minmax(110px,0.65fr)_auto] lg:items-end">
+        <CardContent className="px-5 sm:px-6">
+          <form onSubmit={handleCreate} className="space-y-3">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.25fr)_120px_150px] lg:items-end">
               <div className="space-y-2">
                 <Label>Client</Label>
                 <ClientCombobox clients={data.clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} />
@@ -538,9 +429,24 @@ export function LmsWorkLogWorkspace({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="work-minutes">Minutes</Label>
-                <Input id="work-minutes" type="number" min={1} max={1440} step={1} inputMode="numeric" value={minutes} onChange={(event) => setMinutes(event.target.value)} placeholder="45" required />
+                <div className="relative">
+                  <Input
+                    id="work-minutes"
+                    type="number"
+                    min={1}
+                    max={1440}
+                    step={1}
+                    inputMode="numeric"
+                    value={minutes}
+                    onChange={(event) => setMinutes(event.target.value)}
+                    placeholder="45"
+                    className="pr-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    required
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-[var(--text-muted)]">min</span>
+                </div>
               </div>
-              <Button type="submit" className="w-full lg:w-auto" disabled={saving || !today || data.clients.length === 0 || activeTasks.length === 0}>
+              <Button type="submit" className="h-10 w-full" disabled={saving || !today || data.clients.length === 0 || activeTasks.length === 0}>
                 {saving ? <Loader2 className="animate-spin" /> : <Plus />}
                 Save entry
               </Button>
@@ -556,7 +462,7 @@ export function LmsWorkLogWorkspace({
                     if (next) setWorkDate(today)
                   }}
                 />
-                <Label htmlFor="different-work-date" className="cursor-pointer text-sm font-medium">
+                <Label htmlFor="different-work-date" className="cursor-pointer text-xs font-medium text-[var(--text-secondary)]">
                   Select a different date
                 </Label>
               </div>
@@ -566,9 +472,13 @@ export function LmsWorkLogWorkspace({
             </div>
           </form>
           {activeTasks.length === 0 ? (
-            <button type="button" onClick={() => setManageTasksOpen(true)} className="mt-4 text-left text-sm font-medium text-[var(--brand-primary)] hover:underline">
-              Add a predefined task before recording work.
-            </button>
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              No active work tasks are configured.{" "}
+              <Link href="/lms-analysis/data?section=catalog" className="font-semibold underline underline-offset-2">
+                Configure tasks in Data
+              </Link>
+              .
+            </div>
           ) : null}
         </CardContent>
       </Card>
@@ -661,7 +571,6 @@ export function LmsWorkLogWorkspace({
         </CardContent>
       </Card>
 
-      <ManageTasksDialog open={manageTasksOpen} onOpenChange={setManageTasksOpen} tasks={data.tasks} />
       <EditEntryDialog entry={editingEntry} clients={data.clients} tasks={data.tasks} onClose={() => setEditingEntry(null)} />
     </div>
   )

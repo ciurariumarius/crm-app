@@ -5,6 +5,19 @@ import type { LmsWorkLogPageData } from "@/lib/lms-work-entries/types"
 
 const DEFAULT_PAGE_SIZE = 50
 
+async function findLmsWorkTasksForTenant(tenantId: string) {
+  return prisma.lmsWorkTask.findMany({
+    where: { tenantId },
+    select: { id: true, name: true, isActive: true },
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+  })
+}
+
+export async function getLmsWorkTaskOptions() {
+  const session = await requireTenantContext()
+  return findLmsWorkTasksForTenant(session.tenantId)
+}
+
 export async function getLmsWorkLogPageData(args?: {
   from?: string | null
   to?: string | null
@@ -31,11 +44,7 @@ export async function getLmsWorkLogPageData(args?: {
       select: { id: true, client: true },
       orderBy: { client: "asc" },
     }),
-    prisma.lmsWorkTask.findMany({
-      where: { tenantId: session.tenantId },
-      select: { id: true, name: true, isActive: true },
-      orderBy: [{ isActive: "desc" }, { name: "asc" }],
-    }),
+    findLmsWorkTasksForTenant(session.tenantId),
     prisma.lmsWorkEntry.count({ where }),
     prisma.lmsWorkEntry.aggregate({ where, _sum: { durationMinutes: true } }),
   ])
