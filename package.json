@@ -13,6 +13,7 @@
     "clean:artifacts": "rm -rf .next tmp/*.json tsconfig.tsbuildinfo",
     "verify": "npm run lint && npm run typecheck && npm run build",
     "test:filters": "tsx scripts/verify-filter-helpers.ts",
+    "test:lms-work": "tsx scripts/verify-lms-work-entries.ts",
     "verify:mobile": "tsx scripts/verify-mobile-guardrails.ts",
     "verify:tablet": "node --import tsx scripts/verify-tablet-guardrails.ts",
     "security:test-guardrails": "tsx scripts/verify-security-guardrails.ts",

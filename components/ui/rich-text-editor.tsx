@@ -6,7 +6,6 @@ import { BubbleMenu } from "@tiptap/react/menus"
 import { mergeAttributes, Node } from "@tiptap/core"
 import type { Editor as TiptapEditor } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
-import Link from "@tiptap/extension-link"
 import Placeholder from "@tiptap/extension-placeholder"
 import { Table } from "@tiptap/extension-table"
 import { TableRow } from "@tiptap/extension-table-row"
@@ -102,6 +101,11 @@ const INITIAL_VIEWER_STATE: ImageViewerState = {
     index: 0,
     zoom: 1,
     sources: [],
+}
+
+function stripAnchorTags(value: string): string {
+    if (!value) return value
+    return value.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, "$1")
 }
 
 function extractImageSources(editor: TiptapEditor): string[] {
@@ -488,19 +492,13 @@ export function RichTextEditor({
             TableHeader,
             TableCell,
             ScreenshotImage,
-            Link.configure({
-                autolink: false,
-                linkOnPaste: false,
-                openOnClick: false,
-                defaultProtocol: "https",
-            }),
             Placeholder.configure({
                 placeholder: placeholder ?? "Start writing...",
                 emptyEditorClass:
                     "is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:pointer-events-none before:h-0",
             }),
         ],
-        content: value,
+        content: stripAnchorTags(value),
         editorProps: {
             attributes: {
                 class: cn(
@@ -569,7 +567,10 @@ export function RichTextEditor({
             },
         },
         onUpdate: ({ editor: currentEditor }) => {
-            const html = currentEditor.getHTML()
+            const html = stripAnchorTags(currentEditor.getHTML())
+            if (html !== currentEditor.getHTML()) {
+                currentEditor.commands.setContent(html, { emitUpdate: false })
+            }
             lastEditorHtmlRef.current = html
             syncImageSources(extractImageSources(currentEditor))
             onChange(html)
@@ -613,12 +614,13 @@ export function RichTextEditor({
 
     React.useEffect(() => {
         if (!editor) return
-        if (value === editor.getHTML()) return
-        if (value === lastEditorHtmlRef.current) return
+        const sanitizedValue = stripAnchorTags(value)
+        if (sanitizedValue === editor.getHTML()) return
+        if (sanitizedValue === lastEditorHtmlRef.current) return
         if (editor.isFocused) return
 
-        editor.commands.setContent(value, { emitUpdate: false })
-        lastEditorHtmlRef.current = value
+        editor.commands.setContent(sanitizedValue, { emitUpdate: false })
+        lastEditorHtmlRef.current = sanitizedValue
     }, [value, editor])
 
     React.useEffect(() => {

@@ -11,8 +11,8 @@ import {
   FolderKanban,
   FolderPlus,
   ListTodo,
-  MoreHorizontal,
   NotebookPen,
+  Pencil,
   Pin,
   PinOff,
   Plus,
@@ -41,7 +41,6 @@ import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -276,7 +275,6 @@ export function NotesWorkspace({
   const [isCreatingFolder, setIsCreatingFolder] = React.useState(false)
   const [editingFolderId, setEditingFolderId] = React.useState<string | null>(null)
   const [editingFolderName, setEditingFolderName] = React.useState("")
-  const [folderMenuOpenId, setFolderMenuOpenId] = React.useState<string | null>(null)
   const [isRenamingFolder, setIsRenamingFolder] = React.useState(false)
   const [pendingDeleteFolder, setPendingDeleteFolder] = React.useState<NoteFolderRecord | null>(null)
   const [isDeletingFolder, setIsDeletingFolder] = React.useState(false)
@@ -563,7 +561,6 @@ export function NotesWorkspace({
   const startRenameFolder = React.useCallback((folder: NoteFolderRecord) => {
     setEditingFolderId(folder.id)
     setEditingFolderName(folder.name)
-    setFolderMenuOpenId(null)
   }, [])
 
   const cancelRenameFolder = React.useCallback(() => {
@@ -635,7 +632,6 @@ export function NotesWorkspace({
       if (activeRailKey === folderRailKey(pendingDeleteFolder.id)) {
         setActiveRailKey(folderRailKey(result.data.defaultFolderId))
       }
-      setFolderMenuOpenId(null)
       setPendingDeleteFolder(null)
       toast.success(`Folder deleted. Notes moved to ${result.data.defaultFolderName}.`)
     } finally {
@@ -900,6 +896,20 @@ export function NotesWorkspace({
         )}
       >
         <div className="space-y-0.5">
+          {foldersEnabled ? (
+            <div className="mb-1 flex justify-end px-1">
+              <button
+                type="button"
+                onClick={() => setIsAddingFolder((current) => !current)}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#6b7280] transition-colors hover:bg-[#edf1f6] hover:text-[#374151]"
+                disabled={isCreatingFolder || storageUnavailable}
+                aria-label="New folder"
+                title="New folder"
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : null}
           <button type="button" onClick={() => setActiveRailKey("all")} className={railButtonClass(activeRailKey === "all") }>
             <span className="inline-flex items-center gap-1.5"><NotebookPen className="h-3.5 w-3.5" />All Notes</span>
             <span className="text-[10px] tabular-nums text-[#7b8796]">{smartCollectionCounts.all}</span>
@@ -920,22 +930,6 @@ export function NotesWorkspace({
             <span className="inline-flex items-center gap-1.5"><ListTodo className="h-3.5 w-3.5" />Task Notes</span>
             <span className="text-[10px] tabular-nums text-[#7b8796]">{smartCollectionCounts.tasks}</span>
           </button>
-          {foldersEnabled ? (
-            <button
-              type="button"
-              onClick={() => setIsAddingFolder((current) => !current)}
-              className={cn(
-                railButtonClass(false),
-                "mt-1 border border-dashed border-[#d7dde7] text-[#5f6c7d] hover:border-[#c9d1de]"
-              )}
-              disabled={isCreatingFolder || storageUnavailable}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <FolderPlus className="h-3.5 w-3.5" />
-                New Folder
-              </span>
-            </button>
-          ) : null}
           {isAddingFolder ? (
             <div className="mt-1.5 flex items-center gap-1.5 px-1">
               <Input
@@ -967,17 +961,8 @@ export function NotesWorkspace({
                 const key = folderRailKey(folder.id)
                 const active = activeRailKey === key
                 const isEditing = editingFolderId === folder.id
-                const isMenuOpen = folderMenuOpenId === folder.id
                 return (
-                  <div
-                    key={folder.id}
-                    className={cn("group rounded-lg px-1.5 py-0.5", active ? "bg-[#eef2f7]" : "")}
-                    onContextMenu={(event) => {
-                      if (isEditing) return
-                      event.preventDefault()
-                      setFolderMenuOpenId(folder.id)
-                    }}
-                  >
+                  <div key={folder.id} className={cn("group rounded-lg px-1.5 py-0.5", active ? "bg-[#eef2f7]" : "")}>
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -1030,45 +1015,32 @@ export function NotesWorkspace({
                           </button>
                         </>
                       ) : (
-                        <DropdownMenu
-                          open={isMenuOpen}
-                          onOpenChange={(open) => setFolderMenuOpenId(open ? folder.id : null)}
-                        >
-                          <DropdownMenuTrigger asChild>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              startRenameFolder(folder)
+                            }}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#5b6573] opacity-0 transition-opacity hover:bg-[#e9edf2] group-hover:opacity-100 focus-visible:opacity-100"
+                            aria-label={`Rename folder ${folder.name}`}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          {!folder.isDefault ? (
                             <button
                               type="button"
-                              className={cn(
-                                "inline-flex h-6 w-6 items-center justify-center rounded-md text-[#5b6573] transition-opacity hover:bg-[#e9edf2]",
-                                isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                              )}
-                              onClick={(event) => event.stopPropagation()}
-                              aria-label={`Folder actions for ${folder.name}`}
-                            >
-                              <MoreHorizontal className="h-3.5 w-3.5" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-lg">
-                            <DropdownMenuItem
                               onClick={(event) => {
                                 event.stopPropagation()
-                                startRenameFolder(folder)
+                                setPendingDeleteFolder(folder)
                               }}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-rose-500 opacity-0 transition-opacity hover:bg-rose-50 group-hover:opacity-100 focus-visible:opacity-100"
+                              aria-label={`Delete folder ${folder.name}`}
                             >
-                              Rename folder
-                            </DropdownMenuItem>
-                            {!folder.isDefault ? (
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  setPendingDeleteFolder(folder)
-                                }}
-                              >
-                                Delete folder
-                              </DropdownMenuItem>
-                            ) : null}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          ) : null}
+                        </div>
                       )}
                     </div>
                   </div>

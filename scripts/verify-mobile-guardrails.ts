@@ -17,6 +17,10 @@ function run() {
   assert.match(tasksPage, /hidden md:block/)
   assert.match(tasksPage, /md:hidden/)
 
+  const workLog = read("components/lms-work-entries/lms-work-log-workspace.tsx")
+  assert.match(workLog, /hidden overflow-hidden rounded-2xl[^\n]+md:block/)
+  assert.match(workLog, /space-y-3 md:hidden/)
+
   const projectsPage = read("app/(dashboard)/lms-analysis/projects/page.tsx")
   assert.match(projectsPage, /hidden md:block/)
   assert.match(projectsPage, /md:hidden/)
