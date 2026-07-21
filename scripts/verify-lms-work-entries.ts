@@ -13,6 +13,10 @@ import {
 import { rankLmsWorkOptionsByFrequency } from "../lib/lms-work-entries/frequent-options"
 import { formatLmsWorkDateLabel, isValidDateOnly, normalizeDateRange } from "../lib/lms-work-entries/date"
 import {
+  canonicalizeLmsWorkTaskName,
+  LMS_WORK_TASK_NAMES_WITH_TRAILING_SPACE,
+} from "../lib/lms-work-entries/task-names"
+import {
   buildLmsCrmExportBuffer,
   LMS_CRM_EXPORT_COLUMN_WIDTHS,
   LMS_CRM_EXPORT_HEADERS,
@@ -74,9 +78,24 @@ async function run() {
     ).map((option) => option.id),
     ["client-a", "client-b", "client-c"]
   )
+  assert.equal(canonicalizeLmsWorkTaskName("Meeting / videocall client"), "Meeting / videocall client ")
+  assert.equal(canonicalizeLmsWorkTaskName("Meeting / videocall client "), "Meeting / videocall client ")
+  assert.equal(canonicalizeLmsWorkTaskName("Custom task  "), "Custom task")
+  assert.equal(LMS_WORK_TASK_NAMES_WITH_TRAILING_SPACE.length, 5)
 
   const workLogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-log-workspace.tsx"), "utf8")
   const workLogDbSource = readFileSync(resolve(process.cwd(), "lib/lms-work-entries/db.ts"), "utf8")
+  const workTaskCatalogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-task-catalog.tsx"), "utf8")
+  const workEntryActionsSource = readFileSync(resolve(process.cwd(), "lib/actions/lms-work-entries.ts"), "utf8")
+  const prismaSchemaSource = readFileSync(resolve(process.cwd(), "prisma/schema.prisma"), "utf8")
+  const taskOrderMigrationSource = readFileSync(
+    resolve(process.cwd(), "prisma/migrations/20260721180000_add_lms_work_task_order_and_defaults/migration.sql"),
+    "utf8"
+  )
+  const exactTaskNamesMigrationSource = readFileSync(
+    resolve(process.cwd(), "prisma/migrations/20260721183000_preserve_exact_lms_task_names/migration.sql"),
+    "utf8"
+  )
   const dataWorkspaceSource = readFileSync(resolve(process.cwd(), "components/lms-tasks/lms-analysis-data-workspace.tsx"), "utf8")
   assert.doesNotMatch(workLogSource, /Manage tasks|Manage predefined tasks/)
   assert.doesNotMatch(workLogSource, /Capture client work quickly/)
@@ -99,6 +118,47 @@ async function run() {
   assert.match(workLogDbSource, /by: \["lmsAllocationId"\]/)
   assert.match(workLogDbSource, /by: \["taskTypeId"\]/)
   assert.match(workLogDbSource, /where: \{ tenantId: session\.tenantId, userId: session\.userId \}/)
+  assert.match(workLogDbSource, /orderBy: \[\{ sortOrder: "asc" \}, \{ name: "asc" \}\]/)
+  assert.match(workTaskCatalogSource, /draggable=\{canReorder\}/)
+  assert.match(workTaskCatalogSource, /reorderLmsWorkTasks/)
+  assert.match(workTaskCatalogSource, /Alt\+ArrowUp Alt\+ArrowDown/)
+  assert.match(workEntryActionsSource, /export async function reorderLmsWorkTasks/)
+  assert.match(workEntryActionsSource, /where: \{ id, tenantId: session\.tenantId \}/)
+  assert.match(prismaSchemaSource, /sortOrder\s+Int\s+@default\(1000\)\s+@map\("sort_order"\)/)
+  assert.match(taskOrderMigrationSource, /INSERT OR IGNORE INTO "lms_work_tasks"/)
+  assert.match(exactTaskNamesMigrationSource, /UPDATE "lms_work_tasks"/)
+  assert.match(exactTaskNamesMigrationSource, /UPDATE "lms_work_entries"/)
+  for (const taskName of LMS_WORK_TASK_NAMES_WITH_TRAILING_SPACE) {
+    assert.ok(exactTaskNamesMigrationSource.includes(`'${taskName}'`), `Missing exact CRM task name: ${taskName}`)
+  }
+  const extractedTaskNames = [
+    "Acces in platforme",
+    "Audit tracking",
+    "Comunicare client / coleg - email / telefon",
+    "Creare GA4 / GTM",
+    "Debriefing client - ca urmare a auditului",
+    "Dezvoltare",
+    "Followup la tracking - ca urmare a debriefing-ului",
+    "Meeting / videocall client",
+    "Meeting / videocall intern",
+    "Modificari in contul de GTM",
+    "Reverificare tracking",
+    "Setare server side tracking",
+    "Setare tracking - alte sisteme de advertising",
+    "Setare tracking facebook ads",
+    "Setare tracking google ads",
+    "Setare tracking google analitics",
+    "Setare tracking tiktok ads",
+    "Task-uri administrative",
+    "Training intern",
+    "Verificare / Setare / Modificare cookie consent",
+  ]
+  let previousTaskPosition = -1
+  for (const taskName of extractedTaskNames) {
+    const position = taskOrderMigrationSource.indexOf(`('${taskName}'`)
+    assert.ok(position > previousTaskPosition, `Missing or out-of-order seeded task: ${taskName}`)
+    previousTaskPosition = position
+  }
   assert.doesNotMatch(dataWorkspaceSource, /TabsList|TabsTrigger|TabsContent/)
   assert.match(dataWorkspaceSource, /id="task-catalog"/)
   assert.match(dataWorkspaceSource, /id="imports"/)
@@ -108,7 +168,7 @@ async function run() {
     {
       workDate: "2026-03-12",
       clientDomainSnapshot: "example.ro",
-      taskNameSnapshot: "Meeting / videocall client",
+      taskNameSnapshot: "Meeting / videocall client ",
       employeeNameSnapshot: "Marius Ciurariu",
       durationMinutes: 60,
     },
@@ -135,7 +195,7 @@ async function run() {
   assert.equal(sheet.getCell("B2").value, "2026-03-12")
   assert.equal(sheet.getCell("B2").numFmt, "@")
   assert.equal(sheet.getCell("C2").value, "example.ro")
-  assert.equal(sheet.getCell("D2").value, "Meeting / videocall client")
+  assert.equal(sheet.getCell("D2").value, "Meeting / videocall client ")
   assert.equal(sheet.getCell("E2").value, "DATA Subdivizie")
   assert.equal(sheet.getCell("F2").value, "Marius Ciurariu")
   assert.equal(sheet.getCell("G2").value, "Marius Ciurariu")

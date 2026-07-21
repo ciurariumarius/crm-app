@@ -6,12 +6,14 @@ import { z } from "zod"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { DateOnlySchema } from "@/lib/lms-work-entries/date"
+import { canonicalizeLmsWorkTaskName } from "@/lib/lms-work-entries/task-names"
 import type { LmsWorkEntryInput, LmsWorkEntryUpdateInput } from "@/lib/lms-work-entries/types"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 
 const EntryIdSchema = z.string().uuid()
 const TaskIdSchema = z.string().uuid()
+const TaskOrderSchema = z.array(TaskIdSchema).min(1).max(1000)
 const WorkEntryInputSchema = z.object({
   workDate: DateOnlySchema,
   lmsAllocationId: z.string().uuid("Select a valid LMS client"),
@@ -29,6 +31,7 @@ function normalizeTaskName(value: string) {
 
 function revalidateWorkLog() {
   revalidatePath("/lms-analysis/work-log")
+  revalidatePath("/lms-analysis/data")
 }
 
 function handleActionError(error: unknown, fallback: string) {
@@ -190,14 +193,21 @@ export async function deleteLmsWorkEntry(entryId: string) {
 export async function createLmsWorkTask(name: string) {
   try {
     const session = await requireTenantContext()
-    const validatedName = TaskNameSchema.parse(name).replace(/\s+/g, " ")
-    const task = await prisma.lmsWorkTask.create({
-      data: {
-        tenantId: session.tenantId,
-        name: validatedName,
-        normalizedName: normalizeTaskName(validatedName),
-      },
-      select: { id: true },
+    const validatedName = canonicalizeLmsWorkTaskName(TaskNameSchema.parse(name))
+    const task = await prisma.$transaction(async (tx) => {
+      const aggregate = await tx.lmsWorkTask.aggregate({
+        where: { tenantId: session.tenantId },
+        _max: { sortOrder: true },
+      })
+      return tx.lmsWorkTask.create({
+        data: {
+          tenantId: session.tenantId,
+          name: validatedName,
+          normalizedName: normalizeTaskName(validatedName),
+          sortOrder: (aggregate._max.sortOrder ?? -1) + 1,
+        },
+        select: { id: true },
+      })
     })
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_TASK_CREATED",
@@ -210,6 +220,40 @@ export async function createLmsWorkTask(name: string) {
   }
 }
 
+export async function reorderLmsWorkTasks(taskIds: string[]) {
+  try {
+    const session = await requireTenantContext()
+    const orderedIds = TaskOrderSchema.parse(taskIds)
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      throw new ActionError("INVALID_TASK_ORDER", "Task order contains duplicates")
+    }
+
+    const existing = await prisma.lmsWorkTask.findMany({
+      where: { tenantId: session.tenantId },
+      select: { id: true },
+    })
+    const existingIds = new Set(existing.map((task) => task.id))
+    if (orderedIds.length !== existing.length || orderedIds.some((id) => !existingIds.has(id))) {
+      throw new ActionError("INVALID_TASK_ORDER", "Refresh the catalog before reordering tasks")
+    }
+
+    await prisma.$transaction(
+      orderedIds.map((id, sortOrder) => prisma.lmsWorkTask.updateMany({
+        where: { id, tenantId: session.tenantId },
+        data: { sortOrder },
+      }))
+    )
+    await logSessionAuditEvent(session, {
+      action: "LMS_WORK_TASKS_REORDERED",
+      details: `taskCount=${orderedIds.length}`,
+    })
+    revalidateWorkLog()
+    return { success: true as const }
+  } catch (error) {
+    return handleActionError(error, "Failed to reorder tasks")
+  }
+}
+
 export async function updateLmsWorkTask(
   taskId: string,
   data: { name: string; isActive: boolean }
@@ -218,7 +262,7 @@ export async function updateLmsWorkTask(
     const session = await requireTenantContext()
     const validatedId = TaskIdSchema.parse(taskId)
     const validated = z.object({ name: TaskNameSchema, isActive: z.boolean() }).parse(data)
-    const name = validated.name.replace(/\s+/g, " ")
+    const name = canonicalizeLmsWorkTaskName(validated.name)
     const existing = await prisma.lmsWorkTask.findFirst({
       where: { id: validatedId, tenantId: session.tenantId },
       select: { id: true },

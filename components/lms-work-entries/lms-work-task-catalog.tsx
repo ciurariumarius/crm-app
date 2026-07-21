@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Check, ListChecks, Loader2, Pencil, Plus, Search, X } from "lucide-react"
+import { ArrowDown, ArrowUp, Check, GripVertical, ListChecks, Loader2, Pencil, Plus, Search, X } from "lucide-react"
 import { toast } from "sonner"
-import { createLmsWorkTask, updateLmsWorkTask } from "@/lib/actions/lms-work-entries"
+import { createLmsWorkTask, reorderLmsWorkTasks, updateLmsWorkTask } from "@/lib/actions/lms-work-entries"
 import type { LmsWorkTaskOption } from "@/lib/lms-work-entries/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,24 +23,32 @@ export function LmsWorkTaskCatalog({ tasks }: { tasks: LmsWorkTaskOption[] }) {
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const [draftName, setDraftName] = React.useState("")
   const [busyId, setBusyId] = React.useState<string | null>(null)
+  const [orderedTasks, setOrderedTasks] = React.useState(tasks)
+  const [draggingId, setDraggingId] = React.useState<string | null>(null)
+  const [dragOverId, setDragOverId] = React.useState<string | null>(null)
 
-  const activeCount = tasks.filter((task) => task.isActive).length
-  const inactiveCount = tasks.length - activeCount
+  const activeCount = orderedTasks.filter((task) => task.isActive).length
+  const inactiveCount = orderedTasks.length - activeCount
+  const canReorder = filter === "all" && !search.trim() && editingId === null && busyId === null
   const visibleTasks = React.useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ro-RO")
-    return tasks.filter((task) => {
+    return orderedTasks.filter((task) => {
       if (filter === "active" && !task.isActive) return false
       if (filter === "inactive" && task.isActive) return false
       return !query || task.name.toLocaleLowerCase("ro-RO").includes(query)
     })
-  }, [filter, search, tasks])
+  }, [filter, orderedTasks, search])
 
   React.useEffect(() => {
-    if (editingId && !tasks.some((task) => task.id === editingId)) {
+    setOrderedTasks(tasks)
+  }, [tasks])
+
+  React.useEffect(() => {
+    if (editingId && !orderedTasks.some((task) => task.id === editingId)) {
       setEditingId(null)
       setDraftName("")
     }
-  }, [editingId, tasks])
+  }, [editingId, orderedTasks])
 
   async function addTask(event: React.FormEvent) {
     event.preventDefault()
@@ -98,8 +106,41 @@ export function LmsWorkTaskCatalog({ tasks }: { tasks: LmsWorkTaskOption[] }) {
     router.refresh()
   }
 
+  async function persistTaskOrder(nextTasks: LmsWorkTaskOption[]) {
+    const previousTasks = orderedTasks
+    setOrderedTasks(nextTasks)
+    setBusyId("reorder")
+    const result = await reorderLmsWorkTasks(nextTasks.map((task) => task.id))
+    setBusyId(null)
+    if (!result.success) {
+      setOrderedTasks(previousTasks)
+      toast.error(result.error)
+      return
+    }
+    toast.success("Task order saved")
+  }
+
+  function moveTask(taskId: string, targetId: string) {
+    if (!canReorder || taskId === targetId) return
+    const fromIndex = orderedTasks.findIndex((task) => task.id === taskId)
+    const targetIndex = orderedTasks.findIndex((task) => task.id === targetId)
+    if (fromIndex < 0 || targetIndex < 0) return
+    const nextTasks = [...orderedTasks]
+    const [movedTask] = nextTasks.splice(fromIndex, 1)
+    nextTasks.splice(targetIndex, 0, movedTask)
+    void persistTaskOrder(nextTasks)
+  }
+
+  function moveTaskByOffset(taskId: string, offset: -1 | 1) {
+    if (!canReorder) return
+    const currentIndex = orderedTasks.findIndex((task) => task.id === taskId)
+    const target = orderedTasks[currentIndex + offset]
+    if (currentIndex < 0 || !target) return
+    moveTask(taskId, target.id)
+  }
+
   const filters: Array<{ value: CatalogFilter; label: string; count: number }> = [
-    { value: "all", label: "All", count: tasks.length },
+    { value: "all", label: "All", count: orderedTasks.length },
     { value: "active", label: "Active", count: activeCount },
     { value: "inactive", label: "Inactive", count: inactiveCount },
   ]
@@ -161,15 +202,84 @@ export function LmsWorkTaskCatalog({ tasks }: { tasks: LmsWorkTaskOption[] }) {
           </div>
         </div>
 
+        {orderedTasks.length > 1 ? (
+          <p className="text-xs text-[var(--text-secondary)]">
+            {canReorder
+              ? "Drag tasks by the handle to set their order in Record Work. Use Alt + Arrow Up/Down from the handle for keyboard reordering."
+              : "Clear search and select All to reorder tasks."}
+          </p>
+        ) : null}
+
         <div className="space-y-2">
-          {visibleTasks.map((task) => {
+          {visibleTasks.map((task, index) => {
             const editing = editingId === task.id
-            const busy = busyId === task.id
+            const busy = busyId === task.id || busyId === "reorder"
             return (
               <div
                 key={task.id}
-                className="flex flex-col gap-3 rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3 sm:flex-row sm:items-center"
+                onDragOver={(event) => {
+                  if (!canReorder || !draggingId) return
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = "move"
+                  setDragOverId(task.id)
+                }}
+                onDragLeave={() => setDragOverId((current) => current === task.id ? null : current)}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  const sourceId = draggingId || event.dataTransfer.getData("text/plain")
+                  setDraggingId(null)
+                  setDragOverId(null)
+                  if (sourceId) moveTask(sourceId, task.id)
+                }}
+                className={cn(
+                  "flex flex-col gap-3 rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3 transition-colors sm:flex-row sm:items-center",
+                  draggingId === task.id && "opacity-50",
+                  dragOverId === task.id && draggingId !== task.id && "border-[var(--brand-primary)] bg-[var(--bg-surface-soft)]"
+                )}
               >
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    draggable={canReorder}
+                    disabled={!canReorder}
+                    aria-label={`Drag to reorder ${task.name}`}
+                    aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+                    title={canReorder ? "Drag to reorder" : "Clear filters to reorder"}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = "move"
+                      event.dataTransfer.setData("text/plain", task.id)
+                      setDraggingId(task.id)
+                    }}
+                    onDragEnd={() => {
+                      setDraggingId(null)
+                      setDragOverId(null)
+                    }}
+                    onKeyDown={(event) => {
+                      if (!event.altKey) return
+                      if (event.key === "ArrowUp") {
+                        event.preventDefault()
+                        moveTaskByOffset(task.id, -1)
+                      }
+                      if (event.key === "ArrowDown") {
+                        event.preventDefault()
+                        moveTaskByOffset(task.id, 1)
+                      }
+                    }}
+                    className="cursor-grab active:cursor-grabbing"
+                  >
+                    <GripVertical />
+                  </Button>
+                  <div className="flex sm:hidden">
+                    <Button type="button" size="icon-sm" variant="ghost" aria-label={`Move ${task.name} up`} disabled={!canReorder || index === 0} onClick={() => moveTaskByOffset(task.id, -1)}>
+                      <ArrowUp />
+                    </Button>
+                    <Button type="button" size="icon-sm" variant="ghost" aria-label={`Move ${task.name} down`} disabled={!canReorder || index === visibleTasks.length - 1} onClick={() => moveTaskByOffset(task.id, 1)}>
+                      <ArrowDown />
+                    </Button>
+                  </div>
+                </div>
                 <div className="min-w-0 flex-1">
                   {editing ? (
                     <Input
@@ -227,7 +337,7 @@ export function LmsWorkTaskCatalog({ tasks }: { tasks: LmsWorkTaskOption[] }) {
 
           {visibleTasks.length === 0 ? (
             <div className="rounded-xl border border-dashed border-[var(--line-subtle)] p-8 text-center text-sm text-[var(--text-secondary)]">
-              {tasks.length === 0 ? "No predefined work tasks yet. Add the first one above." : "No tasks match this search and status filter."}
+              {orderedTasks.length === 0 ? "No predefined work tasks yet. Add the first one above." : "No tasks match this search and status filter."}
             </div>
           ) : null}
         </div>

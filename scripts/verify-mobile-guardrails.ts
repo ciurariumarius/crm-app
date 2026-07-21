@@ -39,6 +39,10 @@ function run() {
   const workTaskCatalog = read("components/lms-work-entries/lms-work-task-catalog.tsx")
   assert.match(workTaskCatalog, /flex flex-col gap-2 sm:flex-row/)
   assert.match(workTaskCatalog, /sm:flex-row sm:items-center/)
+  assert.match(workTaskCatalog, /draggable=\{canReorder\}/)
+  assert.match(workTaskCatalog, /flex sm:hidden/)
+  assert.match(workTaskCatalog, /Move \$\{task\.name\} up/)
+  assert.match(workTaskCatalog, /Move \$\{task\.name\} down/)
 
   const dateFilter = read("components/lms-tasks/lms-tasks-date-range-filters.tsx")
   assert.match(dateFilter, /min\(96vw,640px\)/)

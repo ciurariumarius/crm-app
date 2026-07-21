@@ -11,7 +11,7 @@ async function findLmsWorkTasksForTenant(tenantId: string) {
   return prisma.lmsWorkTask.findMany({
     where: { tenantId },
     select: { id: true, name: true, isActive: true },
-    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   })
 }
 
