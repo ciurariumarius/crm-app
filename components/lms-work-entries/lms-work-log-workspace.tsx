@@ -224,6 +224,41 @@ function TaskCombobox({
   )
 }
 
+function FrequentWorkOptions({
+  ariaLabel,
+  options,
+  value,
+  onValueChange,
+}: {
+  ariaLabel: string
+  options: Array<{ id: string; label: string }>
+  value: string
+  onValueChange: (value: string) => void
+}) {
+  if (options.length === 0) return null
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-[var(--text-muted)]">Frequently used</p>
+      <div role="group" aria-label={ariaLabel} className="flex gap-1.5 overflow-x-auto pb-1">
+        {options.map((option) => (
+          <Button
+            key={option.id}
+            type="button"
+            variant={value === option.id ? "default" : "outline"}
+            aria-pressed={value === option.id}
+            title={option.label}
+            onClick={() => onValueChange(option.id)}
+            className="h-8 min-w-32 max-w-48 flex-1 shrink-0 rounded-lg px-2 text-xs font-semibold"
+          >
+            <span className="truncate">{option.label}</span>
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function TaskSelect({
   tasks,
   value,
@@ -529,15 +564,27 @@ export function LmsWorkLogWorkspace({
               <div className="space-y-2.5">
                 <Label className="text-sm font-semibold">Client</Label>
                 <ClientCombobox clients={data.clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} large />
+                <FrequentWorkOptions
+                  ariaLabel="Frequently used clients"
+                  options={data.frequentClients.map((client) => ({ id: client.id, label: client.client }))}
+                  value={lmsAllocationId}
+                  onValueChange={setLmsAllocationId}
+                />
               </div>
               <div className="space-y-2.5">
                 <Label className="text-sm font-semibold">Task</Label>
                 <TaskCombobox tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} />
+                <FrequentWorkOptions
+                  ariaLabel="Frequently used tasks"
+                  options={data.frequentTasks.map((task) => ({ id: task.id, label: task.name }))}
+                  value={taskTypeId}
+                  onValueChange={setTaskTypeId}
+                />
               </div>
             </div>
 
-            <div className="h-full space-y-5 border-t border-[var(--line-subtle)] pt-5 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
-              <div className="space-y-3">
+            <div className="h-full space-y-4 border-t border-[var(--line-subtle)] pt-5 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
+              <div className="space-y-2.5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <Label className="text-sm font-semibold">Date</Label>
@@ -572,10 +619,10 @@ export function LmsWorkLogWorkspace({
                 ) : null}
               </div>
 
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 <Label htmlFor="work-duration" className="text-sm font-semibold">Minutes</Label>
                 <Select value={durationSelection} onValueChange={selectDuration}>
-                  <SelectTrigger id="work-duration" className="h-12! w-full rounded-xl px-4 text-sm">
+                  <SelectTrigger id="work-duration" className="h-10! w-full rounded-lg px-3 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="start">
@@ -600,7 +647,7 @@ export function LmsWorkLogWorkspace({
                       value={customMinutes}
                       onChange={(event) => setCustomMinutes(event.target.value)}
                       placeholder="Enter minutes"
-                      className="h-12! pr-11 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      className="h-10! pr-11 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                     <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-[var(--text-muted)]">min</span>
                   </div>
@@ -608,9 +655,9 @@ export function LmsWorkLogWorkspace({
                 {customDurationInvalid ? (
                   <p id="custom-duration-error" className="text-xs font-medium text-red-600">Enter 1–1440 whole minutes.</p>
                 ) : null}
-                <div className="space-y-2 pt-1">
+                <div className="space-y-1.5 pt-0.5">
                   <p className="text-xs font-medium text-[var(--text-muted)]">Frequently used</p>
-                  <div role="group" aria-label="Frequently used durations" className="grid grid-cols-3 gap-2">
+                  <div role="group" aria-label="Frequently used durations" className="grid grid-cols-3 gap-1.5">
                     {data.frequentDurations.map((minutes) => (
                       <Button
                         key={minutes}
@@ -618,7 +665,7 @@ export function LmsWorkLogWorkspace({
                         variant={durationMinutes === minutes ? "default" : "outline"}
                         aria-pressed={durationMinutes === minutes}
                         onClick={() => selectDurationShortcut(minutes)}
-                        className="h-9 rounded-lg px-2 text-xs font-semibold"
+                        className="h-8 rounded-lg px-2 text-xs font-semibold"
                       >
                         {minutes} min
                       </Button>

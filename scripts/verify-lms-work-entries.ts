@@ -11,6 +11,7 @@ import {
   buildLmsWorkDurationShortcuts,
   parseCustomLmsWorkDuration,
 } from "../lib/lms-work-entries/duration-options"
+import { rankLmsWorkOptionsByFrequency } from "../lib/lms-work-entries/frequent-options"
 import { formatLmsWorkDateLabel, isValidDateOnly, normalizeDateRange } from "../lib/lms-work-entries/date"
 import {
   buildLmsCrmExportBuffer,
@@ -62,6 +63,24 @@ async function run() {
     ]),
     [60, 75, 120, 30, 180, 240]
   )
+  assert.deepEqual(
+    rankLmsWorkOptionsByFrequency(
+      [
+        { id: "client-c", label: "Zulu" },
+        { id: "client-a", label: "Alpha" },
+        { id: "client-b", label: "Beta" },
+      ],
+      [
+        { id: "client-c", count: 1 },
+        { id: "client-b", count: 4 },
+        { id: "client-a", count: 4 },
+        { id: "missing", count: 20 },
+        { id: null, count: 30 },
+      ],
+      (option) => option.label
+    ).map((option) => option.id),
+    ["client-a", "client-b", "client-c"]
+  )
 
   const workLogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-log-workspace.tsx"), "utf8")
   const workLogDbSource = readFileSync(resolve(process.cwd(), "lib/lms-work-entries/db.ts"), "utf8")
@@ -78,10 +97,14 @@ async function run() {
   assert.match(workLogSource, /xl:col-start-1 xl:row-start-2/)
   assert.match(workLogSource, /formatLmsWorkDateLabel/)
   assert.match(workLogSource, /Frequently used/)
+  assert.match(workLogSource, /Frequently used clients/)
+  assert.match(workLogSource, /Frequently used tasks/)
   assert.match(workLogSource, /Save work/)
   assert.match(workLogSource, /!hasSelectedClient/)
   assert.match(workLogSource, /!hasSelectedTask/)
   assert.match(workLogDbSource, /prisma\.lmsWorkEntry\.groupBy/)
+  assert.match(workLogDbSource, /by: \["lmsAllocationId"\]/)
+  assert.match(workLogDbSource, /by: \["taskTypeId"\]/)
   assert.match(workLogDbSource, /where: \{ tenantId: session\.tenantId, userId: session\.userId \}/)
   assert.match(dataWorkspaceSource, /value="catalog"/)
   assert.match(dataWorkspaceSource, /value="imports"/)

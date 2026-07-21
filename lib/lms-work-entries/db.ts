@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { normalizeDateRange } from "@/lib/lms-work-entries/date"
 import { buildLmsWorkDurationShortcuts } from "@/lib/lms-work-entries/duration-options"
+import { rankLmsWorkOptionsByFrequency } from "@/lib/lms-work-entries/frequent-options"
 import type { LmsWorkLogPageData } from "@/lib/lms-work-entries/types"
 
 const DEFAULT_PAGE_SIZE = 50
@@ -39,7 +40,15 @@ export async function getLmsWorkLogPageData(args?: {
     ...(from || to ? { workDate: dateFilter } : {}),
   }
 
-  const [clients, tasks, totalEntries, aggregate, durationFrequencies] = await Promise.all([
+  const [
+    clients,
+    tasks,
+    totalEntries,
+    aggregate,
+    durationFrequencies,
+    clientFrequencies,
+    taskFrequencies,
+  ] = await Promise.all([
     prisma.lmsAllocation.findMany({
       where: { tenantId: session.tenantId },
       select: { id: true, client: true },
@@ -53,7 +62,38 @@ export async function getLmsWorkLogPageData(args?: {
       where: { tenantId: session.tenantId, userId: session.userId },
       _count: { _all: true },
     }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["lmsAllocationId"],
+      where: {
+        tenantId: session.tenantId,
+        userId: session.userId,
+        lmsAllocationId: { not: null },
+      },
+      _count: { _all: true },
+    }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["taskTypeId"],
+      where: { tenantId: session.tenantId, userId: session.userId },
+      _count: { _all: true },
+    }),
   ])
+
+  const frequentClients = rankLmsWorkOptionsByFrequency(
+    clients,
+    clientFrequencies.map((frequency) => ({
+      id: frequency.lmsAllocationId,
+      count: frequency._count._all,
+    })),
+    (client) => client.client
+  )
+  const frequentTasks = rankLmsWorkOptionsByFrequency(
+    tasks.filter((task) => task.isActive),
+    taskFrequencies.map((frequency) => ({
+      id: frequency.taskTypeId,
+      count: frequency._count._all,
+    })),
+    (task) => task.name
+  )
 
   const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize))
   const page = Math.min(requestedPage, totalPages)
@@ -79,6 +119,8 @@ export async function getLmsWorkLogPageData(args?: {
   return {
     clients,
     tasks,
+    frequentClients,
+    frequentTasks,
     frequentDurations: buildLmsWorkDurationShortcuts(
       durationFrequencies.map((frequency) => ({
         durationMinutes: frequency.durationMinutes,

@@ -24,7 +24,8 @@ function run() {
   assert.match(workLog, /xl:col-start-2 xl:row-span-2 xl:row-start-1/)
   assert.match(workLog, /xl:col-start-1 xl:row-start-2/)
   assert.match(workLog, /xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6/)
-  assert.match(workLog, /grid grid-cols-3 gap-2/)
+  assert.match(workLog, /flex gap-1.5 overflow-x-auto pb-1/)
+  assert.match(workLog, /grid grid-cols-3 gap-1.5/)
   assert.match(workLog, /h-12! w-full rounded-xl/)
 
   const projectsPage = read("app/(dashboard)/lms-analysis/projects/page.tsx")
