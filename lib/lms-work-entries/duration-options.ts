@@ -26,6 +26,13 @@ export function parseCustomLmsWorkDuration(value: string) {
   return isValidLmsWorkDuration(parsed) ? parsed : null
 }
 
+export function getLmsWorkUtilizationPercent(workedMinutes: number, availableHours: number) {
+  if (!Number.isFinite(workedMinutes) || workedMinutes < 0 || !Number.isFinite(availableHours) || availableHours <= 0) {
+    return 0
+  }
+  return Math.round((workedMinutes / (availableHours * 60)) * 100)
+}
+
 export function buildLmsWorkDurationShortcuts(frequencies: LmsWorkDurationFrequency[]) {
   const ranked = frequencies
     .filter(({ durationMinutes, count }) => isValidLmsWorkDuration(durationMinutes) && Number.isInteger(count) && count > 0)

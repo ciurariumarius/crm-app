@@ -18,6 +18,7 @@ export type LmsWorkEntryRow = {
   clientDomain: string
   taskName: string
   employeeName: string
+  exportedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -41,6 +42,7 @@ export type LmsWorkLogPageData = {
   frequentDurations: number[]
   entries: LmsWorkEntryRow[]
   totalEntries: number
+  unexportedEntries: number
   totalMinutes: number
   page: number
   pageSize: number

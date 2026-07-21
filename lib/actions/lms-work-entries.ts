@@ -141,6 +141,7 @@ export async function updateLmsWorkEntry(entryId: string, data: LmsWorkEntryUpda
       data: {
         workDate: validated.workDate,
         durationMinutes: validated.durationMinutes,
+        exportedAt: null,
         ...(nextClient
           ? {
               lmsAllocationId: nextClient.id,

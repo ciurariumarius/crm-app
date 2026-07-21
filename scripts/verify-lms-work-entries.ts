@@ -9,6 +9,7 @@ import {
   LMS_WORK_DURATION_FALLBACK_SHORTCUTS,
   LMS_WORK_DURATION_PRESETS,
   buildLmsWorkDurationShortcuts,
+  getLmsWorkUtilizationPercent,
   parseCustomLmsWorkDuration,
 } from "../lib/lms-work-entries/duration-options"
 import { rankLmsWorkOptionsByFrequency } from "../lib/lms-work-entries/frequent-options"
@@ -68,6 +69,10 @@ async function run() {
   assert.equal(parseCustomLmsWorkDuration("0"), null)
   assert.equal(parseCustomLmsWorkDuration("30.5"), null)
   assert.equal(parseCustomLmsWorkDuration("1441"), null)
+  assert.equal(getLmsWorkUtilizationPercent(135, 120), 2)
+  assert.equal(getLmsWorkUtilizationPercent(720, 120), 10)
+  assert.equal(getLmsWorkUtilizationPercent(9000, 120), 125)
+  assert.equal(getLmsWorkUtilizationPercent(60, 0), 0)
   assert.deepEqual(buildLmsWorkDurationShortcuts([]), [30, 60, 120, 180, 240, 360])
   assert.deepEqual(
     buildLmsWorkDurationShortcuts([
@@ -106,6 +111,7 @@ async function run() {
   const workLogDbSource = readFileSync(resolve(process.cwd(), "lib/lms-work-entries/db.ts"), "utf8")
   const workTaskCatalogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-task-catalog.tsx"), "utf8")
   const workEntryActionsSource = readFileSync(resolve(process.cwd(), "lib/actions/lms-work-entries.ts"), "utf8")
+  const workEntryExportRouteSource = readFileSync(resolve(process.cwd(), "app/api/lms-work-entries/export/route.ts"), "utf8")
   const prismaSchemaSource = readFileSync(resolve(process.cwd(), "prisma/schema.prisma"), "utf8")
   const taskOrderMigrationSource = readFileSync(
     resolve(process.cwd(), "prisma/migrations/20260721180000_add_lms_work_task_order_and_defaults/migration.sql"),
@@ -117,6 +123,10 @@ async function run() {
   )
   const employeeNameMigrationSource = readFileSync(
     resolve(process.cwd(), "prisma/migrations/20260721190000_set_lms_crm_employee_name/migration.sql"),
+    "utf8"
+  )
+  const exportTrackingMigrationSource = readFileSync(
+    resolve(process.cwd(), "prisma/migrations/20260721200000_track_lms_work_entry_exports/migration.sql"),
     "utf8"
   )
   const dataWorkspaceSource = readFileSync(resolve(process.cwd(), "components/lms-tasks/lms-analysis-data-workspace.tsx"), "utf8")
@@ -132,7 +142,15 @@ async function run() {
   assert.match(workLogSource, /xl:col-start-1 xl:row-start-2/)
   assert.match(workLogSource, /formatLmsWorkDateLabel/)
   assert.match(workLogSource, /workCapacity\.hours}h available/)
-  assert.match(workLogSource, /workCapacity\.workdays} Romanian workdays × 8h/)
+  assert.match(workLogSource, /workUtilizationPercent}%/)
+  assert.match(workLogSource, /ExportStatusBadge/)
+  assert.match(workLogSource, /Not exported/)
+  assert.match(workLogSource, /Exported/)
+  assert.match(workLogSource, /data\.unexportedEntries/)
+  assert.match(workLogSource, /id="export-all-entries"/)
+  assert.match(workLogSource, /includeExported/)
+  assert.match(workLogSource, /Export all/)
+  assert.doesNotMatch(workLogSource, /Romanian workdays × 8h/)
   assert.match(workLogSource, /Frequently used/)
   assert.match(workLogSource, /Frequently used clients/)
   assert.match(workLogSource, /Frequently used tasks/)
@@ -149,17 +167,29 @@ async function run() {
   assert.match(workLogDbSource, /by: \["taskTypeId"\]/)
   assert.match(workLogDbSource, /where: \{ tenantId: session\.tenantId, userId: session\.userId \}/)
   assert.match(workLogDbSource, /orderBy: \[\{ sortOrder: "asc" \}, \{ name: "asc" \}\]/)
+  assert.match(workLogDbSource, /exportedAt: null/)
+  assert.match(workLogDbSource, /exportedAt: true/)
   assert.match(workTaskCatalogSource, /draggable=\{canReorder\}/)
   assert.match(workTaskCatalogSource, /reorderLmsWorkTasks/)
   assert.match(workTaskCatalogSource, /Alt\+ArrowUp Alt\+ArrowDown/)
   assert.match(workEntryActionsSource, /export async function reorderLmsWorkTasks/)
   assert.match(workEntryActionsSource, /where: \{ id, tenantId: session\.tenantId \}/)
   assert.match(workEntryActionsSource, /employeeNameSnapshot: LMS_CRM_EMPLOYEE_NAME/)
+  assert.match(workEntryActionsSource, /exportedAt: null/)
+  assert.match(workEntryExportRouteSource, /exportedAt: null/)
+  assert.match(workEntryExportRouteSource, /includeExported.*=== "true"/)
+  assert.match(workEntryExportRouteSource, /includeExported \? \{\} : \{ exportedAt: null \}/)
+  assert.match(workEntryExportRouteSource, /data: \{ exportedAt \}/)
+  assert.match(workEntryExportRouteSource, /LMS_WORK_EXPORT_CONFLICT/)
+  assert.match(workEntryExportRouteSource, /X-Exported-Entry-Count/)
   assert.match(prismaSchemaSource, /sortOrder\s+Int\s+@default\(1000\)\s+@map\("sort_order"\)/)
+  assert.match(prismaSchemaSource, /exportedAt\s+DateTime\?\s+@map\("exported_at"\)/)
   assert.match(taskOrderMigrationSource, /INSERT OR IGNORE INTO "lms_work_tasks"/)
   assert.match(exactTaskNamesMigrationSource, /UPDATE "lms_work_tasks"/)
   assert.match(exactTaskNamesMigrationSource, /UPDATE "lms_work_entries"/)
   assert.match(employeeNameMigrationSource, /"employee_name_snapshot" = 'Marius Ciurariu'/)
+  assert.match(exportTrackingMigrationSource, /ADD COLUMN "exported_at" DATETIME/)
+  assert.match(exportTrackingMigrationSource, /CREATE INDEX "lms_work_entries_tenant_id_user_id_exported_at_work_date_idx"/)
   assert.equal(LMS_CRM_EMPLOYEE_NAME, "Marius Ciurariu")
   for (const taskName of LMS_WORK_TASK_NAMES_WITH_TRAILING_SPACE) {
     assert.ok(exactTaskNamesMigrationSource.includes(`'${taskName}'`), `Missing exact CRM task name: ${taskName}`)

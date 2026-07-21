@@ -7,6 +7,7 @@ import { format, isValid, parseISO } from "date-fns"
 import {
   CalendarDays,
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
@@ -30,6 +31,7 @@ import { formatLmsWorkDateLabel, getLmsWorkCapacity } from "@/lib/lms-work-entri
 import {
   DEFAULT_LMS_WORK_DURATION_MINUTES,
   LMS_WORK_DURATION_PRESETS,
+  getLmsWorkUtilizationPercent,
   isLmsWorkDurationPreset,
   parseCustomLmsWorkDuration,
 } from "@/lib/lms-work-entries/duration-options"
@@ -82,6 +84,32 @@ function formatMinutes(value: number) {
   const hours = Math.floor(value / 60)
   const minutes = value % 60
   return minutes ? `${hours}h ${minutes}m` : `${hours}h`
+}
+
+function formatExportedAt(value: string) {
+  const parsed = parseISO(value)
+  return isValid(parsed) ? format(parsed, "dd MMM yyyy, HH:mm") : value
+}
+
+function ExportStatusBadge({ exportedAt }: { exportedAt: string | null }) {
+  if (!exportedAt) {
+    return (
+      <Badge variant="outline" className="text-[var(--text-muted)]">
+        Not exported
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className="border-emerald-200 bg-emerald-50 text-emerald-700"
+      title={`Exported ${formatExportedAt(exportedAt)}`}
+    >
+      <CheckCircle2 />
+      Exported
+    </Badge>
+  )
 }
 
 function getDownloadFilename(disposition: string | null) {
@@ -555,7 +583,7 @@ function EditEntryDialog({
       toast.error(result.error)
       return
     }
-    toast.success("Work entry updated")
+    toast.success(entry.exportedAt ? "Work entry updated and marked for re-export" : "Work entry updated")
     onClose()
     router.refresh()
   }
@@ -621,6 +649,7 @@ export function LmsWorkLogWorkspace({
   const [customMinutes, setCustomMinutes] = React.useState("")
   const [saving, setSaving] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
+  const [exportAll, setExportAll] = React.useState(false)
   const [editingEntry, setEditingEntry] = React.useState<LmsWorkEntryRow | null>(null)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [period, setPeriod] = React.useState(activePeriod)
@@ -640,6 +669,9 @@ export function LmsWorkLogWorkspace({
   const effectiveWorkDate = differentDate ? workDate : today
   const effectiveDateLabel = formatLmsWorkDateLabel(effectiveWorkDate, today)
   const workCapacity = React.useMemo(() => getLmsWorkCapacity(data.from, data.to), [data.from, data.to])
+  const workUtilizationPercent = workCapacity
+    ? getLmsWorkUtilizationPercent(data.totalMinutes, workCapacity.hours)
+    : null
 
   React.useEffect(() => {
     const value = localToday()
@@ -738,11 +770,14 @@ export function LmsWorkLogWorkspace({
       const query = new URLSearchParams()
       if (data.from) query.set("from", data.from)
       if (data.to) query.set("to", data.to)
+      if (exportAll) query.set("includeExported", "true")
       const response = await fetch(`/api/lms-work-entries/export?${query.toString()}`, { cache: "no-store" })
       if (!response.ok) {
         const payload = await response.json().catch(() => null)
         throw new Error(payload?.error || "Export failed")
       }
+      const expectedExportCount = exportAll ? data.totalEntries : data.unexportedEntries
+      const exportedCount = Number(response.headers.get("x-exported-entry-count")) || expectedExportCount
       const blob = await response.blob()
       const href = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
@@ -752,7 +787,9 @@ export function LmsWorkLogWorkspace({
       anchor.click()
       anchor.remove()
       URL.revokeObjectURL(href)
-      toast.success("CRM workbook generated")
+      toast.success(`${exportedCount} ${exportedCount === 1 ? "entry" : "entries"} exported and marked`)
+      setExportAll(false)
+      router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Export failed")
     } finally {
@@ -926,8 +963,9 @@ export function LmsWorkLogWorkspace({
               <CardDescription className="mt-2">
                 {data.totalEntries} entries · {formatMinutes(data.totalMinutes)} worked
                 {workCapacity
-                  ? ` · ${workCapacity.hours}h available (${workCapacity.workdays} Romanian workdays × 8h)`
+                  ? ` · ${workCapacity.hours}h available · ${workUtilizationPercent}%`
                   : " · Available hours require a bounded date range"}
+                {` · ${data.unexportedEntries} not exported`}
               </CardDescription>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -948,9 +986,32 @@ export function LmsWorkLogWorkspace({
                   <Button type="button" variant="outline" onClick={() => navigateToRange(CUSTOM_PERIOD, customFrom || null, customTo || null)} disabled={!customFrom && !customTo}>Apply</Button>
                 </>
               ) : null}
-              <Button type="button" onClick={handleExport} disabled={exporting || data.totalEntries === 0}>
+              <div className="flex h-9 items-center gap-2 px-1">
+                <Checkbox
+                  id="export-all-entries"
+                  checked={exportAll}
+                  onCheckedChange={(checked) => setExportAll(checked === true)}
+                  disabled={exporting || data.totalEntries === 0}
+                />
+                <Label
+                  htmlFor="export-all-entries"
+                  className="cursor-pointer whitespace-nowrap text-xs font-medium"
+                  title="Include entries that were already exported"
+                >
+                  Export all
+                </Label>
+              </div>
+              <Button
+                type="button"
+                onClick={handleExport}
+                disabled={exporting || (exportAll ? data.totalEntries === 0 : data.unexportedEntries === 0)}
+              >
                 {exporting ? <Loader2 className="animate-spin" /> : <Download />}
-                Export XLSX
+                {exportAll
+                  ? `Export all ${data.totalEntries}`
+                  : data.unexportedEntries > 0
+                    ? `Export ${data.unexportedEntries} new`
+                    : "All exported"}
               </Button>
             </div>
           </div>
@@ -966,7 +1027,16 @@ export function LmsWorkLogWorkspace({
             <>
               <div className="hidden overflow-hidden rounded-2xl border border-[var(--line-subtle)] md:block">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Task</TableHead><TableHead className="text-right">Minutes</TableHead><TableHead className="w-24 text-right">Actions</TableHead></TableRow></TableHeader>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Task</TableHead>
+                      <TableHead className="text-right">Minutes</TableHead>
+                      <TableHead>CRM export</TableHead>
+                      <TableHead className="w-24 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
                     {data.entries.map((entry) => (
                       <TableRow key={entry.id}>
@@ -974,6 +1044,7 @@ export function LmsWorkLogWorkspace({
                         <TableCell className="font-medium">{entry.clientDomain}</TableCell>
                         <TableCell>{entry.taskName}</TableCell>
                         <TableCell className="text-right font-mono font-semibold">{entry.durationMinutes}</TableCell>
+                        <TableCell><ExportStatusBadge exportedAt={entry.exportedAt} /></TableCell>
                         <TableCell><div className="flex justify-end gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div></TableCell>
                       </TableRow>
                     ))}
@@ -984,7 +1055,13 @@ export function LmsWorkLogWorkspace({
                 {data.entries.map((entry) => (
                   <div key={entry.id} className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-4">
                     <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-[var(--text-primary)]">{entry.taskName}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">{entry.clientDomain}</p></div><Badge variant="secondary">{formatMinutes(entry.durationMinutes)}</Badge></div>
-                    <div className="mt-4 flex items-center justify-between"><span className="text-xs text-[var(--text-muted)]">{formatEntryDate(entry.workDate)}</span><div className="flex gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div></div>
+                    <div className="mt-4 flex items-end justify-between gap-3">
+                      <div className="space-y-2">
+                        <span className="block text-xs text-[var(--text-muted)]">{formatEntryDate(entry.workDate)}</span>
+                        <ExportStatusBadge exportedAt={entry.exportedAt} />
+                      </div>
+                      <div className="flex gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div>
+                    </div>
                   </div>
                 ))}
               </div>

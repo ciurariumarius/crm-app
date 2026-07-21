@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server"
+import { ActionError } from "@/lib/action-errors"
 import { apiError, apiRouteError } from "@/lib/api-response"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { normalizeDateRange } from "@/lib/lms-work-entries/date"
@@ -20,10 +21,12 @@ export async function GET(request: NextRequest) {
       request.nextUrl.searchParams.get("from"),
       request.nextUrl.searchParams.get("to")
     )
+    const includeExported = request.nextUrl.searchParams.get("includeExported") === "true"
     const entries = await prisma.lmsWorkEntry.findMany({
       where: {
         tenantId: session.tenantId,
         userId: session.userId,
+        ...(includeExported ? {} : { exportedAt: null }),
         ...(from || to
           ? {
               workDate: {
@@ -35,6 +38,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ workDate: "asc" }, { createdAt: "asc" }],
       select: {
+        id: true,
         workDate: true,
         clientDomainSnapshot: true,
         taskNameSnapshot: true,
@@ -44,18 +48,42 @@ export async function GET(request: NextRequest) {
     })
 
     if (entries.length === 0) {
-      return apiError("No work entries found for the selected date range", 404, {
-        code: "NO_WORK_ENTRIES",
+      return apiError(includeExported
+        ? "No work entries found for the selected date range"
+        : "No unexported work entries found for the selected date range", 404, {
+        code: includeExported ? "NO_WORK_ENTRIES" : "NO_UNEXPORTED_WORK_ENTRIES",
         headers: { "Cache-Control": "no-store" },
       })
     }
 
     const buffer = await buildLmsCrmExportBuffer(entries)
+    const exportedAt = new Date()
+    await prisma.$transaction(async (tx) => {
+      let updatedCount = 0
+      for (let offset = 0; offset < entries.length; offset += 500) {
+        const result = await tx.lmsWorkEntry.updateMany({
+          where: {
+            id: { in: entries.slice(offset, offset + 500).map((entry) => entry.id) },
+            tenantId: session.tenantId,
+            userId: session.userId,
+            ...(includeExported ? {} : { exportedAt: null }),
+          },
+          data: { exportedAt },
+        })
+        updatedCount += result.count
+      }
+      if (updatedCount !== entries.length) {
+        throw new ActionError(
+          "LMS_WORK_EXPORT_CONFLICT",
+          "Some entries were exported in another request. Refresh and export again."
+        )
+      }
+    })
     const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")
     const filename = `TASK_IMPORT_${filenamePart(from, "ALL")}_${filenamePart(to, "ALL")}_${timestamp}.xlsx`
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_ENTRIES_EXPORTED",
-      details: `from=${from || "all"}; to=${to || "all"}; count=${entries.length}`,
+      details: `from=${from || "all"}; to=${to || "all"}; count=${entries.length}; mode=${includeExported ? "all" : "new"}`,
     })
 
     return new Response(new Uint8Array(buffer), {
@@ -64,6 +92,7 @@ export async function GET(request: NextRequest) {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "no-store",
+        "X-Exported-Entry-Count": String(entries.length),
       },
     })
   } catch (error) {
@@ -77,4 +106,3 @@ export async function GET(request: NextRequest) {
     })
   }
 }
-
