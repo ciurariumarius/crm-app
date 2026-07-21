@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
 import { DateOnlySchema } from "@/lib/lms-work-entries/date"
 import { canonicalizeLmsWorkTaskName } from "@/lib/lms-work-entries/task-names"
 import type { LmsWorkEntryInput, LmsWorkEntryUpdateInput } from "@/lib/lms-work-entries/types"
@@ -66,14 +67,11 @@ export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
   try {
     const session = await requireTenantContext()
     const validated = WorkEntryInputSchema.parse(data)
-    const [{ client, task }, user] = await Promise.all([
-      resolveEntryReferences(session.tenantId, validated.lmsAllocationId, validated.taskTypeId),
-      prisma.user.findFirst({
-        where: { id: session.userId, tenantId: session.tenantId },
-        select: { name: true, username: true },
-      }),
-    ])
-    if (!user) throw new ActionError("USER_NOT_FOUND", "Your user profile could not be loaded")
+    const { client, task } = await resolveEntryReferences(
+      session.tenantId,
+      validated.lmsAllocationId,
+      validated.taskTypeId
+    )
 
     const entry = await prisma.lmsWorkEntry.create({
       data: {
@@ -85,7 +83,7 @@ export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
         durationMinutes: validated.durationMinutes,
         clientDomainSnapshot: client.client,
         taskNameSnapshot: task.name,
-        employeeNameSnapshot: user.name?.trim() || user.username,
+        employeeNameSnapshot: LMS_CRM_EMPLOYEE_NAME,
       },
       select: { id: true },
     })

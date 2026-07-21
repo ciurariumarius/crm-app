@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs"
+import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
 import type { LmsWorkExportEntry } from "@/lib/lms-work-entries/types"
 
 export const LMS_CRM_EXPORT_HEADERS = [
@@ -95,8 +96,8 @@ export function buildLmsCrmExportRow(entry: LmsWorkExportEntry) {
   row[2] = entry.clientDomainSnapshot
   row[3] = entry.taskNameSnapshot
   row[4] = "DATA Subdivizie"
-  row[5] = entry.employeeNameSnapshot
-  row[6] = entry.employeeNameSnapshot
+  row[5] = LMS_CRM_EMPLOYEE_NAME
+  row[6] = LMS_CRM_EMPLOYEE_NAME
   row[7] = "Finalizat"
   row[9] = entry.durationMinutes
   return row
@@ -140,4 +141,3 @@ export async function buildLmsCrmExportBuffer(entries: LmsWorkExportEntry[]) {
   const workbook = await buildLmsCrmExportWorkbook(entries)
   return workbook.xlsx.writeBuffer()
 }
-

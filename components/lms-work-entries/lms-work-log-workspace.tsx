@@ -26,7 +26,7 @@ import {
 } from "@/lib/actions/lms-work-entries"
 import { getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
 import { matchesLmsClientSearch } from "@/lib/lms-work-entries/client-search"
-import { formatLmsWorkDateLabel } from "@/lib/lms-work-entries/date"
+import { formatLmsWorkDateLabel, getLmsWorkCapacity } from "@/lib/lms-work-entries/date"
 import {
   DEFAULT_LMS_WORK_DURATION_MINUTES,
   LMS_WORK_DURATION_PRESETS,
@@ -44,7 +44,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import {
   Dialog,
   DialogContent,
@@ -55,7 +54,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -278,53 +277,161 @@ function TaskCombobox({
   disabled?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
-  const options = tasks.filter((task) => task.isActive)
+  const options = React.useMemo(() => tasks.filter((task) => task.isActive), [tasks])
   const selectedTask = options.find((task) => task.id === value)
+  const [search, setSearch] = React.useState(selectedTask?.name ?? "")
+  const [activeTaskId, setActiveTaskId] = React.useState<string | null>(null)
+  const listboxId = React.useId()
+  const skipClearedSelectionSync = React.useRef(false)
+  const previousSelection = React.useRef({ value, label: selectedTask?.name ?? "" })
+  const filteredTasks = React.useMemo(
+    () => options.filter((task) => matchesLmsClientSearch(task.name, search)),
+    [options, search]
+  )
+
+  React.useEffect(() => {
+    const label = selectedTask?.name ?? ""
+    if (previousSelection.current.value === value && previousSelection.current.label === label) return
+    previousSelection.current = { value, label }
+
+    if (!value && skipClearedSelectionSync.current) {
+      skipClearedSelectionSync.current = false
+      return
+    }
+    skipClearedSelectionSync.current = false
+    setSearch(label)
+  }, [selectedTask?.name, value])
+
+  React.useEffect(() => {
+    if (!open) return
+    setActiveTaskId((current) => (
+      current && filteredTasks.some((task) => task.id === current)
+        ? current
+        : filteredTasks[0]?.id ?? null
+    ))
+  }, [filteredTasks, open])
+
+  React.useEffect(() => {
+    if (!open || !activeTaskId) return
+    document.getElementById(`${listboxId}-${activeTaskId}`)?.scrollIntoView({ block: "nearest" })
+  }, [activeTaskId, listboxId, open])
+
+  function selectTask(task: LmsWorkTaskOption) {
+    setSearch(task.name)
+    setActiveTaskId(task.id)
+    skipClearedSelectionSync.current = false
+    onValueChange(task.id)
+    setOpen(false)
+  }
+
+  function closeTaskSearch() {
+    setOpen(false)
+    setActiveTaskId(null)
+    setSearch(selectedTask?.name ?? "")
+  }
+
+  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault()
+      closeTaskSearch()
+      return
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault()
+      if (!open) setOpen(true)
+      if (filteredTasks.length === 0) return
+      const currentIndex = filteredTasks.findIndex((task) => task.id === activeTaskId)
+      const offset = event.key === "ArrowDown" ? 1 : -1
+      const nextIndex = currentIndex < 0
+        ? (offset === 1 ? 0 : filteredTasks.length - 1)
+        : (currentIndex + offset + filteredTasks.length) % filteredTasks.length
+      setActiveTaskId(filteredTasks[nextIndex].id)
+      return
+    }
+    if (event.key === "Enter" && open && activeTaskId) {
+      const activeTask = filteredTasks.find((task) => task.id === activeTaskId)
+      if (activeTask) {
+        event.preventDefault()
+        selectTask(activeTask)
+      }
+    }
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          aria-label="Select predefined task"
-          className="h-12! w-full justify-between overflow-hidden rounded-xl px-4 text-sm font-normal"
-          disabled={disabled || options.length === 0}
-        >
-          <span className={cn("truncate", !selectedTask && "text-muted-foreground")}>
-            {selectedTask?.name || (options.length ? "Search predefined tasks" : "Add a task first")}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) setOpen(true)
+        else closeTaskSearch()
+      }}
+    >
+      <PopoverAnchor asChild>
+        <div className="relative">
+          <Input
+            type="text"
+            role="combobox"
+            aria-expanded={open}
+            aria-autocomplete="list"
+            aria-controls={listboxId}
+            aria-activedescendant={activeTaskId ? `${listboxId}-${activeTaskId}` : undefined}
+            aria-label="Select predefined task"
+            autoComplete="off"
+            value={search}
+            placeholder={options.length ? "Search predefined tasks" : "Add a task first"}
+            onFocus={(event) => {
+              setOpen(true)
+              if (selectedTask) event.currentTarget.select()
+            }}
+            onChange={(event) => {
+              const nextSearch = event.target.value
+              setSearch(nextSearch)
+              setOpen(true)
+              if (value) {
+                skipClearedSelectionSync.current = true
+                onValueChange("")
+              }
+            }}
+            onKeyDown={handleSearchKeyDown}
+            className="h-12! w-full rounded-xl px-4 pr-10 text-sm font-normal"
+            disabled={disabled || options.length === 0}
+          />
+          <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+        </div>
+      </PopoverAnchor>
       <PopoverContent
         align="start"
         className="w-[var(--radix-popover-trigger-width)] min-w-[280px] max-w-[min(92vw,560px)] p-0"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
       >
-        <Command filter={(itemValue, search) => matchesLmsClientSearch(itemValue, search) ? 1 : 0}>
-          <CommandInput placeholder="Search predefined tasks..." />
-          <CommandList className="max-h-[280px]">
-            <CommandEmpty>No work-entry task found.</CommandEmpty>
-            <CommandGroup>
-              {options.map((task) => (
-                <CommandItem
-                  key={task.id}
-                  value={task.name}
-                  onSelect={() => {
-                    onValueChange(task.id)
-                    setOpen(false)
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Check className={cn("mr-2 h-4 w-4 shrink-0", value === task.id ? "opacity-100" : "opacity-0")} />
-                  <span className="truncate">{task.name}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label="Predefined tasks"
+          className="max-h-[280px] overflow-y-auto p-1"
+        >
+          {filteredTasks.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No work-entry task found.</p>
+          ) : filteredTasks.map((task) => (
+            <button
+              key={task.id}
+              id={`${listboxId}-${task.id}`}
+              type="button"
+              role="option"
+              aria-selected={value === task.id}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => setActiveTaskId(task.id)}
+              onClick={() => selectTask(task)}
+              className={cn(
+                "flex w-full cursor-pointer items-center rounded-sm px-2 py-2 text-left text-sm outline-none",
+                activeTaskId === task.id && "bg-accent text-accent-foreground"
+              )}
+            >
+              <Check className={cn("mr-2 h-4 w-4 shrink-0", value === task.id ? "opacity-100" : "opacity-0")} />
+              <span className="truncate">{task.name}</span>
+            </button>
+          ))}
+        </div>
       </PopoverContent>
     </Popover>
   )
@@ -532,6 +639,7 @@ export function LmsWorkLogWorkspace({
   const customDurationInvalid = customDurationEnabled && customMinutes.trim().length > 0 && durationMinutes === null
   const effectiveWorkDate = differentDate ? workDate : today
   const effectiveDateLabel = formatLmsWorkDateLabel(effectiveWorkDate, today)
+  const workCapacity = React.useMemo(() => getLmsWorkCapacity(data.from, data.to), [data.from, data.to])
 
   React.useEffect(() => {
     const value = localToday()
@@ -815,7 +923,12 @@ export function LmsWorkLogWorkspace({
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-lg"><FileSpreadsheet className="h-5 w-5 text-[var(--brand-primary)]" />Work entries</CardTitle>
-              <CardDescription className="mt-2">{data.totalEntries} entries · {formatMinutes(data.totalMinutes)} in the selected range</CardDescription>
+              <CardDescription className="mt-2">
+                {data.totalEntries} entries · {formatMinutes(data.totalMinutes)} worked
+                {workCapacity
+                  ? ` · ${workCapacity.hours}h available (${workCapacity.workdays} Romanian workdays × 8h)`
+                  : " · Available hours require a bounded date range"}
+              </CardDescription>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="space-y-1.5">
