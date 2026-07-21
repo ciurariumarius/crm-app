@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import ExcelJS from "exceljs"
 import { matchesLmsClientSearch } from "../lib/lms-work-entries/client-search"
-import { resolveLmsDataSection } from "../lib/lms-work-entries/data-section"
 import {
   DEFAULT_LMS_WORK_DURATION_MINUTES,
   LMS_WORK_DURATION_FALLBACK_SHORTCUTS,
@@ -37,12 +36,6 @@ async function run() {
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "CLIENT-800")).length, 1)
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "școala")).length, 1)
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "missing-client")).length, 0)
-  assert.equal(resolveLmsDataSection(undefined), "catalog")
-  assert.equal(resolveLmsDataSection("catalog"), "catalog")
-  assert.equal(resolveLmsDataSection("imports"), "imports")
-  assert.equal(resolveLmsDataSection("logs"), "logs")
-  assert.equal(resolveLmsDataSection("unknown"), "catalog")
-
   assert.deepEqual(Array.from(LMS_WORK_DURATION_PRESETS), [15, 30, 45, 60, 120, 150, 180, 240, 300, 360])
   assert.equal(DEFAULT_LMS_WORK_DURATION_MINUTES, 120)
   assert.deepEqual(Array.from(LMS_WORK_DURATION_FALLBACK_SHORTCUTS), [30, 60, 120, 180, 240, 360])
@@ -89,7 +82,7 @@ async function run() {
   assert.doesNotMatch(workLogSource, /Capture client work quickly/)
   assert.doesNotMatch(workLogSource, /localStorage|LMS_WORK_DURATION_STORAGE_KEY/)
   assert.doesNotMatch(workLogSource, /_120px_150px/)
-  assert.match(workLogSource, /\/lms-analysis\/data\?section=catalog/)
+  assert.match(workLogSource, /\/lms-analysis\/data#task-catalog/)
   assert.match(workLogSource, /LMS_WORK_DURATION_PRESETS\.map/)
   assert.match(workLogSource, /DEFAULT_LMS_WORK_DURATION_MINUTES/)
   assert.match(workLogSource, /xl:grid-cols-\[minmax\(0,11fr\)_minmax\(420px,9fr\)\]/)
@@ -106,9 +99,10 @@ async function run() {
   assert.match(workLogDbSource, /by: \["lmsAllocationId"\]/)
   assert.match(workLogDbSource, /by: \["taskTypeId"\]/)
   assert.match(workLogDbSource, /where: \{ tenantId: session\.tenantId, userId: session\.userId \}/)
-  assert.match(dataWorkspaceSource, /value="catalog"/)
-  assert.match(dataWorkspaceSource, /value="imports"/)
-  assert.match(dataWorkspaceSource, /value="logs"/)
+  assert.doesNotMatch(dataWorkspaceSource, /TabsList|TabsTrigger|TabsContent/)
+  assert.match(dataWorkspaceSource, /id="task-catalog"/)
+  assert.match(dataWorkspaceSource, /id="imports"/)
+  assert.match(dataWorkspaceSource, /id="import-logs"/)
 
   const buffer = await buildLmsCrmExportBuffer([
     {

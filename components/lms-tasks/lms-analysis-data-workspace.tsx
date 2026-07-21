@@ -1,18 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLmsTasksData } from "@/components/lms-tasks/lms-tasks-provider"
 import { LmsWorkTaskCatalog } from "@/components/lms-work-entries/lms-work-task-catalog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { isLmsMobileOptimizedEnabled } from "@/lib/lms-tasks/feature-flags"
 import { parseAllocationsFile, parseTasksFile } from "@/lib/lms-tasks/parsers"
 import type { LmsSyncMode, ParseIssue } from "@/lib/lms-tasks/types"
-import type { LmsDataSection } from "@/lib/lms-work-entries/data-section"
 import type { LmsWorkTaskOption } from "@/lib/lms-work-entries/types"
 import { cn } from "@/lib/utils"
 
@@ -105,16 +102,7 @@ function IssuesCard({ title, issues }: { title: string; issues: ParseIssue[] }) 
   )
 }
 
-export function LmsAnalysisDataWorkspace({
-  workTasks,
-  activeSection,
-}: {
-  workTasks: LmsWorkTaskOption[]
-  activeSection: LmsDataSection
-}) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+export function LmsAnalysisDataWorkspace({ workTasks }: { workTasks: LmsWorkTaskOption[] }) {
   const mobileOptimized = isLmsMobileOptimizedEnabled()
   const { ready, loading, error, data, syncTasksToDatabase, syncAllocationsToDatabase, clearAllData } = useLmsTasksData()
   const [syncMode, setSyncMode] = React.useState<LmsSyncMode>("merge")
@@ -128,13 +116,6 @@ export function LmsAnalysisDataWorkspace({
   const [importingAllocations, setImportingAllocations] = React.useState(false)
   const [logs, setLogs] = React.useState<ImportLog[]>([])
   const [logsHydrated, setLogsHydrated] = React.useState(false)
-
-  function selectSection(value: string) {
-    if (value !== "catalog" && value !== "imports" && value !== "logs") return
-    const next = new URLSearchParams(searchParams.toString())
-    next.set("section", value)
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
-  }
 
   React.useEffect(() => {
     try {
@@ -270,25 +251,19 @@ export function LmsAnalysisDataWorkspace({
   }, [allocationsFile, appendLog, syncAllocationsToDatabase, syncMode])
 
   return (
-    <Tabs value={activeSection} onValueChange={selectSection} className="space-y-4">
-      <TabsList className="grid h-auto w-full grid-cols-3 rounded-xl bg-[var(--bg-surface-soft)] p-1 sm:w-fit sm:min-w-[430px]">
-        <TabsTrigger value="catalog" className="rounded-lg py-2">Task Catalog</TabsTrigger>
-        <TabsTrigger value="imports" className="rounded-lg py-2">Imports</TabsTrigger>
-        <TabsTrigger value="logs" className="rounded-lg py-2">Import Logs</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="catalog">
+    <div className="space-y-6">
+      <section id="task-catalog" className="scroll-mt-6" aria-label="Task Catalog">
         <LmsWorkTaskCatalog tasks={workTasks} />
-      </TabsContent>
+      </section>
 
-      <TabsContent value="imports">
+      <section id="imports" className="scroll-mt-6" aria-label="Imports">
         {!ready ? (
           <Card className="rounded-2xl border-[var(--line-subtle)] p-6 text-sm text-[var(--text-secondary)]">Loading LMS data…</Card>
         ) : (
           <Card className="rounded-2xl border-[var(--line-subtle)]">
         <CardHeader>
           <CardTitle>Data Upload</CardTitle>
-          <CardDescription>Import task and project files here. Browser import history is available in the Import Logs tab.</CardDescription>
+          <CardDescription>Import task and project files here. Browser import history is available in the Import Logs section below.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
@@ -349,9 +324,9 @@ export function LmsAnalysisDataWorkspace({
         </CardContent>
           </Card>
         )}
-      </TabsContent>
+      </section>
 
-      <TabsContent value="logs">
+      <section id="import-logs" className="scroll-mt-6" aria-label="Import Logs">
         <Card className="rounded-2xl border-[var(--line-subtle)]">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -449,7 +424,7 @@ export function LmsAnalysisDataWorkspace({
           </div>
         </CardContent>
         </Card>
-      </TabsContent>
-    </Tabs>
+      </section>
+    </div>
   )
 }
