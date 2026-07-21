@@ -4,6 +4,12 @@ import { resolve } from "node:path"
 import ExcelJS from "exceljs"
 import { matchesLmsClientSearch } from "../lib/lms-work-entries/client-search"
 import { resolveLmsDataSection } from "../lib/lms-work-entries/data-section"
+import {
+  LMS_WORK_DURATION_PRESETS,
+  parseCustomLmsWorkDuration,
+  parseLmsWorkDurationPreference,
+  serializeLmsWorkDurationPreference,
+} from "../lib/lms-work-entries/duration-preference"
 import { isValidDateOnly, normalizeDateRange } from "../lib/lms-work-entries/date"
 import {
   buildLmsCrmExportBuffer,
@@ -32,10 +38,35 @@ async function run() {
   assert.equal(resolveLmsDataSection("logs"), "logs")
   assert.equal(resolveLmsDataSection("unknown"), "catalog")
 
+  assert.deepEqual(Array.from(LMS_WORK_DURATION_PRESETS), [15, 30, 45, 60, 120, 150, 180, 240, 300, 360])
+  assert.equal(parseCustomLmsWorkDuration("1"), 1)
+  assert.equal(parseCustomLmsWorkDuration("1440"), 1440)
+  assert.equal(parseCustomLmsWorkDuration(""), null)
+  assert.equal(parseCustomLmsWorkDuration("0"), null)
+  assert.equal(parseCustomLmsWorkDuration("30.5"), null)
+  assert.equal(parseCustomLmsWorkDuration("1441"), null)
+  assert.deepEqual(
+    parseLmsWorkDurationPreference(serializeLmsWorkDurationPreference({ mode: "preset", minutes: 30 })),
+    { mode: "preset", minutes: 30 }
+  )
+  assert.deepEqual(
+    parseLmsWorkDurationPreference(serializeLmsWorkDurationPreference({ mode: "custom", minutes: 75 })),
+    { mode: "custom", minutes: 75 }
+  )
+  assert.equal(parseLmsWorkDurationPreference('{"version":1,"mode":"preset","minutes":75}'), null)
+  assert.equal(parseLmsWorkDurationPreference('{"version":1,"mode":"custom","minutes":0}'), null)
+  assert.equal(parseLmsWorkDurationPreference("not-json"), null)
+
   const workLogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-log-workspace.tsx"), "utf8")
   const dataWorkspaceSource = readFileSync(resolve(process.cwd(), "components/lms-tasks/lms-analysis-data-workspace.tsx"), "utf8")
   assert.doesNotMatch(workLogSource, /Manage tasks|Manage predefined tasks/)
+  assert.doesNotMatch(workLogSource, /_120px_150px/)
   assert.match(workLogSource, /\/lms-analysis\/data\?section=catalog/)
+  assert.match(workLogSource, /LMS_WORK_DURATION_PRESETS\.map/)
+  assert.match(workLogSource, /LMS_WORK_DURATION_STORAGE_KEY/)
+  assert.match(workLogSource, /md:grid-cols-2/)
+  assert.match(workLogSource, /!hasSelectedClient/)
+  assert.match(workLogSource, /!hasSelectedTask/)
   assert.match(dataWorkspaceSource, /value="catalog"/)
   assert.match(dataWorkspaceSource, /value="imports"/)
   assert.match(dataWorkspaceSource, /value="logs"/)
