@@ -1,7 +1,6 @@
-export type LmsWorkProjectOption = {
+export type LmsWorkClientOption = {
   id: string
-  domainName: string
-  displayName: string
+  client: string
 }
 
 export type LmsWorkTaskOption = {
@@ -12,7 +11,7 @@ export type LmsWorkTaskOption = {
 
 export type LmsWorkEntryRow = {
   id: string
-  projectId: string | null
+  lmsAllocationId: string | null
   taskTypeId: string
   workDate: string
   durationMinutes: number
@@ -25,13 +24,17 @@ export type LmsWorkEntryRow = {
 
 export type LmsWorkEntryInput = {
   workDate: string
-  projectId: string
+  lmsAllocationId: string
   taskTypeId: string
   durationMinutes: number
 }
 
+export type LmsWorkEntryUpdateInput = Omit<LmsWorkEntryInput, "lmsAllocationId"> & {
+  lmsAllocationId: string | null
+}
+
 export type LmsWorkLogPageData = {
-  projects: LmsWorkProjectOption[]
+  clients: LmsWorkClientOption[]
   tasks: LmsWorkTaskOption[]
   entries: LmsWorkEntryRow[]
   totalEntries: number
@@ -50,4 +53,3 @@ export type LmsWorkExportEntry = {
   employeeNameSnapshot: string
   durationMinutes: number
 }
-

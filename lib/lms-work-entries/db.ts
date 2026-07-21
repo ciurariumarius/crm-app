@@ -25,15 +25,11 @@ export async function getLmsWorkLogPageData(args?: {
     ...(from || to ? { workDate: dateFilter } : {}),
   }
 
-  const [projects, tasks, totalEntries, aggregate] = await Promise.all([
-    prisma.project.findMany({
-      where: { tenantId: session.tenantId, status: "Active" },
-      select: {
-        id: true,
-        name: true,
-        site: { select: { domainName: true } },
-      },
-      orderBy: [{ site: { domainName: "asc" } }, { name: "asc" }],
+  const [clients, tasks, totalEntries, aggregate] = await Promise.all([
+    prisma.lmsAllocation.findMany({
+      where: { tenantId: session.tenantId },
+      select: { id: true, client: true },
+      orderBy: { client: "asc" },
     }),
     prisma.lmsWorkTask.findMany({
       where: { tenantId: session.tenantId },
@@ -53,7 +49,7 @@ export async function getLmsWorkLogPageData(args?: {
     take: pageSize,
     select: {
       id: true,
-      projectId: true,
+      lmsAllocationId: true,
       taskTypeId: true,
       workDate: true,
       durationMinutes: true,
@@ -66,17 +62,11 @@ export async function getLmsWorkLogPageData(args?: {
   })
 
   return {
-    projects: projects.map((project) => ({
-      id: project.id,
-      domainName: project.site.domainName,
-      displayName: project.name?.trim()
-        ? `${project.name.trim()} — ${project.site.domainName}`
-        : project.site.domainName,
-    })),
+    clients,
     tasks,
     entries: entries.map((entry) => ({
       id: entry.id,
-      projectId: entry.projectId,
+      lmsAllocationId: entry.lmsAllocationId,
       taskTypeId: entry.taskTypeId,
       workDate: entry.workDate,
       durationMinutes: entry.durationMinutes,
@@ -95,4 +85,3 @@ export async function getLmsWorkLogPageData(args?: {
     to,
   }
 }
-

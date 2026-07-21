@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import ExcelJS from "exceljs"
+import { matchesLmsClientSearch } from "../lib/lms-work-entries/client-search"
 import { isValidDateOnly, normalizeDateRange } from "../lib/lms-work-entries/date"
 import {
   buildLmsCrmExportBuffer,
@@ -16,6 +17,12 @@ async function run() {
     from: "2026-03-01",
     to: "2026-03-31",
   })
+
+  const importedClients = Array.from({ length: 850 }, (_, index) => `client-${String(index + 1).padStart(3, "0")}.ro`)
+  importedClients.push("Școala Exemplu.ro")
+  assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "CLIENT-800")).length, 1)
+  assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "școala")).length, 1)
+  assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "missing-client")).length, 0)
 
   const buffer = await buildLmsCrmExportBuffer([
     {

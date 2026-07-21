@@ -6,8 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { format, isValid, parseISO } from "date-fns"
 import {
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   Clock3,
   Download,
   FileSpreadsheet,
@@ -26,17 +28,19 @@ import {
   updateLmsWorkTask,
 } from "@/lib/actions/lms-work-entries"
 import { getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
+import { matchesLmsClientSearch } from "@/lib/lms-work-entries/client-search"
 import type {
   LmsWorkEntryInput,
   LmsWorkEntryRow,
+  LmsWorkClientOption,
   LmsWorkLogPageData,
-  LmsWorkProjectOption,
   LmsWorkTaskOption,
 } from "@/lib/lms-work-entries/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import {
   Dialog,
   DialogContent,
@@ -47,6 +51,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -56,6 +61,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 
 const CUSTOM_PERIOD = "custom"
 
@@ -80,30 +86,68 @@ function getDownloadFilename(disposition: string | null) {
   return match?.[1] || "TASK_IMPORT.xlsx"
 }
 
-function ProjectSelect({
-  projects,
+function ClientCombobox({
+  clients,
   value,
   onValueChange,
   disabled,
 }: {
-  projects: LmsWorkProjectOption[]
+  clients: LmsWorkClientOption[]
   value: string
   onValueChange: (value: string) => void
   disabled?: boolean
 }) {
+  const [open, setOpen] = React.useState(false)
+  const selectedClient = clients.find((client) => client.id === value)
+
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder={projects.length ? "Select client project" : "No active projects"} />
-      </SelectTrigger>
-      <SelectContent align="start" className="max-w-[min(92vw,520px)]">
-        {projects.map((project) => (
-          <SelectItem key={project.id} value={project.id}>
-            {project.displayName}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-label="Select LMS client"
+          className="w-full justify-between overflow-hidden font-normal"
+          disabled={disabled || clients.length === 0}
+        >
+          <span className={cn("truncate", !selectedClient && "text-muted-foreground")}>
+            {selectedClient?.client || (clients.length ? "Search LMS clients" : "No LMS clients imported")}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[var(--radix-popover-trigger-width)] min-w-[300px] max-w-[min(92vw,560px)] p-0"
+      >
+        <Command
+          filter={(itemValue, search) => matchesLmsClientSearch(itemValue, search) ? 1 : 0}
+        >
+          <CommandInput placeholder="Search all LMS clients..." />
+          <CommandList className="max-h-[320px]">
+            <CommandEmpty>No LMS client found.</CommandEmpty>
+            <CommandGroup>
+              {clients.map((client) => (
+                <CommandItem
+                  key={client.id}
+                  value={client.client}
+                  onSelect={() => {
+                    onValueChange(client.id)
+                    setOpen(false)
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Check className={cn("mr-2 h-4 w-4 shrink-0", value === client.id ? "opacity-100" : "opacity-0")} />
+                  <span className="truncate">{client.client}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -139,17 +183,17 @@ function TaskSelect({
 
 function EditEntryDialog({
   entry,
-  projects,
+  clients,
   tasks,
   onClose,
 }: {
   entry: LmsWorkEntryRow | null
-  projects: LmsWorkProjectOption[]
+  clients: LmsWorkClientOption[]
   tasks: LmsWorkTaskOption[]
   onClose: () => void
 }) {
   const router = useRouter()
-  const [projectId, setProjectId] = React.useState("")
+  const [lmsAllocationId, setLmsAllocationId] = React.useState("")
   const [taskTypeId, setTaskTypeId] = React.useState("")
   const [workDate, setWorkDate] = React.useState("")
   const [minutes, setMinutes] = React.useState("")
@@ -157,22 +201,32 @@ function EditEntryDialog({
 
   React.useEffect(() => {
     if (!entry) return
-    setProjectId(entry.projectId && projects.some((project) => project.id === entry.projectId) ? entry.projectId : "")
+    setLmsAllocationId(
+      entry.lmsAllocationId && clients.some((client) => client.id === entry.lmsAllocationId)
+        ? entry.lmsAllocationId
+        : ""
+    )
     setTaskTypeId(entry.taskTypeId)
     setWorkDate(entry.workDate)
     setMinutes(String(entry.durationMinutes))
-  }, [entry, projects])
+  }, [clients, entry])
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!entry) return
     const durationMinutes = Number(minutes)
-    if (!projectId || !taskTypeId || !workDate || !Number.isInteger(durationMinutes) || durationMinutes < 1) {
+    const canPreserveDetachedClient = entry.lmsAllocationId === null && !lmsAllocationId
+    if ((!lmsAllocationId && !canPreserveDetachedClient) || !taskTypeId || !workDate || !Number.isInteger(durationMinutes) || durationMinutes < 1) {
       toast.error("Complete all fields with valid values")
       return
     }
     setSaving(true)
-    const result = await updateLmsWorkEntry(entry.id, { projectId, taskTypeId, workDate, durationMinutes })
+    const result = await updateLmsWorkEntry(entry.id, {
+      lmsAllocationId: lmsAllocationId || null,
+      taskTypeId,
+      workDate,
+      durationMinutes,
+    })
     setSaving(false)
     if (!result.success) {
       toast.error(result.error)
@@ -188,7 +242,7 @@ function EditEntryDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit work entry</DialogTitle>
-          <DialogDescription>Snapshots used by the CRM export will update to these selected values.</DialogDescription>
+          <DialogDescription>Client and task snapshots change only when you select a different value.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -197,9 +251,11 @@ function EditEntryDialog({
           </div>
           <div className="space-y-2">
             <Label>Client</Label>
-            <ProjectSelect projects={projects} value={projectId} onValueChange={setProjectId} />
-            {entry?.projectId && !projectId ? (
-              <p className="text-xs text-amber-700">The original project is no longer active. Select an active project before saving.</p>
+            <ClientCombobox clients={clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} />
+            {entry?.lmsAllocationId === null && !lmsAllocationId ? (
+              <p className="text-xs text-amber-700">
+                {entry.clientDomain} is no longer in LMS Projects. You can keep this historical client or select a current one.
+              </p>
             ) : null}
           </div>
           <div className="space-y-2">
@@ -333,7 +389,7 @@ export function LmsWorkLogWorkspace({
   const [today, setToday] = React.useState("")
   const [differentDate, setDifferentDate] = React.useState(false)
   const [workDate, setWorkDate] = React.useState("")
-  const [projectId, setProjectId] = React.useState("")
+  const [lmsAllocationId, setLmsAllocationId] = React.useState("")
   const [taskTypeId, setTaskTypeId] = React.useState("")
   const [minutes, setMinutes] = React.useState("")
   const [saving, setSaving] = React.useState(false)
@@ -382,11 +438,11 @@ export function LmsWorkLogWorkspace({
     const durationMinutes = Number(minutes)
     const entry: LmsWorkEntryInput = {
       workDate: differentDate ? workDate : today,
-      projectId,
+      lmsAllocationId,
       taskTypeId,
       durationMinutes,
     }
-    if (!entry.workDate || !entry.projectId || !entry.taskTypeId || !Number.isInteger(durationMinutes) || durationMinutes < 1) {
+    if (!entry.workDate || !entry.lmsAllocationId || !entry.taskTypeId || !Number.isInteger(durationMinutes) || durationMinutes < 1) {
       toast.error("Complete all fields with valid values")
       return
     }
@@ -400,7 +456,7 @@ export function LmsWorkLogWorkspace({
     }
 
     toast.success("Work recorded")
-    setProjectId("")
+    setLmsAllocationId("")
     setTaskTypeId("")
     setMinutes("")
     setDifferentDate(false)
@@ -470,43 +526,44 @@ export function LmsWorkLogWorkspace({
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleCreate} className="grid gap-4 lg:grid-cols-[1fr_1.3fr_1.3fr_0.65fr_auto] lg:items-end">
-            <div className="space-y-2">
-              <Label>Date</Label>
-              <div className="flex h-10 items-center gap-2 rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-3">
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.3fr)_minmax(110px,0.65fr)_auto] lg:items-end">
+              <div className="space-y-2">
+                <Label>Client</Label>
+                <ClientCombobox clients={data.clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} />
+              </div>
+              <div className="space-y-2">
+                <Label>Task</Label>
+                <TaskSelect tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="work-minutes">Minutes</Label>
+                <Input id="work-minutes" type="number" min={1} max={1440} step={1} inputMode="numeric" value={minutes} onChange={(event) => setMinutes(event.target.value)} placeholder="45" required />
+              </div>
+              <Button type="submit" className="w-full lg:w-auto" disabled={saving || !today || data.clients.length === 0 || activeTasks.length === 0}>
+                {saving ? <Loader2 className="animate-spin" /> : <Plus />}
+                Save entry
+              </Button>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-2">
                 <Checkbox
                   id="different-work-date"
                   checked={differentDate}
                   onCheckedChange={(checked) => {
                     const next = checked === true
                     setDifferentDate(next)
-                    if (next && !workDate) setWorkDate(today)
+                    if (next) setWorkDate(today)
                   }}
                 />
-                <Label htmlFor="different-work-date" className="cursor-pointer text-xs font-medium">
-                  {differentDate ? "Different date" : today ? `Today · ${formatEntryDate(today)}` : "Today"}
+                <Label htmlFor="different-work-date" className="cursor-pointer text-sm font-medium">
+                  Select a different date
                 </Label>
               </div>
               {differentDate ? (
-                <Input aria-label="Work date" type="date" value={workDate} onChange={(event) => setWorkDate(event.target.value)} required />
+                <Input aria-label="Work date" className="w-full sm:w-44" type="date" value={workDate} onChange={(event) => setWorkDate(event.target.value)} required />
               ) : null}
             </div>
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <ProjectSelect projects={data.projects} value={projectId} onValueChange={setProjectId} />
-            </div>
-            <div className="space-y-2">
-              <Label>Task</Label>
-              <TaskSelect tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="work-minutes">Minutes</Label>
-              <Input id="work-minutes" type="number" min={1} max={1440} step={1} inputMode="numeric" value={minutes} onChange={(event) => setMinutes(event.target.value)} placeholder="45" required />
-            </div>
-            <Button type="submit" className="w-full lg:w-auto" disabled={saving || !today || data.projects.length === 0 || activeTasks.length === 0}>
-              {saving ? <Loader2 className="animate-spin" /> : <Plus />}
-              Save entry
-            </Button>
           </form>
           {activeTasks.length === 0 ? (
             <button type="button" onClick={() => setManageTasksOpen(true)} className="mt-4 text-left text-sm font-medium text-[var(--brand-primary)] hover:underline">
@@ -605,7 +662,7 @@ export function LmsWorkLogWorkspace({
       </Card>
 
       <ManageTasksDialog open={manageTasksOpen} onOpenChange={setManageTasksOpen} tasks={data.tasks} />
-      <EditEntryDialog entry={editingEntry} projects={data.projects} tasks={data.tasks} onClose={() => setEditingEntry(null)} />
+      <EditEntryDialog entry={editingEntry} clients={data.clients} tasks={data.tasks} onClose={() => setEditingEntry(null)} />
     </div>
   )
 }

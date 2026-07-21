@@ -6,7 +6,7 @@ import { z } from "zod"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { DateOnlySchema } from "@/lib/lms-work-entries/date"
-import type { LmsWorkEntryInput } from "@/lib/lms-work-entries/types"
+import type { LmsWorkEntryInput, LmsWorkEntryUpdateInput } from "@/lib/lms-work-entries/types"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 
@@ -14,9 +14,12 @@ const EntryIdSchema = z.string().uuid()
 const TaskIdSchema = z.string().uuid()
 const WorkEntryInputSchema = z.object({
   workDate: DateOnlySchema,
-  projectId: z.string().uuid("Select a valid client project"),
+  lmsAllocationId: z.string().uuid("Select a valid LMS client"),
   taskTypeId: z.string().uuid("Select a valid task"),
   durationMinutes: z.number().int("Minutes must be a whole number").min(1, "Minutes must be at least 1").max(1440, "Minutes cannot exceed 1440"),
+})
+const WorkEntryUpdateInputSchema = WorkEntryInputSchema.extend({
+  lmsAllocationId: z.string().uuid("Select a valid LMS client").nullable(),
 })
 const TaskNameSchema = z.string().trim().min(1, "Task name is required").max(255, "Task name is too long")
 
@@ -37,36 +40,31 @@ function handleActionError(error: unknown, fallback: string) {
 
 async function resolveEntryReferences(
   tenantId: string,
-  projectId: string,
-  taskTypeId: string,
-  options?: { allowInactiveTaskId?: string }
+  lmsAllocationId: string,
+  taskTypeId: string
 ) {
-  const [project, task] = await Promise.all([
-    prisma.project.findFirst({
-      where: { id: projectId, tenantId, status: "Active" },
-      select: { id: true, site: { select: { domainName: true } } },
+  const [client, task] = await Promise.all([
+    prisma.lmsAllocation.findFirst({
+      where: { id: lmsAllocationId, tenantId },
+      select: { id: true, client: true },
     }),
     prisma.lmsWorkTask.findFirst({
-      where: {
-        id: taskTypeId,
-        tenantId,
-        ...(options?.allowInactiveTaskId === taskTypeId ? {} : { isActive: true }),
-      },
+      where: { id: taskTypeId, tenantId, isActive: true },
       select: { id: true, name: true },
     }),
   ])
 
-  if (!project) throw new ActionError("PROJECT_NOT_FOUND", "Select an active client project")
+  if (!client) throw new ActionError("LMS_CLIENT_NOT_FOUND", "Select a client from LMS Projects")
   if (!task) throw new ActionError("TASK_NOT_FOUND", "Select an active predefined task")
-  return { project, task }
+  return { client, task }
 }
 
 export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
   try {
     const session = await requireTenantContext()
     const validated = WorkEntryInputSchema.parse(data)
-    const [{ project, task }, user] = await Promise.all([
-      resolveEntryReferences(session.tenantId, validated.projectId, validated.taskTypeId),
+    const [{ client, task }, user] = await Promise.all([
+      resolveEntryReferences(session.tenantId, validated.lmsAllocationId, validated.taskTypeId),
       prisma.user.findFirst({
         where: { id: session.userId, tenantId: session.tenantId },
         select: { name: true, username: true },
@@ -78,11 +76,11 @@ export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
       data: {
         tenantId: session.tenantId,
         userId: session.userId,
-        projectId: project.id,
+        lmsAllocationId: client.id,
         taskTypeId: task.id,
         workDate: validated.workDate,
         durationMinutes: validated.durationMinutes,
-        clientDomainSnapshot: project.site.domainName,
+        clientDomainSnapshot: client.client,
         taskNameSnapshot: task.name,
         employeeNameSnapshot: user.name?.trim() || user.username,
       },
@@ -90,7 +88,7 @@ export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
     })
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_ENTRY_CREATED",
-      details: `entryId=${entry.id}; projectId=${project.id}; workDate=${validated.workDate}`,
+      details: `entryId=${entry.id}; lmsAllocationId=${client.id}; workDate=${validated.workDate}`,
     })
     revalidateWorkLog()
     return { success: true as const, id: entry.id }
@@ -99,37 +97,66 @@ export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
   }
 }
 
-export async function updateLmsWorkEntry(entryId: string, data: LmsWorkEntryInput) {
+export async function updateLmsWorkEntry(entryId: string, data: LmsWorkEntryUpdateInput) {
   try {
     const session = await requireTenantContext()
     const validatedId = EntryIdSchema.parse(entryId)
-    const validated = WorkEntryInputSchema.parse(data)
+    const validated = WorkEntryUpdateInputSchema.parse(data)
     const existing = await prisma.lmsWorkEntry.findFirst({
       where: { id: validatedId, tenantId: session.tenantId, userId: session.userId },
-      select: { id: true, taskTypeId: true },
+      select: { id: true, lmsAllocationId: true, taskTypeId: true },
     })
     if (!existing) throw new ActionError("ENTRY_NOT_FOUND", "Work entry not found")
 
-    const { project, task } = await resolveEntryReferences(
-      session.tenantId,
-      validated.projectId,
-      validated.taskTypeId,
-      { allowInactiveTaskId: existing.taskTypeId }
-    )
+    if (validated.lmsAllocationId === null && existing.lmsAllocationId !== null) {
+      throw new ActionError("LMS_CLIENT_REQUIRED", "Select a client from LMS Projects")
+    }
+
+    const clientChanged = validated.lmsAllocationId !== existing.lmsAllocationId
+    const taskChanged = validated.taskTypeId !== existing.taskTypeId
+    const [nextClient, nextTask] = await Promise.all([
+      clientChanged && validated.lmsAllocationId
+        ? prisma.lmsAllocation.findFirst({
+            where: { id: validated.lmsAllocationId, tenantId: session.tenantId },
+            select: { id: true, client: true },
+          })
+        : null,
+      taskChanged
+        ? prisma.lmsWorkTask.findFirst({
+            where: { id: validated.taskTypeId, tenantId: session.tenantId, isActive: true },
+            select: { id: true, name: true },
+          })
+        : null,
+    ])
+    if (clientChanged && !nextClient) {
+      throw new ActionError("LMS_CLIENT_NOT_FOUND", "Select a client from LMS Projects")
+    }
+    if (taskChanged && !nextTask) {
+      throw new ActionError("TASK_NOT_FOUND", "Select an active predefined task")
+    }
+
     await prisma.lmsWorkEntry.update({
       where: { id: existing.id },
       data: {
-        projectId: project.id,
-        taskTypeId: task.id,
         workDate: validated.workDate,
         durationMinutes: validated.durationMinutes,
-        clientDomainSnapshot: project.site.domainName,
-        taskNameSnapshot: task.name,
+        ...(nextClient
+          ? {
+              lmsAllocationId: nextClient.id,
+              clientDomainSnapshot: nextClient.client,
+            }
+          : {}),
+        ...(nextTask
+          ? {
+              taskTypeId: nextTask.id,
+              taskNameSnapshot: nextTask.name,
+            }
+          : {}),
       },
     })
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_ENTRY_UPDATED",
-      details: `entryId=${existing.id}; projectId=${project.id}; workDate=${validated.workDate}`,
+      details: `entryId=${existing.id}; lmsAllocationId=${validated.lmsAllocationId || "detached"}; workDate=${validated.workDate}`,
     })
     revalidateWorkLog()
     return { success: true as const }
@@ -216,4 +243,3 @@ export async function updateLmsWorkTask(
     return handleActionError(error, "Failed to update task")
   }
 }
-
