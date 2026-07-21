@@ -5,12 +5,13 @@ import ExcelJS from "exceljs"
 import { matchesLmsClientSearch } from "../lib/lms-work-entries/client-search"
 import { resolveLmsDataSection } from "../lib/lms-work-entries/data-section"
 import {
+  DEFAULT_LMS_WORK_DURATION_MINUTES,
+  LMS_WORK_DURATION_FALLBACK_SHORTCUTS,
   LMS_WORK_DURATION_PRESETS,
+  buildLmsWorkDurationShortcuts,
   parseCustomLmsWorkDuration,
-  parseLmsWorkDurationPreference,
-  serializeLmsWorkDurationPreference,
-} from "../lib/lms-work-entries/duration-preference"
-import { isValidDateOnly, normalizeDateRange } from "../lib/lms-work-entries/date"
+} from "../lib/lms-work-entries/duration-options"
+import { formatLmsWorkDateLabel, isValidDateOnly, normalizeDateRange } from "../lib/lms-work-entries/date"
 import {
   buildLmsCrmExportBuffer,
   LMS_CRM_EXPORT_COLUMN_WIDTHS,
@@ -26,6 +27,9 @@ async function run() {
     from: "2026-03-01",
     to: "2026-03-31",
   })
+  assert.equal(formatLmsWorkDateLabel("2026-07-21", "2026-07-21"), "Today · 21 Jul 2026")
+  assert.equal(formatLmsWorkDateLabel("2026-07-20", "2026-07-21"), "20 Jul 2026")
+  assert.equal(formatLmsWorkDateLabel("", "2026-07-21"), "Today")
 
   const importedClients = Array.from({ length: 850 }, (_, index) => `client-${String(index + 1).padStart(3, "0")}.ro`)
   importedClients.push("Școala Exemplu.ro")
@@ -39,34 +43,44 @@ async function run() {
   assert.equal(resolveLmsDataSection("unknown"), "catalog")
 
   assert.deepEqual(Array.from(LMS_WORK_DURATION_PRESETS), [15, 30, 45, 60, 120, 150, 180, 240, 300, 360])
+  assert.equal(DEFAULT_LMS_WORK_DURATION_MINUTES, 120)
+  assert.deepEqual(Array.from(LMS_WORK_DURATION_FALLBACK_SHORTCUTS), [30, 60, 120, 180, 240, 360])
   assert.equal(parseCustomLmsWorkDuration("1"), 1)
   assert.equal(parseCustomLmsWorkDuration("1440"), 1440)
   assert.equal(parseCustomLmsWorkDuration(""), null)
   assert.equal(parseCustomLmsWorkDuration("0"), null)
   assert.equal(parseCustomLmsWorkDuration("30.5"), null)
   assert.equal(parseCustomLmsWorkDuration("1441"), null)
+  assert.deepEqual(buildLmsWorkDurationShortcuts([]), [30, 60, 120, 180, 240, 360])
   assert.deepEqual(
-    parseLmsWorkDurationPreference(serializeLmsWorkDurationPreference({ mode: "preset", minutes: 30 })),
-    { mode: "preset", minutes: 30 }
+    buildLmsWorkDurationShortcuts([
+      { durationMinutes: 120, count: 2 },
+      { durationMinutes: 75, count: 5 },
+      { durationMinutes: 60, count: 5 },
+      { durationMinutes: 0, count: 20 },
+      { durationMinutes: 240, count: 0 },
+    ]),
+    [60, 75, 120, 30, 180, 240]
   )
-  assert.deepEqual(
-    parseLmsWorkDurationPreference(serializeLmsWorkDurationPreference({ mode: "custom", minutes: 75 })),
-    { mode: "custom", minutes: 75 }
-  )
-  assert.equal(parseLmsWorkDurationPreference('{"version":1,"mode":"preset","minutes":75}'), null)
-  assert.equal(parseLmsWorkDurationPreference('{"version":1,"mode":"custom","minutes":0}'), null)
-  assert.equal(parseLmsWorkDurationPreference("not-json"), null)
 
   const workLogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-log-workspace.tsx"), "utf8")
+  const workLogDbSource = readFileSync(resolve(process.cwd(), "lib/lms-work-entries/db.ts"), "utf8")
   const dataWorkspaceSource = readFileSync(resolve(process.cwd(), "components/lms-tasks/lms-analysis-data-workspace.tsx"), "utf8")
   assert.doesNotMatch(workLogSource, /Manage tasks|Manage predefined tasks/)
+  assert.doesNotMatch(workLogSource, /Capture client work quickly/)
+  assert.doesNotMatch(workLogSource, /localStorage|LMS_WORK_DURATION_STORAGE_KEY/)
   assert.doesNotMatch(workLogSource, /_120px_150px/)
   assert.match(workLogSource, /\/lms-analysis\/data\?section=catalog/)
   assert.match(workLogSource, /LMS_WORK_DURATION_PRESETS\.map/)
-  assert.match(workLogSource, /LMS_WORK_DURATION_STORAGE_KEY/)
-  assert.match(workLogSource, /md:grid-cols-2/)
+  assert.match(workLogSource, /DEFAULT_LMS_WORK_DURATION_MINUTES/)
+  assert.match(workLogSource, /xl:grid-cols-\[minmax\(0,13fr\)_minmax\(340px,7fr\)\]/)
+  assert.match(workLogSource, /formatLmsWorkDateLabel/)
+  assert.match(workLogSource, /Frequently used/)
+  assert.match(workLogSource, /Save work/)
   assert.match(workLogSource, /!hasSelectedClient/)
   assert.match(workLogSource, /!hasSelectedTask/)
+  assert.match(workLogDbSource, /prisma\.lmsWorkEntry\.groupBy/)
+  assert.match(workLogDbSource, /where: \{ tenantId: session\.tenantId, userId: session\.userId \}/)
   assert.match(dataWorkspaceSource, /value="catalog"/)
   assert.match(dataWorkspaceSource, /value="imports"/)
   assert.match(dataWorkspaceSource, /value="logs"/)

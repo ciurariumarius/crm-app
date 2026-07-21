@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 import { normalizeDateRange } from "@/lib/lms-work-entries/date"
+import { buildLmsWorkDurationShortcuts } from "@/lib/lms-work-entries/duration-options"
 import type { LmsWorkLogPageData } from "@/lib/lms-work-entries/types"
 
 const DEFAULT_PAGE_SIZE = 50
@@ -38,7 +39,7 @@ export async function getLmsWorkLogPageData(args?: {
     ...(from || to ? { workDate: dateFilter } : {}),
   }
 
-  const [clients, tasks, totalEntries, aggregate] = await Promise.all([
+  const [clients, tasks, totalEntries, aggregate, durationFrequencies] = await Promise.all([
     prisma.lmsAllocation.findMany({
       where: { tenantId: session.tenantId },
       select: { id: true, client: true },
@@ -47,6 +48,11 @@ export async function getLmsWorkLogPageData(args?: {
     findLmsWorkTasksForTenant(session.tenantId),
     prisma.lmsWorkEntry.count({ where }),
     prisma.lmsWorkEntry.aggregate({ where, _sum: { durationMinutes: true } }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["durationMinutes"],
+      where: { tenantId: session.tenantId, userId: session.userId },
+      _count: { _all: true },
+    }),
   ])
 
   const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize))
@@ -73,6 +79,12 @@ export async function getLmsWorkLogPageData(args?: {
   return {
     clients,
     tasks,
+    frequentDurations: buildLmsWorkDurationShortcuts(
+      durationFrequencies.map((frequency) => ({
+        durationMinutes: frequency.durationMinutes,
+        count: frequency._count._all,
+      }))
+    ),
     entries: entries.map((entry) => ({
       id: entry.id,
       lmsAllocationId: entry.lmsAllocationId,

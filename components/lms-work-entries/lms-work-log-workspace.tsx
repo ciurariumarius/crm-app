@@ -26,15 +26,13 @@ import {
 } from "@/lib/actions/lms-work-entries"
 import { getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
 import { matchesLmsClientSearch } from "@/lib/lms-work-entries/client-search"
+import { formatLmsWorkDateLabel } from "@/lib/lms-work-entries/date"
 import {
+  DEFAULT_LMS_WORK_DURATION_MINUTES,
   LMS_WORK_DURATION_PRESETS,
-  LMS_WORK_DURATION_STORAGE_KEY,
+  isLmsWorkDurationPreset,
   parseCustomLmsWorkDuration,
-  parseLmsWorkDurationPreference,
-  serializeLmsWorkDurationPreference,
-  type LmsWorkDurationPreference,
-  type LmsWorkDurationPreset,
-} from "@/lib/lms-work-entries/duration-preference"
+} from "@/lib/lms-work-entries/duration-options"
 import type {
   LmsWorkEntryInput,
   LmsWorkEntryRow,
@@ -69,6 +67,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils"
 
 const CUSTOM_PERIOD = "custom"
+const CUSTOM_DURATION_VALUE = "custom"
 
 function localToday() {
   return format(new Date(), "yyyy-MM-dd")
@@ -151,6 +150,70 @@ function ClientCombobox({
                 >
                   <Check className={cn("mr-2 h-4 w-4 shrink-0", value === client.id ? "opacity-100" : "opacity-0")} />
                   <span className="truncate">{client.client}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function TaskCombobox({
+  tasks,
+  value,
+  onValueChange,
+  disabled,
+}: {
+  tasks: LmsWorkTaskOption[]
+  value: string
+  onValueChange: (value: string) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = React.useState(false)
+  const options = tasks.filter((task) => task.isActive)
+  const selectedTask = options.find((task) => task.id === value)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-label="Select predefined task"
+          className="h-12! w-full justify-between overflow-hidden rounded-xl px-4 text-sm font-normal"
+          disabled={disabled || options.length === 0}
+        >
+          <span className={cn("truncate", !selectedTask && "text-muted-foreground")}>
+            {selectedTask?.name || (options.length ? "Search predefined tasks" : "Add a task first")}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[var(--radix-popover-trigger-width)] min-w-[280px] max-w-[min(92vw,560px)] p-0"
+      >
+        <Command filter={(itemValue, search) => matchesLmsClientSearch(itemValue, search) ? 1 : 0}>
+          <CommandInput placeholder="Search predefined tasks..." />
+          <CommandList className="max-h-[280px]">
+            <CommandEmpty>No work-entry task found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((task) => (
+                <CommandItem
+                  key={task.id}
+                  value={task.name}
+                  onSelect={() => {
+                    onValueChange(task.id)
+                    setOpen(false)
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Check className={cn("mr-2 h-4 w-4 shrink-0", value === task.id ? "opacity-100" : "opacity-0")} />
+                  <span className="truncate">{task.name}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -306,8 +369,7 @@ export function LmsWorkLogWorkspace({
   const [workDate, setWorkDate] = React.useState("")
   const [lmsAllocationId, setLmsAllocationId] = React.useState("")
   const [taskTypeId, setTaskTypeId] = React.useState("")
-  const [selectedPresetMinutes, setSelectedPresetMinutes] = React.useState<LmsWorkDurationPreset | null>(null)
-  const [customDurationEnabled, setCustomDurationEnabled] = React.useState(false)
+  const [durationSelection, setDurationSelection] = React.useState(String(DEFAULT_LMS_WORK_DURATION_MINUTES))
   const [customMinutes, setCustomMinutes] = React.useState("")
   const [saving, setSaving] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
@@ -321,36 +383,19 @@ export function LmsWorkLogWorkspace({
   const activeTasks = data.tasks.filter((task) => task.isActive)
   const hasSelectedClient = data.clients.some((client) => client.id === lmsAllocationId)
   const hasSelectedTask = activeTasks.some((task) => task.id === taskTypeId)
+  const customDurationEnabled = durationSelection === CUSTOM_DURATION_VALUE
+  const selectedPresetMinutes = Number(durationSelection)
   const durationMinutes = customDurationEnabled
     ? parseCustomLmsWorkDuration(customMinutes)
-    : selectedPresetMinutes
+    : isLmsWorkDurationPreset(selectedPresetMinutes) ? selectedPresetMinutes : null
   const customDurationInvalid = customDurationEnabled && customMinutes.trim().length > 0 && durationMinutes === null
+  const effectiveWorkDate = differentDate ? workDate : today
+  const effectiveDateLabel = formatLmsWorkDateLabel(effectiveWorkDate, today)
 
   React.useEffect(() => {
     const value = localToday()
     setToday(value)
     setWorkDate((current) => current || value)
-  }, [])
-
-  React.useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(LMS_WORK_DURATION_STORAGE_KEY)
-      const preference = parseLmsWorkDurationPreference(stored)
-      if (stored !== null && !preference) {
-        window.localStorage.removeItem(LMS_WORK_DURATION_STORAGE_KEY)
-        return
-      }
-      if (preference?.mode === "preset") {
-        setSelectedPresetMinutes(preference.minutes)
-        setCustomDurationEnabled(false)
-      } else if (preference?.mode === "custom") {
-        setSelectedPresetMinutes(null)
-        setCustomDurationEnabled(true)
-        setCustomMinutes(String(preference.minutes))
-      }
-    } catch {
-      // Browser storage can be unavailable in strict privacy modes.
-    }
   }, [])
 
   React.useEffect(() => {
@@ -377,21 +422,27 @@ export function LmsWorkLogWorkspace({
     navigateToRange(value, preset.from, preset.to)
   }
 
-  function selectPresetDuration(value: LmsWorkDurationPreset) {
-    setSelectedPresetMinutes(value)
-    setCustomDurationEnabled(false)
+  function selectDuration(value: string) {
+    setDurationSelection(value)
+    if (value === CUSTOM_DURATION_VALUE) {
+      window.requestAnimationFrame(() => customMinutesRef.current?.focus())
+    }
   }
 
-  function selectCustomDuration() {
-    setSelectedPresetMinutes(null)
-    setCustomDurationEnabled(true)
+  function selectDurationShortcut(value: number) {
+    if (isLmsWorkDurationPreset(value)) {
+      setDurationSelection(String(value))
+      return
+    }
+    setDurationSelection(CUSTOM_DURATION_VALUE)
+    setCustomMinutes(String(value))
     window.requestAnimationFrame(() => customMinutesRef.current?.focus())
   }
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault()
     const entry: LmsWorkEntryInput = {
-      workDate: differentDate ? workDate : today,
+      workDate: effectiveWorkDate,
       lmsAllocationId,
       taskTypeId,
       durationMinutes: durationMinutes ?? 0,
@@ -410,21 +461,12 @@ export function LmsWorkLogWorkspace({
     }
 
     toast.success("Work recorded")
-    const durationPreference: LmsWorkDurationPreference = customDurationEnabled
-      ? { mode: "custom", minutes: durationMinutes }
-      : { mode: "preset", minutes: durationMinutes as LmsWorkDurationPreset }
-    try {
-      window.localStorage.setItem(
-        LMS_WORK_DURATION_STORAGE_KEY,
-        serializeLmsWorkDurationPreference(durationPreference)
-      )
-    } catch {
-      // The entry is saved even when browser preference storage is unavailable.
-    }
     setLmsAllocationId("")
     setTaskTypeId("")
     setDifferentDate(false)
     setWorkDate(today)
+    setDurationSelection(String(DEFAULT_LMS_WORK_DURATION_MINUTES))
+    setCustomMinutes("")
     router.refresh()
   }
 
@@ -477,82 +519,33 @@ export function LmsWorkLogWorkspace({
 
   return (
     <div className="space-y-6 pb-8">
-      <Card className="gap-5 py-6">
-        <CardHeader className="gap-1 px-5 sm:px-7">
+      <Card className="gap-4 py-6">
+        <CardHeader className="px-5 sm:px-7">
           <CardTitle className="flex items-center gap-2 text-lg"><Clock3 className="h-5 w-5 text-[var(--brand-primary)]" />Record work</CardTitle>
-          <CardDescription>Capture client work quickly. Entries can be exported below in the company CRM format.</CardDescription>
         </CardHeader>
         <CardContent className="px-5 sm:px-7">
-          <form onSubmit={handleCreate} className="space-y-5">
-            <div className="grid gap-5 md:grid-cols-2">
+          <form onSubmit={handleCreate} className="grid gap-6 xl:grid-cols-[minmax(0,13fr)_minmax(340px,7fr)]">
+            <div className="space-y-5">
               <div className="space-y-2.5">
                 <Label className="text-sm font-semibold">Client</Label>
                 <ClientCombobox clients={data.clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} large />
               </div>
               <div className="space-y-2.5">
                 <Label className="text-sm font-semibold">Task</Label>
-                <TaskSelect tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} large />
+                <TaskCombobox tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} />
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,auto)_180px] xl:items-end">
-              <div className="space-y-2.5">
-                <Label id="work-duration-label" className="text-sm font-semibold">Minutes</Label>
-                <div role="group" aria-labelledby="work-duration-label" className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
-                  {LMS_WORK_DURATION_PRESETS.map((preset) => {
-                    const selected = !customDurationEnabled && selectedPresetMinutes === preset
-                    return (
-                      <Button
-                        key={preset}
-                        type="button"
-                        variant={selected ? "default" : "outline"}
-                        aria-pressed={selected}
-                        onClick={() => selectPresetDuration(preset)}
-                        className="h-12 w-full rounded-xl px-3 text-sm font-semibold sm:w-auto sm:min-w-[58px]"
-                      >
-                        {preset}
-                      </Button>
-                    )
-                  })}
-                  <Button
-                    type="button"
-                    variant={customDurationEnabled ? "default" : "outline"}
-                    aria-pressed={customDurationEnabled}
-                    onClick={selectCustomDuration}
-                    className="h-12 w-full rounded-xl px-3 text-sm font-semibold sm:w-auto sm:min-w-[84px]"
-                  >
-                    Custom
-                  </Button>
-                  {customDurationEnabled ? (
-                    <div className="relative col-span-2 min-w-[124px] sm:w-36 sm:flex-none">
-                      <Input
-                        ref={customMinutesRef}
-                        aria-label="Custom minutes"
-                        aria-invalid={customDurationInvalid}
-                        aria-describedby={customDurationInvalid ? "custom-duration-error" : undefined}
-                        type="number"
-                        min={1}
-                        max={1440}
-                        step={1}
-                        inputMode="numeric"
-                        value={customMinutes}
-                        onChange={(event) => setCustomMinutes(event.target.value)}
-                        placeholder="Minutes"
-                        className="h-12! pr-11 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      />
-                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-[var(--text-muted)]">min</span>
-                    </div>
-                  ) : null}
-                </div>
-                {customDurationInvalid ? (
-                  <p id="custom-duration-error" className="text-xs font-medium text-red-600">Enter 1–1440 whole minutes.</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2.5">
-                <span aria-hidden="true" className="hidden text-sm font-semibold xl:block xl:invisible">Optional date</span>
-                <div className="flex min-h-12 flex-col gap-2 sm:flex-row sm:items-center">
-                  <div className="flex h-12 w-full shrink-0 items-center gap-2 rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-3 sm:w-auto">
+            <div className="space-y-5 border-t border-[var(--line-subtle)] pt-5 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <Label className="text-sm font-semibold">Date</Label>
+                    <p className="mt-1 truncate text-base font-semibold text-[var(--text-primary)]" aria-live="polite">
+                      {effectiveDateLabel}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 pt-1">
                     <Checkbox
                       id="different-work-date"
                       checked={differentDate}
@@ -562,35 +555,94 @@ export function LmsWorkLogWorkspace({
                         if (next) setWorkDate(today)
                       }}
                     />
-                    <Label htmlFor="different-work-date" className="cursor-pointer whitespace-nowrap text-sm font-medium text-[var(--text-secondary)]">
-                      Different date
+                    <Label htmlFor="different-work-date" className="cursor-pointer whitespace-nowrap text-xs font-medium text-[var(--text-secondary)]">
+                      Other date
                     </Label>
                   </div>
-                  {differentDate ? (
-                    <Input aria-label="Work date" className="h-12! w-full sm:w-44" type="date" value={workDate} onChange={(event) => setWorkDate(event.target.value)} required />
-                  ) : null}
                 </div>
+                {differentDate ? (
+                  <Input
+                    aria-label="Work date"
+                    className="h-12! w-full"
+                    type="date"
+                    value={workDate}
+                    onChange={(event) => setWorkDate(event.target.value)}
+                    required
+                  />
+                ) : null}
               </div>
 
               <div className="space-y-2.5">
-                <span aria-hidden="true" className="hidden text-sm font-semibold xl:block xl:invisible">Save</span>
-                <Button
-                  type="submit"
-                  className="h-12! w-full min-w-44 rounded-xl text-sm font-semibold"
-                  disabled={
-                    saving
-                    || !today
-                    || !hasSelectedClient
-                    || !hasSelectedTask
-                    || data.clients.length === 0
-                    || activeTasks.length === 0
-                    || durationMinutes === null
-                  }
-                >
-                  {saving ? <Loader2 className="animate-spin" /> : <Plus />}
-                  Save entry
-                </Button>
+                <Label htmlFor="work-duration" className="text-sm font-semibold">Minutes</Label>
+                <Select value={durationSelection} onValueChange={selectDuration}>
+                  <SelectTrigger id="work-duration" className="h-12! w-full rounded-xl px-4 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {LMS_WORK_DURATION_PRESETS.map((preset) => (
+                      <SelectItem key={preset} value={String(preset)}>{preset} min</SelectItem>
+                    ))}
+                    <SelectItem value={CUSTOM_DURATION_VALUE}>Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                {customDurationEnabled ? (
+                  <div className="relative">
+                    <Input
+                      ref={customMinutesRef}
+                      aria-label="Custom minutes"
+                      aria-invalid={customDurationInvalid}
+                      aria-describedby={customDurationInvalid ? "custom-duration-error" : undefined}
+                      type="number"
+                      min={1}
+                      max={1440}
+                      step={1}
+                      inputMode="numeric"
+                      value={customMinutes}
+                      onChange={(event) => setCustomMinutes(event.target.value)}
+                      placeholder="Enter minutes"
+                      className="h-12! pr-11 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-[var(--text-muted)]">min</span>
+                  </div>
+                ) : null}
+                {customDurationInvalid ? (
+                  <p id="custom-duration-error" className="text-xs font-medium text-red-600">Enter 1–1440 whole minutes.</p>
+                ) : null}
+                <div className="space-y-2 pt-1">
+                  <p className="text-xs font-medium text-[var(--text-muted)]">Frequently used</p>
+                  <div role="group" aria-label="Frequently used durations" className="grid grid-cols-3 gap-2">
+                    {data.frequentDurations.map((minutes) => (
+                      <Button
+                        key={minutes}
+                        type="button"
+                        variant={durationMinutes === minutes ? "default" : "outline"}
+                        aria-pressed={durationMinutes === minutes}
+                        onClick={() => selectDurationShortcut(minutes)}
+                        className="h-9 rounded-lg px-2 text-xs font-semibold"
+                      >
+                        {minutes} min
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               </div>
+
+              <Button
+                type="submit"
+                className="h-12! w-full rounded-xl text-sm font-semibold"
+                disabled={
+                  saving
+                  || !effectiveWorkDate
+                  || !hasSelectedClient
+                  || !hasSelectedTask
+                  || data.clients.length === 0
+                  || activeTasks.length === 0
+                  || durationMinutes === null
+                }
+              >
+                {saving ? <Loader2 className="animate-spin" /> : <Plus />}
+                Save work
+              </Button>
             </div>
           </form>
           {activeTasks.length === 0 ? (

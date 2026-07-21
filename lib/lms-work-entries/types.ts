@@ -36,6 +36,7 @@ export type LmsWorkEntryUpdateInput = Omit<LmsWorkEntryInput, "lmsAllocationId">
 export type LmsWorkLogPageData = {
   clients: LmsWorkClientOption[]
   tasks: LmsWorkTaskOption[]
+  frequentDurations: number[]
   entries: LmsWorkEntryRow[]
   totalEntries: number
   totalMinutes: number
