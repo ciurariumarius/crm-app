@@ -55,7 +55,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -105,56 +105,162 @@ function ClientCombobox({
 }) {
   const [open, setOpen] = React.useState(false)
   const selectedClient = clients.find((client) => client.id === value)
+  const [search, setSearch] = React.useState(selectedClient?.client ?? "")
+  const [activeClientId, setActiveClientId] = React.useState<string | null>(null)
+  const listboxId = React.useId()
+  const skipClearedSelectionSync = React.useRef(false)
+  const previousSelection = React.useRef({ value, label: selectedClient?.client ?? "" })
+  const filteredClients = React.useMemo(
+    () => clients.filter((client) => matchesLmsClientSearch(client.client, search)),
+    [clients, search]
+  )
+
+  React.useEffect(() => {
+    const label = selectedClient?.client ?? ""
+    if (previousSelection.current.value === value && previousSelection.current.label === label) return
+    previousSelection.current = { value, label }
+
+    if (!value && skipClearedSelectionSync.current) {
+      skipClearedSelectionSync.current = false
+      return
+    }
+    skipClearedSelectionSync.current = false
+    setSearch(label)
+  }, [selectedClient?.client, value])
+
+  React.useEffect(() => {
+    if (!open) return
+    setActiveClientId((current) => (
+      current && filteredClients.some((client) => client.id === current)
+        ? current
+        : filteredClients[0]?.id ?? null
+    ))
+  }, [filteredClients, open])
+
+  React.useEffect(() => {
+    if (!open || !activeClientId) return
+    document.getElementById(`${listboxId}-${activeClientId}`)?.scrollIntoView({ block: "nearest" })
+  }, [activeClientId, listboxId, open])
+
+  function selectClient(client: LmsWorkClientOption) {
+    setSearch(client.client)
+    setActiveClientId(client.id)
+    skipClearedSelectionSync.current = false
+    onValueChange(client.id)
+    setOpen(false)
+  }
+
+  function closeClientSearch() {
+    setOpen(false)
+    setActiveClientId(null)
+    setSearch(selectedClient?.client ?? "")
+  }
+
+  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault()
+      closeClientSearch()
+      return
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault()
+      if (!open) setOpen(true)
+      if (filteredClients.length === 0) return
+      const currentIndex = filteredClients.findIndex((client) => client.id === activeClientId)
+      const offset = event.key === "ArrowDown" ? 1 : -1
+      const nextIndex = currentIndex < 0
+        ? (offset === 1 ? 0 : filteredClients.length - 1)
+        : (currentIndex + offset + filteredClients.length) % filteredClients.length
+      setActiveClientId(filteredClients[nextIndex].id)
+      return
+    }
+    if (event.key === "Enter" && open && activeClientId) {
+      const activeClient = filteredClients.find((client) => client.id === activeClientId)
+      if (activeClient) {
+        event.preventDefault()
+        selectClient(activeClient)
+      }
+    }
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          aria-label="Select LMS client"
-          className={cn(
-            "w-full justify-between overflow-hidden font-normal",
-            large && "h-12! rounded-xl px-4 text-sm"
-          )}
-          disabled={disabled || clients.length === 0}
-        >
-          <span className={cn("truncate", !selectedClient && "text-muted-foreground")}>
-            {selectedClient?.client || (clients.length ? "Search LMS clients" : "No LMS clients imported")}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) setOpen(true)
+        else closeClientSearch()
+      }}
+    >
+      <PopoverAnchor asChild>
+        <div className="relative">
+          <Input
+            type="text"
+            role="combobox"
+            aria-expanded={open}
+            aria-autocomplete="list"
+            aria-controls={listboxId}
+            aria-activedescendant={activeClientId ? `${listboxId}-${activeClientId}` : undefined}
+            aria-label="Select LMS client"
+            autoComplete="off"
+            value={search}
+            placeholder={clients.length ? "Search LMS clients" : "No LMS clients imported"}
+            onFocus={(event) => {
+              setOpen(true)
+              if (selectedClient) event.currentTarget.select()
+            }}
+            onChange={(event) => {
+              const nextSearch = event.target.value
+              setSearch(nextSearch)
+              setOpen(true)
+              if (value) {
+                skipClearedSelectionSync.current = true
+                onValueChange("")
+              }
+            }}
+            onKeyDown={handleSearchKeyDown}
+            className={cn(
+              "w-full pr-10 font-normal",
+              large && "h-12! rounded-xl px-4 text-sm"
+            )}
+            disabled={disabled || clients.length === 0}
+          />
+          <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+        </div>
+      </PopoverAnchor>
       <PopoverContent
         align="start"
         className="w-[var(--radix-popover-trigger-width)] min-w-[300px] max-w-[min(92vw,560px)] p-0"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
       >
-        <Command
-          filter={(itemValue, search) => matchesLmsClientSearch(itemValue, search) ? 1 : 0}
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label="LMS clients"
+          className="max-h-[320px] overflow-y-auto p-1"
         >
-          <CommandInput placeholder="Search all LMS clients..." />
-          <CommandList className="max-h-[320px]">
-            <CommandEmpty>No LMS client found.</CommandEmpty>
-            <CommandGroup>
-              {clients.map((client) => (
-                <CommandItem
-                  key={client.id}
-                  value={client.client}
-                  onSelect={() => {
-                    onValueChange(client.id)
-                    setOpen(false)
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Check className={cn("mr-2 h-4 w-4 shrink-0", value === client.id ? "opacity-100" : "opacity-0")} />
-                  <span className="truncate">{client.client}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+          {filteredClients.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No LMS client found.</p>
+          ) : filteredClients.map((client) => (
+            <button
+              key={client.id}
+              id={`${listboxId}-${client.id}`}
+              type="button"
+              role="option"
+              aria-selected={value === client.id}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => setActiveClientId(client.id)}
+              onClick={() => selectClient(client)}
+              className={cn(
+                "flex w-full cursor-pointer items-center rounded-sm px-2 py-2 text-left text-sm outline-none",
+                activeClientId === client.id && "bg-accent text-accent-foreground"
+              )}
+            >
+              <Check className={cn("mr-2 h-4 w-4 shrink-0", value === client.id ? "opacity-100" : "opacity-0")} />
+              <span className="truncate">{client.client}</span>
+            </button>
+          ))}
+        </div>
       </PopoverContent>
     </Popover>
   )
