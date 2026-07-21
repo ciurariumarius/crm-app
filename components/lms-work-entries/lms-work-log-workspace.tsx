@@ -524,8 +524,8 @@ export function LmsWorkLogWorkspace({
           <CardTitle className="flex items-center gap-2 text-lg"><Clock3 className="h-5 w-5 text-[var(--brand-primary)]" />Record work</CardTitle>
         </CardHeader>
         <CardContent className="px-5 sm:px-7">
-          <form onSubmit={handleCreate} className="grid gap-6 xl:grid-cols-[minmax(0,13fr)_minmax(340px,7fr)]">
-            <div className="space-y-5">
+          <form onSubmit={handleCreate} className="grid gap-x-6 gap-y-5 xl:grid-cols-[minmax(0,11fr)_minmax(420px,9fr)]">
+            <div className="space-y-5 xl:col-start-1 xl:row-start-1">
               <div className="space-y-2.5">
                 <Label className="text-sm font-semibold">Client</Label>
                 <ClientCombobox clients={data.clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} large />
@@ -536,7 +536,7 @@ export function LmsWorkLogWorkspace({
               </div>
             </div>
 
-            <div className="space-y-5 border-t border-[var(--line-subtle)] pt-5 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
+            <div className="h-full space-y-5 border-t border-[var(--line-subtle)] pt-5 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -626,24 +626,24 @@ export function LmsWorkLogWorkspace({
                   </div>
                 </div>
               </div>
-
-              <Button
-                type="submit"
-                className="h-12! w-full rounded-xl text-sm font-semibold"
-                disabled={
-                  saving
-                  || !effectiveWorkDate
-                  || !hasSelectedClient
-                  || !hasSelectedTask
-                  || data.clients.length === 0
-                  || activeTasks.length === 0
-                  || durationMinutes === null
-                }
-              >
-                {saving ? <Loader2 className="animate-spin" /> : <Plus />}
-                Save work
-              </Button>
             </div>
+
+            <Button
+              type="submit"
+              className="h-12! w-full rounded-xl text-sm font-semibold xl:col-start-1 xl:row-start-2"
+              disabled={
+                saving
+                || !effectiveWorkDate
+                || !hasSelectedClient
+                || !hasSelectedTask
+                || data.clients.length === 0
+                || activeTasks.length === 0
+                || durationMinutes === null
+              }
+            >
+              {saving ? <Loader2 className="animate-spin" /> : <Plus />}
+              Save work
+            </Button>
           </form>
           {activeTasks.length === 0 ? (
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
