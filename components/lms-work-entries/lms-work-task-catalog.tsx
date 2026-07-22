@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 
 type CatalogFilter = "all" | "active" | "inactive"
 
-export function LmsWorkTaskCatalog({ tasks }: { tasks: LmsWorkTaskOption[] }) {
+export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWorkTaskOption[]; embedded?: boolean }) {
   const router = useRouter()
   const [newTask, setNewTask] = React.useState("")
   const [search, setSearch] = React.useState("")
@@ -145,18 +145,8 @@ export function LmsWorkTaskCatalog({ tasks }: { tasks: LmsWorkTaskOption[] }) {
     { value: "inactive", label: "Inactive", count: inactiveCount },
   ]
 
-  return (
-    <Card className="rounded-2xl border-[var(--line-subtle)]">
-      <CardHeader className="gap-1">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <ListChecks className="h-5 w-5 text-[var(--brand-primary)]" />
-          Work-entry task catalog
-        </CardTitle>
-        <CardDescription>
-          These choices appear only in Tasks → Record work. They do not change imported LMS task analysis.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-5">
+  const content = (
+      <div className="space-y-5">
         <form onSubmit={addTask} className="flex flex-col gap-2 sm:flex-row">
           <Input
             value={newTask}
@@ -341,7 +331,23 @@ export function LmsWorkTaskCatalog({ tasks }: { tasks: LmsWorkTaskOption[] }) {
             </div>
           ) : null}
         </div>
-      </CardContent>
+      </div>
+  )
+
+  if (embedded) return content
+
+  return (
+    <Card className="rounded-2xl border-[var(--line-subtle)]">
+      <CardHeader className="gap-1">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <ListChecks className="h-5 w-5 text-[var(--brand-primary)]" />
+          Work-entry task catalog
+        </CardTitle>
+        <CardDescription>
+          These choices appear only in Tasks → Record work. They do not change imported LMS task analysis.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>{content}</CardContent>
     </Card>
   )
 }

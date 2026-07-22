@@ -8,7 +8,7 @@ const moduleLinks = [
   { label: "Tasks", href: "/lms-analysis/work-log" },
   { label: "Tasks Analysis", href: "/lms-analysis/tasks" },
   { label: "Projects", href: "/lms-analysis/projects" },
-  { label: "Data", href: "/lms-analysis/data" },
+  { label: "Settings", href: "/lms-analysis/data" },
 ] as const
 
 function isActivePath(pathname: string, href: string) {

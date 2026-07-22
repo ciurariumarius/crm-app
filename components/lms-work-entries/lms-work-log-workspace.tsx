@@ -947,7 +947,7 @@ export function LmsWorkLogWorkspace({
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               No active work tasks are configured.{" "}
               <Link href="/lms-analysis/data#task-catalog" className="font-semibold underline underline-offset-2">
-                Configure tasks in Data
+                Configure tasks in Settings
               </Link>
               .
             </div>

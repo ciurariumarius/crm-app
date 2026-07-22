@@ -70,7 +70,7 @@ const lmsAnalysisNav: NavItem[] = [
   { name: "Tasks", href: "/lms-analysis/work-log", icon: Clock },
   { name: "Tasks Analysis", href: "/lms-analysis/tasks", icon: CheckCircle },
   { name: "Projects", href: "/lms-analysis/projects", icon: Package },
-  { name: "Data", href: "/lms-analysis/data", icon: Database },
+  { name: "Settings", href: "/lms-analysis/data", icon: Database },
 ]
 
 function isActivePath(pathname: string, href: string) {

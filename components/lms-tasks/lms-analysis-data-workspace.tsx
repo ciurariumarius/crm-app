@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { ChevronDown } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -123,6 +124,7 @@ export function LmsAnalysisDataWorkspace({
   const [importingAllocations, setImportingAllocations] = React.useState(false)
   const [logs, setLogs] = React.useState<ImportLog[]>([])
   const [logsHydrated, setLogsHydrated] = React.useState(false)
+  const [workTaskCatalogOpen, setWorkTaskCatalogOpen] = React.useState(false)
 
   React.useEffect(() => {
     try {
@@ -142,6 +144,16 @@ export function LmsAnalysisDataWorkspace({
     if (!logsHydrated) return
     localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(logs.slice(0, 200)))
   }, [logs, logsHydrated])
+
+  React.useEffect(() => {
+    const openCatalogFromHash = () => {
+      if (window.location.hash === "#task-catalog") setWorkTaskCatalogOpen(true)
+    }
+
+    openCatalogFromHash()
+    window.addEventListener("hashchange", openCatalogFromHash)
+    return () => window.removeEventListener("hashchange", openCatalogFromHash)
+  }, [])
 
   const appendLog = React.useCallback((entry: ImportLog) => {
     setLogs((current) => [entry, ...current].slice(0, 200))
@@ -259,14 +271,6 @@ export function LmsAnalysisDataWorkspace({
 
   return (
     <div className="space-y-6">
-      <section id="task-catalog" className="scroll-mt-6" aria-label="Task Catalog">
-        <LmsWorkTaskCatalog tasks={workTasks} />
-      </section>
-
-      <section id="recurring-work" className="scroll-mt-6" aria-label="Recurring Work">
-        <LmsWorkRecurrences data={recurrenceData} />
-      </section>
-
       <section id="imports" className="scroll-mt-6" aria-label="Imports">
         {!ready ? (
           <Card className="rounded-2xl border-[var(--line-subtle)] p-6 text-sm text-[var(--text-secondary)]">Loading LMS data…</Card>
@@ -434,6 +438,40 @@ export function LmsAnalysisDataWorkspace({
             </Table>
           </div>
         </CardContent>
+        </Card>
+      </section>
+
+      <section id="recurring-work" className="scroll-mt-6" aria-label="Recurring Work">
+        <LmsWorkRecurrences data={recurrenceData} />
+      </section>
+
+      <section id="task-catalog" className="scroll-mt-6" aria-label="Work-entry task catalog">
+        <Card className="rounded-2xl border-[var(--line-subtle)]">
+          <CardHeader className="gap-1">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <CardTitle className="text-lg">Work-entry tasks</CardTitle>
+                <CardDescription>Manage the predefined tasks available in Tasks → Record work.</CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 rounded-xl"
+                aria-expanded={workTaskCatalogOpen}
+                aria-controls="work-entry-task-catalog"
+                onClick={() => setWorkTaskCatalogOpen((open) => !open)}
+              >
+                {workTaskCatalogOpen ? "Hide" : "Manage"}
+                <ChevronDown className={cn("transition-transform", workTaskCatalogOpen && "rotate-180")} />
+              </Button>
+            </div>
+          </CardHeader>
+          {workTaskCatalogOpen ? (
+            <CardContent id="work-entry-task-catalog" className="pt-0">
+              <LmsWorkTaskCatalog tasks={workTasks} embedded />
+            </CardContent>
+          ) : null}
         </Card>
       </section>
     </div>
