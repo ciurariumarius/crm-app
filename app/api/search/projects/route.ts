@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { normalizeProjectStatus } from "@/lib/status"
 import { formatProjectServiceList } from "@/lib/utils"
 import { buildProjectWhereInput, normalizeProjectFilters } from "@/lib/filters/project-filters"
@@ -98,7 +98,7 @@ type ProjectRow = Prisma.ProjectGetPayload<{ include: typeof projectInclude }>
 
 export async function GET(request: Request) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const { searchParams } = new URL(request.url)
         const filters = normalizeProjectFilters({
             q: searchParams.get("q"),
@@ -112,7 +112,6 @@ export async function GET(request: Request) {
             to: searchParams.get("to"),
         })
         const where = buildProjectWhereInput({
-            tenantId: session.tenantId,
             filters,
             now: new Date(),
         })

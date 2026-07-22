@@ -2,13 +2,13 @@ import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { SettingsContent } from "./settings-content"
 import type { DeviceSessionData, UserData } from "./settings-content"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { isSessionRegistryEnabled } from "@/lib/auth"
 
 export default async function SettingsPage() {
-    let session: Awaited<ReturnType<typeof requireTenantContext>>
+    let session: Awaited<ReturnType<typeof requireAuth>>
     try {
-        session = await requireTenantContext()
+        session = await requireAuth()
     } catch {
         redirect("/login")
     }
@@ -26,7 +26,7 @@ export default async function SettingsPage() {
 
     try {
         user = await prisma.user.findFirst({
-            where: { id: session.userId, tenantId: session.tenantId },
+            where: { id: session.userId },
             select: {
                 name: true,
                 username: true,
@@ -41,7 +41,7 @@ export default async function SettingsPage() {
     } catch (error) {
         console.warn("[settings] Timer preference fields unavailable; using defaults.", error)
         const fallbackUser = await prisma.user.findFirst({
-            where: { id: session.userId, tenantId: session.tenantId },
+            where: { id: session.userId },
             select: {
                 name: true,
                 username: true,
@@ -72,7 +72,6 @@ export default async function SettingsPage() {
             const now = new Date()
             const sessions = await prisma.authSession.findMany({
                 where: {
-                    tenantId: session.tenantId,
                     userId: session.userId,
                     revokedAt: null,
                     maxSessionExpiresAt: { gt: now },

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { formatProjectName } from "@/lib/utils"
@@ -40,11 +40,10 @@ export async function createPartner(data: {
     internalNotes?: string
     }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = CreatePartnerSchema.parse(data)
         const partner = await prisma.partner.create({
             data: {
-                tenantId: session.tenantId,
                 name: validated.name,
                 isMainJob: validated.isMainJob,
                 internalNotes: validated.internalNotes,
@@ -72,10 +71,10 @@ export async function updatePartner(partnerId: string, data: {
     internalNotes?: string
     }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = UpdatePartnerSchema.parse({ partnerId, ...data })
         const updated = await prisma.partner.updateMany({
-            where: { id: validated.partnerId, tenantId: session.tenantId },
+            where: { id: validated.partnerId },
             data: {
                 name: validated.name,
                 businessName: validated.businessName || null,
@@ -110,10 +109,10 @@ export async function updatePartner(partnerId: string, data: {
 
 export async function deletePartner(partnerId: string) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedPartnerId = z.string().uuid().parse(partnerId)
         const deleted = await prisma.partner.deleteMany({
-            where: { id: validatedPartnerId, tenantId: session.tenantId },
+            where: { id: validatedPartnerId },
         })
         if (deleted.count === 0) {
             await logSessionAuditEvent(session, {
@@ -137,9 +136,9 @@ export async function deletePartner(partnerId: string) {
 
 export async function getPartnerById(partnerId: string) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const partnerRaw = await prisma.partner.findFirst({
-            where: { id: partnerId, tenantId: session.tenantId },
+            where: { id: partnerId },
             include: {
                 sites: {
                     include: {
@@ -171,14 +170,13 @@ export async function addPartnerAdHocPayment(data: {
     description?: string
 }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = AddAdHocPaymentSchema.parse(data)
         const paymentDate = new Date()
         const selectedProject = validated.projectId
             ? await prisma.project.findFirst({
                 where: {
                     id: validated.projectId,
-                    tenantId: session.tenantId,
                     site: { partnerId: validated.partnerId },
                 },
                 select: {
@@ -201,7 +199,6 @@ export async function addPartnerAdHocPayment(data: {
             service = await prisma.service.findFirst({
                 where: {
                     id: validated.serviceId,
-                    tenantId: session.tenantId,
                     isRecurring: false,
                 },
                 select: {
@@ -217,7 +214,6 @@ export async function addPartnerAdHocPayment(data: {
             // Backward compatible fallback for older UI paths.
             const fallbackService = await prisma.service.findFirst({
                 where: {
-                    tenantId: session.tenantId,
                     serviceName: "Ad-Hoc Payment",
                     isRecurring: false
                 },
@@ -232,7 +228,6 @@ export async function addPartnerAdHocPayment(data: {
             } else {
                 service = await prisma.service.create({
                     data: {
-                        tenantId: session.tenantId,
                         serviceName: "Ad-Hoc Payment",
                         isRecurring: false,
                         standardTasks: JSON.stringify([])
@@ -262,7 +257,6 @@ export async function addPartnerAdHocPayment(data: {
             // Find or create a generic Site for this Partner
             let site = await prisma.site.findFirst({
                 where: {
-                    tenantId: session.tenantId,
                     partnerId: validated.partnerId,
                     domainName: "ad-hoc-payments.local"
                 }
@@ -271,7 +265,6 @@ export async function addPartnerAdHocPayment(data: {
             if (!site) {
                 site = await prisma.site.create({
                     data: {
-                        tenantId: session.tenantId,
                         partnerId: validated.partnerId,
                         domainName: "ad-hoc-payments.local",
                         name: "Ad-Hoc Payments",
@@ -283,7 +276,6 @@ export async function addPartnerAdHocPayment(data: {
 
         const createdProject = await prisma.project.create({
             data: {
-                tenantId: session.tenantId,
                 siteId: siteIdForProject,
                 name: resolvedName,
                 description: validated.description || null,
@@ -319,11 +311,10 @@ export async function addPartnerAdHocPayment(data: {
 
 export async function getPartnerProjectsForPayment(partnerId: string) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const validatedPartnerId = z.string().uuid().parse(partnerId)
         const projects = await prisma.project.findMany({
             where: {
-                tenantId: session.tenantId,
                 site: { partnerId: validatedPartnerId },
             },
             select: {

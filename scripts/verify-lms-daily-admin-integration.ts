@@ -31,17 +31,10 @@ async function run() {
     const prisma = prismaModule.default
     prismaClient = prisma
 
-    const tenantId = "10000000-0000-0000-0000-000000000001"
-    const userId = "10000000-0000-0000-0000-000000000002"
     const allocationId = "10000000-0000-0000-0000-000000000003"
-    await prisma.tenant.create({ data: { id: tenantId, name: "Integration tenant" } })
-    await prisma.user.create({
-      data: { id: userId, tenantId, username: "mxa95", passwordHash: "integration-test-only" },
-    })
     await prisma.lmsAllocation.create({
       data: {
         id: allocationId,
-        tenantId,
         syncKey: automation.LMS_DAILY_ADMIN_CLIENT_SYNC_KEY,
         client: automation.LMS_DAILY_ADMIN_CLIENT,
       },
@@ -54,7 +47,7 @@ async function run() {
       ["20000000-0000-0000-0000-000000000004", "Dezvoltare", "dezvoltare"],
     ] as const
     for (const [id, name, normalizedName] of taskDefinitions) {
-      await prisma.lmsWorkTask.create({ data: { id, tenantId, name, normalizedName } })
+      await prisma.lmsWorkTask.create({ data: { id, name, normalizedName } })
     }
 
     const ruleDefinitions = [
@@ -67,7 +60,6 @@ async function run() {
       await prisma.lmsWorkRecurrence.create({
         data: {
           id,
-          tenantId,
           lmsAllocationId: allocationId,
           taskTypeId: task[0],
           clientSnapshot: "[Intern]",
@@ -81,8 +73,6 @@ async function run() {
 
     const manualCommunication = await prisma.lmsWorkEntry.create({
       data: {
-        tenantId,
-        userId,
         lmsAllocationId: allocationId,
         taskTypeId: taskDefinitions[2][0],
         workDate: "2026-07-20",

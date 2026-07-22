@@ -12,7 +12,8 @@ import {
 import { runSecurityPreflight } from './lib/security/preflight'
 
 const PUBLIC_PATHS = ['/login', '/manifest.json', '/sw.js']
-const PUBLIC_API_PATHS = ['/api/cron/rollover']
+// Cron routes perform their own timing-safe CRON_SECRET authentication.
+const PUBLIC_API_PATHS = ['/api/cron/rollover', '/api/cron/lms-daily-admin-work']
 const STATIC_ASSET_PATTERN = /\.(ico|png|svg|jpg|jpeg|gif|webp|txt|xml)$/i
 
 runSecurityPreflight()
@@ -60,7 +61,7 @@ export async function proxy(request: NextRequest) {
         return unauthorizedResponse(request)
     }
 
-    if (!session.userId || !session.tenantId) {
+    if (!session.userId) {
         return unauthorizedResponse(request)
     }
 

@@ -3,7 +3,7 @@ import { CreateProjectButton } from "@/components/projects/create-project-button
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { formatProjectName, formatProjectServiceList } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
 import { ProjectsFiltersToolbar } from "@/components/projects/projects-filters-toolbar"
@@ -79,7 +79,7 @@ export default async function ProjectsPage({
         page?: string
     }>
 }) {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const params = await searchParams
     const normalizedFilters = normalizeProjectFilters({
         q: params.q,
@@ -110,7 +110,6 @@ export default async function ProjectsPage({
     const requestedPage = Math.max(1, Number(params.page) || 1)
 
     const projectWhere = buildProjectWhereInput({
-        tenantId: session.tenantId,
         filters: normalizedFilters,
         now: new Date(),
     })
@@ -147,7 +146,6 @@ export default async function ProjectsPage({
             ...(shouldPaginate ? { skip: (page - 1) * perPage, take: perPage } : {}),
         }),
         prisma.partner.findMany({
-            where: { tenantId: session.tenantId },
             include: {
                 sites: {
                     select: { id: true, domainName: true },
@@ -156,7 +154,6 @@ export default async function ProjectsPage({
             orderBy: { name: "asc" },
         }),
         prisma.service.findMany({
-            where: { tenantId: session.tenantId },
             orderBy: { serviceName: "asc" },
         }),
     ])
@@ -193,7 +190,7 @@ export default async function ProjectsPage({
     const pageEnd = shouldPaginate ? Math.min(page * perPage, totalProjects) : totalProjects
 
     const user = await prisma.user.findFirst({
-        where: { id: session.userId, tenantId: session.tenantId },
+        where: { id: session.userId },
         select: { hourlyRate: true }
     })
 

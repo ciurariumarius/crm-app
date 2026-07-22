@@ -4,7 +4,7 @@ import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { SitesTable } from "@/components/vault/sites-table"
 import Link from "next/link"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { DomainsFilters } from "@/components/vault/domains-filters"
 import type { Prisma } from "@prisma/client"
 import { buttonLinkClassName } from "@/components/ui/button-link"
@@ -18,12 +18,12 @@ export default async function SitesPage({
 }: {
     searchParams: Promise<{ q?: string; partnerId?: string; page?: string; sort?: string; order?: "asc" | "desc" }>
 }) {
-    const session = await requireTenantContext()
+    await requireAuth()
     const { q, partnerId, page: pageStr, sort = "domainName", order = "asc" } = await searchParams
     const page = parseInt(pageStr || "1")
     const skip = (page - 1) * PAGE_SIZE
 
-    const where: Prisma.SiteWhereInput = { tenantId: session.tenantId }
+    const where: Prisma.SiteWhereInput = {}
     
     if (q) {
         where.OR = [
@@ -54,7 +54,6 @@ export default async function SitesPage({
 
     // Fetch partners for filters and dialog
     const partnersPromise = prisma.partner.findMany({
-        where: { tenantId: session.tenantId },
         select: { id: true, name: true },
         orderBy: { name: "asc" }
     })

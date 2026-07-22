@@ -56,7 +56,6 @@ async function backfillProjectNames() {
     const projects = await prisma.project.findMany({
         select: {
             id: true,
-            tenantId: true,
             name: true,
             createdAt: true,
             site: {
@@ -93,7 +92,6 @@ async function backfillProjectNames() {
         if (preview.length < 20) {
             preview.push({
                 id: project.id,
-                tenantId: project.tenantId,
                 from: currentName,
                 to: nextName,
             })
@@ -120,7 +118,7 @@ async function backfillProjectNames() {
     if (preview.length > 0) {
         console.log("[backfill-project-names] sample changes:")
         preview.forEach((item, index) => {
-            console.log(`${index + 1}. projectId=${item.id} tenantId=${item.tenantId}`)
+            console.log(`${index + 1}. projectId=${item.id}`)
             console.log(`   from: ${item.from ?? "NULL"}`)
             console.log(`   to:   ${item.to}`)
         })

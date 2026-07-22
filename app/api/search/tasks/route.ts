@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { buildTaskWhereInput, getLocalDayBounds, normalizeTaskFilters } from "@/lib/filters/task-filters"
 import { Prisma } from "@prisma/client"
@@ -49,7 +49,7 @@ function buildSort(sort: string): Prisma.TaskOrderByWithRelationInput[] {
 
 export async function GET(request: Request) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const { searchParams } = new URL(request.url)
         const filters = normalizeTaskFilters({
             q: searchParams.get("q"),
@@ -63,7 +63,6 @@ export async function GET(request: Request) {
         })
         const { todayStart, todayEnd } = getLocalDayBounds(new Date())
         const where = buildTaskWhereInput({
-            tenantId: session.tenantId,
             filters,
             todayStart,
             todayEnd,

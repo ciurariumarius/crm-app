@@ -86,7 +86,7 @@ export default async function RootLayout({
   if (session) {
     try {
       timerPreferenceRecord = (await prisma.user.findFirst({
-        where: { id: session.userId, tenantId: session.tenantId },
+        where: { id: session.userId },
         select: {
           timerIdlePauseMinutes: true,
           timerHardCapHours: true,

@@ -1,6 +1,6 @@
 import Link from "next/link"
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { FolderPlus, Timer, Banknote } from "lucide-react"
 import { GlobalSearch } from "@/components/dashboard/global-search"
@@ -33,7 +33,7 @@ type HomeProject = {
 }
 
 export default async function HomePage() {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const now = new Date()
     const nowMs = now.getTime()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -59,14 +59,12 @@ export default async function HomePage() {
         monthTimeByProjectRaw,
     ] = await Promise.all([
         prisma.user.findFirst({
-            where: { id: session.userId, tenantId: session.tenantId },
+            where: { id: session.userId },
             select: { name: true, username: true, hourlyRate: true },
         }),
         prisma.service.findMany({
-            where: { tenantId: session.tenantId },
         }),
         prisma.partner.findMany({
-            where: { tenantId: session.tenantId },
             include: {
                 sites: {
                     select: {
@@ -79,45 +77,39 @@ export default async function HomePage() {
         }),
         prisma.project.count({
             where: {
-                tenantId: session.tenantId,
                 status: "Active",
                 services: { some: { isRecurring: true } },
             },
         }),
         prisma.project.count({
             where: {
-                tenantId: session.tenantId,
                 status: "Active",
                 services: { none: { isRecurring: true } },
             },
         }),
         prisma.task.count({
             where: {
-                tenantId: session.tenantId,
                 status: "Completed",
             },
         }),
         prisma.project.aggregate({
             where: {
-                tenantId: session.tenantId,
                 createdAt: { gte: monthStart, lt: nextMonthStart },
             },
             _sum: { currentFee: true },
         }),
         prisma.project.aggregate({
-            where: { tenantId: session.tenantId, paymentStatus: "Unpaid" },
+            where: { paymentStatus: "Unpaid" },
             _sum: { currentFee: true },
         }),
         prisma.timeLog.aggregate({
             where: {
-                tenantId: session.tenantId,
                 startTime: { gte: monthStart, lt: nextMonthStart },
             },
             _sum: { durationSeconds: true },
         }),
         prisma.timeLog.findMany({
             where: {
-                tenantId: session.tenantId,
                 startTime: { gte: monthStart, lt: nextMonthStart },
                 endTime: null,
             },
@@ -127,7 +119,6 @@ export default async function HomePage() {
         }),
         prisma.task.findMany({
             where: {
-                tenantId: session.tenantId,
                 status: { in: ["Active", "Paused"] },
                 urgency: { in: ["Urgent", "High"] },
             },
@@ -185,7 +176,6 @@ export default async function HomePage() {
         }),
         prisma.task.findMany({
             where: {
-                tenantId: session.tenantId,
                 status: { in: ["Active", "Paused"] },
                 deadline: { not: null, lt: todayStart },
             },
@@ -243,7 +233,6 @@ export default async function HomePage() {
         }),
         prisma.task.findMany({
             where: {
-                tenantId: session.tenantId,
                 status: { in: ["Active", "Paused"] },
                 urgency: "Normal",
             },
@@ -300,7 +289,6 @@ export default async function HomePage() {
             },
         }),
         prisma.project.findMany({
-            where: { tenantId: session.tenantId },
             select: {
                 id: true,
                 name: true,
@@ -325,7 +313,6 @@ export default async function HomePage() {
         prisma.timeLog.groupBy({
             by: ["projectId"],
             where: {
-                tenantId: session.tenantId,
                 startTime: { gte: monthStart, lt: nextMonthStart },
             },
             _sum: { durationSeconds: true },

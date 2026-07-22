@@ -2,14 +2,13 @@ import prisma from "@/lib/prisma"
 import { CreateServiceDialog } from "@/components/services/create-service-dialog"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { ServicesListView } from "@/components/services/services-list-view"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 
 export default async function ServicesPage() {
-    const session = await requireTenantContext()
+    await requireAuth()
     const servicesRaw = await prisma.service.findMany({
-        where: { tenantId: session.tenantId },
         orderBy: { createdAt: "desc" },
         include: {
             projects: {

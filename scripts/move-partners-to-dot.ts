@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
-const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
 async function movePartnersToDOT() {
     console.log("🔄 Starting partner migration to DOT...")
@@ -11,7 +10,7 @@ async function movePartnersToDOT() {
 
     // Find DOT partner
     const dotPartner = await prisma.partner.findUnique({
-        where: { tenantId_name: { tenantId: DEFAULT_TENANT_ID, name: "DOT" } }
+        where: { name: "DOT" }
     })
 
     if (!dotPartner) {
@@ -25,7 +24,7 @@ async function movePartnersToDOT() {
         try {
             // Find the partner
             const partner = await prisma.partner.findUnique({
-                where: { tenantId_name: { tenantId: DEFAULT_TENANT_ID, name: partnerName } },
+                where: { name: partnerName },
                 include: { sites: true }
             })
 
@@ -39,7 +38,7 @@ async function movePartnersToDOT() {
 
             // Update all sites to point to DOT
             const updateResult = await prisma.site.updateMany({
-                where: { partnerId: partner.id, tenantId: DEFAULT_TENANT_ID },
+                where: { partnerId: partner.id },
                 data: { partnerId: dotPartner.id }
             })
 

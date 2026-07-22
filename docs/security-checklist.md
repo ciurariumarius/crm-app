@@ -23,4 +23,4 @@ Run this checklist once per quarter and before major releases.
 
 5. Observability checks
 - Confirm audit events are present for auth anomalies, blocked SSRF/domain attempts, and debug-route access denials.
-- Spot check recent audit rows for expected metadata (action, success, tenant/user where applicable).
+- Spot check recent audit rows for expected metadata (action, success, actor user where applicable).

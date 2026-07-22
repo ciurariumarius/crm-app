@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { normalizeDateRange } from "@/lib/lms-work-entries/date"
 import { buildLmsWorkDurationShortcuts } from "@/lib/lms-work-entries/duration-options"
 import { rankLmsWorkOptionsByFrequency } from "@/lib/lms-work-entries/frequent-options"
@@ -8,30 +8,27 @@ import type { LmsWorkLogPageData, LmsWorkRecurrencePageData } from "@/lib/lms-wo
 
 const DEFAULT_PAGE_SIZE = 50
 
-async function findLmsWorkTasksForTenant(tenantId: string) {
+async function findLmsWorkTasks() {
   return prisma.lmsWorkTask.findMany({
-    where: { tenantId },
     select: { id: true, name: true, isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   })
 }
 
 export async function getLmsWorkTaskOptions() {
-  const session = await requireTenantContext()
-  return findLmsWorkTasksForTenant(session.tenantId)
+  await requireAuth()
+  return findLmsWorkTasks()
 }
 
 export async function getLmsWorkRecurrencePageData(): Promise<LmsWorkRecurrencePageData> {
-  const session = await requireTenantContext()
+  await requireAuth()
   const [clients, tasks, recurrences] = await Promise.all([
     prisma.lmsAllocation.findMany({
-      where: { tenantId: session.tenantId },
       select: { id: true, client: true },
       orderBy: { client: "asc" },
     }),
-    findLmsWorkTasksForTenant(session.tenantId),
+    findLmsWorkTasks(),
     prisma.lmsWorkRecurrence.findMany({
-      where: { tenantId: session.tenantId },
       orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
       select: {
         id: true,
@@ -78,7 +75,7 @@ export async function getLmsWorkLogPageData(args?: {
   page?: number
   pageSize?: number
 }): Promise<LmsWorkLogPageData> {
-  const session = await requireTenantContext()
+  await requireAuth()
   const { from, to } = normalizeDateRange(args?.from, args?.to)
   const pageSize = Math.min(100, Math.max(1, Math.trunc(args?.pageSize ?? DEFAULT_PAGE_SIZE)))
   const requestedPage = Math.max(1, Math.trunc(args?.page ?? 1))
@@ -87,8 +84,6 @@ export async function getLmsWorkLogPageData(args?: {
     ...(to ? { lte: to } : {}),
   }
   const where = {
-    tenantId: session.tenantId,
-    userId: session.userId,
     ...(from || to ? { workDate: dateFilter } : {}),
   }
 
@@ -103,31 +98,26 @@ export async function getLmsWorkLogPageData(args?: {
     taskFrequencies,
   ] = await Promise.all([
     prisma.lmsAllocation.findMany({
-      where: { tenantId: session.tenantId },
       select: { id: true, client: true },
       orderBy: { client: "asc" },
     }),
-    findLmsWorkTasksForTenant(session.tenantId),
+    findLmsWorkTasks(),
     prisma.lmsWorkEntry.count({ where }),
     prisma.lmsWorkEntry.count({ where: { ...where, exportedAt: null } }),
     prisma.lmsWorkEntry.aggregate({ where, _sum: { durationMinutes: true } }),
     prisma.lmsWorkEntry.groupBy({
       by: ["durationMinutes"],
-      where: { tenantId: session.tenantId, userId: session.userId },
       _count: { _all: true },
     }),
     prisma.lmsWorkEntry.groupBy({
       by: ["lmsAllocationId"],
       where: {
-        tenantId: session.tenantId,
-        userId: session.userId,
         lmsAllocationId: { not: null },
       },
       _count: { _all: true },
     }),
     prisma.lmsWorkEntry.groupBy({
       by: ["taskTypeId"],
-      where: { tenantId: session.tenantId, userId: session.userId },
       _count: { _all: true },
     }),
   ])

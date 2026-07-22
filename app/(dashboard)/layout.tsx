@@ -22,11 +22,10 @@ export default async function DashboardLayout({
 
   const [userData, partnersData, servicesData, projectsData] = await Promise.all([
     prisma.user.findFirst({
-      where: { id: session.userId, tenantId: session.tenantId },
+      where: { id: session.userId },
       select: { name: true, username: true, profilePic: true },
     }),
     prisma.partner.findMany({
-      where: { tenantId: session.tenantId },
       include: {
         sites: {
           select: {
@@ -38,11 +37,9 @@ export default async function DashboardLayout({
       orderBy: { name: "asc" },
     }),
     prisma.service.findMany({
-      where: { tenantId: session.tenantId },
       orderBy: { serviceName: "asc" },
     }),
     prisma.project.findMany({
-      where: { tenantId: session.tenantId },
       select: {
         id: true,
         status: true,

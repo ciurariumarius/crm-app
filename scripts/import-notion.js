@@ -6,14 +6,6 @@ const path = require("path")
 
 async function run() {
     const prisma = new PrismaClient()
-    const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"
-
-    await prisma.tenant.upsert({
-        where: { id: DEFAULT_TENANT_ID },
-        update: { name: "Default Tenant" },
-        create: { id: DEFAULT_TENANT_ID, name: "Default Tenant" },
-    })
-
     const CSV_PATH = path.join(process.cwd(), "temp_imports", "projects.csv")
 
     if (!fs.existsSync(CSV_PATH)) {
@@ -39,9 +31,9 @@ async function run() {
             const cleanPartnerName = partnerName.replace(/^Client\s+/i, "") || "Unspecified"
 
             const partner = await prisma.partner.upsert({
-                where: { tenantId_name: { tenantId: DEFAULT_TENANT_ID, name: cleanPartnerName } },
+                where: { name: cleanPartnerName },
                 update: {},
-                create: { tenantId: DEFAULT_TENANT_ID, name: cleanPartnerName }
+                create: { name: cleanPartnerName }
             })
 
             const domainBase = cleanPartnerName.toLowerCase().replace(/[^a-z0-9]/g, "-")
@@ -50,17 +42,15 @@ async function run() {
             const site = await prisma.site.create({
                 data: {
                     partnerId: partner.id,
-                    tenantId: DEFAULT_TENANT_ID,
                     domainName: domainName
                 }
             })
 
             const serviceName = row["Service"] || "General"
             const service = await prisma.service.upsert({
-                where: { tenantId_serviceName: { tenantId: DEFAULT_TENANT_ID, serviceName: serviceName } },
+                where: { serviceName },
                 update: {},
                 create: {
-                    tenantId: DEFAULT_TENANT_ID,
                     serviceName: serviceName,
                     standardTasks: "[]"
                 }
@@ -68,7 +58,6 @@ async function run() {
 
             await prisma.project.create({
                 data: {
-                    tenantId: DEFAULT_TENANT_ID,
                     siteId: site.id,
                     status: mapStatus(row["Status"] || ""),
                     paymentStatus: mapPaymentStatus(row["Payment"] || ""),

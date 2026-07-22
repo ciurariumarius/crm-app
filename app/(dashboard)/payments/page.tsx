@@ -1,6 +1,6 @@
 import { getPaymentLogs } from "@/lib/actions/payment-actions"
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
 import { PaymentsTable } from "@/components/payments/payments-table"
 import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
@@ -43,17 +43,15 @@ export default async function PaymentsPage({
 }: {
     searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string; timeRange?: string }>
 }) {
-    const session = await requireTenantContext()
+    await requireAuth()
     const { projectId, partnerId, q, timeRange, page: pageParam } = await searchParams
     const page = Math.max(1, Number(pageParam) || 1)
 
     const [projects, partners, logsResult] = await Promise.all([
         prisma.project.findMany({
-            where: { tenantId: session.tenantId },
             include: { site: true, services: true }
         }),
         prisma.partner.findMany({
-            where: { tenantId: session.tenantId },
             select: { id: true, name: true }
         }),
         getPaymentLogs({
@@ -66,7 +64,7 @@ export default async function PaymentsPage({
         })
     ])
     const oneTimeServices = await prisma.service.findMany({
-        where: { tenantId: session.tenantId, isRecurring: false },
+        where: { isRecurring: false },
         select: { id: true, serviceName: true },
         orderBy: { serviceName: "asc" },
     })

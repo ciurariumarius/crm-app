@@ -62,19 +62,16 @@ async function checkRateLimitSafe(
 }
 
 async function revokeOtherActiveSessionsForUser(args: {
-    tenantId: string
     userId: string
     currentSessionId?: string
 }) {
     if (!isSessionRegistryEnabled()) return
 
     const where: {
-        tenantId: string
         userId: string
         revokedAt: null
         id?: { not: string }
     } = {
-        tenantId: args.tenantId,
         userId: args.userId,
         revokedAt: null,
     }
@@ -126,6 +123,17 @@ export async function loginUser(formData: FormData) {
         }
 
         const user = await prisma.user.findUnique({ where: { username } })
+        const userCount = await prisma.user.count()
+        if (userCount !== 1) {
+            await logAuditEvent({
+                action: "AUTH_SINGLE_OWNER_INVARIANT_FAILED",
+                success: false,
+                ipAddress,
+                userAgent,
+                details: `userCount=${userCount}`,
+            })
+            return { success: false, error: "Application owner configuration is invalid" }
+        }
         if (!user) {
             await logAuditEvent({
                 action: "AUTH_LOGIN_FAILED",
@@ -142,7 +150,6 @@ export async function loginUser(formData: FormData) {
             await logAuditEvent({
                 action: "AUTH_LOGIN_FAILED",
                 success: false,
-                tenantId: user.tenantId,
                 actorUserId: user.id,
                 ipAddress,
                 userAgent,
@@ -154,7 +161,6 @@ export async function loginUser(formData: FormData) {
         if (user.twoFactorEnabled) {
             const challengeToken = await encrypt({
                 userId: user.id,
-                tenantId: user.tenantId,
                 purpose: "2fa_challenge",
                 rememberDevice,
                 exp: Math.floor(Date.now() / 1000) + 300,
@@ -162,7 +168,6 @@ export async function loginUser(formData: FormData) {
             await logAuditEvent({
                 action: "AUTH_LOGIN_2FA_CHALLENGE",
                 success: true,
-                tenantId: user.tenantId,
                 actorUserId: user.id,
                 ipAddress,
                 userAgent,
@@ -170,14 +175,13 @@ export async function loginUser(formData: FormData) {
             return { success: true, requiresTwoFactor: true, challengeToken }
         }
 
-        await createSession(user.id, user.username, user.tenantId, true, rememberDevice, {
+        await createSession(user.id, user.username, true, rememberDevice, {
             ipAddress,
             userAgent,
         })
         await logAuditEvent({
             action: "AUTH_LOGIN_SUCCESS",
             success: true,
-            tenantId: user.tenantId,
             actorUserId: user.id,
             ipAddress,
             userAgent,
@@ -203,7 +207,6 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
         }
 
         const userId = challenge.userId as string
-        const challengeTenantId = challenge.tenantId as string | undefined
         const rememberDevice = challenge.rememberDevice === true
 
         const ipRl = await checkRateLimitSafe(`2fa_ip:${ipAddress}`, { maxAttempts: 100 })
@@ -211,7 +214,6 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
             await logAuditEvent({
                 action: "AUTH_2FA_IP_RATE_LIMITED",
                 success: false,
-                tenantId: challengeTenantId,
                 actorUserId: userId,
                 ipAddress,
                 userAgent,
@@ -224,7 +226,6 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
             await logAuditEvent({
                 action: "AUTH_2FA_RATE_LIMITED",
                 success: false,
-                tenantId: challengeTenantId,
                 actorUserId: userId,
                 ipAddress,
                 userAgent,
@@ -232,11 +233,7 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
             return { success: false, error: "Too many verification attempts. Please try again later." }
         }
 
-        const user = await prisma.user.findFirst({
-            where: challengeTenantId
-                ? { id: userId, tenantId: challengeTenantId }
-                : { id: userId },
-        })
+        const user = await prisma.user.findUnique({ where: { id: userId } })
         if (!user || !user.twoFactorSecret) {
             return { success: false, error: "Invalid user or 2FA not set up" }
         }
@@ -248,7 +245,6 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
             await logAuditEvent({
                 action: "AUTH_2FA_FAILED",
                 success: false,
-                tenantId: user.tenantId,
                 actorUserId: user.id,
                 ipAddress,
                 userAgent,
@@ -269,7 +265,6 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
             await logAuditEvent({
                 action: "AUTH_2FA_FAILED",
                 success: false,
-                tenantId: user.tenantId,
                 actorUserId: user.id,
                 ipAddress,
                 userAgent,
@@ -281,7 +276,7 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
         if (shouldRotateSensitiveValue(user.twoFactorSecret)) {
             try {
                 await prisma.user.updateMany({
-                    where: { id: user.id, tenantId: user.tenantId },
+                    where: { id: user.id },
                     data: { twoFactorSecret: encryptSensitiveValue(decryptedSecret) },
                 })
             } catch {
@@ -289,14 +284,13 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
             }
         }
 
-        await createSession(user.id, user.username, user.tenantId, true, rememberDevice, {
+        await createSession(user.id, user.username, true, rememberDevice, {
             ipAddress,
             userAgent,
         })
         await logAuditEvent({
             action: "AUTH_2FA_SUCCESS",
             success: true,
-            tenantId: user.tenantId,
             actorUserId: user.id,
             ipAddress,
             userAgent,
@@ -314,7 +308,6 @@ export async function logoutUser() {
     await logAuditEvent({
         action: "AUTH_LOGOUT",
         success: true,
-        tenantId: session?.tenantId,
         actorUserId: session?.userId,
         ipAddress,
         userAgent,
@@ -337,7 +330,7 @@ export async function changePassword(formData: FormData) {
         return { success: false, error: "New password must be at least 8 characters long" }
     }
 
-    const user = await prisma.user.findFirst({ where: { id: session.userId, tenantId: session.tenantId } })
+    const user = await prisma.user.findUnique({ where: { id: session.userId } })
     if (!user) return { success: false, error: "User not found" }
 
     const isValid = await bcrypt.compare(currentPassword, user.passwordHash)
@@ -345,7 +338,6 @@ export async function changePassword(formData: FormData) {
         await logAuditEvent({
             action: "AUTH_PASSWORD_CHANGE_FAILED",
             success: false,
-            tenantId: user.tenantId,
             actorUserId: user.id,
             ipAddress,
             userAgent,
@@ -361,7 +353,6 @@ export async function changePassword(formData: FormData) {
     })
 
     await revokeOtherActiveSessionsForUser({
-        tenantId: user.tenantId,
         userId: user.id,
         currentSessionId: session.sid,
     })
@@ -369,7 +360,6 @@ export async function changePassword(formData: FormData) {
     await logAuditEvent({
         action: "AUTH_PASSWORD_CHANGED",
         success: true,
-        tenantId: user.tenantId,
         actorUserId: user.id,
         ipAddress,
         userAgent,
@@ -386,7 +376,7 @@ export async function generateTwoFactorSecret() {
     }
 
     const { ipAddress, userAgent } = await getRequestContext()
-    const user = await prisma.user.findFirst({ where: { id: session.userId, tenantId: session.tenantId } })
+    const user = await prisma.user.findUnique({ where: { id: session.userId } })
     if (!user) return { success: false, error: "User not found" }
 
     const secret = new OTPAuth.Secret()
@@ -402,7 +392,6 @@ export async function generateTwoFactorSecret() {
     await logAuditEvent({
         action: "AUTH_2FA_SECRET_GENERATED",
         success: true,
-        tenantId: user.tenantId,
         actorUserId: user.id,
         ipAddress,
         userAgent,
@@ -430,7 +419,6 @@ export async function enableTwoFactor(token: string, secret: string) {
         await logAuditEvent({
             action: "AUTH_2FA_ENABLE_FAILED",
             success: false,
-            tenantId: session.tenantId,
             actorUserId: session.userId,
             ipAddress,
             userAgent,
@@ -447,11 +435,10 @@ export async function enableTwoFactor(token: string, secret: string) {
     }
 
     await prisma.user.updateMany({
-        where: { id: session.userId, tenantId: session.tenantId },
+        where: { id: session.userId },
         data: { twoFactorEnabled: true, twoFactorSecret: encryptedSecret }
     })
     await revokeOtherActiveSessionsForUser({
-        tenantId: session.tenantId,
         userId: session.userId,
         currentSessionId: session.sid,
     })
@@ -459,7 +446,6 @@ export async function enableTwoFactor(token: string, secret: string) {
     await logAuditEvent({
         action: "AUTH_2FA_ENABLED",
         success: true,
-        tenantId: session.tenantId,
         actorUserId: session.userId,
         ipAddress,
         userAgent,
@@ -478,8 +464,8 @@ export async function disableTwoFactor(currentPassword: string) {
     if (!currentPassword) return { success: false, error: "Current password is required" }
 
     const user = await prisma.user.findFirst({
-        where: { id: session.userId, tenantId: session.tenantId },
-        select: { id: true, passwordHash: true, tenantId: true },
+        where: { id: session.userId },
+        select: { id: true, passwordHash: true },
     })
     if (!user) return { success: false, error: "User not found" }
 
@@ -488,7 +474,6 @@ export async function disableTwoFactor(currentPassword: string) {
         await logAuditEvent({
             action: "AUTH_2FA_DISABLE_FAILED",
             success: false,
-            tenantId: user.tenantId,
             actorUserId: user.id,
             ipAddress,
             userAgent,
@@ -498,11 +483,10 @@ export async function disableTwoFactor(currentPassword: string) {
     }
 
     await prisma.user.updateMany({
-        where: { id: session.userId, tenantId: session.tenantId },
+        where: { id: session.userId },
         data: { twoFactorEnabled: false, twoFactorSecret: null }
     })
     await revokeOtherActiveSessionsForUser({
-        tenantId: session.tenantId,
         userId: session.userId,
         currentSessionId: session.sid,
     })
@@ -510,7 +494,6 @@ export async function disableTwoFactor(currentPassword: string) {
     await logAuditEvent({
         action: "AUTH_2FA_DISABLED",
         success: true,
-        tenantId: session.tenantId,
         actorUserId: session.userId,
         ipAddress,
         userAgent,
@@ -535,7 +518,7 @@ export async function updateProfile(formData: FormData) {
 
         try {
             await prisma.user.updateMany({
-                where: { id: session.userId, tenantId: session.tenantId },
+                where: { id: session.userId },
                 data: {
                     name: name || null,
                     profilePic: profilePic || null,
@@ -555,7 +538,7 @@ export async function updateProfile(formData: FormData) {
 
             // Backward-compatible fallback while migration is pending.
             await prisma.user.updateMany({
-                where: { id: session.userId, tenantId: session.tenantId },
+                where: { id: session.userId },
                 data: {
                     name: name || null,
                     profilePic: profilePic || null,
@@ -567,7 +550,6 @@ export async function updateProfile(formData: FormData) {
         await logAuditEvent({
             action: "AUTH_PROFILE_UPDATED",
             success: true,
-            tenantId: session.tenantId,
             actorUserId: session.userId,
             ipAddress,
             userAgent,
@@ -595,7 +577,6 @@ export async function revokeOtherDeviceSessions() {
     const revokedAt = new Date()
     const result = await prisma.authSession.updateMany({
         where: {
-            tenantId: session.tenantId,
             userId: session.userId,
             revokedAt: null,
             id: { not: session.sid },
@@ -608,7 +589,6 @@ export async function revokeOtherDeviceSessions() {
     await logAuditEvent({
         action: "AUTH_SESSIONS_REVOKED_OTHERS",
         success: true,
-        tenantId: session.tenantId,
         actorUserId: session.userId,
         ipAddress,
         userAgent,
@@ -636,7 +616,6 @@ export async function revokeDeviceSession(sessionId: string) {
     const result = await prisma.authSession.updateMany({
         where: {
             id: normalizedSessionId,
-            tenantId: session.tenantId,
             userId: session.userId,
             revokedAt: null,
         },
@@ -657,7 +636,6 @@ export async function revokeDeviceSession(sessionId: string) {
     await logAuditEvent({
         action: "AUTH_SESSION_REVOKED",
         success: true,
-        tenantId: session.tenantId,
         actorUserId: session.userId,
         ipAddress,
         userAgent,

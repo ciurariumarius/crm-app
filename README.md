@@ -28,7 +28,13 @@ npm run typecheck         # TypeScript check
 npm run verify            # lint + typecheck + build
 npm run security:audit    # fail on prod high/critical advisories
 npm run security:test-guardrails  # domain/security guardrail checks
+npm run data:preflight-single-owner
+npm run data:migrate-project-note-storage:dry
 ```
+
+The application uses a single-owner data model. Authentication, 2FA and session
+management remain required, while CRM and LMS records belong directly to the
+application rather than to a tenant or individual data owner.
 
 Cleanup and context compaction guide:
 - `docs/codebase-cleanup-playbook.md`
@@ -50,7 +56,7 @@ Optional server log route controls:
 
 ## Project Note File Controls
 
-Project note image uploads are stored outside `public/` and served through a signed, tenant-scoped API route.
+Project note image uploads are stored outside `public/` and served through an authenticated, signed API route.
 
 - `PROJECT_NOTES_STORAGE_ROOT=/absolute/or/relative/path` (default `storage/project-notes`)
 - `PROJECT_NOTES_SIGNING_SECRET=<strong-random-secret>` (required in production)
@@ -115,7 +121,7 @@ npm run security:rotate-2fa-secrets -- --strict
 Optional scoped rotation:
 
 ```bash
-npm run security:rotate-2fa-secrets -- --tenant <tenantId> --dry-run
+npm run security:rotate-2fa-secrets -- --user <userId> --dry-run
 npm run security:rotate-2fa-secrets -- --user <userId>
 ```
 

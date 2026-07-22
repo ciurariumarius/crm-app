@@ -12,7 +12,6 @@ const DEFAULT_BATCH_SIZE = 200
 type CliOptions = {
     dryRun: boolean
     strict: boolean
-    tenantId: string | null
     userId: string | null
     limit: number | null
     batchSize: number
@@ -34,7 +33,6 @@ function printUsage() {
             "Options:",
             "  --dry-run              Show what would rotate without writing DB changes.",
             "  --strict               Exit with code 1 if any row fails to rotate.",
-            "  --tenant <tenantId>    Limit operation to a specific tenant.",
             "  --user <userId>        Limit operation to a specific user ID.",
             "  --limit <number>       Process at most N records.",
             "  --batch <number>       Batch size (default 200).",
@@ -42,7 +40,7 @@ function printUsage() {
             "",
             "Examples:",
             "  npm run security:rotate-2fa-secrets -- --dry-run",
-            "  npm run security:rotate-2fa-secrets -- --tenant 123 --strict",
+            "  npm run security:rotate-2fa-secrets -- --user 123 --strict",
         ].join("\n") + "\n"
     )
 }
@@ -63,7 +61,6 @@ function parseArgs(argv: string[]): CliOptions {
     const options: CliOptions = {
         dryRun: false,
         strict: false,
-        tenantId: null,
         userId: null,
         limit: null,
         batchSize: DEFAULT_BATCH_SIZE,
@@ -81,13 +78,6 @@ function parseArgs(argv: string[]): CliOptions {
         }
         if (arg === "--strict") {
             options.strict = true
-            continue
-        }
-        if (arg === "--tenant") {
-            const value = argv[i + 1]
-            if (!value) throw new Error("--tenant requires a value")
-            options.tenantId = value
-            i += 1
             continue
         }
         if (arg === "--user") {
@@ -128,13 +118,12 @@ async function rotateTwoFactorSecrets(options: CliOptions): Promise<RotationStat
     while (true) {
         const where = {
             twoFactorSecret: { not: null as string | null },
-            ...(options.tenantId ? { tenantId: options.tenantId } : {}),
             ...(options.userId ? { id: options.userId } : {}),
         }
 
         const users = await prisma.user.findMany({
             where,
-            select: { id: true, twoFactorSecret: true, tenantId: true },
+            select: { id: true, twoFactorSecret: true },
             orderBy: { id: "asc" },
             ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
             take: options.batchSize,
@@ -165,7 +154,7 @@ async function rotateTwoFactorSecrets(options: CliOptions): Promise<RotationStat
                 }
 
                 const result = await prisma.user.updateMany({
-                    where: { id: user.id, tenantId: user.tenantId },
+                    where: { id: user.id },
                     data: { twoFactorSecret: reencrypted },
                 })
 
@@ -174,14 +163,14 @@ async function rotateTwoFactorSecrets(options: CliOptions): Promise<RotationStat
                 } else {
                     stats.failed += 1
                     process.stderr.write(
-                        `Rotation failed: user row not updated (userId=${user.id}, tenantId=${user.tenantId})\n`
+                        `Rotation failed: user row not updated (userId=${user.id})\n`
                     )
                 }
             } catch (error) {
                 stats.failed += 1
                 const message = error instanceof Error ? error.message : "Unknown error"
                 process.stderr.write(
-                    `Rotation failed for userId=${user.id}, tenantId=${user.tenantId}: ${message}\n`
+                    `Rotation failed for userId=${user.id}: ${message}\n`
                 )
             }
         }

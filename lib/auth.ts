@@ -33,7 +33,6 @@ if (SESSION_REGISTRY_REQUIRED && !SESSION_REGISTRY_ENABLED) {
 export type SessionPayload = JWTPayload & {
     userId: string
     username: string
-    tenantId: string
     twoFactorVerified: boolean
     rememberDevice?: boolean
     sid?: string
@@ -178,7 +177,6 @@ export function isSessionRegistryRequired() {
 function buildSessionPayload(args: {
     userId: string
     username: string
-    tenantId: string
     twoFactorVerified: boolean
     rememberDevice: boolean
     sid?: string
@@ -189,7 +187,6 @@ function buildSessionPayload(args: {
     return {
         userId: args.userId,
         username: args.username,
-        tenantId: args.tenantId,
         twoFactorVerified: args.twoFactorVerified,
         rememberDevice: args.rememberDevice,
         sid: args.sid,
@@ -201,11 +198,10 @@ function buildSessionPayload(args: {
 
 async function loadSessionRegistryRecord(session: SessionPayload) {
     if (!SESSION_REGISTRY_ENABLED && !SESSION_REGISTRY_REQUIRED) return null
-    if (!session.sid || !session.userId || !session.tenantId) return null
+    if (!session.sid || !session.userId) return null
     return prisma.authSession.findFirst({
         where: {
             id: session.sid,
-            tenantId: session.tenantId,
             userId: session.userId,
             revokedAt: null,
         },
@@ -214,7 +210,6 @@ async function loadSessionRegistryRecord(session: SessionPayload) {
 
 type SessionRegistryRecord = {
     id: string
-    tenantId: string
     userId: string
     expiresAt: Date
     maxSessionExpiresAt: Date
@@ -233,7 +228,7 @@ function isRegistryRecordInactive(record: SessionRegistryRecord) {
 }
 
 async function logSessionAnomaly(
-    session: Pick<SessionPayload, "tenantId" | "userId" | "sid">,
+    session: Pick<SessionPayload, "userId" | "sid">,
     reason: string
 ) {
     try {
@@ -241,7 +236,6 @@ async function logSessionAnomaly(
             data: {
                 action: "AUTH_SESSION_ANOMALY",
                 success: false,
-                tenantId: session.tenantId,
                 actorUserId: session.userId,
                 details: `sid=${session.sid ?? "missing"}; reason=${reason}`,
             },
@@ -259,7 +253,6 @@ async function revokeRegistrySession(record: SessionRegistryRecord, reason: stri
 
     await logSessionAnomaly(
         {
-            tenantId: record.tenantId,
             userId: record.userId,
             sid: record.id,
         },
@@ -304,7 +297,6 @@ export async function decrypt<T = JWTPayload>(input: string): Promise<T | null> 
 export async function createSession(
     userId: string,
     username: string,
-    tenantId: string,
     twoFactorVerified: boolean = false,
     rememberDevice: boolean = false,
     metadata?: { ipAddress?: string; userAgent?: string; authAtIso?: string }
@@ -318,7 +310,6 @@ export async function createSession(
     const sessionPayload = buildSessionPayload({
         userId,
         username,
-        tenantId,
         twoFactorVerified,
         rememberDevice,
         sid,
@@ -331,7 +322,6 @@ export async function createSession(
         await prisma.authSession.create({
             data: {
                 id: sid,
-                tenantId,
                 userId,
                 userAgent: metadata?.userAgent?.slice(0, 512) || null,
                 ipAddress: metadata?.ipAddress?.slice(0, 128) || null,
@@ -402,7 +392,7 @@ export async function updateSession(request: NextRequest) {
     if (!sessionCookie) return null
 
     const parsed = await decrypt<SessionPayload>(sessionCookie)
-    if (!parsed || !parsed.userId || !parsed.username || !parsed.tenantId) return null
+    if (!parsed || !parsed.userId || !parsed.username) return null
     if (isSessionPastAbsoluteMax(parsed)) return null
     if (!shouldRefreshSession(parsed)) return null
 
@@ -439,7 +429,6 @@ export async function updateSession(request: NextRequest) {
     const refreshedPayload = buildSessionPayload({
         userId: parsed.userId,
         username: parsed.username,
-        tenantId: parsed.tenantId,
         twoFactorVerified: parsed.twoFactorVerified !== false,
         rememberDevice,
         sid: parsed.sid,
@@ -452,7 +441,6 @@ export async function updateSession(request: NextRequest) {
         await prisma.authSession.updateMany({
             where: {
                 id: parsed.sid,
-                tenantId: parsed.tenantId,
                 userId: parsed.userId,
                 revokedAt: null,
             },
@@ -485,12 +473,11 @@ export async function destroySession() {
     if ((SESSION_REGISTRY_ENABLED || SESSION_REGISTRY_REQUIRED) && sessionCookie) {
         try {
             const parsed = await decrypt<SessionPayload>(sessionCookie)
-            if (parsed?.sid && parsed.userId && parsed.tenantId) {
+            if (parsed?.sid && parsed.userId) {
                 await prisma.authSession.updateMany({
                     where: {
                         id: parsed.sid,
                         userId: parsed.userId,
-                        tenantId: parsed.tenantId,
                         revokedAt: null,
                     },
                     data: {
@@ -514,7 +501,7 @@ export async function destroySession() {
 
 export async function requireAuth() {
     const session = await getSession()
-    if (!session || !session.userId || !session.tenantId) {
+    if (!session || !session.userId) {
         throw new Error("Unauthorized")
     }
     return session

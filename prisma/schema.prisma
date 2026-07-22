@@ -10,36 +10,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Tenant {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  users              User[]
-  partners           Partner[]
-  sites              Site[]
-  services           Service[]
-  projects           Project[]
-  tasks              Task[]
-  timeLogs           TimeLog[]
-  auditLogs          AuditLog[]
-  projectRollovers   ProjectRollover[]
-  authSessions       AuthSession[]
-  lmsTaskLogs        LmsTaskLog[]
-  lmsAllocations     LmsAllocation[]
-  lmsWorkTasks       LmsWorkTask[]
-  lmsWorkEntries     LmsWorkEntry[]
-  lmsWorkRecurrences LmsWorkRecurrence[]
-  notes              Note[]
-  noteFolders        NoteFolder[]
-
-  @@map("tenants")
-}
-
 model Partner {
   id             String   @id @default(uuid())
-  tenantId       String   @map("tenant_id")
   name           String
   businessName   String?  @map("business_name")
   isMainJob      Boolean  @default(false) @map("is_main_job")
@@ -50,18 +22,14 @@ model Partner {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sites  Site[]
+  sites Site[]
 
-  @@unique([tenantId, id])
-  @@unique([tenantId, name])
-  @@index([tenantId])
+  @@unique([name])
   @@map("partners")
 }
 
 model Site {
   id          String  @id @default(uuid())
-  tenantId    String  @map("tenant_id")
   partnerId   String  @map("partner_id")
   name        String? // Optional custom name override
   domainName  String  @map("domain_name")
@@ -77,21 +45,16 @@ model Site {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  partner  Partner   @relation(fields: [tenantId, partnerId], references: [tenantId, id], onDelete: Cascade)
+  partner  Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
   projects Project[]
 
-  @@unique([tenantId, id])
-  @@unique([tenantId, domainName])
-  @@index([tenantId])
+  @@unique([domainName])
   @@index([partnerId])
-  @@index([tenantId, partnerId])
   @@map("sites")
 }
 
 model Service {
   id          String  @id @default(uuid())
-  tenantId    String  @map("tenant_id")
   serviceName String  @map("service_name")
   isRecurring Boolean @default(false) @map("is_recurring") // Recurring (PPC) vs One-time (GTM)
 
@@ -103,18 +66,15 @@ model Service {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projects Project[]
 
-  @@unique([tenantId, serviceName])
-  @@index([tenantId])
-  @@index([tenantId, isRecurring])
+  @@unique([serviceName])
+  @@index([isRecurring])
   @@map("service_library")
 }
 
 model Project {
   id          String  @id @default(uuid())
-  tenantId    String  @map("tenant_id")
   siteId      String  @map("site_id")
   name        String? // Optional custom name override
   description String? // Optional rich text content
@@ -130,34 +90,29 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  site              Site              @relation(fields: [tenantId, siteId], references: [tenantId, id], onDelete: Cascade)
+  site              Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
   services          Service[]
   tasks             Task[]
   timeLogs          TimeLog[]
   rolloversAsSource ProjectRollover[] @relation("ProjectRolloverSource")
   rolloversAsTarget ProjectRollover[] @relation("ProjectRolloverTarget")
 
-  @@unique([tenantId, id])
-  @@index([tenantId])
   @@index([siteId])
-  @@index([tenantId, siteId])
-  @@index([tenantId, createdAt])
-  @@index([tenantId, updatedAt])
-  @@index([tenantId, status, createdAt])
-  @@index([tenantId, paymentStatus, createdAt])
-  @@index([tenantId, currentFee])
-  @@index([tenantId, status, updatedAt])
-  @@index([tenantId, paymentStatus, updatedAt])
-  @@index([tenantId, closedMonthKey])
-  @@index([tenantId, isHeavyRevenueMonth, closedMonthKey])
-  @@index([tenantId, status, closedAt])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([status, createdAt])
+  @@index([paymentStatus, createdAt])
+  @@index([currentFee])
+  @@index([status, updatedAt])
+  @@index([paymentStatus, updatedAt])
+  @@index([closedMonthKey])
+  @@index([isHeavyRevenueMonth, closedMonthKey])
+  @@index([status, closedAt])
   @@map("projects")
 }
 
 model Task {
   id               String    @id @default(uuid())
-  tenantId         String    @map("tenant_id")
   projectId        String?   @map("project_id")
   name             String
   description      String?
@@ -169,28 +124,22 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  project  Project?  @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade)
+  project  Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   timeLogs TimeLog[]
 
-  @@unique([tenantId, id])
-  @@index([tenantId])
   @@index([projectId])
-  @@index([tenantId, projectId])
-  @@index([tenantId, projectId, status])
-  @@index([tenantId, createdAt])
-  @@index([tenantId, updatedAt])
-  @@index([tenantId, name])
-  @@index([tenantId, status, deadline])
-  @@index([tenantId, status, createdAt])
-  @@index([tenantId, urgency, deadline])
+  @@index([projectId, status])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([name])
+  @@index([status, deadline])
+  @@index([status, createdAt])
+  @@index([urgency, deadline])
   @@map("tasks")
 }
 
 model TimeLog {
   id        String  @id @default(uuid())
-  tenantId  String  @map("tenant_id")
-  userId    String  @map("user_id")
   projectId String  @map("project_id")
   taskId    String? @map("task_id") // Optional: can log to project generally
 
@@ -203,27 +152,19 @@ model TimeLog {
 
   createdAt DateTime @default(now())
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [tenantId, projectId], references: [tenantId, id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   task    Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
-  @@index([tenantId])
-  @@index([userId])
   @@index([projectId])
-  @@index([tenantId, projectId])
-  @@index([tenantId, userId, endTime])
-  @@index([tenantId, userId, isPaused, endTime])
   @@index([taskId])
-  @@index([tenantId, endTime])
-  @@index([tenantId, startTime])
-  @@index([tenantId, isPaused, endTime])
+  @@index([endTime])
+  @@index([startTime])
+  @@index([isPaused, endTime])
   @@map("time_logs")
 }
 
 model User {
   id                           String   @id @default(uuid())
-  tenantId                     String   @map("tenant_id")
   username                     String   @unique
   name                         String?
   profilePic                   String?  @map("profile_pic")
@@ -237,14 +178,8 @@ model User {
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @default(now()) @updatedAt
 
-  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  authSessions   AuthSession[]
-  timeLogs       TimeLog[]
-  lmsWorkEntries LmsWorkEntry[]
-  notes          Note[]
-  noteFolders    NoteFolder[]
+  authSessions AuthSession[]
 
-  @@index([tenantId])
   @@map("users")
 }
 
@@ -261,7 +196,6 @@ model RateLimitEntry {
 
 model AuthSession {
   id                  String    @id
-  tenantId            String    @map("tenant_id")
   userId              String    @map("user_id")
   userAgent           String?   @map("user_agent")
   ipAddress           String?   @map("ip_address")
@@ -273,20 +207,17 @@ model AuthSession {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, userId, revokedAt])
-  @@index([tenantId, expiresAt])
-  @@index([tenantId, maxSessionExpiresAt])
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@index([maxSessionExpiresAt])
   @@index([userId])
   @@map("auth_sessions")
 }
 
 model Note {
   id          String   @id @default(uuid())
-  tenantId    String   @map("tenant_id")
-  userId      String   @map("user_id")
   folderId    String?  @map("folder_id")
   title       String   @default("Untitled")
   content     String   @default("")
@@ -296,42 +227,31 @@ model Note {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
-  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   folder NoteFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
-  @@unique([tenantId, id])
-  @@index([tenantId])
-  @@index([tenantId, userId])
-  @@index([tenantId, folderId, updatedAt])
-  @@index([tenantId, archived, updatedAt])
-  @@index([tenantId, pinned, updatedAt])
+  @@index([folderId, updatedAt])
+  @@index([archived, updatedAt])
+  @@index([pinned, updatedAt])
   @@map("notes")
 }
 
 model NoteFolder {
   id        String   @id @default(uuid())
-  tenantId  String   @map("tenant_id")
-  userId    String   @map("user_id")
   name      String
   isDefault Boolean  @default(false) @map("is_default")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notes  Note[]
+  notes Note[]
 
-  @@unique([tenantId, name])
-  @@index([tenantId, userId])
-  @@index([tenantId, isDefault])
-  @@index([tenantId, createdAt])
+  @@unique([name])
+  @@index([isDefault])
+  @@index([createdAt])
   @@map("note_folders")
 }
 
 model AuditLog {
   id          String   @id @default(uuid())
-  tenantId    String?  @map("tenant_id")
   actorUserId String?  @map("actor_user_id")
   action      String
   success     Boolean  @default(true)
@@ -340,9 +260,6 @@ model AuditLog {
   details     String?
   createdAt   DateTime @default(now()) @map("created_at")
 
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-
-  @@index([tenantId])
   @@index([actorUserId])
   @@index([action])
   @@index([createdAt])
@@ -351,25 +268,22 @@ model AuditLog {
 
 model ProjectRollover {
   id              String   @id @default(uuid())
-  tenantId        String   @map("tenant_id")
   sourceProjectId String   @map("source_project_id")
   newProjectId    String?  @map("new_project_id")
   targetYear      Int      @map("target_year")
   targetMonth     Int      @map("target_month")
   createdAt       DateTime @default(now()) @map("created_at")
 
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sourceProject Project  @relation("ProjectRolloverSource", fields: [tenantId, sourceProjectId], references: [tenantId, id], onDelete: Cascade)
+  sourceProject Project  @relation("ProjectRolloverSource", fields: [sourceProjectId], references: [id], onDelete: Cascade)
   newProject    Project? @relation("ProjectRolloverTarget", fields: [newProjectId], references: [id], onDelete: SetNull)
 
-  @@unique([tenantId, sourceProjectId, targetYear, targetMonth])
-  @@index([tenantId, targetYear, targetMonth])
+  @@unique([sourceProjectId, targetYear, targetMonth])
+  @@index([targetYear, targetMonth])
   @@map("project_rollovers")
 }
 
 model LmsTaskLog {
   id              String    @id @default(uuid())
-  tenantId        String    @map("tenant_id")
   syncKey         String    @map("sync_key")
   sourceId        String?   @map("source_id")
   taskDate        DateTime? @map("task_date")
@@ -381,18 +295,15 @@ model LmsTaskLog {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, syncKey])
-  @@index([tenantId, taskDate])
-  @@index([tenantId, executant])
-  @@index([tenantId, client])
+  @@unique([syncKey])
+  @@index([taskDate])
+  @@index([executant])
+  @@index([client])
   @@map("lms_task_logs")
 }
 
 model LmsAllocation {
   id         String   @id @default(uuid())
-  tenantId   String   @map("tenant_id")
   syncKey    String   @map("sync_key")
   client     String
   specialist String   @default("Unassigned")
@@ -403,19 +314,17 @@ model LmsAllocation {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
 
-  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workEntries     LmsWorkEntry[]
   workRecurrences LmsWorkRecurrence[]
 
-  @@unique([tenantId, syncKey])
-  @@index([tenantId, client])
-  @@index([tenantId, specialist])
+  @@unique([syncKey])
+  @@index([client])
+  @@index([specialist])
   @@map("lms_allocations")
 }
 
 model LmsWorkTask {
   id             String   @id @default(uuid())
-  tenantId       String   @map("tenant_id")
   name           String
   normalizedName String   @map("normalized_name")
   isActive       Boolean  @default(true) @map("is_active")
@@ -423,20 +332,17 @@ model LmsWorkTask {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
 
-  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   entries     LmsWorkEntry[]
   recurrences LmsWorkRecurrence[]
 
-  @@unique([tenantId, normalizedName])
-  @@index([tenantId, isActive, name])
-  @@index([tenantId, sortOrder])
+  @@unique([normalizedName])
+  @@index([isActive, name])
+  @@index([sortOrder])
   @@map("lms_work_tasks")
 }
 
 model LmsWorkEntry {
   id                   String    @id @default(uuid())
-  tenantId             String    @map("tenant_id")
-  userId               String    @map("user_id")
   lmsAllocationId      String?   @map("lms_allocation_id")
   taskTypeId           String    @map("task_type_id")
   workDate             String    @map("work_date")
@@ -449,22 +355,19 @@ model LmsWorkEntry {
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   lmsAllocation LmsAllocation? @relation(fields: [lmsAllocationId], references: [id], onDelete: SetNull)
   taskType      LmsWorkTask    @relation(fields: [taskTypeId], references: [id], onDelete: NoAction)
 
-  @@unique([tenantId, sourceKey, workDate])
-  @@index([tenantId, userId, workDate])
-  @@index([tenantId, userId, exportedAt, workDate])
-  @@index([tenantId, lmsAllocationId])
-  @@index([tenantId, taskTypeId])
+  @@unique([sourceKey, workDate])
+  @@index([workDate])
+  @@index([exportedAt, workDate])
+  @@index([lmsAllocationId])
+  @@index([taskTypeId])
   @@map("lms_work_entries")
 }
 
 model LmsWorkRecurrence {
   id               String    @id @default(uuid())
-  tenantId         String    @map("tenant_id")
   lmsAllocationId  String?   @map("lms_allocation_id")
   taskTypeId       String    @map("task_type_id")
   clientSnapshot   String    @map("client_snapshot")
@@ -478,12 +381,11 @@ model LmsWorkRecurrence {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lmsAllocation LmsAllocation? @relation(fields: [lmsAllocationId], references: [id], onDelete: SetNull)
   taskType      LmsWorkTask    @relation(fields: [taskTypeId], references: [id], onDelete: NoAction)
 
-  @@index([tenantId, isActive])
-  @@index([tenantId, lmsAllocationId])
-  @@index([tenantId, taskTypeId])
+  @@index([isActive])
+  @@index([lmsAllocationId])
+  @@index([taskTypeId])
   @@map("lms_work_recurrences")
 }

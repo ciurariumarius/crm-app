@@ -4,7 +4,7 @@ import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { PartnerCard } from "@/components/vault/partner-card"
 import { Users, SortAsc, SortDesc, Type, BarChart3 } from "lucide-react"
 import Link from "next/link"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { cn, formatProjectName } from "@/lib/utils"
 import type { Prisma } from "@prisma/client"
 
@@ -15,7 +15,7 @@ export default async function VaultPage({
 }: {
     searchParams: Promise<{ page?: string; tab?: string; sortBy?: string; order?: string; partnerId?: string }>
 }) {
-    const session = await requireTenantContext()
+    await requireAuth()
     const params = await searchParams
     const sortBy = params.sortBy === "revenue" ? "revenue" : "name"
     const order: Prisma.SortOrder = params.order === "desc" ? "desc" : "asc"
@@ -51,7 +51,6 @@ export default async function VaultPage({
     // Fetch partners with site projects and billing data
     const partnersRaw = await prisma.partner.findMany({
         where: {
-            tenantId: session.tenantId,
             ...(partnerId ? { id: partnerId } : {}),
         },
         include: {

@@ -9,7 +9,6 @@ import {
 import { recurrenceRunsOnDate } from "@/lib/lms-work-entries/recurrence"
 import prisma from "@/lib/prisma"
 
-export const LMS_DAILY_ADMIN_OWNER_USERNAME = "mxa95"
 export const LMS_DAILY_ADMIN_CLIENT = "[Intern]"
 export const LMS_DAILY_ADMIN_CLIENT_SYNC_KEY = "client:intern"
 export const LMS_DAILY_ADMIN_TASK = "Task-uri administrative"
@@ -17,16 +16,10 @@ export const LMS_DAILY_ADMIN_TASK_NORMALIZED_NAME = "task-uri administrative"
 export const LMS_DAILY_ADMIN_DURATION_MINUTES = 60
 export const LMS_RECURRENCE_SOURCE_PREFIX = "recurrence:"
 
-type AutomationContext = {
-  tenantId: string
-  userId: string
-}
-
 type AutomationDb = Pick<Prisma.TransactionClient, "lmsWorkEntry" | "lmsWorkRecurrence">
 
 type RecurrenceRecord = {
   id: string
-  tenantId: string
   lmsAllocationId: string | null
   taskTypeId: string
   clientSnapshot: string
@@ -68,21 +61,18 @@ export type LmsRecurringWorkRunSummary = {
 export class LmsDailyAdminAutomationError extends Error {
   code: string
   status: number
-  context?: AutomationContext
   ruleId?: string
 
   constructor(
     code: string,
     message: string,
     status = 503,
-    context?: AutomationContext,
     ruleId?: string
   ) {
     super(message)
     this.name = "LmsDailyAdminAutomationError"
     this.code = code
     this.status = status
-    this.context = context
     this.ruleId = ruleId
   }
 }
@@ -92,27 +82,12 @@ function isRetryableAutomationConflict(error: unknown) {
     && (error.code === "P2002" || error.code === "P2034")
 }
 
-async function resolveAutomationOwner(): Promise<AutomationContext> {
-  const user = await prisma.user.findUnique({
-    where: { username: LMS_DAILY_ADMIN_OWNER_USERNAME },
-    select: { id: true, tenantId: true },
-  })
-  if (!user) {
-    throw new LmsDailyAdminAutomationError(
-      "LMS_RECURRING_OWNER_NOT_FOUND",
-      "The LMS application owner account was not found"
-    )
-  }
-  return { tenantId: user.tenantId, userId: user.id }
-}
-
-function validateRule(rule: RecurrenceRecord, context: AutomationContext) {
+function validateRule(rule: RecurrenceRecord) {
   if (!rule.lmsAllocationId || !rule.lmsAllocation) {
     throw new LmsDailyAdminAutomationError(
       "LMS_RECURRENCE_CLIENT_DETACHED",
       "The configured LMS client is no longer available",
       503,
-      context,
       rule.id
     )
   }
@@ -121,7 +96,6 @@ function validateRule(rule: RecurrenceRecord, context: AutomationContext) {
       "LMS_RECURRENCE_TASK_INACTIVE",
       "The configured work-entry task is inactive",
       503,
-      context,
       rule.id
     )
   }
@@ -129,13 +103,12 @@ function validateRule(rule: RecurrenceRecord, context: AutomationContext) {
 
 async function reconcileRule(
   db: AutomationDb,
-  context: AutomationContext,
   rule: RecurrenceRecord,
   today: string,
   now: Date,
   dryRun: boolean
 ): Promise<LmsRecurringRuleRunResult> {
-  validateRule(rule, context)
+  validateRule(rule)
   const startsOn = rule.startsOn ?? today
   const processedFrom = rule.processedThrough
     ? addDateOnlyDays(rule.processedThrough, 1)
@@ -170,8 +143,6 @@ async function reconcileRule(
   const [automaticEntries, matchingManualEntries] = await Promise.all([
     db.lmsWorkEntry.findMany({
       where: {
-        tenantId: context.tenantId,
-        userId: context.userId,
         sourceKey,
         workDate: { in: eligibleDates },
       },
@@ -179,8 +150,6 @@ async function reconcileRule(
     }),
     db.lmsWorkEntry.findMany({
       where: {
-        tenantId: context.tenantId,
-        userId: context.userId,
         sourceKey: null,
         lmsAllocationId: rule.lmsAllocationId,
         taskTypeId: rule.taskTypeId,
@@ -216,8 +185,6 @@ async function reconcileRule(
     if (!dryRun) {
       await db.lmsWorkEntry.create({
         data: {
-          tenantId: context.tenantId,
-          userId: context.userId,
           lmsAllocationId: rule.lmsAllocationId,
           taskTypeId: rule.taskTypeId,
           workDate,
@@ -254,7 +221,6 @@ async function reconcileRule(
 
 const recurrenceSelect = {
   id: true,
-  tenantId: true,
   lmsAllocationId: true,
   taskTypeId: true,
   clientSnapshot: true,
@@ -268,7 +234,6 @@ const recurrenceSelect = {
 } satisfies Prisma.LmsWorkRecurrenceSelect
 
 async function processRule(
-  context: AutomationContext,
   ruleId: string,
   today: string,
   now: Date,
@@ -276,18 +241,18 @@ async function processRule(
 ) {
   if (dryRun) {
     const rule = await prisma.lmsWorkRecurrence.findFirstOrThrow({
-      where: { id: ruleId, tenantId: context.tenantId, isActive: true },
+      where: { id: ruleId, isActive: true },
       select: recurrenceSelect,
     })
-    return reconcileRule(prisma, context, rule, today, now, true)
+    return reconcileRule(prisma, rule, today, now, true)
   }
 
   const execute = () => prisma.$transaction(async (tx) => {
     const rule = await tx.lmsWorkRecurrence.findFirstOrThrow({
-      where: { id: ruleId, tenantId: context.tenantId, isActive: true },
+      where: { id: ruleId, isActive: true },
       select: recurrenceSelect,
     })
-    return reconcileRule(tx, context, rule, today, now, false)
+    return reconcileRule(tx, rule, today, now, false)
   }, { maxWait: 5_000, timeout: 20_000 })
 
   try {
@@ -320,9 +285,8 @@ export async function runLmsDailyAdminAutomation(options?: { now?: Date; dryRun?
   const now = options?.now ?? new Date()
   const today = getBucharestDateOnly(now)
   const dryRun = options?.dryRun ?? false
-  const context = await resolveAutomationOwner()
   const rules = await prisma.lmsWorkRecurrence.findMany({
-    where: { tenantId: context.tenantId, isActive: true },
+    where: { isActive: true },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: recurrenceSelect,
   })
@@ -330,7 +294,7 @@ export async function runLmsDailyAdminAutomation(options?: { now?: Date; dryRun?
   const results: LmsRecurringRuleRunResult[] = []
   for (const rule of rules) {
     try {
-      results.push(await processRule(context, rule.id, today, now, dryRun))
+      results.push(await processRule(rule.id, today, now, dryRun))
     } catch (error) {
       results.push(failedResult(rule, error))
     }
@@ -347,5 +311,5 @@ export async function runLmsDailyAdminAutomation(options?: { now?: Date; dryRun?
     results,
   }
 
-  return { context, summary }
+  return { summary }
 }

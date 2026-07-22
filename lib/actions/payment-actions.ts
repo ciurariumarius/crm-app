@@ -1,16 +1,15 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { Prisma } from "@prisma/client"
 
 export async function getProjectPaymentHistory(projectId: string) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
 
         const logs = await prisma.auditLog.findMany({
             where: {
-                tenantId: session.tenantId,
                 action: { in: ["PROJECT_PAYMENT_TOGGLED", "SETTLE_PARTNER", "SETTLE_PARTNER_VOIDED", "PARTNER_AD_HOC_PAYMENT_ADDED"] },
                 details: { contains: projectId }
             },
@@ -45,11 +44,10 @@ export async function getProjectPaymentHistory(projectId: string) {
 
 export async function getProjectStatusHistory(projectId: string) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
 
         const logs = await prisma.auditLog.findMany({
             where: {
-                tenantId: session.tenantId,
                 action: { in: ["PROJECT_STATUS_CHANGED", "PROJECT_CREATED", "PROJECT_CLOSED", "PROJECT_REOPENED"] },
                 details: { contains: `projectId=${projectId}` },
             },
@@ -129,11 +127,10 @@ export async function getPaymentLogs(params: {
     skip?: number;
 }) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const { projectId, partnerId, q, timeRange, take = 50, skip = 0 } = params
 
         const where: Prisma.AuditLogWhereInput = {
-            tenantId: session.tenantId,
             action: { in: ["PROJECT_PAYMENT_TOGGLED", "SETTLE_PARTNER", "SETTLE_PARTNER_VOIDED", "PARTNER_AD_HOC_PAYMENT_ADDED"] }
         }
 

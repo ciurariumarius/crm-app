@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BarChart3, TrendingUp, DollarSign, Clock, Briefcase, Users } from "lucide-react"
 import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
 import { PageHeader } from "@/components/layout/page-header"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import type { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
@@ -54,12 +54,11 @@ type ServiceStat = {
 }
 
 export default async function AnalyticsPage() {
-    const session = await requireTenantContext()
+    await requireAuth()
     // Run all queries in parallel
     const [projects, totalTimeAgg, projectCounts, timeByProject] = await Promise.all([
         // Projects with only data needed for analytics math
         prisma.project.findMany({
-            where: { tenantId: session.tenantId },
             select: {
                 id: true,
                 status: true,
@@ -83,16 +82,13 @@ export default async function AnalyticsPage() {
         // Total time across all projects via aggregate
         prisma.timeLog.aggregate({
             _sum: { durationSeconds: true },
-            where: { tenantId: session.tenantId },
         }),
         // Project counts by status via groupBy
         prisma.project.groupBy({
-            where: { tenantId: session.tenantId },
             by: ['status'],
             _count: { _all: true }
         }),
         prisma.timeLog.groupBy({
-            where: { tenantId: session.tenantId },
             by: ['projectId'],
             _sum: { durationSeconds: true },
         }),

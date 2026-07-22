@@ -79,13 +79,12 @@ export function normalizeTaskFilters(input: TaskFiltersInput): NormalizedTaskFil
 }
 
 export function buildTaskWhereInput(input: {
-    tenantId: string
     filters: NormalizedTaskFilters
     todayStart: Date
     todayEnd: Date
 }): Prisma.TaskWhereInput {
-    const { tenantId, filters, todayStart, todayEnd } = input
-    const where: Prisma.TaskWhereInput = { tenantId }
+    const { filters, todayStart, todayEnd } = input
+    const where: Prisma.TaskWhereInput = {}
 
     if (filters.status !== "All") {
         where.status = filters.status === "Active" ? { in: ["Active", "Paused"] } : filters.status

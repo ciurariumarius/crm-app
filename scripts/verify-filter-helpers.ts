@@ -31,13 +31,12 @@ function run() {
         q: "optik",
     })
     const projectWhere = buildProjectWhereInput({
-        tenantId: "tenant-1",
         filters: normalizedProjectFilters,
         now: march19Utc,
     })
 
     const projectWhereJson = JSON.stringify(projectWhere)
-    assert.match(projectWhereJson, /"tenantId":"tenant-1"/)
+    assert.doesNotMatch(projectWhereJson, /tenantId/)
     assert.match(projectWhereJson, /"status":"Completed"/)
     assert.match(projectWhereJson, /"paymentStatus":"Unpaid"/)
     assert.match(projectWhereJson, /"partnerId":"partner-1"/)
@@ -59,14 +58,13 @@ function run() {
 
     const { todayStart, todayEnd } = getLocalDayBounds(new Date("2026-03-19T08:00:00.000Z"))
     const taskWhere = buildTaskWhereInput({
-        tenantId: "tenant-1",
         filters: normalizedTaskFilters,
         todayStart,
         todayEnd,
     })
 
     const taskWhereJson = JSON.stringify(taskWhere)
-    assert.match(taskWhereJson, /"tenantId":"tenant-1"/)
+    assert.doesNotMatch(taskWhereJson, /tenantId/)
     assert.match(taskWhereJson, /"status":\{"in":\["Active","Paused"\]\}/)
     assert.match(taskWhereJson, /"urgency":\{"in":\["Urgent","High"\]\}/)
     assert.match(taskWhereJson, /"partnerId":"partner-2"/)

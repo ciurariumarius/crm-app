@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { apiRouteError } from "@/lib/api-response"
-import { getLmsModuleDataForTenant } from "@/lib/lms-tasks/db"
+import { getLmsModuleData } from "@/lib/lms-tasks/db"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
-    const session = await requireTenantContext()
-    const data = await getLmsModuleDataForTenant(session.tenantId)
+    await requireAuth()
+    const data = await getLmsModuleData()
     return NextResponse.json(
       { success: true, data },
       {

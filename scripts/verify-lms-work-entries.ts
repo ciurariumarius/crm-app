@@ -156,6 +156,7 @@ async function run() {
   const dailyAdminAutomationSource = readFileSync(resolve(process.cwd(), "lib/lms-work-entries/daily-admin-automation.ts"), "utf8")
   const dailyAdminCronRouteSource = readFileSync(resolve(process.cwd(), "app/api/cron/lms-daily-admin-work/route.ts"), "utf8")
   const recurringWorkSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-recurrences.tsx"), "utf8")
+  const proxySource = readFileSync(resolve(process.cwd(), "proxy.ts"), "utf8")
   const prismaSchemaSource = readFileSync(resolve(process.cwd(), "prisma/schema.prisma"), "utf8")
   const taskOrderMigrationSource = readFileSync(
     resolve(process.cwd(), "prisma/migrations/20260721180000_add_lms_work_task_order_and_defaults/migration.sql"),
@@ -183,6 +184,10 @@ async function run() {
   )
   const recurringWorkMigrationSource = readFileSync(
     resolve(process.cwd(), "prisma/migrations/20260722110000_add_lms_work_recurrences/migration.sql"),
+    "utf8"
+  )
+  const singleOwnerMigrationSource = readFileSync(
+    resolve(process.cwd(), "prisma/migrations/20260722130000_simplify_to_single_owner/migration.sql"),
     "utf8"
   )
   const dailyAdminRunbookSource = readFileSync(resolve(process.cwd(), "docs/lms-daily-admin-cron.md"), "utf8")
@@ -223,7 +228,7 @@ async function run() {
   assert.match(workLogDbSource, /prisma\.lmsWorkEntry\.groupBy/)
   assert.match(workLogDbSource, /by: \["lmsAllocationId"\]/)
   assert.match(workLogDbSource, /by: \["taskTypeId"\]/)
-  assert.match(workLogDbSource, /where: \{ tenantId: session\.tenantId, userId: session\.userId \}/)
+  assert.doesNotMatch(workLogDbSource, /tenantId|userId|requireTenantContext/)
   assert.match(workLogDbSource, /orderBy: \[\{ sortOrder: "asc" \}, \{ name: "asc" \}\]/)
   assert.match(workLogDbSource, /exportedAt: null/)
   assert.match(workLogDbSource, /exportedAt: true/)
@@ -231,7 +236,8 @@ async function run() {
   assert.match(workTaskCatalogSource, /reorderLmsWorkTasks/)
   assert.match(workTaskCatalogSource, /Alt\+ArrowUp Alt\+ArrowDown/)
   assert.match(workEntryActionsSource, /export async function reorderLmsWorkTasks/)
-  assert.match(workEntryActionsSource, /where: \{ id, tenantId: session\.tenantId \}/)
+  assert.match(workEntryActionsSource, /where: \{ id \}/)
+  assert.doesNotMatch(workEntryActionsSource, /tenantId|userId|requireTenantContext/)
   assert.match(workEntryActionsSource, /employeeNameSnapshot: LMS_CRM_EMPLOYEE_NAME/)
   assert.match(workEntryActionsSource, /exportedAt: null/)
   assert.match(workEntryExportRouteSource, /exportedAt: null/)
@@ -245,7 +251,8 @@ async function run() {
   assert.match(prismaSchemaSource, /sourceKey\s+String\?\s+@map\("source_key"\)/)
   assert.match(prismaSchemaSource, /model LmsWorkRecurrence/)
   assert.doesNotMatch(prismaSchemaSource, /model LmsWorkAutomationState/)
-  assert.match(prismaSchemaSource, /@@unique\(\[tenantId, sourceKey, workDate\]\)/)
+  assert.match(prismaSchemaSource, /@@unique\(\[sourceKey, workDate\]\)/)
+  assert.doesNotMatch(prismaSchemaSource, /model Tenant/)
   assert.match(taskOrderMigrationSource, /INSERT OR IGNORE INTO "lms_work_tasks"/)
   assert.match(exactTaskNamesMigrationSource, /UPDATE "lms_work_tasks"/)
   assert.match(exactTaskNamesMigrationSource, /UPDATE "lms_work_entries"/)
@@ -264,6 +271,9 @@ async function run() {
   assert.match(recurringWorkMigrationSource, /Dezvoltare/)
   assert.match(recurringWorkMigrationSource, /UPDATE "lms_work_entries"/)
   assert.match(recurringWorkMigrationSource, /DROP TABLE "lms_work_automation_states"/)
+  assert.match(singleOwnerMigrationSource, /CREATE TEMP TABLE "_single_owner_guard"/)
+  assert.match(singleOwnerMigrationSource, /DROP TABLE "tenants"/)
+  assert.match(singleOwnerMigrationSource, /PRAGMA foreign_key_check/)
   assert.match(dailyAdminAutomationSource, /LMS_RECURRENCE_SOURCE_PREFIX/)
   assert.match(dailyAdminAutomationSource, /sourceKey: null/)
   assert.match(dailyAdminAutomationSource, /durationMinutes: rule\.durationMinutes/)
@@ -271,7 +281,7 @@ async function run() {
   assert.match(dailyAdminAutomationSource, /processedThrough: today/)
   assert.match(dailyAdminAutomationSource, /isRomanianLegalHoliday/)
   assert.match(dailyAdminAutomationSource, /prisma\.\$transaction/)
-  assert.match(dailyAdminAutomationSource, /LMS_DAILY_ADMIN_OWNER_USERNAME = "mxa95"/)
+  assert.doesNotMatch(dailyAdminAutomationSource, /LMS_DAILY_ADMIN_OWNER_USERNAME|prisma\.user|tenantId|userId/)
   assert.doesNotMatch(dailyAdminAutomationSource, /process\.env\.LMS_DAILY_ADMIN_USERNAME/)
   assert.match(dailyAdminCronRouteSource, /matchesBearerOrHeaderSecret/)
   assert.match(dailyAdminCronRouteSource, /CRON_UNAUTHORIZED/)
@@ -279,6 +289,7 @@ async function run() {
   assert.match(dailyAdminCronRouteSource, /LMS_RECURRING_WORK_COMPLETED/)
   assert.match(dailyAdminCronRouteSource, /LMS_DAILY_ADMIN_WORK_FAILED/)
   assert.doesNotMatch(dailyAdminCronRouteSource, /username: target\.username/)
+  assert.match(proxySource, /\/api\/cron\/lms-daily-admin-work/)
   assert.match(dailyAdminRunbookSource, /CRON_TZ=Europe\/Bucharest/)
   assert.match(dailyAdminRunbookSource, /5 8 \* \* \*/)
   assert.doesNotMatch(envExampleSource, /LMS_DAILY_ADMIN_USERNAME/)

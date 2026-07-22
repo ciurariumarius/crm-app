@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { apiRouteError } from "@/lib/api-response"
-import { requireTenantContext } from "@/lib/tenant"
-import { getLmsModuleDataForTenant, syncLmsAllocationsForTenant } from "@/lib/lms-tasks/db"
+import { requireAuth } from "@/lib/auth"
+import { getLmsModuleData, syncLmsAllocations } from "@/lib/lms-tasks/db"
 
 export const dynamic = "force-dynamic"
 
@@ -24,10 +24,10 @@ const bodySchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await requireTenantContext()
+    await requireAuth()
     const parsed = bodySchema.parse(await request.json())
-    const summary = await syncLmsAllocationsForTenant(session.tenantId, parsed.records, parsed.syncMode)
-    const data = await getLmsModuleDataForTenant(session.tenantId)
+    const summary = await syncLmsAllocations(parsed.records, parsed.syncMode)
+    const data = await getLmsModuleData()
     return NextResponse.json(
       { success: true, summary, data },
       {

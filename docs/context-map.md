@@ -1,12 +1,12 @@
 # Context Map
 
-Last updated: 2026-03-26
+Last updated: 2026-07-22
 
 ## Primary app surfaces
 - `app/(dashboard)/` pages and route wiring.
 - `components/` UI, sheets, filters, cards.
 - `lib/actions/` server actions (business logic + writes).
-- `lib/` shared auth, utils, tenant, prisma bindings.
+- `lib/` shared auth, utilities, and Prisma bindings.
 - `prisma/` schema and migrations.
 
 ## Fast reading order for new tasks

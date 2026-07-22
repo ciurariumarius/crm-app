@@ -11,7 +11,7 @@ import { TasksPaginationBar } from "@/components/tasks/tasks-pagination-bar"
 import Link from "next/link"
 import { Prisma } from "@prisma/client"
 import { ListChecks, Play, AlertTriangle, CalendarClock, CalendarDays } from "lucide-react"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { buildTaskWhereInput, getLocalDayBounds, normalizeTaskFilters } from "@/lib/filters/task-filters"
 
 export const dynamic = "force-dynamic"
@@ -70,7 +70,7 @@ export default async function TasksPage({
         cols?: string
     }>
 }) {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const params = await searchParams
     const normalizedFilters = normalizeTaskFilters({
         q: params.q,
@@ -100,7 +100,6 @@ export default async function TasksPage({
     const requestedPage = Math.max(1, Number(params.page) || 1)
     const { todayStart, todayEnd } = getLocalDayBounds(new Date())
     const where = buildTaskWhereInput({
-        tenantId: session.tenantId,
         filters: normalizedFilters,
         todayStart,
         todayEnd,
@@ -130,42 +129,36 @@ export default async function TasksPage({
             ...(shouldPaginate ? { skip: (page - 1) * perPage, take: perPage } : {}),
         }),
         prisma.task.count({
-            where: { tenantId: session.tenantId },
         }),
         prisma.task.count({
             where: {
-                tenantId: session.tenantId,
                 status: { in: ["Active", "Paused"] },
             },
         }),
         prisma.task.count({
             where: {
-                tenantId: session.tenantId,
                 status: { in: ["Active", "Paused"] },
                 urgency: { in: ["Urgent", "High"] },
             },
         }),
         prisma.task.count({
             where: {
-                tenantId: session.tenantId,
                 status: { in: ["Active", "Paused"] },
                 deadline: { not: null, lt: todayStart },
             },
         }),
         prisma.task.count({
             where: {
-                tenantId: session.tenantId,
                 status: { in: ["Active", "Paused"] },
                 deadline: { not: null, gte: todayStart, lte: todayEnd },
             },
         }),
-        prisma.service.findMany({ where: { tenantId: session.tenantId }, orderBy: { serviceName: "asc" } }),
+        prisma.service.findMany({ orderBy: { serviceName: "asc" } }),
         prisma.timeLog.findFirst({
-            where: { endTime: null, tenantId: session.tenantId },
+            where: { endTime: null },
             include: { task: true, project: true },
         }),
         prisma.project.findMany({
-            where: { tenantId: session.tenantId },
             select: {
                 id: true,
                 name: true,
@@ -182,7 +175,7 @@ export default async function TasksPage({
             orderBy: { updatedAt: "desc" },
         }),
         prisma.user.findFirst({
-            where: { id: session.userId, tenantId: session.tenantId },
+            where: { id: session.userId },
             select: { hourlyRate: true },
         }),
     ])

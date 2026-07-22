@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
@@ -32,7 +32,7 @@ const UpdateSiteSchema = z.object({
 })
 
 async function resolveNormalizedDomainAndFavicon(
-    session: Awaited<ReturnType<typeof requireTenantContext>>,
+    session: Awaited<ReturnType<typeof requireAuth>>,
     domainInput: string
 ) {
     let normalizedDomainName: string
@@ -72,10 +72,10 @@ async function resolveNormalizedDomainAndFavicon(
 
 export async function createSite(partnerId: string, domainName: string) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = CreateSiteSchema.parse({ partnerId, domainName })
         const partner = await prisma.partner.findFirst({
-            where: { id: validated.partnerId, tenantId: session.tenantId },
+            where: { id: validated.partnerId },
             select: { id: true },
         })
         if (!partner) {
@@ -87,7 +87,6 @@ export async function createSite(partnerId: string, domainName: string) {
         )
         const site = await prisma.site.create({
             data: {
-                tenantId: session.tenantId,
                 partnerId: validated.partnerId,
                 domainName: normalizedDomainName,
                 faviconUrl,
@@ -116,7 +115,7 @@ export async function updateSiteDetails(siteId: string, data: {
     marketingVault?: string // JSON string
 }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = UpdateSiteSchema.parse({ siteId, ...data })
         const updateData: Prisma.SiteUpdateInput = { ...validated }
         delete (updateData as Record<string, unknown>).siteId
@@ -142,7 +141,7 @@ export async function updateSiteDetails(siteId: string, data: {
         }
 
         const site = await prisma.site.findFirst({
-            where: { id: validated.siteId, tenantId: session.tenantId },
+            where: { id: validated.siteId },
             select: { id: true, partnerId: true },
         })
         if (!site) {
@@ -178,10 +177,10 @@ export async function updateSiteDetails(siteId: string, data: {
 
 export async function deleteSite(siteId: string) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedSiteId = SiteIdSchema.parse(siteId)
         const site = await prisma.site.findFirst({
-            where: { id: validatedSiteId, tenantId: session.tenantId },
+            where: { id: validatedSiteId },
             select: { id: true, partnerId: true },
         })
         if (!site) {
@@ -210,11 +209,11 @@ export async function deleteSite(siteId: string) {
 
 export async function getSiteById(siteId: string) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const validatedSiteId = SiteIdSchema.parse(siteId)
 
         const site = await prisma.site.findFirst({
-            where: { id: validatedSiteId, tenantId: session.tenantId },
+            where: { id: validatedSiteId },
             include: {
                 partner: {
                     select: { id: true, name: true },

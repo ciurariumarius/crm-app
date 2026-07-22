@@ -5,7 +5,6 @@ import type { SessionPayload } from "@/lib/auth"
 export async function logAuditEvent(data: {
     action: string
     success?: boolean
-    tenantId?: string | null
     actorUserId?: string | null
     ipAddress?: string | null
     userAgent?: string | null
@@ -16,7 +15,6 @@ export async function logAuditEvent(data: {
             data: {
                 action: data.action,
                 success: data.success ?? true,
-                tenantId: data.tenantId ?? null,
                 actorUserId: data.actorUserId ?? null,
                 ipAddress: data.ipAddress ?? null,
                 userAgent: data.userAgent ?? null,
@@ -41,7 +39,7 @@ export async function getAuditRequestContext() {
 }
 
 export async function logSessionAuditEvent(
-    session: Pick<SessionPayload, "tenantId" | "userId">,
+    session: Pick<SessionPayload, "userId">,
     data: {
         action: string
         success?: boolean
@@ -53,7 +51,6 @@ export async function logSessionAuditEvent(
         action: data.action,
         success: data.success,
         details: data.details,
-        tenantId: session.tenantId,
         actorUserId: session.userId,
         ipAddress,
         userAgent,

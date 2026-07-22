@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { TASK_STATUS_VALUES, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
@@ -67,7 +67,7 @@ export async function addTask(
     }
 ) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = AddTaskSchema.parse({ projectId, name, options })
 
         const taskResult = await prisma.$transaction(async (tx) => {
@@ -76,7 +76,7 @@ export async function addTask(
 
             if (selectedProjectId) {
                 targetProject = await tx.project.findFirst({
-                    where: { id: selectedProjectId, tenantId: session.tenantId },
+                    where: { id: selectedProjectId },
                     select: {
                         id: true,
                         siteId: true,
@@ -97,7 +97,6 @@ export async function addTask(
 
             const task = await tx.task.create({
                 data: {
-                    tenantId: session.tenantId,
                     projectId: targetProject?.id ?? null,
                     name: validated.name,
                     status: validated.options?.status || "Active",
@@ -153,7 +152,7 @@ export async function addTask(
 
 export async function toggleTaskStatus(taskId: string, currentStatus: string, projectId?: string | null) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedTaskId = TaskIdSchema.parse(taskId)
         const validatedProjectId = projectId ? ProjectIdSchema.parse(projectId) : undefined
         const validatedCurrentStatus = LegacyTaskStatusSchema.parse(currentStatus)
@@ -162,7 +161,7 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
         const newStatus = isCompleted ? "Active" : "Completed"
 
         const taskEntity = await prisma.task.findFirst({
-            where: { id: validatedTaskId, tenantId: session.tenantId },
+            where: { id: validatedTaskId },
             select: { id: true },
         })
         if (!taskEntity) {
@@ -211,7 +210,7 @@ export async function updateTask(taskId: string, data: {
     estimatedMinutes?: number | null
 }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = UpdateTaskSchema.parse({ taskId, ...data })
         const { isCompleted, taskId: validatedTaskId, ...restData } = validated
         const updateData: Prisma.TaskUpdateInput = { ...restData }
@@ -226,7 +225,7 @@ export async function updateTask(taskId: string, data: {
         }
 
         const existingTask = await prisma.task.findFirst({
-            where: { id: validatedTaskId, tenantId: session.tenantId },
+            where: { id: validatedTaskId },
             select: { id: true, projectId: true, status: true, urgency: true, deadline: true },
         })
         if (!existingTask) {
@@ -283,11 +282,11 @@ export async function updateTask(taskId: string, data: {
 
 export async function deleteTask(taskId: string, projectId?: string | null) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedTaskId = TaskIdSchema.parse(taskId)
         const validatedProjectId = projectId ? ProjectIdSchema.parse(projectId) : undefined
         const task = await prisma.task.findFirst({
-            where: { id: validatedTaskId, tenantId: session.tenantId },
+            where: { id: validatedTaskId },
             include: { project: { include: { site: true } } }
         })
         if (!task) {
@@ -313,11 +312,11 @@ export async function deleteTask(taskId: string, projectId?: string | null) {
 
 export async function deleteTasks(taskIds: string[]) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedTaskIds = TaskIdsSchema.parse(taskIds)
         if (validatedTaskIds.length === 0) return { success: true }
         const deleted = await prisma.task.deleteMany({
-            where: { id: { in: validatedTaskIds }, tenantId: session.tenantId }
+            where: { id: { in: validatedTaskIds } }
         })
         await logSessionAuditEvent(session, {
             action: "TASKS_BULK_DELETED",
@@ -333,12 +332,12 @@ export async function deleteTasks(taskIds: string[]) {
 
 export async function updateTasksStatus(taskIds: string[], status: string) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedTaskIds = TaskIdsSchema.parse(taskIds)
         const validatedStatus = TaskStatusSchema.parse(status)
         if (validatedTaskIds.length === 0) return { success: true }
         const updated = await prisma.task.updateMany({
-            where: { id: { in: validatedTaskIds }, tenantId: session.tenantId },
+            where: { id: { in: validatedTaskIds } },
             data: { status: validatedStatus }
         })
         await logSessionAuditEvent(session, {
@@ -357,12 +356,11 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
 
 export async function getTaskHistory(taskId: string) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const validatedTaskId = TaskIdSchema.parse(taskId)
 
         const logs = await prisma.auditLog.findMany({
             where: {
-                tenantId: session.tenantId,
                 action: {
                     in: [
                         "TASK_CREATED",

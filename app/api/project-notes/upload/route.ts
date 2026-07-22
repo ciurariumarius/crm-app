@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { apiRouteError } from "@/lib/api-response"
 import {
     buildProjectNoteRelativePath,
@@ -53,7 +53,7 @@ function detectImageExtensionFromMagicBytes(buffer: Buffer): AllowedImageExtensi
 
 export async function POST(request: Request) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const formData = await request.formData()
         const projectIdRaw = String(formData.get("projectId") || "project")
         const projectId = sanitizeProjectNoteSegment(projectIdRaw).slice(0, 64)
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         }
 
         const projectDirectory = resolveProjectNoteAbsolutePath(
-            buildProjectNoteRelativePath(session.tenantId, projectId, "index")
+            buildProjectNoteRelativePath(projectId, "index")
         )
         await mkdir(path.dirname(projectDirectory), { recursive: true })
 
@@ -118,7 +118,6 @@ export async function POST(request: Request) {
 
             const filename = `${Date.now()}-${randomUUID()}.${extension}`
             const relativePath = buildProjectNoteRelativePath(
-                session.tenantId,
                 projectId,
                 filename
             )

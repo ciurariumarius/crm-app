@@ -81,7 +81,6 @@ async function buildRolloverDebugSnapshot(startOfCurrentMonth: Date) {
 
 async function rolloverProject(project: {
     id: string
-    tenantId: string
     siteId: string
     name: string | null
     currentFee: Prisma.Decimal | null
@@ -90,8 +89,7 @@ async function rolloverProject(project: {
 }, today: Date) {
     const period = currentPeriod(today)
     const markerWhere = {
-        tenantId_sourceProjectId_targetYear_targetMonth: {
-            tenantId: project.tenantId,
+        sourceProjectId_targetYear_targetMonth: {
             sourceProjectId: project.id,
             targetYear: period.year,
             targetMonth: period.month,
@@ -114,7 +112,6 @@ async function rolloverProject(project: {
         if (!existingMarker) {
             await tx.projectRollover.create({
                 data: {
-                    tenantId: project.tenantId,
                     sourceProjectId: project.id,
                     targetYear: period.year,
                     targetMonth: period.month,
@@ -125,7 +122,6 @@ async function rolloverProject(project: {
         const updated = await tx.project.updateMany({
             where: {
                 id: project.id,
-                tenantId: project.tenantId,
                 status: 'Active',
             },
             data: { status: 'Completed' },
@@ -142,7 +138,6 @@ async function rolloverProject(project: {
 
         await tx.auditLog.create({
             data: {
-                tenantId: project.tenantId,
                 action: 'PROJECT_STATUS_CHANGED',
                 details: `projectId=${project.id}; from=Active; to=Completed; source=rollover_cron`,
             },
@@ -169,7 +164,6 @@ async function rolloverProject(project: {
 
         const createdProject = await tx.project.create({
             data: {
-                tenantId: project.tenantId,
                 siteId: project.siteId,
                 name: newProjectName,
                 services: {
@@ -184,7 +178,6 @@ async function rolloverProject(project: {
         if (uniqueTasks.length > 0) {
             await tx.task.createMany({
                 data: uniqueTasks.map((taskName) => ({
-                    tenantId: project.tenantId,
                     projectId: createdProject.id,
                     name: taskName,
                     status: 'Active',
@@ -230,7 +223,6 @@ export async function POST(request: Request) {
             },
             select: {
                 id: true,
-                tenantId: true,
                 siteId: true,
                 name: true,
                 createdAt: true,

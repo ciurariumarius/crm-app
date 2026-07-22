@@ -3,19 +3,17 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { logAuditEvent } from "@/lib/audit"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { formatProjectName } from "@/lib/utils"
 
 export async function settlePartnerDebt(partnerId: string) {
     try {
-        const session = await requireTenantContext()
-        if (!session) return { success: false, error: "Unauthorized" }
+        const session = await requireAuth()
 
         // Fetch all unpaid projects for this partner
         const unpaidProjects = await prisma.project.findMany({
             where: {
                 paymentStatus: "Unpaid",
-                tenantId: session.tenantId,
                 site: { partnerId: partnerId }
             },
             include: {
@@ -38,7 +36,6 @@ export async function settlePartnerDebt(partnerId: string) {
         await prisma.project.updateMany({
             where: {
                 id: { in: unpaidProjects.map(p => p.id) },
-                tenantId: session.tenantId
             },
             data: {
                 paymentStatus: "Paid",
@@ -50,7 +47,6 @@ export async function settlePartnerDebt(partnerId: string) {
         await logAuditEvent({
             action: "SETTLE_PARTNER",
             success: true,
-            tenantId: session.tenantId,
             actorUserId: session.userId,
             details: JSON.stringify({
                 partnerId,
@@ -80,11 +76,10 @@ export async function settlePartnerDebt(partnerId: string) {
 
 export async function voidSettlement(auditLogId: string) {
     try {
-        const session = await requireTenantContext()
-        if (!session) return { success: false, error: "Unauthorized" }
+        const session = await requireAuth()
 
         const log = await prisma.auditLog.findUnique({
-            where: { id: auditLogId, tenantId: session.tenantId }
+            where: { id: auditLogId }
         })
 
         if (!log || log.action !== "SETTLE_PARTNER") {
@@ -101,7 +96,6 @@ export async function voidSettlement(auditLogId: string) {
             await prisma.project.updateMany({
                 where: {
                     id: { in: projectIds },
-                    tenantId: session.tenantId
                 },
                 data: {
                     paymentStatus: "Unpaid",
@@ -114,7 +108,6 @@ export async function voidSettlement(auditLogId: string) {
         await logAuditEvent({
             action: "SETTLE_PARTNER_VOIDED",
             success: true,
-            tenantId: session.tenantId,
             actorUserId: session.userId,
             details: JSON.stringify({
                 auditLogId,
@@ -141,11 +134,10 @@ export async function voidSettlement(auditLogId: string) {
 
 export async function settleProject(projectId: string) {
     try {
-        const session = await requireTenantContext()
-        if (!session) return { success: false, error: "Unauthorized" }
+        const session = await requireAuth()
 
         const project = await prisma.project.findFirst({
-            where: { id: projectId, tenantId: session.tenantId },
+            where: { id: projectId },
             include: { site: { include: { partner: true } } }
         })
 
@@ -168,7 +160,6 @@ export async function settleProject(projectId: string) {
         await logAuditEvent({
             action: "SETTLE_PARTNER",
             success: true,
-            tenantId: session.tenantId,
             actorUserId: session.userId,
             details: JSON.stringify({
                 partnerId,

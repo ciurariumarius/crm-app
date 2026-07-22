@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/layout/page-header"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import Link from "next/link"
 import { formatProjectName } from "@/lib/utils"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -26,14 +26,13 @@ export default async function LedgerPage({
 }: {
     searchParams: Promise<{ page?: string }>
 }) {
-    const session = await requireTenantContext()
+    await requireAuth()
     const { page: pageParam } = await searchParams
     const page = Math.max(1, Number(pageParam) || 1)
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
     const activeProjectsWhere = {
-        tenantId: session.tenantId,
         status: "Active" as const,
     }
 
@@ -52,7 +51,6 @@ export default async function LedgerPage({
         prisma.timeLog.groupBy({
             by: ["projectId"],
             where: {
-                tenantId: session.tenantId,
                 startTime: { gte: startOfMonth },
             },
             _sum: { durationSeconds: true },
@@ -61,7 +59,7 @@ export default async function LedgerPage({
 
     const projectIds = timeByProject.map((entry) => entry.projectId)
     const projectsForStats = await prisma.project.findMany({
-        where: { tenantId: session.tenantId, id: { in: projectIds } },
+        where: { id: { in: projectIds } },
         select: { id: true, site: { select: { partner: { select: { name: true } } } } },
     })
     const partnerByProject = new Map(projectsForStats.map((project) => [project.id, project.site.partner.name]))

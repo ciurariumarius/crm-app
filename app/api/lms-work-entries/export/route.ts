@@ -5,7 +5,7 @@ import { logSessionAuditEvent } from "@/lib/audit"
 import { normalizeDateRange } from "@/lib/lms-work-entries/date"
 import { buildLmsCrmExportBuffer } from "@/lib/lms-work-entries/export"
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -16,7 +16,7 @@ function filenamePart(value: string | null, fallback: string) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const { from, to } = normalizeDateRange(
       request.nextUrl.searchParams.get("from"),
       request.nextUrl.searchParams.get("to")
@@ -24,8 +24,6 @@ export async function GET(request: NextRequest) {
     const includeExported = request.nextUrl.searchParams.get("includeExported") === "true"
     const entries = await prisma.lmsWorkEntry.findMany({
       where: {
-        tenantId: session.tenantId,
-        userId: session.userId,
         ...(includeExported ? {} : { exportedAt: null }),
         ...(from || to
           ? {
@@ -64,8 +62,6 @@ export async function GET(request: NextRequest) {
         const result = await tx.lmsWorkEntry.updateMany({
           where: {
             id: { in: entries.slice(offset, offset + 500).map((entry) => entry.id) },
-            tenantId: session.tenantId,
-            userId: session.userId,
             ...(includeExported ? {} : { exportedAt: null }),
           },
           data: { exportedAt },

@@ -5,7 +5,7 @@ import { getActiveTimer, getTimeLogs } from "@/lib/actions/time"
 import prisma from "@/lib/prisma"
 import { CreateTimeLogDialog } from "@/components/time/create-time-log-dialog"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { ChevronLeft, ChevronRight, Clock3 } from "lucide-react"
@@ -19,24 +19,23 @@ export default async function TimePage({
 }: {
     searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string }>
 }) {
-    const session = await requireTenantContext()
+    await requireAuth()
     const { projectId, partnerId, q, page: pageParam } = await searchParams
     const page = Math.max(1, Number(pageParam) || 1)
 
     const [projects, partners, tasks, logsResult, activeTimerResult] = await Promise.all([
         prisma.project.findMany({
-            where: { status: "Active", tenantId: session.tenantId },
+            where: { status: "Active" },
             include: {
                 site: { select: { domainName: true, partnerId: true } },
                 services: true
             }
         }),
         prisma.partner.findMany({
-            where: { tenantId: session.tenantId },
             select: { id: true, name: true }
         }),
         prisma.task.findMany({
-            where: { status: { not: "Completed" }, tenantId: session.tenantId },
+            where: { status: { not: "Completed" } },
             select: { id: true, name: true, projectId: true }
         }),
         getTimeLogs({

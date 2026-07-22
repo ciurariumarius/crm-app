@@ -1,7 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
 import path from "node:path"
 
-const DEFAULT_STORAGE_ROOT = path.join(process.cwd(), "storage", "project-notes")
+const DEFAULT_STORAGE_ROOT = path.join(
+    /* turbopackIgnore: true */ process.cwd(),
+    "storage",
+    "project-notes"
+)
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 30 * 24 * 60 * 60
 const MIN_SIGNED_URL_TTL_SECONDS = 60
 const MAX_SIGNED_URL_TTL_SECONDS = 365 * 24 * 60 * 60
@@ -57,14 +61,12 @@ export function getProjectNotesStorageRoot() {
 }
 
 export function buildProjectNoteRelativePath(
-    tenantId: string,
     projectId: string,
     fileName: string
 ) {
-    const safeTenant = sanitizeProjectNoteSegment(tenantId, "tenant")
     const safeProject = sanitizeProjectNoteSegment(projectId, "project").slice(0, 64)
     const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "")
-    return `${safeTenant}/${safeProject}/${safeFileName}`
+    return `${safeProject}/${safeFileName}`
 }
 
 export function resolveProjectNoteAbsolutePath(relativePath: string) {
@@ -135,9 +137,4 @@ export function createSignedProjectNoteUrl(
 export function getProjectNoteMimeTypeFromRelativePath(relativePath: string) {
     const extension = path.extname(relativePath).replace(".", "").toLowerCase()
     return MIME_BY_EXTENSION[extension] || "application/octet-stream"
-}
-
-export function getTenantIdFromProjectNotePath(relativePath: string) {
-    const [tenantId] = relativePath.split("/")
-    return tenantId || ""
 }

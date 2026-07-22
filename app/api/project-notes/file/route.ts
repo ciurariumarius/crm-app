@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { apiRouteError } from "@/lib/api-response"
 import {
     getProjectNoteMimeTypeFromRelativePath,
-    getTenantIdFromProjectNotePath,
     isProjectNoteUrlExpired,
     resolveProjectNoteAbsolutePath,
     verifyProjectNotePathSignature,
@@ -15,7 +14,7 @@ export const runtime = "nodejs"
 
 export async function GET(request: Request) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const { searchParams } = new URL(request.url)
         const relativePath = searchParams.get("path") || ""
         const signature = searchParams.get("sig") || ""
@@ -40,11 +39,6 @@ export async function GET(request: Request) {
             }
         } else if (!verifyProjectNotePathSignature(relativePath, signature)) {
             return NextResponse.json({ success: false, error: "Invalid file signature." }, { status: 403 })
-        }
-
-        const pathTenantId = getTenantIdFromProjectNotePath(relativePath)
-        if (!pathTenantId || pathTenantId !== session.tenantId) {
-            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 })
         }
 
         const absolutePath = resolveProjectNoteAbsolutePath(relativePath)

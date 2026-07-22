@@ -68,11 +68,10 @@ export function normalizeProjectFilters(input: ProjectFiltersInput): NormalizedP
 }
 
 export function buildProjectWhereInput(input: {
-    tenantId: string
     filters: NormalizedProjectFilters
     now?: Date
 }): Prisma.ProjectWhereInput {
-    const { tenantId, filters, now } = input
+    const { filters, now } = input
     const createdAtRange = resolveUtcDateRange({
         period: filters.period,
         from: filters.from,
@@ -92,7 +91,6 @@ export function buildProjectWhereInput(input: {
 
     return {
         AND: [
-            { tenantId },
             filters.projectId ? { id: filters.projectId } : {},
             filters.status === "All" ? {} : { status: filters.status },
             filters.payment === "All" ? {} : { paymentStatus: filters.payment },

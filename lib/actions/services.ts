@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { Prisma } from "@prisma/client"
@@ -30,11 +30,10 @@ export async function createService(data: {
     baseFee?: number
 }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = ServicePayloadSchema.parse(data)
         const service = await prisma.service.create({
             data: {
-                tenantId: session.tenantId,
                 serviceName: validated.serviceName,
                 isRecurring: validated.isRecurring,
                 standardTasks: JSON.stringify(validated.standardTasks),
@@ -61,11 +60,11 @@ export async function updateService(serviceId: string, data: {
     baseFee?: number
 }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedServiceId = z.string().uuid().parse(serviceId)
         const validated = ServicePayloadSchema.parse(data)
         const updated = await prisma.service.updateMany({
-            where: { id: validatedServiceId, tenantId: session.tenantId },
+            where: { id: validatedServiceId },
             data: {
                 serviceName: validated.serviceName,
                 isRecurring: validated.isRecurring,
@@ -95,12 +94,12 @@ export async function updateService(serviceId: string, data: {
 
 export async function deleteService(serviceId: string) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedServiceId = z.string().uuid().parse(serviceId)
 
         // Check if the service exists and belongs to the tenant
         const service = await prisma.service.findFirst({
-            where: { id: validatedServiceId, tenantId: session.tenantId },
+            where: { id: validatedServiceId },
         })
 
         if (!service) {
@@ -129,7 +128,7 @@ export async function searchProjectServices(
     limit = 40
 ) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const validated = SearchProjectServicesSchema.parse({ query, cadence, limit })
 
         if (!validated.query) {
@@ -137,7 +136,6 @@ export async function searchProjectServices(
         }
 
         const where: Prisma.ServiceWhereInput = {
-            tenantId: session.tenantId,
             serviceName: { contains: validated.query },
         }
 

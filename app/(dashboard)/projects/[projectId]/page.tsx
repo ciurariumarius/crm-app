@@ -3,16 +3,16 @@ import { notFound } from "next/navigation"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { DeleteProjectButton } from "@/components/projects/delete-project-button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ projectId: string }> }) {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const { projectId } = await params
 
     const projectRaw = await prisma.project.findFirst({
-        where: { id: projectId, tenantId: session.tenantId },
+        where: { id: projectId },
         include: {
             site: {
                 include: {
@@ -39,12 +39,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     }
 
     const servicesRaw = await prisma.service.findMany({
-        where: { tenantId: session.tenantId },
         orderBy: { serviceName: "asc" }
     })
 
     const userRaw = await prisma.user.findFirst({
-        where: { id: session.userId, tenantId: session.tenantId },
+        where: { id: session.userId },
         select: { hourlyRate: true },
     })
 

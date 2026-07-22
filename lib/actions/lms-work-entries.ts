@@ -15,7 +15,7 @@ import type {
   LmsWorkRecurrenceInput,
 } from "@/lib/lms-work-entries/types"
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 
 const EntryIdSchema = z.string().uuid()
 const TaskIdSchema = z.string().uuid()
@@ -55,17 +55,16 @@ function handleActionError(error: unknown, fallback: string) {
 }
 
 async function resolveEntryReferences(
-  tenantId: string,
   lmsAllocationId: string,
   taskTypeId: string
 ) {
   const [client, task] = await Promise.all([
     prisma.lmsAllocation.findFirst({
-      where: { id: lmsAllocationId, tenantId },
+      where: { id: lmsAllocationId },
       select: { id: true, client: true },
     }),
     prisma.lmsWorkTask.findFirst({
-      where: { id: taskTypeId, tenantId, isActive: true },
+      where: { id: taskTypeId, isActive: true },
       select: { id: true, name: true },
     }),
   ])
@@ -76,7 +75,6 @@ async function resolveEntryReferences(
 }
 
 async function assertNoOverlappingRecurrence(args: {
-  tenantId: string
   lmsAllocationId: string
   taskTypeId: string
   durationMinutes: number
@@ -85,7 +83,6 @@ async function assertNoOverlappingRecurrence(args: {
 }) {
   const candidates = await prisma.lmsWorkRecurrence.findMany({
     where: {
-      tenantId: args.tenantId,
       lmsAllocationId: args.lmsAllocationId,
       taskTypeId: args.taskTypeId,
       durationMinutes: args.durationMinutes,
@@ -104,18 +101,15 @@ async function assertNoOverlappingRecurrence(args: {
 
 export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const validated = WorkEntryInputSchema.parse(data)
     const { client, task } = await resolveEntryReferences(
-      session.tenantId,
       validated.lmsAllocationId,
       validated.taskTypeId
     )
 
     const entry = await prisma.lmsWorkEntry.create({
       data: {
-        tenantId: session.tenantId,
-        userId: session.userId,
         lmsAllocationId: client.id,
         taskTypeId: task.id,
         workDate: validated.workDate,
@@ -139,11 +133,11 @@ export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
 
 export async function updateLmsWorkEntry(entryId: string, data: LmsWorkEntryUpdateInput) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const validatedId = EntryIdSchema.parse(entryId)
     const validated = WorkEntryUpdateInputSchema.parse(data)
     const existing = await prisma.lmsWorkEntry.findFirst({
-      where: { id: validatedId, tenantId: session.tenantId, userId: session.userId },
+      where: { id: validatedId },
       select: { id: true, lmsAllocationId: true, taskTypeId: true },
     })
     if (!existing) throw new ActionError("ENTRY_NOT_FOUND", "Work entry not found")
@@ -157,13 +151,13 @@ export async function updateLmsWorkEntry(entryId: string, data: LmsWorkEntryUpda
     const [nextClient, nextTask] = await Promise.all([
       clientChanged && validated.lmsAllocationId
         ? prisma.lmsAllocation.findFirst({
-            where: { id: validated.lmsAllocationId, tenantId: session.tenantId },
+            where: { id: validated.lmsAllocationId },
             select: { id: true, client: true },
           })
         : null,
       taskChanged
         ? prisma.lmsWorkTask.findFirst({
-            where: { id: validated.taskTypeId, tenantId: session.tenantId, isActive: true },
+            where: { id: validated.taskTypeId, isActive: true },
             select: { id: true, name: true },
           })
         : null,
@@ -208,10 +202,10 @@ export async function updateLmsWorkEntry(entryId: string, data: LmsWorkEntryUpda
 
 export async function deleteLmsWorkEntry(entryId: string) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const validatedId = EntryIdSchema.parse(entryId)
     const existing = await prisma.lmsWorkEntry.findFirst({
-      where: { id: validatedId, tenantId: session.tenantId, userId: session.userId },
+      where: { id: validatedId },
       select: { id: true },
     })
     if (!existing) throw new ActionError("ENTRY_NOT_FOUND", "Work entry not found")
@@ -230,16 +224,14 @@ export async function deleteLmsWorkEntry(entryId: string) {
 
 export async function createLmsWorkTask(name: string) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const validatedName = canonicalizeLmsWorkTaskName(TaskNameSchema.parse(name))
     const task = await prisma.$transaction(async (tx) => {
       const aggregate = await tx.lmsWorkTask.aggregate({
-        where: { tenantId: session.tenantId },
         _max: { sortOrder: true },
       })
       return tx.lmsWorkTask.create({
         data: {
-          tenantId: session.tenantId,
           name: validatedName,
           normalizedName: normalizeTaskName(validatedName),
           sortOrder: (aggregate._max.sortOrder ?? -1) + 1,
@@ -260,14 +252,13 @@ export async function createLmsWorkTask(name: string) {
 
 export async function reorderLmsWorkTasks(taskIds: string[]) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const orderedIds = TaskOrderSchema.parse(taskIds)
     if (new Set(orderedIds).size !== orderedIds.length) {
       throw new ActionError("INVALID_TASK_ORDER", "Task order contains duplicates")
     }
 
     const existing = await prisma.lmsWorkTask.findMany({
-      where: { tenantId: session.tenantId },
       select: { id: true },
     })
     const existingIds = new Set(existing.map((task) => task.id))
@@ -277,7 +268,7 @@ export async function reorderLmsWorkTasks(taskIds: string[]) {
 
     await prisma.$transaction(
       orderedIds.map((id, sortOrder) => prisma.lmsWorkTask.updateMany({
-        where: { id, tenantId: session.tenantId },
+        where: { id },
         data: { sortOrder },
       }))
     )
@@ -297,12 +288,12 @@ export async function updateLmsWorkTask(
   data: { name: string; isActive: boolean }
 ) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const validatedId = TaskIdSchema.parse(taskId)
     const validated = z.object({ name: TaskNameSchema, isActive: z.boolean() }).parse(data)
     const name = canonicalizeLmsWorkTaskName(validated.name)
     const existing = await prisma.lmsWorkTask.findFirst({
-      where: { id: validatedId, tenantId: session.tenantId },
+      where: { id: validatedId },
       select: { id: true },
     })
     if (!existing) throw new ActionError("TASK_NOT_FOUND", "Predefined task not found")
@@ -328,17 +319,15 @@ export async function updateLmsWorkTask(
 
 export async function createLmsWorkRecurrence(data: LmsWorkRecurrenceInput) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const validated = RecurrenceInputSchema.parse(data)
     const weekdays = [...new Set(validated.weekdays)]
     const weekdayMask = weekdaysToMask(weekdays)
     const { client, task } = await resolveEntryReferences(
-      session.tenantId,
       validated.lmsAllocationId,
       validated.taskTypeId
     )
     await assertNoOverlappingRecurrence({
-      tenantId: session.tenantId,
       lmsAllocationId: client.id,
       taskTypeId: task.id,
       durationMinutes: validated.durationMinutes,
@@ -347,7 +336,6 @@ export async function createLmsWorkRecurrence(data: LmsWorkRecurrenceInput) {
 
     const recurrence = await prisma.lmsWorkRecurrence.create({
       data: {
-        tenantId: session.tenantId,
         lmsAllocationId: client.id,
         taskTypeId: task.id,
         clientSnapshot: client.client,
@@ -374,24 +362,22 @@ export async function updateLmsWorkRecurrence(
   data: LmsWorkRecurrenceInput
 ) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const validatedId = RecurrenceIdSchema.parse(recurrenceId)
     const validated = RecurrenceInputSchema.parse(data)
     const weekdays = [...new Set(validated.weekdays)]
     const weekdayMask = weekdaysToMask(weekdays)
     const existing = await prisma.lmsWorkRecurrence.findFirst({
-      where: { id: validatedId, tenantId: session.tenantId },
+      where: { id: validatedId },
       select: { id: true, isActive: true },
     })
     if (!existing) throw new ActionError("LMS_RECURRENCE_NOT_FOUND", "Recurring work rule not found")
     const { client, task } = await resolveEntryReferences(
-      session.tenantId,
       validated.lmsAllocationId,
       validated.taskTypeId
     )
     if (existing.isActive) {
       await assertNoOverlappingRecurrence({
-        tenantId: session.tenantId,
         lmsAllocationId: client.id,
         taskTypeId: task.id,
         durationMinutes: validated.durationMinutes,
@@ -424,11 +410,11 @@ export async function updateLmsWorkRecurrence(
 
 export async function setLmsWorkRecurrenceActive(recurrenceId: string, isActive: boolean) {
   try {
-    const session = await requireTenantContext()
+    const session = await requireAuth()
     const validatedId = RecurrenceIdSchema.parse(recurrenceId)
     const validatedActive = z.boolean().parse(isActive)
     const existing = await prisma.lmsWorkRecurrence.findFirst({
-      where: { id: validatedId, tenantId: session.tenantId },
+      where: { id: validatedId },
       select: {
         id: true,
         isActive: true,
@@ -450,7 +436,6 @@ export async function setLmsWorkRecurrenceActive(recurrenceId: string, isActive:
         throw new ActionError("TASK_NOT_FOUND", "Choose an active predefined task before activating this rule")
       }
       await assertNoOverlappingRecurrence({
-        tenantId: session.tenantId,
         lmsAllocationId: existing.lmsAllocationId,
         taskTypeId: existing.taskTypeId,
         durationMinutes: existing.durationMinutes,

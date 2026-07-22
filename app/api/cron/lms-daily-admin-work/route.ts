@@ -23,13 +23,11 @@ export async function POST(request: Request) {
   const dryRun = new URL(request.url).searchParams.get("dryRun") === "1"
   const requestContext = await getAuditRequestContext()
   try {
-    const { context, summary } = await runLmsDailyAdminAutomation({ dryRun })
+    const { summary } = await runLmsDailyAdminAutomation({ dryRun })
     for (const result of summary.results.filter((item) => item.status === "failed")) {
       await logAuditEvent({
         action: "LMS_RECURRING_WORK_RULE_FAILED",
         success: false,
-        tenantId: context.tenantId,
-        actorUserId: context.userId,
         ...requestContext,
         details: `ruleId=${result.ruleId}; code=${result.errorCode}; dryRun=${dryRun}`,
       })
@@ -37,8 +35,6 @@ export async function POST(request: Request) {
     await logAuditEvent({
       action: dryRun ? "LMS_RECURRING_WORK_DRY_RUN" : "LMS_RECURRING_WORK_COMPLETED",
       success: summary.failedRules === 0,
-      tenantId: context.tenantId,
-      actorUserId: context.userId,
       ...requestContext,
       details: `date=${summary.date}; rules=${summary.rulesProcessed}; created=${summary.entriesCreated}; adopted=${summary.entriesAdopted}; skipped=${summary.skippedNonWorkingDates}; failed=${summary.failedRules}; alreadyProcessed=${summary.alreadyProcessed}`,
     })
@@ -52,8 +48,6 @@ export async function POST(request: Request) {
     await logAuditEvent({
       action: "LMS_DAILY_ADMIN_WORK_FAILED",
       success: false,
-      tenantId: knownError?.context?.tenantId,
-      actorUserId: knownError?.context?.userId,
       ...requestContext,
       details: `code=${knownError?.code || "LMS_RECURRING_WORK_UNEXPECTED_ERROR"}; dryRun=${dryRun}`,
     })

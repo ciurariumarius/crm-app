@@ -2,7 +2,7 @@
 
 One protected cron call processes every active rule configured in **LMS Analysis → Data → Recurring Work**. Generated rows are normal Work Entries, begin as `Not exported`, and use the standard CRM export flow.
 
-Rules are tenant-scoped. The application owner account is attached internally because Work Entries require an owner; there is no user selector in recurrence configuration.
+Rules belong directly to this single-owner application. Work Entries are global application data, so recurrence configuration has no tenant or user selector.
 
 ## Application environment
 

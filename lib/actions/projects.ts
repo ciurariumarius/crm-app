@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { PROJECT_STATUS_VALUES, taskStatusSortOrder } from "@/lib/status"
@@ -80,12 +80,12 @@ export async function createProject(data: {
     paymentStatus?: "Paid" | "Unpaid"
 }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validated = CreateProjectSchema.parse(data)
         const uniqueServiceIds = Array.from(new Set(validated.serviceIds))
 
         const services = await prisma.service.findMany({
-            where: { id: { in: uniqueServiceIds }, tenantId: session.tenantId },
+            where: { id: { in: uniqueServiceIds } },
         })
 
         if (services.length === 0) {
@@ -107,7 +107,7 @@ export async function createProject(data: {
 
         const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             const site = await tx.site.findFirst({
-                where: { id: validated.siteId, tenantId: session.tenantId },
+                where: { id: validated.siteId },
                 select: { id: true, domainName: true },
             })
             if (!site) {
@@ -125,7 +125,6 @@ export async function createProject(data: {
 
             const project = await tx.project.create({
                 data: {
-                    tenantId: session.tenantId,
                     siteId: validated.siteId,
                     name: projectName,
                     services: {
@@ -155,7 +154,6 @@ export async function createProject(data: {
             if (uniqueTasks.length > 0) {
                 await tx.task.createMany({
                     data: uniqueTasks.map((taskName) => ({
-                        tenantId: session.tenantId,
                         projectId: project.id,
                         name: taskName,
                         status: "Active",
@@ -186,13 +184,13 @@ export async function createProject(data: {
 
 export async function togglePaymentStatus(projectId: string, currentStatus: string) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedProjectId = ProjectIdSchema.parse(projectId)
         const validatedCurrentStatus = PaymentStatusSchema.parse(currentStatus)
         const newStatus = validatedCurrentStatus === "Paid" ? "Unpaid" : "Paid"
 
         const updated = await prisma.project.updateMany({
-            where: { id: validatedProjectId, tenantId: session.tenantId },
+            where: { id: validatedProjectId },
             data: { paymentStatus: newStatus },
         })
         if (updated.count === 0) {
@@ -228,7 +226,7 @@ export async function updateProject(projectId: string, data: {
     serviceIds?: string[]
 }) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedProjectId = ProjectIdSchema.parse(projectId)
         const updateData: Record<string, unknown> = {}
         if (data.name !== undefined) updateData.name = data.name === "" ? null : data.name
@@ -252,12 +250,12 @@ export async function updateProject(projectId: string, data: {
         if (serviceIds) {
             const uniqueServiceIds = Array.from(new Set(serviceIds))
             const projectInfo = await prisma.project.findFirst({
-                where: { id: validatedProjectId, tenantId: session.tenantId },
+                where: { id: validatedProjectId },
                 include: { site: true }
             })
 
             const newServices = await prisma.service.findMany({
-                where: { id: { in: uniqueServiceIds }, tenantId: session.tenantId }
+                where: { id: { in: uniqueServiceIds } }
             })
             if (newServices.length !== uniqueServiceIds.length) {
                 await logSessionAuditEvent(session, {
@@ -282,7 +280,7 @@ export async function updateProject(projectId: string, data: {
         }
 
         const existingProject = await prisma.project.findFirst({
-            where: { id: validatedProjectId, tenantId: session.tenantId },
+            where: { id: validatedProjectId },
             select: {
                 id: true,
                 status: true,
@@ -391,10 +389,10 @@ export async function updateProject(projectId: string, data: {
 
 export async function deleteProject(projectId: string) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedProjectId = ProjectIdSchema.parse(projectId)
         const project = await prisma.project.findFirst({
-            where: { id: validatedProjectId, tenantId: session.tenantId },
+            where: { id: validatedProjectId },
             include: { site: true }
         })
         if (!project) {
@@ -420,11 +418,11 @@ export async function deleteProject(projectId: string) {
 
 export async function getProjectById(projectId: string) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const validatedProjectId = ProjectIdSchema.parse(projectId)
 
         const project = await prisma.project.findFirst({
-            where: { id: validatedProjectId, tenantId: session.tenantId },
+            where: { id: validatedProjectId },
             include: {
                 services: true,
                 site: {
@@ -457,14 +455,13 @@ export async function getProjectById(projectId: string) {
 
 export async function deleteProjects(projectIds: string[]) {
     try {
-        const session = await requireTenantContext()
+        const session = await requireAuth()
         const validatedProjectIds = ProjectIdsSchema.parse(projectIds)
         if (validatedProjectIds.length === 0) return { success: true }
 
         const deleted = await prisma.project.deleteMany({
             where: {
                 id: { in: validatedProjectIds },
-                tenantId: session.tenantId,
             }
         })
 
@@ -482,10 +479,10 @@ export async function deleteProjects(projectIds: string[]) {
 
 export async function getProjectDetails(projectId: string) {
     try {
-        const session = await requireTenantContext()
+        await requireAuth()
         const validatedProjectId = ProjectIdSchema.parse(projectId)
         const project = await prisma.project.findFirst({
-            where: { id: validatedProjectId, tenantId: session.tenantId },
+            where: { id: validatedProjectId },
             include: {
                 services: true,
                 site: {

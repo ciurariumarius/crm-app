@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 import { NotesWorkspace } from "@/components/notes/notes-workspace"
 import type { NoteFolderRecord, NoteRecord } from "@/lib/actions/notes"
 
@@ -22,14 +22,12 @@ export default async function NotesPage({
 }: {
   searchParams?: Promise<{ note?: string }>
 }) {
-  const session = await requireTenantContext()
+  await requireAuth()
   const params = (await searchParams) || {}
   const noteDelegate = (prisma as unknown as {
     note?: {
       findMany: (...args: unknown[]) => Promise<Array<{
         id: string
-        tenantId: string
-        userId: string
         folderId?: string | null
         title: string
         content: string
@@ -43,8 +41,6 @@ export default async function NotesPage({
     noteFolder?: {
       findMany: (...args: unknown[]) => Promise<Array<{
         id: string
-        tenantId: string
-        userId: string
         name: string
         isDefault: boolean
         createdAt: Date
@@ -52,8 +48,6 @@ export default async function NotesPage({
       }>>
       create?: (...args: unknown[]) => Promise<{
         id: string
-        tenantId: string
-        userId: string
         name: string
         isDefault: boolean
         createdAt: Date
@@ -61,8 +55,6 @@ export default async function NotesPage({
       }>
       update?: (...args: unknown[]) => Promise<{
         id: string
-        tenantId: string
-        userId: string
         name: string
         isDefault: boolean
         createdAt: Date
@@ -75,8 +67,6 @@ export default async function NotesPage({
     noteFolder?: {
       findMany: (...args: unknown[]) => Promise<Array<{
         id: string
-        tenantId: string
-        userId: string
         name: string
         isDefault: boolean
         createdAt: Date
@@ -84,8 +74,6 @@ export default async function NotesPage({
       }>>
       create?: (...args: unknown[]) => Promise<{
         id: string
-        tenantId: string
-        userId: string
         name: string
         isDefault: boolean
         createdAt: Date
@@ -93,8 +81,6 @@ export default async function NotesPage({
       }>
       update?: (...args: unknown[]) => Promise<{
         id: string
-        tenantId: string
-        userId: string
         name: string
         isDefault: boolean
         createdAt: Date
@@ -107,7 +93,6 @@ export default async function NotesPage({
   const [notes, foldersRawMaybe, projectNotesRaw, taskNotesRaw] = await Promise.all([
     noteDelegate && typeof noteDelegate.findMany === "function"
       ? await noteDelegate.findMany({
-          where: { tenantId: session.tenantId },
           orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
           take: 400,
         })
@@ -116,7 +101,6 @@ export default async function NotesPage({
       ? await (async () => {
           try {
             return await noteFolderDelegate.findMany({
-              where: { tenantId: session.tenantId },
               orderBy: [{ isDefault: "desc" }, { name: "asc" }],
             })
           } catch {
@@ -125,7 +109,7 @@ export default async function NotesPage({
         })()
       : null,
     prisma.project.findMany({
-      where: { tenantId: session.tenantId, description: { not: null } },
+      where: { description: { not: null } },
       select: {
         id: true,
         name: true,
@@ -138,7 +122,7 @@ export default async function NotesPage({
       take: 400,
     }),
     prisma.task.findMany({
-      where: { tenantId: session.tenantId, description: { not: null } },
+      where: { description: { not: null } },
       select: {
         id: true,
         name: true,
@@ -169,8 +153,6 @@ export default async function NotesPage({
     try {
       const createdDefault = await noteFolderDelegate.create({
         data: {
-          tenantId: session.tenantId,
-          userId: session.userId,
           name: DEFAULT_NOTES_FOLDER_NAME,
           isDefault: true,
         },
@@ -203,7 +185,6 @@ export default async function NotesPage({
         try {
           await noteFolderDelegate.updateMany({
             where: {
-              tenantId: session.tenantId,
               isDefault: true,
               id: { not: candidateDefault.id },
             },
@@ -226,8 +207,6 @@ export default async function NotesPage({
 
   const folders: NoteFolderRecord[] = foldersRaw.map((folder) => ({
     id: folder.id,
-    tenantId: folder.tenantId,
-    userId: folder.userId,
     name: folder.name,
     isDefault: folder.isDefault,
     createdAt: folder.createdAt.toISOString(),
@@ -237,8 +216,6 @@ export default async function NotesPage({
 
   const personalNotes: NoteRecord[] = notes.map((note) => ({
     id: note.id,
-    tenantId: note.tenantId,
-    userId: note.userId,
     folderId: note.folderId ?? defaultFolder?.id ?? null,
     folderName:
       foldersRaw.find((folder) => folder.id === (note.folderId ?? null))?.name ||
@@ -262,8 +239,6 @@ export default async function NotesPage({
       const projectName = project.name?.trim() || domainName
       return {
         id: `project:${project.id}`,
-        tenantId: session.tenantId,
-        userId: session.userId,
         title: projectName,
         content,
         contentText: toContentText(content),
@@ -285,8 +260,6 @@ export default async function NotesPage({
       const taskName = task.name?.trim() || "Task"
       return {
         id: `task:${task.id}`,
-        tenantId: session.tenantId,
-        userId: session.userId,
         title: taskName,
         content,
         contentText: toContentText(content),

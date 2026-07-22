@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { requireTenantContext } from "@/lib/tenant"
+import { requireAuth } from "@/lib/auth"
 
 const MIN_QUERY_LENGTH = 2
 const CANDIDATE_LIMIT = 24
@@ -48,7 +48,7 @@ function rankItems<T>(items: T[], input: {
 export async function globalSearch(query: string) {
     if (!query || query.trim().length < MIN_QUERY_LENGTH) return { projects: [], tasks: [], partners: [] }
 
-    const { tenantId } = await requireTenantContext()
+    await requireAuth()
     const q = query.trim()
     const normalizedQuery = normalizeSearchValue(q)
 
@@ -56,7 +56,6 @@ export async function globalSearch(query: string) {
         const [projectCandidates, taskCandidates, partnerCandidates] = await Promise.all([
             prisma.project.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { name: { contains: q } },
                         { site: { domainName: { contains: q } } },
@@ -90,7 +89,6 @@ export async function globalSearch(query: string) {
             }),
             prisma.task.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { name: { contains: q } },
                         { description: { contains: q } },
@@ -131,7 +129,6 @@ export async function globalSearch(query: string) {
             }),
             prisma.partner.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { name: { contains: q } },
                         { businessName: { contains: q } },
