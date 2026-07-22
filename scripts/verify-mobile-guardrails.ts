@@ -47,8 +47,8 @@ function run() {
   const recurringWork = read("components/lms-work-entries/lms-work-recurrences.tsx")
   assert.match(recurringWork, /grid gap-4 lg:grid-cols-2/)
   assert.match(recurringWork, /grid grid-cols-4 gap-2 sm:grid-cols-7/)
-  assert.match(recurringWork, /lg:grid-cols-\[minmax\(0,1fr\)_auto_auto\]/)
-  assert.match(recurringWork, /w-full rounded-xl lg:w-auto/)
+  assert.match(recurringWork, /flex flex-wrap items-start justify-between gap-3/)
+  assert.match(recurringWork, /flex flex-wrap items-center justify-between gap-3/)
 
   const dateFilter = read("components/lms-tasks/lms-tasks-date-range-filters.tsx")
   assert.match(dateFilter, /min\(96vw,640px\)/)

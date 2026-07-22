@@ -710,16 +710,6 @@ export function LmsWorkLogWorkspace({
     }
   }
 
-  function selectDurationShortcut(value: number) {
-    if (isLmsWorkDurationPreset(value)) {
-      setDurationSelection(String(value))
-      return
-    }
-    setDurationSelection(CUSTOM_DURATION_VALUE)
-    setCustomMinutes(String(value))
-    window.requestAnimationFrame(() => customMinutesRef.current?.focus())
-  }
-
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault()
     const entry: LmsWorkEntryInput = {
@@ -871,18 +861,30 @@ export function LmsWorkLogWorkspace({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="work-duration" className="text-sm font-semibold">Minutes</Label>
-                <Select value={durationSelection} onValueChange={selectDuration}>
-                  <SelectTrigger id="work-duration" className="h-10! w-full rounded-lg px-3 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    {LMS_WORK_DURATION_PRESETS.map((preset) => (
-                      <SelectItem key={preset} value={String(preset)}>{preset} min</SelectItem>
-                    ))}
-                    <SelectItem value={CUSTOM_DURATION_VALUE}>Custom</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-sm font-semibold">Minutes</Label>
+                <div role="group" aria-label="Minutes" className="grid grid-cols-3 gap-1.5">
+                  {LMS_WORK_DURATION_PRESETS.map((preset) => (
+                    <Button
+                      key={preset}
+                      type="button"
+                      variant={durationMinutes === preset ? "default" : "outline"}
+                      aria-pressed={durationMinutes === preset}
+                      onClick={() => selectDuration(String(preset))}
+                      className="h-10 rounded-lg px-2 text-sm font-semibold"
+                    >
+                      {preset} min
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    variant={customDurationEnabled ? "default" : "outline"}
+                    aria-pressed={customDurationEnabled}
+                    onClick={() => selectDuration(CUSTOM_DURATION_VALUE)}
+                    className="h-10 rounded-lg px-2 text-sm font-semibold"
+                  >
+                    Custom
+                  </Button>
+                </div>
                 {customDurationEnabled ? (
                   <div className="relative">
                     <Input
@@ -906,23 +908,6 @@ export function LmsWorkLogWorkspace({
                 {customDurationInvalid ? (
                   <p id="custom-duration-error" className="text-xs font-medium text-red-600">Enter 1–1440 whole minutes.</p>
                 ) : null}
-                <div className="space-y-1.5 pt-0.5">
-                  <p className="text-xs font-medium text-[var(--text-muted)]">Frequently used</p>
-                  <div role="group" aria-label="Frequently used durations" className="grid grid-cols-3 gap-1.5">
-                    {data.frequentDurations.map((minutes) => (
-                      <Button
-                        key={minutes}
-                        type="button"
-                        variant={durationMinutes === minutes ? "default" : "outline"}
-                        aria-pressed={durationMinutes === minutes}
-                        onClick={() => selectDurationShortcut(minutes)}
-                        className="h-8 rounded-lg px-2 text-xs font-semibold"
-                      >
-                        {minutes} min
-                      </Button>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
 

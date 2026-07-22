@@ -334,6 +334,8 @@ async function run() {
   assert.match(recurringWorkSource, /TaskCombobox/)
   assert.match(recurringWorkSource, /LMS_RECURRENCE_WEEKDAYS/)
   assert.match(recurringWorkSource, /setLmsWorkRecurrenceActive/)
+  assert.match(workLogDbSource, /where: \{ isActive: true \}/)
+  assert.match(recurringWorkSource, /activeRecurrences/)
   assert.doesNotMatch(recurringWorkSource, /deleteLmsWorkRecurrence/)
 
   const buffer = await buildLmsCrmExportBuffer([

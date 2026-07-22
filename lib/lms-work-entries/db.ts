@@ -29,7 +29,8 @@ export async function getLmsWorkRecurrencePageData(): Promise<LmsWorkRecurrenceP
     }),
     findLmsWorkTasks(),
     prisma.lmsWorkRecurrence.findMany({
-      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
+      where: { isActive: true },
+      orderBy: { createdAt: "asc" },
       select: {
         id: true,
         lmsAllocationId: true,
