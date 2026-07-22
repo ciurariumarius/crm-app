@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLmsTasksData } from "@/components/lms-tasks/lms-tasks-provider"
 import { LmsWorkTaskCatalog } from "@/components/lms-work-entries/lms-work-task-catalog"
+import { LmsWorkRecurrences } from "@/components/lms-work-entries/lms-work-recurrences"
 import { isLmsMobileOptimizedEnabled } from "@/lib/lms-tasks/feature-flags"
 import { parseAllocationsFile, parseTasksFile } from "@/lib/lms-tasks/parsers"
 import type { LmsSyncMode, ParseIssue } from "@/lib/lms-tasks/types"
-import type { LmsWorkTaskOption } from "@/lib/lms-work-entries/types"
+import type { LmsWorkRecurrencePageData, LmsWorkTaskOption } from "@/lib/lms-work-entries/types"
 import { cn } from "@/lib/utils"
 
 type ImportLog = {
@@ -102,7 +103,13 @@ function IssuesCard({ title, issues }: { title: string; issues: ParseIssue[] }) 
   )
 }
 
-export function LmsAnalysisDataWorkspace({ workTasks }: { workTasks: LmsWorkTaskOption[] }) {
+export function LmsAnalysisDataWorkspace({
+  workTasks,
+  recurrenceData,
+}: {
+  workTasks: LmsWorkTaskOption[]
+  recurrenceData: LmsWorkRecurrencePageData
+}) {
   const mobileOptimized = isLmsMobileOptimizedEnabled()
   const { ready, loading, error, data, syncTasksToDatabase, syncAllocationsToDatabase, clearAllData } = useLmsTasksData()
   const [syncMode, setSyncMode] = React.useState<LmsSyncMode>("merge")
@@ -254,6 +261,10 @@ export function LmsAnalysisDataWorkspace({ workTasks }: { workTasks: LmsWorkTask
     <div className="space-y-6">
       <section id="task-catalog" className="scroll-mt-6" aria-label="Task Catalog">
         <LmsWorkTaskCatalog tasks={workTasks} />
+      </section>
+
+      <section id="recurring-work" className="scroll-mt-6" aria-label="Recurring Work">
+        <LmsWorkRecurrences data={recurrenceData} />
       </section>
 
       <section id="imports" className="scroll-mt-6" aria-label="Imports">

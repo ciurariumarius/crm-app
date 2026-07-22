@@ -13,7 +13,24 @@ import {
   parseCustomLmsWorkDuration,
 } from "../lib/lms-work-entries/duration-options"
 import { rankLmsWorkOptionsByFrequency } from "../lib/lms-work-entries/frequent-options"
-import { formatLmsWorkDateLabel, getLmsWorkCapacity, isValidDateOnly, normalizeDateRange } from "../lib/lms-work-entries/date"
+import {
+  addDateOnlyDays,
+  formatLmsWorkDateLabel,
+  getBucharestDateOnly,
+  getDateOnlyRange,
+  getLmsWorkCapacity,
+  isRomanianWorkday,
+  isRomanianLegalHoliday,
+  isValidDateOnly,
+  normalizeDateRange,
+} from "../lib/lms-work-entries/date"
+import { LMS_RECURRENCE_SOURCE_PREFIX } from "../lib/lms-work-entries/daily-admin-automation"
+import {
+  formatRecurrenceSchedule,
+  maskToWeekdays,
+  recurrenceRunsOnDate,
+  weekdaysToMask,
+} from "../lib/lms-work-entries/recurrence"
 import { getRomanianLegalHolidayDates, getRomanianOrthodoxEaster } from "../lib/lms-work-entries/romanian-holidays"
 import {
   canonicalizeLmsWorkTaskName,
@@ -37,6 +54,23 @@ async function run() {
   assert.equal(formatLmsWorkDateLabel("2026-07-21", "2026-07-21"), "Today · 21 Jul 2026")
   assert.equal(formatLmsWorkDateLabel("2026-07-20", "2026-07-21"), "20 Jul 2026")
   assert.equal(formatLmsWorkDateLabel("", "2026-07-21"), "Today")
+  assert.equal(getBucharestDateOnly(new Date("2026-07-20T21:30:00.000Z")), "2026-07-21")
+  assert.equal(getBucharestDateOnly(new Date("2026-12-31T22:30:00.000Z")), "2027-01-01")
+  assert.equal(addDateOnlyDays("2024-02-28", 1), "2024-02-29")
+  assert.equal(addDateOnlyDays("2026-01-01", -1), "2025-12-31")
+  assert.deepEqual(getDateOnlyRange("2026-07-17", "2026-07-21"), [
+    "2026-07-17",
+    "2026-07-18",
+    "2026-07-19",
+    "2026-07-20",
+    "2026-07-21",
+  ])
+  assert.equal(isRomanianWorkday("2026-07-17"), true)
+  assert.equal(isRomanianWorkday("2026-07-18"), false)
+  assert.equal(isRomanianWorkday("2026-01-01"), false)
+  assert.equal(isRomanianWorkday("invalid"), false)
+  assert.equal(isRomanianLegalHoliday("2026-12-01"), true)
+  assert.equal(isRomanianLegalHoliday("2026-12-02"), false)
   assert.equal(getRomanianOrthodoxEaster(2024).toISOString().slice(0, 10), "2024-05-05")
   assert.equal(getRomanianOrthodoxEaster(2025).toISOString().slice(0, 10), "2025-04-20")
   assert.equal(getRomanianOrthodoxEaster(2026).toISOString().slice(0, 10), "2026-04-12")
@@ -106,12 +140,22 @@ async function run() {
   assert.equal(canonicalizeLmsWorkTaskName("Meeting / videocall client "), "Meeting / videocall client ")
   assert.equal(canonicalizeLmsWorkTaskName("Custom task  "), "Custom task")
   assert.equal(LMS_WORK_TASK_NAMES_WITH_TRAILING_SPACE.length, 5)
+  assert.equal(LMS_RECURRENCE_SOURCE_PREFIX, "recurrence:")
+  assert.equal(weekdaysToMask([1, 2, 3, 4, 5]), 31)
+  assert.equal(weekdaysToMask([2, 4]), 10)
+  assert.deepEqual(maskToWeekdays(10), [2, 4])
+  assert.equal(recurrenceRunsOnDate(10, "2026-07-21"), true)
+  assert.equal(recurrenceRunsOnDate(10, "2026-07-22"), false)
+  assert.equal(formatRecurrenceSchedule([1, 2, 3, 4, 5]), "Monday–Friday")
 
   const workLogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-log-workspace.tsx"), "utf8")
   const workLogDbSource = readFileSync(resolve(process.cwd(), "lib/lms-work-entries/db.ts"), "utf8")
   const workTaskCatalogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-task-catalog.tsx"), "utf8")
   const workEntryActionsSource = readFileSync(resolve(process.cwd(), "lib/actions/lms-work-entries.ts"), "utf8")
   const workEntryExportRouteSource = readFileSync(resolve(process.cwd(), "app/api/lms-work-entries/export/route.ts"), "utf8")
+  const dailyAdminAutomationSource = readFileSync(resolve(process.cwd(), "lib/lms-work-entries/daily-admin-automation.ts"), "utf8")
+  const dailyAdminCronRouteSource = readFileSync(resolve(process.cwd(), "app/api/cron/lms-daily-admin-work/route.ts"), "utf8")
+  const recurringWorkSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-recurrences.tsx"), "utf8")
   const prismaSchemaSource = readFileSync(resolve(process.cwd(), "prisma/schema.prisma"), "utf8")
   const taskOrderMigrationSource = readFileSync(
     resolve(process.cwd(), "prisma/migrations/20260721180000_add_lms_work_task_order_and_defaults/migration.sql"),
@@ -129,6 +173,20 @@ async function run() {
     resolve(process.cwd(), "prisma/migrations/20260721200000_track_lms_work_entry_exports/migration.sql"),
     "utf8"
   )
+  const dailyAdminMigrationSource = readFileSync(
+    resolve(process.cwd(), "prisma/migrations/20260721210000_add_lms_daily_admin_automation/migration.sql"),
+    "utf8"
+  )
+  const dailyAdminSingletonMigrationSource = readFileSync(
+    resolve(process.cwd(), "prisma/migrations/20260722090000_make_lms_daily_admin_singleton/migration.sql"),
+    "utf8"
+  )
+  const recurringWorkMigrationSource = readFileSync(
+    resolve(process.cwd(), "prisma/migrations/20260722110000_add_lms_work_recurrences/migration.sql"),
+    "utf8"
+  )
+  const dailyAdminRunbookSource = readFileSync(resolve(process.cwd(), "docs/lms-daily-admin-cron.md"), "utf8")
+  const envExampleSource = readFileSync(resolve(process.cwd(), ".env.example"), "utf8")
   const dataWorkspaceSource = readFileSync(resolve(process.cwd(), "components/lms-tasks/lms-analysis-data-workspace.tsx"), "utf8")
   assert.doesNotMatch(workLogSource, /Manage tasks|Manage predefined tasks/)
   assert.doesNotMatch(workLogSource, /Capture client work quickly/)
@@ -184,12 +242,46 @@ async function run() {
   assert.match(workEntryExportRouteSource, /X-Exported-Entry-Count/)
   assert.match(prismaSchemaSource, /sortOrder\s+Int\s+@default\(1000\)\s+@map\("sort_order"\)/)
   assert.match(prismaSchemaSource, /exportedAt\s+DateTime\?\s+@map\("exported_at"\)/)
+  assert.match(prismaSchemaSource, /sourceKey\s+String\?\s+@map\("source_key"\)/)
+  assert.match(prismaSchemaSource, /model LmsWorkRecurrence/)
+  assert.doesNotMatch(prismaSchemaSource, /model LmsWorkAutomationState/)
+  assert.match(prismaSchemaSource, /@@unique\(\[tenantId, sourceKey, workDate\]\)/)
   assert.match(taskOrderMigrationSource, /INSERT OR IGNORE INTO "lms_work_tasks"/)
   assert.match(exactTaskNamesMigrationSource, /UPDATE "lms_work_tasks"/)
   assert.match(exactTaskNamesMigrationSource, /UPDATE "lms_work_entries"/)
   assert.match(employeeNameMigrationSource, /"employee_name_snapshot" = 'Marius Ciurariu'/)
   assert.match(exportTrackingMigrationSource, /ADD COLUMN "exported_at" DATETIME/)
   assert.match(exportTrackingMigrationSource, /CREATE INDEX "lms_work_entries_tenant_id_user_id_exported_at_work_date_idx"/)
+  assert.match(dailyAdminMigrationSource, /ADD COLUMN "source_key" TEXT/)
+  assert.match(dailyAdminMigrationSource, /CREATE TABLE "lms_work_automation_states"/)
+  assert.match(dailyAdminMigrationSource, /lms_work_entries_tenant_id_user_id_source_key_work_date_key/)
+  assert.match(dailyAdminSingletonMigrationSource, /lms_work_entries_tenant_id_source_key_work_date_key/)
+  assert.match(dailyAdminSingletonMigrationSource, /new_lms_work_automation_states/)
+  assert.doesNotMatch(dailyAdminSingletonMigrationSource, /"user_id" TEXT NOT NULL/)
+  assert.match(recurringWorkMigrationSource, /Meeting \/ videocall intern /)
+  assert.match(recurringWorkMigrationSource, /Task-uri administrative/)
+  assert.match(recurringWorkMigrationSource, /Comunicare client \/ coleg - email \/ telefon/)
+  assert.match(recurringWorkMigrationSource, /Dezvoltare/)
+  assert.match(recurringWorkMigrationSource, /UPDATE "lms_work_entries"/)
+  assert.match(recurringWorkMigrationSource, /DROP TABLE "lms_work_automation_states"/)
+  assert.match(dailyAdminAutomationSource, /LMS_RECURRENCE_SOURCE_PREFIX/)
+  assert.match(dailyAdminAutomationSource, /sourceKey: null/)
+  assert.match(dailyAdminAutomationSource, /durationMinutes: rule\.durationMinutes/)
+  assert.match(dailyAdminAutomationSource, /employeeNameSnapshot: LMS_CRM_EMPLOYEE_NAME/)
+  assert.match(dailyAdminAutomationSource, /processedThrough: today/)
+  assert.match(dailyAdminAutomationSource, /isRomanianLegalHoliday/)
+  assert.match(dailyAdminAutomationSource, /prisma\.\$transaction/)
+  assert.match(dailyAdminAutomationSource, /LMS_DAILY_ADMIN_OWNER_USERNAME = "mxa95"/)
+  assert.doesNotMatch(dailyAdminAutomationSource, /process\.env\.LMS_DAILY_ADMIN_USERNAME/)
+  assert.match(dailyAdminCronRouteSource, /matchesBearerOrHeaderSecret/)
+  assert.match(dailyAdminCronRouteSource, /CRON_UNAUTHORIZED/)
+  assert.match(dailyAdminCronRouteSource, /dryRun.*=== "1"/)
+  assert.match(dailyAdminCronRouteSource, /LMS_RECURRING_WORK_COMPLETED/)
+  assert.match(dailyAdminCronRouteSource, /LMS_DAILY_ADMIN_WORK_FAILED/)
+  assert.doesNotMatch(dailyAdminCronRouteSource, /username: target\.username/)
+  assert.match(dailyAdminRunbookSource, /CRON_TZ=Europe\/Bucharest/)
+  assert.match(dailyAdminRunbookSource, /5 8 \* \* \*/)
+  assert.doesNotMatch(envExampleSource, /LMS_DAILY_ADMIN_USERNAME/)
   assert.equal(LMS_CRM_EMPLOYEE_NAME, "Marius Ciurariu")
   for (const taskName of LMS_WORK_TASK_NAMES_WITH_TRAILING_SPACE) {
     assert.ok(exactTaskNamesMigrationSource.includes(`'${taskName}'`), `Missing exact CRM task name: ${taskName}`)
@@ -224,8 +316,14 @@ async function run() {
   }
   assert.doesNotMatch(dataWorkspaceSource, /TabsList|TabsTrigger|TabsContent/)
   assert.match(dataWorkspaceSource, /id="task-catalog"/)
+  assert.match(dataWorkspaceSource, /id="recurring-work"/)
   assert.match(dataWorkspaceSource, /id="imports"/)
   assert.match(dataWorkspaceSource, /id="import-logs"/)
+  assert.match(recurringWorkSource, /ClientCombobox/)
+  assert.match(recurringWorkSource, /TaskCombobox/)
+  assert.match(recurringWorkSource, /LMS_RECURRENCE_WEEKDAYS/)
+  assert.match(recurringWorkSource, /setLmsWorkRecurrenceActive/)
+  assert.doesNotMatch(recurringWorkSource, /deleteLmsWorkRecurrence/)
 
   const buffer = await buildLmsCrmExportBuffer([
     {

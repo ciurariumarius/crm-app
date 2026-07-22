@@ -16,22 +16,23 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  users            User[]
-  partners         Partner[]
-  sites            Site[]
-  services         Service[]
-  projects         Project[]
-  tasks            Task[]
-  timeLogs         TimeLog[]
-  auditLogs        AuditLog[]
-  projectRollovers ProjectRollover[]
-  authSessions     AuthSession[]
-  lmsTaskLogs      LmsTaskLog[]
-  lmsAllocations   LmsAllocation[]
-  lmsWorkTasks     LmsWorkTask[]
-  lmsWorkEntries   LmsWorkEntry[]
-  notes            Note[]
-  noteFolders      NoteFolder[]
+  users              User[]
+  partners           Partner[]
+  sites              Site[]
+  services           Service[]
+  projects           Project[]
+  tasks              Task[]
+  timeLogs           TimeLog[]
+  auditLogs          AuditLog[]
+  projectRollovers   ProjectRollover[]
+  authSessions       AuthSession[]
+  lmsTaskLogs        LmsTaskLog[]
+  lmsAllocations     LmsAllocation[]
+  lmsWorkTasks       LmsWorkTask[]
+  lmsWorkEntries     LmsWorkEntry[]
+  lmsWorkRecurrences LmsWorkRecurrence[]
+  notes              Note[]
+  noteFolders        NoteFolder[]
 
   @@map("tenants")
 }
@@ -402,8 +403,9 @@ model LmsAllocation {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
 
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  workEntries LmsWorkEntry[]
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workEntries     LmsWorkEntry[]
+  workRecurrences LmsWorkRecurrence[]
 
   @@unique([tenantId, syncKey])
   @@index([tenantId, client])
@@ -421,8 +423,9 @@ model LmsWorkTask {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
 
-  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  entries LmsWorkEntry[]
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries     LmsWorkEntry[]
+  recurrences LmsWorkRecurrence[]
 
   @@unique([tenantId, normalizedName])
   @@index([tenantId, isActive, name])
@@ -441,6 +444,7 @@ model LmsWorkEntry {
   clientDomainSnapshot String    @map("client_domain_snapshot")
   taskNameSnapshot     String    @map("task_name_snapshot")
   employeeNameSnapshot String    @map("employee_name_snapshot")
+  sourceKey            String?   @map("source_key")
   exportedAt           DateTime? @map("exported_at")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
@@ -450,9 +454,36 @@ model LmsWorkEntry {
   lmsAllocation LmsAllocation? @relation(fields: [lmsAllocationId], references: [id], onDelete: SetNull)
   taskType      LmsWorkTask    @relation(fields: [taskTypeId], references: [id], onDelete: NoAction)
 
+  @@unique([tenantId, sourceKey, workDate])
   @@index([tenantId, userId, workDate])
   @@index([tenantId, userId, exportedAt, workDate])
   @@index([tenantId, lmsAllocationId])
   @@index([tenantId, taskTypeId])
   @@map("lms_work_entries")
+}
+
+model LmsWorkRecurrence {
+  id               String    @id @default(uuid())
+  tenantId         String    @map("tenant_id")
+  lmsAllocationId  String?   @map("lms_allocation_id")
+  taskTypeId       String    @map("task_type_id")
+  clientSnapshot   String    @map("client_snapshot")
+  taskSnapshot     String    @map("task_snapshot")
+  durationMinutes  Int       @map("duration_minutes")
+  weekdayMask      Int       @map("weekday_mask")
+  isActive         Boolean   @default(true) @map("is_active")
+  startsOn         String?   @map("starts_on")
+  processedThrough String?   @map("processed_through")
+  lastRunAt        DateTime? @map("last_run_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lmsAllocation LmsAllocation? @relation(fields: [lmsAllocationId], references: [id], onDelete: SetNull)
+  taskType      LmsWorkTask    @relation(fields: [taskTypeId], references: [id], onDelete: NoAction)
+
+  @@index([tenantId, isActive])
+  @@index([tenantId, lmsAllocationId])
+  @@index([tenantId, taskTypeId])
+  @@map("lms_work_recurrences")
 }

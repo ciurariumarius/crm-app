@@ -117,7 +117,7 @@ function getDownloadFilename(disposition: string | null) {
   return match?.[1] || "TASK_IMPORT.xlsx"
 }
 
-function ClientCombobox({
+export function ClientCombobox({
   clients,
   value,
   onValueChange,
@@ -293,7 +293,7 @@ function ClientCombobox({
   )
 }
 
-function TaskCombobox({
+export function TaskCombobox({
   tasks,
   value,
   onValueChange,

@@ -58,3 +58,32 @@ export type LmsWorkExportEntry = {
   employeeNameSnapshot: string
   durationMinutes: number
 }
+
+export type LmsWorkRecurrenceInput = {
+  lmsAllocationId: string
+  taskTypeId: string
+  durationMinutes: number
+  weekdays: number[]
+}
+
+export type LmsWorkRecurrenceRow = {
+  id: string
+  lmsAllocationId: string | null
+  taskTypeId: string
+  clientName: string
+  taskName: string
+  durationMinutes: number
+  weekdays: number[]
+  isActive: boolean
+  startsOn: string | null
+  processedThrough: string | null
+  lastRunAt: string | null
+  clientDetached: boolean
+  taskInactive: boolean
+}
+
+export type LmsWorkRecurrencePageData = {
+  clients: LmsWorkClientOption[]
+  tasks: LmsWorkTaskOption[]
+  recurrences: LmsWorkRecurrenceRow[]
+}

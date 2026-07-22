@@ -6,14 +6,20 @@ import { z } from "zod"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
-import { DateOnlySchema } from "@/lib/lms-work-entries/date"
+import { addDateOnlyDays, DateOnlySchema, getBucharestDateOnly } from "@/lib/lms-work-entries/date"
+import { weekdaysToMask } from "@/lib/lms-work-entries/recurrence"
 import { canonicalizeLmsWorkTaskName } from "@/lib/lms-work-entries/task-names"
-import type { LmsWorkEntryInput, LmsWorkEntryUpdateInput } from "@/lib/lms-work-entries/types"
+import type {
+  LmsWorkEntryInput,
+  LmsWorkEntryUpdateInput,
+  LmsWorkRecurrenceInput,
+} from "@/lib/lms-work-entries/types"
 import prisma from "@/lib/prisma"
 import { requireTenantContext } from "@/lib/tenant"
 
 const EntryIdSchema = z.string().uuid()
 const TaskIdSchema = z.string().uuid()
+const RecurrenceIdSchema = z.string().uuid()
 const TaskOrderSchema = z.array(TaskIdSchema).min(1).max(1000)
 const WorkEntryInputSchema = z.object({
   workDate: DateOnlySchema,
@@ -25,6 +31,12 @@ const WorkEntryUpdateInputSchema = WorkEntryInputSchema.extend({
   lmsAllocationId: z.string().uuid("Select a valid LMS client").nullable(),
 })
 const TaskNameSchema = z.string().trim().min(1, "Task name is required").max(255, "Task name is too long")
+const RecurrenceInputSchema = z.object({
+  lmsAllocationId: z.string().uuid("Select a valid LMS client"),
+  taskTypeId: z.string().uuid("Select a valid task"),
+  durationMinutes: z.number().int("Minutes must be a whole number").min(1).max(1440),
+  weekdays: z.array(z.number().int().min(1).max(7)).min(1, "Select at least one weekday").max(7),
+})
 
 function normalizeTaskName(value: string) {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ro-RO")
@@ -61,6 +73,33 @@ async function resolveEntryReferences(
   if (!client) throw new ActionError("LMS_CLIENT_NOT_FOUND", "Select a client from LMS Projects")
   if (!task) throw new ActionError("TASK_NOT_FOUND", "Select an active predefined task")
   return { client, task }
+}
+
+async function assertNoOverlappingRecurrence(args: {
+  tenantId: string
+  lmsAllocationId: string
+  taskTypeId: string
+  durationMinutes: number
+  weekdayMask: number
+  excludeId?: string
+}) {
+  const candidates = await prisma.lmsWorkRecurrence.findMany({
+    where: {
+      tenantId: args.tenantId,
+      lmsAllocationId: args.lmsAllocationId,
+      taskTypeId: args.taskTypeId,
+      durationMinutes: args.durationMinutes,
+      isActive: true,
+      ...(args.excludeId ? { id: { not: args.excludeId } } : {}),
+    },
+    select: { weekdayMask: true },
+  })
+  if (candidates.some((candidate) => (candidate.weekdayMask & args.weekdayMask) !== 0)) {
+    throw new ActionError(
+      "LMS_RECURRENCE_OVERLAP",
+      "An active rule already uses this client, task, duration, and one or more selected weekdays"
+    )
+  }
 }
 
 export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
@@ -284,5 +323,156 @@ export async function updateLmsWorkTask(
     return { success: true as const }
   } catch (error) {
     return handleActionError(error, "Failed to update task")
+  }
+}
+
+export async function createLmsWorkRecurrence(data: LmsWorkRecurrenceInput) {
+  try {
+    const session = await requireTenantContext()
+    const validated = RecurrenceInputSchema.parse(data)
+    const weekdays = [...new Set(validated.weekdays)]
+    const weekdayMask = weekdaysToMask(weekdays)
+    const { client, task } = await resolveEntryReferences(
+      session.tenantId,
+      validated.lmsAllocationId,
+      validated.taskTypeId
+    )
+    await assertNoOverlappingRecurrence({
+      tenantId: session.tenantId,
+      lmsAllocationId: client.id,
+      taskTypeId: task.id,
+      durationMinutes: validated.durationMinutes,
+      weekdayMask,
+    })
+
+    const recurrence = await prisma.lmsWorkRecurrence.create({
+      data: {
+        tenantId: session.tenantId,
+        lmsAllocationId: client.id,
+        taskTypeId: task.id,
+        clientSnapshot: client.client,
+        taskSnapshot: task.name,
+        durationMinutes: validated.durationMinutes,
+        weekdayMask,
+        startsOn: getBucharestDateOnly(),
+      },
+      select: { id: true },
+    })
+    await logSessionAuditEvent(session, {
+      action: "LMS_WORK_RECURRENCE_CREATED",
+      details: `recurrenceId=${recurrence.id}; clientId=${client.id}; taskId=${task.id}; weekdays=${weekdays.join(",")}`,
+    })
+    revalidateWorkLog()
+    return { success: true as const, id: recurrence.id }
+  } catch (error) {
+    return handleActionError(error, "Failed to create recurring work rule")
+  }
+}
+
+export async function updateLmsWorkRecurrence(
+  recurrenceId: string,
+  data: LmsWorkRecurrenceInput
+) {
+  try {
+    const session = await requireTenantContext()
+    const validatedId = RecurrenceIdSchema.parse(recurrenceId)
+    const validated = RecurrenceInputSchema.parse(data)
+    const weekdays = [...new Set(validated.weekdays)]
+    const weekdayMask = weekdaysToMask(weekdays)
+    const existing = await prisma.lmsWorkRecurrence.findFirst({
+      where: { id: validatedId, tenantId: session.tenantId },
+      select: { id: true, isActive: true },
+    })
+    if (!existing) throw new ActionError("LMS_RECURRENCE_NOT_FOUND", "Recurring work rule not found")
+    const { client, task } = await resolveEntryReferences(
+      session.tenantId,
+      validated.lmsAllocationId,
+      validated.taskTypeId
+    )
+    if (existing.isActive) {
+      await assertNoOverlappingRecurrence({
+        tenantId: session.tenantId,
+        lmsAllocationId: client.id,
+        taskTypeId: task.id,
+        durationMinutes: validated.durationMinutes,
+        weekdayMask,
+        excludeId: existing.id,
+      })
+    }
+
+    await prisma.lmsWorkRecurrence.update({
+      where: { id: existing.id },
+      data: {
+        lmsAllocationId: client.id,
+        taskTypeId: task.id,
+        clientSnapshot: client.client,
+        taskSnapshot: task.name,
+        durationMinutes: validated.durationMinutes,
+        weekdayMask,
+      },
+    })
+    await logSessionAuditEvent(session, {
+      action: "LMS_WORK_RECURRENCE_UPDATED",
+      details: `recurrenceId=${existing.id}; clientId=${client.id}; taskId=${task.id}; weekdays=${weekdays.join(",")}`,
+    })
+    revalidateWorkLog()
+    return { success: true as const }
+  } catch (error) {
+    return handleActionError(error, "Failed to update recurring work rule")
+  }
+}
+
+export async function setLmsWorkRecurrenceActive(recurrenceId: string, isActive: boolean) {
+  try {
+    const session = await requireTenantContext()
+    const validatedId = RecurrenceIdSchema.parse(recurrenceId)
+    const validatedActive = z.boolean().parse(isActive)
+    const existing = await prisma.lmsWorkRecurrence.findFirst({
+      where: { id: validatedId, tenantId: session.tenantId },
+      select: {
+        id: true,
+        isActive: true,
+        lmsAllocationId: true,
+        taskTypeId: true,
+        durationMinutes: true,
+        weekdayMask: true,
+        taskType: { select: { isActive: true } },
+      },
+    })
+    if (!existing) throw new ActionError("LMS_RECURRENCE_NOT_FOUND", "Recurring work rule not found")
+    if (existing.isActive === validatedActive) return { success: true as const }
+
+    if (validatedActive) {
+      if (!existing.lmsAllocationId) {
+        throw new ActionError("LMS_CLIENT_NOT_FOUND", "Choose an available LMS client before activating this rule")
+      }
+      if (!existing.taskType.isActive) {
+        throw new ActionError("TASK_NOT_FOUND", "Choose an active predefined task before activating this rule")
+      }
+      await assertNoOverlappingRecurrence({
+        tenantId: session.tenantId,
+        lmsAllocationId: existing.lmsAllocationId,
+        taskTypeId: existing.taskTypeId,
+        durationMinutes: existing.durationMinutes,
+        weekdayMask: existing.weekdayMask,
+        excludeId: existing.id,
+      })
+    }
+
+    const today = getBucharestDateOnly()
+    await prisma.lmsWorkRecurrence.update({
+      where: { id: existing.id },
+      data: validatedActive
+        ? { isActive: true, startsOn: today, processedThrough: addDateOnlyDays(today, -1) }
+        : { isActive: false },
+    })
+    await logSessionAuditEvent(session, {
+      action: validatedActive ? "LMS_WORK_RECURRENCE_ACTIVATED" : "LMS_WORK_RECURRENCE_DEACTIVATED",
+      details: `recurrenceId=${existing.id}`,
+    })
+    revalidateWorkLog()
+    return { success: true as const }
+  } catch (error) {
+    return handleActionError(error, "Failed to change recurring work rule status")
   }
 }

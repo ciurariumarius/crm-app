@@ -3,7 +3,8 @@ import { requireTenantContext } from "@/lib/tenant"
 import { normalizeDateRange } from "@/lib/lms-work-entries/date"
 import { buildLmsWorkDurationShortcuts } from "@/lib/lms-work-entries/duration-options"
 import { rankLmsWorkOptionsByFrequency } from "@/lib/lms-work-entries/frequent-options"
-import type { LmsWorkLogPageData } from "@/lib/lms-work-entries/types"
+import { maskToWeekdays } from "@/lib/lms-work-entries/recurrence"
+import type { LmsWorkLogPageData, LmsWorkRecurrencePageData } from "@/lib/lms-work-entries/types"
 
 const DEFAULT_PAGE_SIZE = 50
 
@@ -18,6 +19,57 @@ async function findLmsWorkTasksForTenant(tenantId: string) {
 export async function getLmsWorkTaskOptions() {
   const session = await requireTenantContext()
   return findLmsWorkTasksForTenant(session.tenantId)
+}
+
+export async function getLmsWorkRecurrencePageData(): Promise<LmsWorkRecurrencePageData> {
+  const session = await requireTenantContext()
+  const [clients, tasks, recurrences] = await Promise.all([
+    prisma.lmsAllocation.findMany({
+      where: { tenantId: session.tenantId },
+      select: { id: true, client: true },
+      orderBy: { client: "asc" },
+    }),
+    findLmsWorkTasksForTenant(session.tenantId),
+    prisma.lmsWorkRecurrence.findMany({
+      where: { tenantId: session.tenantId },
+      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        lmsAllocationId: true,
+        taskTypeId: true,
+        clientSnapshot: true,
+        taskSnapshot: true,
+        durationMinutes: true,
+        weekdayMask: true,
+        isActive: true,
+        startsOn: true,
+        processedThrough: true,
+        lastRunAt: true,
+        lmsAllocation: { select: { id: true } },
+        taskType: { select: { isActive: true } },
+      },
+    }),
+  ])
+
+  return {
+    clients,
+    tasks,
+    recurrences: recurrences.map((recurrence) => ({
+      id: recurrence.id,
+      lmsAllocationId: recurrence.lmsAllocationId,
+      taskTypeId: recurrence.taskTypeId,
+      clientName: recurrence.clientSnapshot,
+      taskName: recurrence.taskSnapshot,
+      durationMinutes: recurrence.durationMinutes,
+      weekdays: maskToWeekdays(recurrence.weekdayMask),
+      isActive: recurrence.isActive,
+      startsOn: recurrence.startsOn,
+      processedThrough: recurrence.processedThrough,
+      lastRunAt: recurrence.lastRunAt?.toISOString() ?? null,
+      clientDetached: recurrence.lmsAllocation === null,
+      taskInactive: !recurrence.taskType.isActive,
+    })),
+  }
 }
 
 export async function getLmsWorkLogPageData(args?: {
