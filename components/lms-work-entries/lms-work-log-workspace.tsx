@@ -14,10 +14,12 @@ import {
   Clock3,
   Download,
   FileSpreadsheet,
+  ListChecks,
   Loader2,
   Pencil,
   Plus,
   Trash2,
+  UserRound,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -44,7 +46,7 @@ import type {
 } from "@/lib/lms-work-entries/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -479,23 +481,20 @@ function FrequentWorkOptions({
   if (options.length === 0) return null
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-[var(--text-muted)]">Frequently used</p>
-      <div role="group" aria-label={ariaLabel} className="flex gap-1.5 overflow-x-auto pb-1">
-        {options.map((option) => (
-          <Button
-            key={option.id}
-            type="button"
-            variant={value === option.id ? "default" : "outline"}
-            aria-pressed={value === option.id}
-            title={option.label}
-            onClick={() => onValueChange(option.id)}
-            className="h-8 min-w-32 max-w-48 flex-1 shrink-0 rounded-lg px-2 text-xs font-semibold"
-          >
-            <span className="truncate">{option.label}</span>
-          </Button>
-        ))}
-      </div>
+    <div role="group" aria-label={ariaLabel} className="flex gap-1.5 overflow-x-auto pb-1">
+      {options.map((option) => (
+        <Button
+          key={option.id}
+          type="button"
+          variant={value === option.id ? "default" : "outline"}
+          aria-pressed={value === option.id}
+          title={option.label}
+          onClick={() => onValueChange(option.id)}
+          className="h-8 min-w-32 max-w-48 flex-1 shrink-0 rounded-lg px-2 text-xs font-semibold"
+        >
+          <span className="truncate">{option.label}</span>
+        </Button>
+      ))}
     </div>
   )
 }
@@ -803,7 +802,7 @@ export function LmsWorkLogWorkspace({
           <form onSubmit={handleCreate} className="grid gap-x-6 gap-y-5 xl:grid-cols-[minmax(0,11fr)_minmax(420px,9fr)]">
             <div className="space-y-5 xl:col-start-1 xl:row-start-1">
               <div className="space-y-2.5">
-                <Label className="text-sm font-semibold">Client</Label>
+                <Label className="flex items-center gap-2 text-sm font-semibold"><UserRound className="h-4 w-4 text-[var(--brand-primary)]" />Client</Label>
                 <ClientCombobox clients={data.clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} large />
                 <FrequentWorkOptions
                   ariaLabel="Frequently used clients"
@@ -813,7 +812,7 @@ export function LmsWorkLogWorkspace({
                 />
               </div>
               <div className="space-y-2.5">
-                <Label className="text-sm font-semibold">Task</Label>
+                <Label className="flex items-center gap-2 text-sm font-semibold"><ListChecks className="h-4 w-4 text-[var(--brand-primary)]" />Task</Label>
                 <TaskCombobox tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} />
                 <FrequentWorkOptions
                   ariaLabel="Frequently used tasks"
@@ -824,12 +823,12 @@ export function LmsWorkLogWorkspace({
               </div>
             </div>
 
-            <div className="h-full space-y-4 border-t border-[var(--line-subtle)] pt-5 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
-              <div className="space-y-2.5">
+            <div className="h-full space-y-5 border-t border-[var(--line-subtle)] pt-5 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
+              <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <Label className="text-sm font-semibold">Date</Label>
-                    <p className="mt-1 truncate text-base font-semibold text-[var(--text-primary)]" aria-live="polite">
+                    <Label className="flex items-center gap-2 text-sm font-semibold"><CalendarDays className="h-4 w-4 text-[var(--brand-primary)]" />Date</Label>
+                    <p className="mt-1.5 truncate text-base font-semibold text-[var(--text-primary)]" aria-live="polite">
                       {effectiveDateLabel}
                     </p>
                   </div>
@@ -851,7 +850,7 @@ export function LmsWorkLogWorkspace({
                 {differentDate ? (
                   <Input
                     aria-label="Work date"
-                    className="h-12! w-full"
+                    className="mt-3 h-12! w-full"
                     type="date"
                     value={workDate}
                     onChange={(event) => setWorkDate(event.target.value)}
@@ -860,9 +859,9 @@ export function LmsWorkLogWorkspace({
                 ) : null}
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Minutes</Label>
-                <div role="group" aria-label="Minutes" className="grid grid-cols-3 gap-1.5">
+              <div className="space-y-2.5">
+                <Label className="flex items-center gap-2 text-sm font-semibold"><Clock3 className="h-4 w-4 text-[var(--brand-primary)]" />Minutes</Label>
+                <div role="group" aria-label="Minutes" className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
                   {LMS_WORK_DURATION_PRESETS.map((preset) => (
                     <Button
                       key={preset}
@@ -870,9 +869,11 @@ export function LmsWorkLogWorkspace({
                       variant={durationMinutes === preset ? "default" : "outline"}
                       aria-pressed={durationMinutes === preset}
                       onClick={() => selectDuration(String(preset))}
-                      className="h-10 rounded-lg px-2 text-sm font-semibold"
+                      title={`${preset} minutes`}
+                      className="h-10 gap-1.5 rounded-lg px-2 text-sm font-semibold"
                     >
-                      {preset} min
+                      <Clock3 className="h-3.5 w-3.5" />
+                      {preset}
                     </Button>
                   ))}
                   <Button
@@ -902,7 +903,7 @@ export function LmsWorkLogWorkspace({
                       placeholder="Enter minutes"
                       className="h-10! pr-11 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
-                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-[var(--text-muted)]">min</span>
+                    <Clock3 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
                   </div>
                 ) : null}
                 {customDurationInvalid ? (
@@ -945,13 +946,6 @@ export function LmsWorkLogWorkspace({
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-lg"><FileSpreadsheet className="h-5 w-5 text-[var(--brand-primary)]" />Work entries</CardTitle>
-              <CardDescription className="mt-2">
-                {data.totalEntries} entries · {formatMinutes(data.totalMinutes)} worked
-                {workCapacity
-                  ? ` · ${workCapacity.hours}h available · ${workUtilizationPercent}%`
-                  : " · Available hours require a bounded date range"}
-                {` · ${data.unexportedEntries} not exported`}
-              </CardDescription>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="space-y-1.5">
@@ -1070,6 +1064,25 @@ export function LmsWorkLogWorkspace({
               </div>
             </div>
           ) : null}
+
+          <div className="grid gap-3 border-t border-[var(--line-subtle)] pt-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
+              <ListChecks className="h-5 w-5 text-[var(--brand-primary)]" />
+              <div><p className="text-xs text-[var(--text-muted)]">Tasks logged</p><p className="font-semibold text-[var(--text-primary)]">{data.totalEntries}</p></div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
+              <Clock3 className="h-5 w-5 text-[var(--brand-primary)]" />
+              <div><p className="text-xs text-[var(--text-muted)]">Total time</p><p className="font-semibold text-[var(--text-primary)]">{formatMinutes(data.totalMinutes)}</p></div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
+              <CalendarDays className="h-5 w-5 text-[var(--brand-primary)]" />
+              <div><p className="text-xs text-[var(--text-muted)]">Capacity</p><p className="font-semibold text-[var(--text-primary)]">{workCapacity ? `${workCapacity.hours}h · ${workUtilizationPercent}%` : "Choose a date range"}</p></div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
+              <FileSpreadsheet className="h-5 w-5 text-[var(--brand-primary)]" />
+              <div><p className="text-xs text-[var(--text-muted)]">Pending export</p><p className="font-semibold text-[var(--text-primary)]">{data.unexportedEntries}</p></div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
