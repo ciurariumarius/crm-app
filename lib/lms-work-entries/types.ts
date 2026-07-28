@@ -44,6 +44,7 @@ export type LmsWorkLogPageData = {
   totalEntries: number
   unexportedEntries: number
   totalMinutes: number
+  workedDays: number
   page: number
   pageSize: number
   totalPages: number

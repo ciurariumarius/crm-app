@@ -158,15 +158,11 @@ export async function resolveDomainFaviconUrl(domain: string | null | undefined)
 
     const homepage = `https://${normalizedHost}`
 
-    try {
-        const payload = await fetchHomepageHtmlWithSafeRedirects(homepage)
-        if (payload) {
-            const discovered = await extractIconHrefFromHtml(payload.html, payload.finalUrl)
-            if (discovered) return discovered
-        }
-    } catch {
-        // Ignore parser/network errors and fallback to conventional favicon path.
-    }
+    const payload = await fetchHomepageHtmlWithSafeRedirects(homepage)
+    if (!payload) return null
+
+    const discovered = await extractIconHrefFromHtml(payload.html, payload.finalUrl)
+    if (discovered) return discovered
 
     return `https://${normalizedHost}/favicon.ico`
 }

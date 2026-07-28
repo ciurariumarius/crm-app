@@ -1,7 +1,12 @@
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
 import { NotesWorkspace } from "@/components/notes/notes-workspace"
-import type { NoteFolderRecord, NoteRecord } from "@/lib/actions/notes"
+import type {
+  NoteFolderRecord,
+  NoteRecord,
+  NoteSmartFolderRecord,
+  NoteTagRecord,
+} from "@/lib/actions/notes"
 
 export const dynamic = "force-dynamic"
 const DEFAULT_NOTES_FOLDER_NAME = "General"
@@ -20,7 +25,7 @@ function sortUnifiedNotes(items: NoteRecord[]) {
 export default async function NotesPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ note?: string }>
+  searchParams?: Promise<{ note?: string; view?: string }>
 }) {
   await requireAuth()
   const params = (await searchParams) || {}
@@ -34,15 +39,27 @@ export default async function NotesPage({
         contentText: string
         archived: boolean
         pinned: boolean
+        deletedAt?: Date | null
+        hasChecklist?: boolean
+        hasAttachment?: boolean
         createdAt: Date
         updatedAt: Date
+        tags?: Array<{
+          tag: {
+            id: string
+            name: string
+            normalizedName: string
+          }
+        }>
       }>>
     }
     noteFolder?: {
       findMany: (...args: unknown[]) => Promise<Array<{
         id: string
+        parentId?: string | null
         name: string
         isDefault: boolean
+        sortOrder?: number
         createdAt: Date
         updatedAt: Date
       }>>
@@ -67,22 +84,28 @@ export default async function NotesPage({
     noteFolder?: {
       findMany: (...args: unknown[]) => Promise<Array<{
         id: string
+        parentId?: string | null
         name: string
         isDefault: boolean
+        sortOrder?: number
         createdAt: Date
         updatedAt: Date
       }>>
       create?: (...args: unknown[]) => Promise<{
         id: string
+        parentId?: string | null
         name: string
         isDefault: boolean
+        sortOrder?: number
         createdAt: Date
         updatedAt: Date
       }>
       update?: (...args: unknown[]) => Promise<{
         id: string
+        parentId?: string | null
         name: string
         isDefault: boolean
+        sortOrder?: number
         createdAt: Date
         updatedAt: Date
       }>
@@ -90,24 +113,68 @@ export default async function NotesPage({
     }
   }).noteFolder
 
-  const [notes, foldersRawMaybe, projectNotesRaw, taskNotesRaw] = await Promise.all([
+  const [notes, foldersRawMaybe, tagsRawMaybe, smartFoldersRawMaybe, projectNotesRaw, taskNotesRaw] = await Promise.all([
     noteDelegate && typeof noteDelegate.findMany === "function"
       ? await noteDelegate.findMany({
+          include: {
+            tags: {
+              include: { tag: true },
+            },
+          },
           orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
-          take: 400,
+          take: 500,
         })
       : [],
     noteFolderDelegate && typeof noteFolderDelegate.findMany === "function"
       ? await (async () => {
           try {
             return await noteFolderDelegate.findMany({
-              orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+              orderBy: [
+                { parentId: "asc" },
+                { sortOrder: "asc" },
+                { isDefault: "desc" },
+                { name: "asc" },
+              ],
             })
           } catch {
             return null
           }
         })()
       : null,
+    (async () => {
+      try {
+        return await prisma.noteTag.findMany({
+          orderBy: { normalizedName: "asc" },
+          include: {
+            _count: {
+              select: {
+                notes: {
+                  where: {
+                    note: { deletedAt: null, archived: false },
+                  },
+                },
+              },
+            },
+          },
+        })
+      } catch {
+        return null
+      }
+    })(),
+    (async () => {
+      try {
+        return await prisma.noteSmartFolder.findMany({
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          include: {
+            tags: {
+              include: { tag: true },
+            },
+          },
+        })
+      } catch {
+        return null
+      }
+    })(),
     prisma.project.findMany({
       where: { description: { not: null } },
       select: {
@@ -155,6 +222,7 @@ export default async function NotesPage({
         data: {
           name: DEFAULT_NOTES_FOLDER_NAME,
           isDefault: true,
+          sortOrder: 0,
         },
       })
       foldersRaw.push(createdDefault)
@@ -207,8 +275,10 @@ export default async function NotesPage({
 
   const folders: NoteFolderRecord[] = foldersRaw.map((folder) => ({
     id: folder.id,
+    parentId: folder.parentId ?? null,
     name: folder.name,
     isDefault: folder.isDefault,
+    sortOrder: folder.sortOrder ?? 1000,
     createdAt: folder.createdAt.toISOString(),
     updatedAt: folder.updatedAt.toISOString(),
   }))
@@ -226,6 +296,15 @@ export default async function NotesPage({
     contentText: note.contentText,
     archived: note.archived,
     pinned: note.pinned,
+    deletedAt: note.deletedAt?.toISOString() ?? null,
+    hasChecklist: note.hasChecklist ?? false,
+    hasAttachment: note.hasAttachment ?? /<img\b/i.test(note.content),
+    tags:
+      note.tags?.map(({ tag }) => ({
+        id: tag.id,
+        name: tag.name,
+        normalizedName: tag.normalizedName,
+      })) ?? [],
     createdAt: note.createdAt.toISOString(),
     updatedAt: note.updatedAt.toISOString(),
     sourceType: "note",
@@ -274,6 +353,35 @@ export default async function NotesPage({
       }
     })
 
+  const tags: NoteTagRecord[] = Array.isArray(tagsRawMaybe)
+    ? tagsRawMaybe.map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        normalizedName: tag.normalizedName,
+        count: tag._count.notes,
+      }))
+    : []
+
+  const smartFolders: NoteSmartFolderRecord[] = Array.isArray(smartFoldersRawMaybe)
+    ? smartFoldersRawMaybe.map((folder) => ({
+        id: folder.id,
+        name: folder.name,
+        matchMode: folder.matchMode === "any" ? "any" : "all",
+        requirePinned: folder.requirePinned,
+        requireChecklist: folder.requireChecklist,
+        requireAttachment: folder.requireAttachment,
+        updatedWithinDays: folder.updatedWithinDays,
+        sortOrder: folder.sortOrder,
+        tags: folder.tags.map(({ tag }) => ({
+          id: tag.id,
+          name: tag.name,
+          normalizedName: tag.normalizedName,
+        })),
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt.toISOString(),
+      }))
+    : []
+
   const initialNotes = sortUnifiedNotes([
     ...personalNotes,
     ...projectNotes,
@@ -287,13 +395,31 @@ export default async function NotesPage({
     initialNotes.find((note) => !note.archived)?.id ??
     initialNotes[0]?.id ??
     null
+  const requestedNote = initialSelectedNoteId
+    ? initialNotes.find((note) => note.id === initialSelectedNoteId)
+    : null
+  const resolvedInitialView =
+    params.view ||
+    (requestedNote?.sourceType === "project"
+      ? "projects"
+      : requestedNote?.sourceType === "task"
+        ? "tasks"
+        : requestedNote?.deletedAt
+          ? "deleted"
+          : requestedNote?.archived
+            ? "archived"
+            : "all")
 
   return (
     <NotesWorkspace
       initialNotes={initialNotes}
       initialSelectedNoteId={initialSelectedNoteId}
+      initialView={resolvedInitialView}
       initialFolders={folders}
+      initialTags={tags}
+      initialSmartFolders={smartFolders}
       foldersEnabled={folderFeatureReady}
+      productivityFeaturesEnabled={Array.isArray(tagsRawMaybe) && Array.isArray(smartFoldersRawMaybe)}
       storageUnavailable={!noteDelegate}
     />
   )

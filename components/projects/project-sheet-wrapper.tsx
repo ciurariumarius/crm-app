@@ -9,9 +9,11 @@ import { PartnerSheetContent } from "@/components/vault/partner-sheet-content"
 import type { ProjectWithDetails } from "@/types"
 import type { Service, Site } from "@prisma/client"
 import { sidePanelClass } from "@/lib/ui/side-panels"
+import { getProjectById } from "@/lib/actions/projects"
+import { Loader2 } from "lucide-react"
 
 interface ProjectSheetWrapperProps {
-    projects: ProjectWithDetails[]
+    projects: Array<{ id: string }>
     allServices: Service[]
     hourlyRate?: number
     children: React.ReactNode
@@ -35,45 +37,34 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
+    const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null)
+    const [projectLoadError, setProjectLoadError] = React.useState<string | null>(null)
     const [selectedSite, setSelectedSite] = React.useState<Site & { partner?: { id: string; name: string } } | null>(null)
     const [selectedPartnerId, setSelectedPartnerId] = React.useState<string | null>(null)
     const pendingSyncRef = React.useRef<Record<string, { status?: string; paymentStatus?: string }>>({})
 
-    const openProject = (projectId: string, projectData?: ProjectWithDetails) => {
-        const project = projectData || projects.find((entry) => entry.id === projectId)
-        if (project) {
-            setSelectedProject(project)
-        }
-    }
+    const openProject = React.useCallback((projectId: string) => {
+        if (!projectId) return
+        setSelectedProjectId(projectId)
+        setSelectedProject(null)
+        setProjectLoadError(null)
+
+        void getProjectById(projectId).then((result) => {
+            if (!result.success || !result.data) {
+                setProjectLoadError(result.error || "Failed to load project")
+                return
+            }
+            setSelectedProject(result.data as ProjectWithDetails)
+        }).catch(() => {
+            setProjectLoadError("Failed to load project")
+        })
+    }, [])
 
     const closeProject = () => {
+        setSelectedProjectId(null)
         setSelectedProject(null)
+        setProjectLoadError(null)
     }
-
-    // Update selected project if it changes in the list (e.g. after editing)
-    React.useEffect(() => {
-        if (selectedProject) {
-            const updated = projects.find((entry) => entry.id === selectedProject.id)
-            if (!updated) return
-
-            const pending = pendingSyncRef.current[selectedProject.id]
-            if (pending) {
-                const statusIsStale = pending.status !== undefined && updated.status !== pending.status
-                const paymentIsStale = pending.paymentStatus !== undefined && updated.paymentStatus !== pending.paymentStatus
-
-                // Ignore stale list snapshots right after a local edit.
-                if (statusIsStale || paymentIsStale) {
-                    return
-                }
-
-                delete pendingSyncRef.current[selectedProject.id]
-            }
-
-            if (JSON.stringify(updated) !== JSON.stringify(selectedProject)) {
-                setSelectedProject(updated)
-            }
-        }
-    }, [projects, selectedProject])
 
     React.useEffect(() => {
         const openProjectId = searchParams.get("openProject")
@@ -82,25 +73,35 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
         const projectFromUrl = projects.find((entry) => entry.id === openProjectId)
         if (!projectFromUrl) return
 
-        setSelectedProject((prev) => (prev?.id === projectFromUrl.id ? prev : projectFromUrl))
+        if (selectedProjectId !== projectFromUrl.id) openProject(projectFromUrl.id)
 
         const nextParams = new URLSearchParams(searchParams.toString())
         nextParams.delete("openProject")
         const nextUrl = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname
         router.replace(nextUrl, { scroll: false })
-    }, [pathname, projects, router, searchParams])
+    }, [openProject, pathname, projects, router, searchParams, selectedProjectId])
 
     return (
         <ProjectSheetContext.Provider value={{ openProject, closeProject, currentProject: selectedProject, hourlyRate }}>
             {children}
-            <Sheet open={!!selectedProject} onOpenChange={(open) => !open && closeProject()}>
+            <Sheet open={!!selectedProjectId} onOpenChange={(open) => !open && closeProject()}>
                 <SheetContent
                     side="right"
                     showCloseButton={false}
                     className={sidePanelClass("wide", 0)}
                 >
                     <SheetTitle className="sr-only">Project details</SheetTitle>
-                    {selectedProject && (
+                    {!selectedProject && !projectLoadError ? (
+                        <div className="flex h-full items-center justify-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-[var(--primary)]" aria-label="Loading project" />
+                        </div>
+                    ) : null}
+                    {projectLoadError ? (
+                        <div className="flex h-full items-center justify-center px-8 text-center text-sm text-[var(--text-secondary)]">
+                            {projectLoadError}
+                        </div>
+                    ) : null}
+                    {selectedProject ? (
                         <ProjectSheetContent
                             project={selectedProject}
                             allServices={allServices}
@@ -118,7 +119,7 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
                             onOpenSite={(site) => setSelectedSite(site)}
                             onOpenPartner={(partnerId) => setSelectedPartnerId(partnerId)}
                         />
-                    )}
+                    ) : null}
                 </SheetContent>
             </Sheet>
 

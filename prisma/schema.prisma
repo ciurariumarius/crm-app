@@ -217,37 +217,100 @@ model AuthSession {
 }
 
 model Note {
-  id          String   @id @default(uuid())
-  folderId    String?  @map("folder_id")
-  title       String   @default("Untitled")
-  content     String   @default("")
-  contentText String   @default("") @map("content_text")
-  archived    Boolean  @default(false)
-  pinned      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id            String    @id @default(uuid())
+  folderId      String?   @map("folder_id")
+  title         String    @default("Untitled")
+  content       String    @default("")
+  contentText   String    @default("") @map("content_text")
+  archived      Boolean   @default(false)
+  pinned        Boolean   @default(false)
+  deletedAt     DateTime? @map("deleted_at")
+  hasChecklist  Boolean   @default(false) @map("has_checklist")
+  hasAttachment Boolean   @default(false) @map("has_attachment")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
 
-  folder NoteFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folder NoteFolder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tags   NoteTagAssignment[]
 
   @@index([folderId, updatedAt])
   @@index([archived, updatedAt])
   @@index([pinned, updatedAt])
+  @@index([deletedAt, updatedAt])
   @@map("notes")
 }
 
 model NoteFolder {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
+  parentId  String?   @map("parent_id")
   name      String
-  isDefault Boolean  @default(false) @map("is_default")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  isDefault Boolean   @default(false) @map("is_default")
+  sortOrder Int       @default(1000) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  notes Note[]
+  notes    Note[]
+  parent   NoteFolder?  @relation("NoteFolderHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children NoteFolder[] @relation("NoteFolderHierarchy")
 
   @@unique([name])
   @@index([isDefault])
+  @@index([parentId, sortOrder])
   @@index([createdAt])
   @@map("note_folders")
+}
+
+model NoteTag {
+  id             String               @id @default(uuid())
+  name           String
+  normalizedName String               @unique @map("normalized_name")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @default(now()) @updatedAt @map("updated_at")
+  notes          NoteTagAssignment[]
+  smartFolders   NoteSmartFolderTag[]
+
+  @@index([name])
+  @@map("note_tags")
+}
+
+model NoteTagAssignment {
+  noteId    String   @map("note_id")
+  tagId     String   @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag       NoteTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+  @@index([tagId, noteId])
+  @@map("note_tag_assignments")
+}
+
+model NoteSmartFolder {
+  id                String               @id @default(uuid())
+  name              String               @unique
+  matchMode         String               @default("all") @map("match_mode")
+  requirePinned     Boolean?             @map("require_pinned")
+  requireChecklist  Boolean?             @map("require_checklist")
+  requireAttachment Boolean?             @map("require_attachment")
+  updatedWithinDays Int?                 @map("updated_within_days")
+  sortOrder         Int                  @default(1000) @map("sort_order")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @default(now()) @updatedAt @map("updated_at")
+  tags              NoteSmartFolderTag[]
+
+  @@index([sortOrder])
+  @@map("note_smart_folders")
+}
+
+model NoteSmartFolderTag {
+  smartFolderId String          @map("smart_folder_id")
+  tagId         String          @map("tag_id")
+  smartFolder   NoteSmartFolder @relation(fields: [smartFolderId], references: [id], onDelete: Cascade)
+  tag           NoteTag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([smartFolderId, tagId])
+  @@index([tagId, smartFolderId])
+  @@map("note_smart_folder_tags")
 }
 
 model AuditLog {

@@ -3,11 +3,14 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { format, isValid, parseISO } from "date-fns"
+import { format, isValid, isWeekend, parseISO } from "date-fns"
 import {
+  AlertTriangle,
+  CalendarCheck2,
   CalendarDays,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
@@ -19,10 +22,12 @@ import {
   Pencil,
   Plus,
   Trash2,
+  UserPlus,
   UserRound,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
+  createLmsWorkClient,
   createLmsWorkEntry,
   deleteLmsWorkEntry,
   updateLmsWorkEntry,
@@ -31,7 +36,6 @@ import { getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-pr
 import { matchesLmsClientSearch } from "@/lib/lms-work-entries/client-search"
 import { formatLmsWorkDateLabel, getLmsWorkCapacity } from "@/lib/lms-work-entries/date"
 import {
-  DEFAULT_LMS_WORK_DURATION_MINUTES,
   LMS_WORK_DURATION_PRESETS,
   getLmsWorkUtilizationPercent,
   isLmsWorkDurationPreset,
@@ -46,8 +50,10 @@ import type {
 } from "@/lib/lms-work-entries/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import {
   Dialog,
   DialogContent,
@@ -58,7 +64,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -79,6 +85,12 @@ function localToday() {
 function formatEntryDate(value: string) {
   const parsed = parseISO(value)
   return isValid(parsed) ? format(parsed, "dd MMM yyyy") : value
+}
+
+function isSelectableWorkDate(value: string) {
+  if (!value) return false
+  const parsed = parseISO(value)
+  return isValid(parsed) && !isWeekend(parsed)
 }
 
 function formatMinutes(value: number) {
@@ -133,163 +145,88 @@ export function ClientCombobox({
   large?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState("")
   const selectedClient = clients.find((client) => client.id === value)
-  const [search, setSearch] = React.useState(selectedClient?.client ?? "")
-  const [activeClientId, setActiveClientId] = React.useState<string | null>(null)
   const listboxId = React.useId()
-  const skipClearedSelectionSync = React.useRef(false)
-  const previousSelection = React.useRef({ value, label: selectedClient?.client ?? "" })
   const filteredClients = React.useMemo(
     () => clients.filter((client) => matchesLmsClientSearch(client.client, search)),
     [clients, search]
   )
+  const hasSelection = Boolean(selectedClient)
 
-  React.useEffect(() => {
-    const label = selectedClient?.client ?? ""
-    if (previousSelection.current.value === value && previousSelection.current.label === label) return
-    previousSelection.current = { value, label }
-
-    if (!value && skipClearedSelectionSync.current) {
-      skipClearedSelectionSync.current = false
-      return
-    }
-    skipClearedSelectionSync.current = false
-    setSearch(label)
-  }, [selectedClient?.client, value])
-
-  React.useEffect(() => {
-    if (!open) return
-    setActiveClientId((current) => (
-      current && filteredClients.some((client) => client.id === current)
-        ? current
-        : filteredClients[0]?.id ?? null
-    ))
-  }, [filteredClients, open])
-
-  React.useEffect(() => {
-    if (!open || !activeClientId) return
-    document.getElementById(`${listboxId}-${activeClientId}`)?.scrollIntoView({ block: "nearest" })
-  }, [activeClientId, listboxId, open])
-
-  function selectClient(client: LmsWorkClientOption) {
-    setSearch(client.client)
-    setActiveClientId(client.id)
-    skipClearedSelectionSync.current = false
-    onValueChange(client.id)
-    setOpen(false)
-  }
-
-  function closeClientSearch() {
-    setOpen(false)
-    setActiveClientId(null)
-    setSearch(selectedClient?.client ?? "")
-  }
-
-  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault()
-      closeClientSearch()
-      return
-    }
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault()
-      if (!open) setOpen(true)
-      if (filteredClients.length === 0) return
-      const currentIndex = filteredClients.findIndex((client) => client.id === activeClientId)
-      const offset = event.key === "ArrowDown" ? 1 : -1
-      const nextIndex = currentIndex < 0
-        ? (offset === 1 ? 0 : filteredClients.length - 1)
-        : (currentIndex + offset + filteredClients.length) % filteredClients.length
-      setActiveClientId(filteredClients[nextIndex].id)
-      return
-    }
-    if (event.key === "Enter" && open && activeClientId) {
-      const activeClient = filteredClients.find((client) => client.id === activeClientId)
-      if (activeClient) {
-        event.preventDefault()
-        selectClient(activeClient)
-      }
-    }
+  function changeOpen(nextOpen: boolean) {
+    setOpen(nextOpen)
+    setSearch("")
   }
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (nextOpen) setOpen(true)
-        else closeClientSearch()
-      }}
-    >
-      <PopoverAnchor asChild>
-        <div className="relative">
-          <Input
-            type="text"
-            role="combobox"
-            aria-expanded={open}
-            aria-autocomplete="list"
-            aria-controls={listboxId}
-            aria-activedescendant={activeClientId ? `${listboxId}-${activeClientId}` : undefined}
-            aria-label="Select LMS client"
-            autoComplete="off"
-            value={search}
-            placeholder={clients.length ? "Search LMS clients" : "No LMS clients imported"}
-            onFocus={(event) => {
-              setOpen(true)
-              if (selectedClient) event.currentTarget.select()
-            }}
-            onChange={(event) => {
-              const nextSearch = event.target.value
-              setSearch(nextSearch)
-              setOpen(true)
-              if (value) {
-                skipClearedSelectionSync.current = true
-                onValueChange("")
-              }
-            }}
-            onKeyDown={handleSearchKeyDown}
-            className={cn(
-              "w-full pr-10 font-normal",
-              large && "h-12! rounded-xl px-4 text-sm"
-            )}
-            disabled={disabled || clients.length === 0}
-          />
-          <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-        </div>
-      </PopoverAnchor>
+    <Popover open={open} onOpenChange={changeOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-label="Select LMS client"
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault()
+              changeOpen(true)
+            }
+          }}
+          className={cn(
+            "w-full justify-between gap-3 px-3 text-left font-normal",
+            hasSelection && "border-[color:color-mix(in_srgb,var(--brand-primary)_58%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_10%,var(--surface-lowest))] font-medium text-[var(--text-primary)]",
+            large && "h-14 px-4 text-base"
+          )}
+          disabled={disabled || clients.length === 0}
+        >
+          <span className={cn("min-w-0 flex-1 truncate", !hasSelection && "text-[var(--text-muted)]")}>
+            {selectedClient?.client ?? (clients.length ? "Select LMS client" : "No LMS clients imported")}
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {hasSelection ? <CheckCircle2 className="h-4 w-4 text-[var(--brand-primary)]" /> : null}
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </span>
+        </Button>
+      </PopoverTrigger>
       <PopoverContent
         align="start"
         className="w-[var(--radix-popover-trigger-width)] min-w-[300px] max-w-[min(92vw,560px)] p-0"
-        onOpenAutoFocus={(event) => event.preventDefault()}
-        onCloseAutoFocus={(event) => event.preventDefault()}
       >
-        <div
-          id={listboxId}
-          role="listbox"
-          aria-label="LMS clients"
-          className="max-h-[320px] overflow-y-auto p-1"
-        >
-          {filteredClients.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No LMS client found.</p>
-          ) : filteredClients.map((client) => (
-            <button
-              key={client.id}
-              id={`${listboxId}-${client.id}`}
-              type="button"
-              role="option"
-              aria-selected={value === client.id}
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => setActiveClientId(client.id)}
-              onClick={() => selectClient(client)}
-              className={cn(
-                "flex w-full cursor-pointer items-center rounded-sm px-2 py-2 text-left text-sm outline-none",
-                activeClientId === client.id && "bg-accent text-accent-foreground"
-              )}
-            >
-              <Check className={cn("mr-2 h-4 w-4 shrink-0", value === client.id ? "opacity-100" : "opacity-0")} />
-              <span className="truncate">{client.client}</span>
-            </button>
-          ))}
-        </div>
+        <Command shouldFilter={false}>
+          <CommandInput
+            autoFocus
+            placeholder="Search clients..."
+            value={search}
+            onValueChange={setSearch}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault()
+                changeOpen(false)
+              }
+            }}
+          />
+          <CommandList id={listboxId} aria-label="LMS clients" className="max-h-[320px]">
+            {filteredClients.length === 0 ? <CommandEmpty>No LMS client found.</CommandEmpty> : null}
+            {filteredClients.map((client) => (
+              <CommandItem
+                key={client.id}
+                value={`${client.client} ${client.id}`}
+                aria-current={value === client.id}
+                onSelect={() => {
+                  onValueChange(client.id)
+                  changeOpen(false)
+                }}
+                className={cn("py-2.5", value === client.id && "bg-[var(--bg-surface-soft)]")}
+              >
+                <Check className={cn("mr-2 h-4 w-4 shrink-0", value === client.id ? "opacity-100" : "opacity-0")} />
+                <span className="truncate">{client.client}</span>
+              </CommandItem>
+            ))}
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   )
@@ -300,168 +237,98 @@ export function TaskCombobox({
   value,
   onValueChange,
   disabled,
+  large,
 }: {
   tasks: LmsWorkTaskOption[]
   value: string
   onValueChange: (value: string) => void
   disabled?: boolean
+  large?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState("")
   const options = React.useMemo(() => tasks.filter((task) => task.isActive), [tasks])
   const selectedTask = options.find((task) => task.id === value)
-  const [search, setSearch] = React.useState(selectedTask?.name ?? "")
-  const [activeTaskId, setActiveTaskId] = React.useState<string | null>(null)
   const listboxId = React.useId()
-  const skipClearedSelectionSync = React.useRef(false)
-  const previousSelection = React.useRef({ value, label: selectedTask?.name ?? "" })
   const filteredTasks = React.useMemo(
     () => options.filter((task) => matchesLmsClientSearch(task.name, search)),
     [options, search]
   )
+  const hasSelection = Boolean(selectedTask)
 
-  React.useEffect(() => {
-    const label = selectedTask?.name ?? ""
-    if (previousSelection.current.value === value && previousSelection.current.label === label) return
-    previousSelection.current = { value, label }
-
-    if (!value && skipClearedSelectionSync.current) {
-      skipClearedSelectionSync.current = false
-      return
-    }
-    skipClearedSelectionSync.current = false
-    setSearch(label)
-  }, [selectedTask?.name, value])
-
-  React.useEffect(() => {
-    if (!open) return
-    setActiveTaskId((current) => (
-      current && filteredTasks.some((task) => task.id === current)
-        ? current
-        : filteredTasks[0]?.id ?? null
-    ))
-  }, [filteredTasks, open])
-
-  React.useEffect(() => {
-    if (!open || !activeTaskId) return
-    document.getElementById(`${listboxId}-${activeTaskId}`)?.scrollIntoView({ block: "nearest" })
-  }, [activeTaskId, listboxId, open])
-
-  function selectTask(task: LmsWorkTaskOption) {
-    setSearch(task.name)
-    setActiveTaskId(task.id)
-    skipClearedSelectionSync.current = false
-    onValueChange(task.id)
-    setOpen(false)
-  }
-
-  function closeTaskSearch() {
-    setOpen(false)
-    setActiveTaskId(null)
-    setSearch(selectedTask?.name ?? "")
-  }
-
-  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault()
-      closeTaskSearch()
-      return
-    }
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault()
-      if (!open) setOpen(true)
-      if (filteredTasks.length === 0) return
-      const currentIndex = filteredTasks.findIndex((task) => task.id === activeTaskId)
-      const offset = event.key === "ArrowDown" ? 1 : -1
-      const nextIndex = currentIndex < 0
-        ? (offset === 1 ? 0 : filteredTasks.length - 1)
-        : (currentIndex + offset + filteredTasks.length) % filteredTasks.length
-      setActiveTaskId(filteredTasks[nextIndex].id)
-      return
-    }
-    if (event.key === "Enter" && open && activeTaskId) {
-      const activeTask = filteredTasks.find((task) => task.id === activeTaskId)
-      if (activeTask) {
-        event.preventDefault()
-        selectTask(activeTask)
-      }
-    }
+  function changeOpen(nextOpen: boolean) {
+    setOpen(nextOpen)
+    setSearch("")
   }
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (nextOpen) setOpen(true)
-        else closeTaskSearch()
-      }}
-    >
-      <PopoverAnchor asChild>
-        <div className="relative">
-          <Input
-            type="text"
-            role="combobox"
-            aria-expanded={open}
-            aria-autocomplete="list"
-            aria-controls={listboxId}
-            aria-activedescendant={activeTaskId ? `${listboxId}-${activeTaskId}` : undefined}
-            aria-label="Select predefined task"
-            autoComplete="off"
-            value={search}
-            placeholder={options.length ? "Search predefined tasks" : "Add a task first"}
-            onFocus={(event) => {
-              setOpen(true)
-              if (selectedTask) event.currentTarget.select()
-            }}
-            onChange={(event) => {
-              const nextSearch = event.target.value
-              setSearch(nextSearch)
-              setOpen(true)
-              if (value) {
-                skipClearedSelectionSync.current = true
-                onValueChange("")
-              }
-            }}
-            onKeyDown={handleSearchKeyDown}
-            className="h-12! w-full rounded-xl px-4 pr-10 text-sm font-normal"
-            disabled={disabled || options.length === 0}
-          />
-          <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-        </div>
-      </PopoverAnchor>
+    <Popover open={open} onOpenChange={changeOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-label="Select predefined task"
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault()
+              changeOpen(true)
+            }
+          }}
+          className={cn(
+            "w-full justify-between gap-3 rounded-xl px-4 text-left text-sm font-normal",
+            large ? "h-14 text-base" : "h-12",
+            hasSelection && "border-[color:color-mix(in_srgb,var(--brand-primary)_58%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_10%,var(--surface-lowest))] font-medium text-[var(--text-primary)]"
+          )}
+          disabled={disabled || options.length === 0}
+        >
+          <span className={cn("min-w-0 flex-1 truncate", !hasSelection && "text-[var(--text-muted)]")}>
+            {selectedTask?.name ?? (options.length ? "Select predefined task" : "Add a task first")}
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {hasSelection ? <CheckCircle2 className="h-4 w-4 text-[var(--brand-primary)]" /> : null}
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </span>
+        </Button>
+      </PopoverTrigger>
       <PopoverContent
         align="start"
         className="w-[var(--radix-popover-trigger-width)] min-w-[280px] max-w-[min(92vw,560px)] p-0"
-        onOpenAutoFocus={(event) => event.preventDefault()}
-        onCloseAutoFocus={(event) => event.preventDefault()}
       >
-        <div
-          id={listboxId}
-          role="listbox"
-          aria-label="Predefined tasks"
-          className="max-h-[280px] overflow-y-auto p-1"
-        >
-          {filteredTasks.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No work-entry task found.</p>
-          ) : filteredTasks.map((task) => (
-            <button
-              key={task.id}
-              id={`${listboxId}-${task.id}`}
-              type="button"
-              role="option"
-              aria-selected={value === task.id}
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => setActiveTaskId(task.id)}
-              onClick={() => selectTask(task)}
-              className={cn(
-                "flex w-full cursor-pointer items-center rounded-sm px-2 py-2 text-left text-sm outline-none",
-                activeTaskId === task.id && "bg-accent text-accent-foreground"
-              )}
-            >
-              <Check className={cn("mr-2 h-4 w-4 shrink-0", value === task.id ? "opacity-100" : "opacity-0")} />
-              <span className="truncate">{task.name}</span>
-            </button>
-          ))}
-        </div>
+        <Command shouldFilter={false}>
+          <CommandInput
+            autoFocus
+            placeholder="Search tasks..."
+            value={search}
+            onValueChange={setSearch}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault()
+                changeOpen(false)
+              }
+            }}
+          />
+          <CommandList id={listboxId} aria-label="Predefined tasks" className="max-h-[280px]">
+            {filteredTasks.length === 0 ? <CommandEmpty>No work-entry task found.</CommandEmpty> : null}
+            {filteredTasks.map((task) => (
+              <CommandItem
+                key={task.id}
+                value={`${task.name} ${task.id}`}
+                aria-current={value === task.id}
+                onSelect={() => {
+                  onValueChange(task.id)
+                  changeOpen(false)
+                }}
+                className={cn("py-2.5", value === task.id && "bg-[var(--bg-surface-soft)]")}
+              >
+                <Check className={cn("mr-2 h-4 w-4 shrink-0", value === task.id ? "opacity-100" : "opacity-0")} />
+                <span className="truncate">{task.name}</span>
+              </CommandItem>
+            ))}
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   )
@@ -472,16 +339,24 @@ function FrequentWorkOptions({
   options,
   value,
   onValueChange,
+  twoRows,
 }: {
   ariaLabel: string
   options: Array<{ id: string; label: string }>
   value: string
   onValueChange: (value: string) => void
+  twoRows?: boolean
 }) {
   if (options.length === 0) return null
 
   return (
-    <div role="group" aria-label={ariaLabel} className="flex gap-1.5 overflow-x-auto pb-1">
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className={twoRows
+        ? "grid grid-cols-3 gap-1.5"
+        : "flex gap-1.5 overflow-x-auto pb-1"}
+    >
       {options.map((option) => (
         <Button
           key={option.id}
@@ -490,7 +365,10 @@ function FrequentWorkOptions({
           aria-pressed={value === option.id}
           title={option.label}
           onClick={() => onValueChange(option.id)}
-          className="h-8 min-w-32 max-w-48 flex-1 shrink-0 rounded-lg px-2 text-xs font-semibold"
+          className={cn(
+            "h-9 rounded-lg px-2 text-xs font-semibold",
+            twoRows ? "min-w-0 w-full" : "min-w-32 max-w-48 flex-1 shrink-0"
+          )}
         >
           <span className="truncate">{option.label}</span>
         </Button>
@@ -629,6 +507,78 @@ function EditEntryDialog({
   )
 }
 
+function AddClientDialog({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onCreated: (client: LmsWorkClientOption) => void
+}) {
+  const [name, setName] = React.useState("")
+  const [saving, setSaving] = React.useState(false)
+
+  function changeOpen(nextOpen: boolean) {
+    if (!nextOpen && !saving) setName("")
+    onOpenChange(nextOpen)
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!name.trim()) return
+
+    setSaving(true)
+    const result = await createLmsWorkClient(name)
+    setSaving(false)
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+
+    onCreated(result.client)
+    setName("")
+    onOpenChange(false)
+    toast.success(result.existed ? "Existing client selected" : "Client added and selected")
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={changeOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add client</DialogTitle>
+          <DialogDescription>
+            Add a client to LMS Projects and select it immediately for this work entry.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-lms-client">Client name or domain</Label>
+            <Input
+              id="new-lms-client"
+              autoFocus
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="example.ro"
+              maxLength={255}
+              disabled={saving}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => changeOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving || !name.trim()}>
+              {saving ? <Loader2 className="animate-spin" /> : <UserPlus />}
+              {saving ? "Adding…" : "Add client"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function LmsWorkLogWorkspace({
   data,
   activePeriod,
@@ -642,9 +592,12 @@ export function LmsWorkLogWorkspace({
   const [today, setToday] = React.useState("")
   const [differentDate, setDifferentDate] = React.useState(false)
   const [workDate, setWorkDate] = React.useState("")
+  const [workDatePickerOpen, setWorkDatePickerOpen] = React.useState(false)
+  const [clientOptions, setClientOptions] = React.useState(data.clients)
   const [lmsAllocationId, setLmsAllocationId] = React.useState("")
+  const [addClientOpen, setAddClientOpen] = React.useState(false)
   const [taskTypeId, setTaskTypeId] = React.useState("")
-  const [durationSelection, setDurationSelection] = React.useState(String(DEFAULT_LMS_WORK_DURATION_MINUTES))
+  const [durationSelection, setDurationSelection] = React.useState("")
   const [customMinutes, setCustomMinutes] = React.useState("")
   const [saving, setSaving] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
@@ -657,7 +610,19 @@ export function LmsWorkLogWorkspace({
   const customMinutesRef = React.useRef<HTMLInputElement | null>(null)
   const presets = React.useMemo(() => getLmsDatePresets(), [])
   const activeTasks = data.tasks.filter((task) => task.isActive)
-  const hasSelectedClient = data.clients.some((client) => client.id === lmsAllocationId)
+  const internalClient = clientOptions.find(
+    (client) => client.client.trim().toLocaleLowerCase("ro") === "[intern]"
+  )
+  const frequentClientOptions = [
+    ...(internalClient ? [internalClient] : []),
+    ...data.frequentClients
+      .filter(
+        (client) => client.id !== internalClient?.id
+          && clientOptions.some((option) => option.id === client.id)
+      )
+      .slice(0, internalClient ? 5 : 6),
+  ]
+  const hasSelectedClient = clientOptions.some((client) => client.id === lmsAllocationId)
   const hasSelectedTask = activeTasks.some((task) => task.id === taskTypeId)
   const customDurationEnabled = durationSelection === CUSTOM_DURATION_VALUE
   const selectedPresetMinutes = Number(durationSelection)
@@ -665,8 +630,12 @@ export function LmsWorkLogWorkspace({
     ? parseCustomLmsWorkDuration(customMinutes)
     : isLmsWorkDurationPreset(selectedPresetMinutes) ? selectedPresetMinutes : null
   const customDurationInvalid = customDurationEnabled && customMinutes.trim().length > 0 && durationMinutes === null
-  const effectiveWorkDate = differentDate ? workDate : today
-  const effectiveDateLabel = formatLmsWorkDateLabel(effectiveWorkDate, today)
+  const customWorkDateValid = isSelectableWorkDate(workDate)
+  const effectiveWorkDate = differentDate ? (customWorkDateValid ? workDate : "") : today
+  const effectiveDateLabel = differentDate && !customWorkDateValid
+    ? "Choose a work day"
+    : formatLmsWorkDateLabel(effectiveWorkDate, today)
+  const selectedWorkDate = customWorkDateValid ? parseISO(workDate) : undefined
   const workCapacity = React.useMemo(() => getLmsWorkCapacity(data.from, data.to), [data.from, data.to])
   const workUtilizationPercent = workCapacity
     ? getLmsWorkUtilizationPercent(data.totalMinutes, workCapacity.hours)
@@ -683,6 +652,10 @@ export function LmsWorkLogWorkspace({
     setCustomFrom(data.from || "")
     setCustomTo(data.to || "")
   }, [activePeriod, data.from, data.to])
+
+  React.useEffect(() => {
+    setClientOptions(data.clients)
+  }, [data.clients])
 
   function navigateToRange(nextPeriod: string, from: string | null, to: string | null) {
     const next = new URLSearchParams(searchParams.toString())
@@ -735,7 +708,7 @@ export function LmsWorkLogWorkspace({
     setTaskTypeId("")
     setDifferentDate(false)
     setWorkDate(today)
-    setDurationSelection(String(DEFAULT_LMS_WORK_DURATION_MINUTES))
+    setDurationSelection("")
     setCustomMinutes("")
     router.refresh()
   }
@@ -800,30 +773,43 @@ export function LmsWorkLogWorkspace({
         </CardHeader>
         <CardContent className="px-5 sm:px-7">
           <form onSubmit={handleCreate} className="grid gap-x-6 gap-y-5 xl:grid-cols-[minmax(0,11fr)_minmax(420px,9fr)]">
-            <div className="space-y-5 xl:col-start-1 xl:row-start-1">
-              <div className="space-y-2.5">
-                <Label className="flex items-center gap-2 text-sm font-semibold"><UserRound className="h-4 w-4 text-[var(--brand-primary)]" />Client</Label>
-                <ClientCombobox clients={data.clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} large />
+            <div className="grid gap-5 xl:col-start-1 xl:row-start-1 xl:h-full xl:grid-rows-2">
+              <div className="content-start space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="flex items-center gap-2 text-sm font-semibold"><UserRound className="h-4 w-4 text-[var(--brand-primary)]" />Client</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-xs font-semibold text-[var(--brand-primary)]"
+                    onClick={() => setAddClientOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Add client
+                  </Button>
+                </div>
+                <ClientCombobox clients={clientOptions} value={lmsAllocationId} onValueChange={setLmsAllocationId} large />
                 <FrequentWorkOptions
                   ariaLabel="Frequently used clients"
-                  options={data.frequentClients.map((client) => ({ id: client.id, label: client.client }))}
+                  options={frequentClientOptions.map((client) => ({ id: client.id, label: client.client }))}
                   value={lmsAllocationId}
                   onValueChange={setLmsAllocationId}
                 />
               </div>
-              <div className="space-y-2.5">
+              <div className="content-start space-y-3">
                 <Label className="flex items-center gap-2 text-sm font-semibold"><ListChecks className="h-4 w-4 text-[var(--brand-primary)]" />Task</Label>
-                <TaskCombobox tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} />
+                <TaskCombobox tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} large />
                 <FrequentWorkOptions
                   ariaLabel="Frequently used tasks"
                   options={data.frequentTasks.map((task) => ({ id: task.id, label: task.name }))}
                   value={taskTypeId}
                   onValueChange={setTaskTypeId}
+                  twoRows
                 />
               </div>
             </div>
 
-            <div className="h-full space-y-5 border-t border-[var(--line-subtle)] pt-5 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
+            <div className="h-full space-y-5 border-t border-[var(--line-subtle)] pt-5 xl:col-start-2 xl:row-start-1 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
               <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -839,7 +825,8 @@ export function LmsWorkLogWorkspace({
                       onCheckedChange={(checked) => {
                         const next = checked === true
                         setDifferentDate(next)
-                        if (next) setWorkDate(today)
+                        if (next) setWorkDate(isSelectableWorkDate(today) ? today : "")
+                        else setWorkDatePickerOpen(false)
                       }}
                     />
                     <Label htmlFor="different-work-date" className="cursor-pointer whitespace-nowrap text-xs font-medium text-[var(--text-secondary)]">
@@ -848,20 +835,68 @@ export function LmsWorkLogWorkspace({
                   </div>
                 </div>
                 {differentDate ? (
-                  <Input
-                    aria-label="Work date"
-                    className="mt-3 h-12! w-full"
-                    type="date"
-                    value={workDate}
-                    onChange={(event) => setWorkDate(event.target.value)}
-                    required
-                  />
+                  <Popover open={workDatePickerOpen} onOpenChange={setWorkDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        aria-label="Work date"
+                        aria-expanded={workDatePickerOpen}
+                        className="mt-3 h-12 w-full justify-between rounded-xl px-4 text-sm font-medium"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <CalendarDays className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+                          <span className="truncate">{workDate ? formatEntryDate(workDate) : "Choose a date"}</span>
+                        </span>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="end"
+                      className="w-[min(92vw,420px)] overflow-hidden rounded-2xl p-0"
+                    >
+                      <div className="w-full p-4 [&_[data-slot=calendar]]:![--cell-size:clamp(40px,11vw,48px)] [&_.rdp-month_grid]:!w-full [&_.rdp-weeks]:!w-full">
+                        <Calendar
+                          mode="single"
+                          selected={selectedWorkDate}
+                          defaultMonth={selectedWorkDate}
+                          disabled={isWeekend}
+                          onSelect={(date) => {
+                            if (!date || isWeekend(date)) return
+                            setWorkDate(format(date, "yyyy-MM-dd"))
+                            setWorkDatePickerOpen(false)
+                          }}
+                          initialFocus
+                          className="w-full bg-transparent p-0"
+                          classNames={{
+                            root: "w-full",
+                            month: "w-full",
+                            months: "w-full",
+                            month_grid: "w-full table-fixed",
+                            weekdays: "grid w-full grid-cols-7",
+                            weekday: "text-sm font-medium",
+                            week: "mt-2 grid w-full grid-cols-7",
+                            day: "w-full",
+                            day_button: "text-base font-medium",
+                            caption_label: "text-base font-semibold",
+                          }}
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 ) : null}
               </div>
 
               <div className="space-y-2.5">
                 <Label className="flex items-center gap-2 text-sm font-semibold"><Clock3 className="h-4 w-4 text-[var(--brand-primary)]" />Minutes</Label>
-                <div role="group" aria-label="Minutes" className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                <div
+                  role="group"
+                  aria-label="Minutes"
+                  aria-describedby={customDurationInvalid
+                    ? "custom-duration-error"
+                    : durationMinutes === null ? "duration-selection-warning" : undefined}
+                  className="grid grid-cols-3 gap-1.5 sm:grid-cols-4"
+                >
                   {LMS_WORK_DURATION_PRESETS.map((preset) => (
                     <Button
                       key={preset}
@@ -909,25 +944,40 @@ export function LmsWorkLogWorkspace({
                 {customDurationInvalid ? (
                   <p id="custom-duration-error" className="text-xs font-medium text-red-600">Enter 1–1440 whole minutes.</p>
                 ) : null}
+                {durationMinutes === null && !customDurationInvalid ? (
+                  <p
+                    id="duration-selection-warning"
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    {customDurationEnabled
+                      ? "Enter custom minutes to continue."
+                      : "Select the time spent to continue."}
+                  </p>
+                ) : null}
               </div>
             </div>
 
-            <Button
-              type="submit"
-              className="h-12! w-full rounded-xl text-sm font-semibold xl:col-start-1 xl:row-start-2"
-              disabled={
-                saving
-                || !effectiveWorkDate
-                || !hasSelectedClient
-                || !hasSelectedTask
-                || data.clients.length === 0
-                || activeTasks.length === 0
-                || durationMinutes === null
-              }
-            >
-              {saving ? <Loader2 className="animate-spin" /> : <Plus />}
-              Save work
-            </Button>
+            <div className="border-t border-[var(--line-subtle)] pt-5 xl:col-span-2 xl:row-start-2">
+              <Button
+                type="submit"
+                className="h-12! w-full rounded-xl text-sm font-semibold"
+                disabled={
+                  saving
+                  || !effectiveWorkDate
+                  || !hasSelectedClient
+                  || !hasSelectedTask
+                  || clientOptions.length === 0
+                  || activeTasks.length === 0
+                  || durationMinutes === null
+                }
+              >
+                {saving ? <Loader2 className="animate-spin" /> : <Plus />}
+                {saving ? "Saving…" : "Save work"}
+              </Button>
+            </div>
           </form>
           {activeTasks.length === 0 ? (
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -1065,10 +1115,14 @@ export function LmsWorkLogWorkspace({
             </div>
           ) : null}
 
-          <div className="grid gap-3 border-t border-[var(--line-subtle)] pt-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 border-t border-[var(--line-subtle)] pt-4 sm:grid-cols-2 xl:grid-cols-5">
             <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
               <ListChecks className="h-5 w-5 text-[var(--brand-primary)]" />
               <div><p className="text-xs text-[var(--text-muted)]">Tasks logged</p><p className="font-semibold text-[var(--text-primary)]">{data.totalEntries}</p></div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
+              <CalendarCheck2 className="h-5 w-5 text-[var(--brand-primary)]" />
+              <div><p className="text-xs text-[var(--text-muted)]">Days logged</p><p className="font-semibold text-[var(--text-primary)]">{data.workedDays}</p></div>
             </div>
             <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
               <Clock3 className="h-5 w-5 text-[var(--brand-primary)]" />
@@ -1086,7 +1140,19 @@ export function LmsWorkLogWorkspace({
         </CardContent>
       </Card>
 
-      <EditEntryDialog entry={editingEntry} clients={data.clients} tasks={data.tasks} onClose={() => setEditingEntry(null)} />
+      <EditEntryDialog entry={editingEntry} clients={clientOptions} tasks={data.tasks} onClose={() => setEditingEntry(null)} />
+      <AddClientDialog
+        open={addClientOpen}
+        onOpenChange={setAddClientOpen}
+        onCreated={(client) => {
+          setClientOptions((current) => {
+            const withoutClient = current.filter((option) => option.id !== client.id)
+            return [...withoutClient, client].sort((a, b) => a.client.localeCompare(b.client, "ro"))
+          })
+          setLmsAllocationId(client.id)
+          router.refresh()
+        }}
+      />
     </div>
   )
 }

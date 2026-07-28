@@ -10,9 +10,10 @@ import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { resolveDomainFaviconUrl } from "@/lib/favicon"
 import {
     DomainValidationError,
-    validateExternalDomainHostInput,
+    parseAndValidateExternalUrl,
 } from "@/lib/security/domain-validation"
 import { z } from "zod"
+import { logger } from "@/lib/logger"
 
 const SiteIdSchema = z.string().uuid()
 
@@ -38,7 +39,7 @@ async function resolveNormalizedDomainAndFavicon(
     let normalizedDomainName: string
 
     try {
-        normalizedDomainName = await validateExternalDomainHostInput(domainInput)
+        normalizedDomainName = parseAndValidateExternalUrl(domainInput).normalizedHost
     } catch (error) {
         const details = error instanceof DomainValidationError
             ? `domainInput=${domainInput}; reason=${error.code}`
@@ -53,9 +54,19 @@ async function resolveNormalizedDomainAndFavicon(
     }
 
     let faviconUrl: string | null
+    let warning: { code: string; message: string } | undefined
     try {
         faviconUrl = await resolveDomainFaviconUrl(normalizedDomainName)
+        if (!faviconUrl) {
+            warning = {
+                code: "FAVICON_UNAVAILABLE",
+                message: "Site saved, but no favicon could be detected.",
+            }
+        }
     } catch (error) {
+        const reason = error instanceof DomainValidationError
+            ? error.code
+            : "FAVICON_FETCH_FAILED"
         const details = error instanceof DomainValidationError
             ? `domain=${normalizedDomainName}; reason=${error.code}`
             : `domain=${normalizedDomainName}; reason=UNKNOWN`
@@ -64,10 +75,16 @@ async function resolveNormalizedDomainAndFavicon(
             success: false,
             details,
         })
-        faviconUrl = `https://${normalizedDomainName}/favicon.ico`
+        faviconUrl = null
+        warning = {
+            code: reason,
+            message: reason === "DNS_RESOLVE_FAILED"
+                ? "Site saved. The domain has no active DNS yet, so its favicon is unavailable."
+                : "Site saved, but its favicon could not be fetched.",
+        }
     }
 
-    return { normalizedDomainName, faviconUrl }
+    return { normalizedDomainName, faviconUrl, warning }
 }
 
 export async function createSite(partnerId: string, domainName: string) {
@@ -81,7 +98,7 @@ export async function createSite(partnerId: string, domainName: string) {
         if (!partner) {
             throw new ActionError("PARTNER_NOT_FOUND", "Partner not found")
         }
-        const { normalizedDomainName, faviconUrl } = await resolveNormalizedDomainAndFavicon(
+        const { normalizedDomainName, faviconUrl, warning } = await resolveNormalizedDomainAndFavicon(
             session,
             validated.domainName
         )
@@ -100,9 +117,12 @@ export async function createSite(partnerId: string, domainName: string) {
         revalidatePath(`/vault/${validated.partnerId}`)
         revalidatePath("/domains")
         revalidatePath("/vault/sites")
-        return site
+        return { success: true as const, site, warning }
     } catch (error) {
-        throw new Error(getActionErrorMessage(error, "Failed to create site"))
+        return {
+            success: false as const,
+            error: getActionErrorMessage(error, "Failed to create site"),
+        }
     }
 }
 
@@ -118,15 +138,17 @@ export async function updateSiteDetails(siteId: string, data: {
         const session = await requireAuth()
         const validated = UpdateSiteSchema.parse({ siteId, ...data })
         const updateData: Prisma.SiteUpdateInput = { ...validated }
+        let warning: { code: string; message: string } | undefined
         delete (updateData as Record<string, unknown>).siteId
         if (updateData.name === "") updateData.name = null
         if (typeof validated.domainName === "string") {
-            const { normalizedDomainName, faviconUrl } = await resolveNormalizedDomainAndFavicon(
+            const resolved = await resolveNormalizedDomainAndFavicon(
                 session,
                 validated.domainName
             )
-            updateData.domainName = normalizedDomainName
-            updateData.faviconUrl = faviconUrl
+            updateData.domainName = resolved.normalizedDomainName
+            updateData.faviconUrl = resolved.faviconUrl
+            warning = resolved.warning
         }
         if (validated.driveLink !== undefined) {
             if (validated.driveLink === "") {
@@ -168,9 +190,9 @@ export async function updateSiteDetails(siteId: string, data: {
         revalidatePath("/domains")
         revalidatePath("/vault/sites")
         revalidatePath("/")
-        return { success: true }
+        return { success: true, warning }
     } catch (error) {
-        console.error("Update site details failed:", error)
+        logger.error("site.update_failed", { siteId, error })
         return { success: false, error: getActionErrorMessage(error, "Failed to update site") }
     }
 }
@@ -202,7 +224,7 @@ export async function deleteSite(siteId: string) {
         revalidatePath(`/vault/${site.partnerId}`)
         return { success: true }
     } catch (error) {
-        console.error("Delete site failed:", error)
+        logger.error("site.delete_failed", { siteId, error })
         return { success: false, error: getActionErrorMessage(error, "Failed to delete site") }
     }
 }
@@ -227,7 +249,7 @@ export async function getSiteById(siteId: string) {
 
         return { success: true, site }
     } catch (error) {
-        console.error("Get site by id failed:", error)
+        logger.error("site.load_failed", { siteId, error })
         return { success: false, error: getActionErrorMessage(error, "Failed to load site") }
     }
 }

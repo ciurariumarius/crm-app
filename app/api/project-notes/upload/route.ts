@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, unlink, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
 import { requireAuth } from "@/lib/auth"
@@ -14,6 +14,7 @@ import {
 export const runtime = "nodejs"
 
 const MAX_FILE_SIZE_BYTES = 12 * 1024 * 1024
+const MAX_TOTAL_SIZE_BYTES = 32 * 1024 * 1024
 const MAX_FILES_PER_REQUEST = 8
 
 type AllowedImageExtension = "png" | "jpg" | "webp" | "gif"
@@ -79,13 +80,15 @@ export async function POST(request: Request) {
             )
         }
 
-        const projectDirectory = resolveProjectNoteAbsolutePath(
-            buildProjectNoteRelativePath(projectId, "index")
-        )
-        await mkdir(path.dirname(projectDirectory), { recursive: true })
+        const totalSize = files.reduce((sum, file) => sum + file.size, 0)
+        if (totalSize > MAX_TOTAL_SIZE_BYTES) {
+            return NextResponse.json(
+                { success: false, error: "Upload exceeds the 32MB total request limit." },
+                { status: 400 }
+            )
+        }
 
-        const urls: string[] = []
-
+        const prepared: Array<{ buffer: Buffer; relativePath: string; absoluteFilePath: string }> = []
         for (const file of files) {
             if (!file.type.startsWith("image/")) {
                 return NextResponse.json(
@@ -122,11 +125,26 @@ export async function POST(request: Request) {
                 filename
             )
             const absoluteFilePath = resolveProjectNoteAbsolutePath(relativePath)
-            await writeFile(absoluteFilePath, buffer)
-
-            urls.push(createSignedProjectNoteUrl(relativePath))
+            prepared.push({ buffer, relativePath, absoluteFilePath })
         }
 
+        const projectDirectory = resolveProjectNoteAbsolutePath(
+            buildProjectNoteRelativePath(projectId, "index")
+        )
+        await mkdir(path.dirname(projectDirectory), { recursive: true })
+
+        const writtenPaths: string[] = []
+        try {
+            for (const file of prepared) {
+                await writeFile(file.absoluteFilePath, file.buffer, { flag: "wx" })
+                writtenPaths.push(file.absoluteFilePath)
+            }
+        } catch (error) {
+            await Promise.all(writtenPaths.map((filePath) => unlink(filePath).catch(() => undefined)))
+            throw error
+        }
+
+        const urls = prepared.map((file) => createSignedProjectNoteUrl(file.relativePath))
         return NextResponse.json({ success: true, urls })
     } catch (error) {
         return apiRouteError(error, {

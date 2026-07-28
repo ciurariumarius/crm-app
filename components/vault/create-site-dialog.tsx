@@ -52,14 +52,21 @@ export function CreateSiteDialog({
         }
         setLoading(true)
         try {
-            await createSite(targetPartnerId, domainName)
+            const result = await createSite(targetPartnerId, domainName)
+            if (!result.success) {
+                toast.error(result.error)
+                return
+            }
             setOpen(false)
             setDomainName("")
             if (!initialPartnerId) setSelectedPartnerId("")
-            toast.success("Site created")
+            if (result.warning) {
+                toast.warning(result.warning.message)
+            } else {
+                toast.success("Site created")
+            }
         } catch (error) {
-            console.error(error)
-            toast.error("Failed to create site")
+            toast.error(error instanceof Error ? error.message : "Failed to create site")
         } finally {
             setLoading(false)
         }

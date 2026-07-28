@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { buildLmsAllocationSyncKey } from "@/lib/lms-tasks/client-key"
 import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
 import { addDateOnlyDays, DateOnlySchema, getBucharestDateOnly } from "@/lib/lms-work-entries/date"
 import { weekdaysToMask } from "@/lib/lms-work-entries/recurrence"
@@ -30,6 +31,7 @@ const WorkEntryInputSchema = z.object({
 const WorkEntryUpdateInputSchema = WorkEntryInputSchema.extend({
   lmsAllocationId: z.string().uuid("Select a valid LMS client").nullable(),
 })
+const ClientNameSchema = z.string().trim().min(1, "Client name is required").max(255, "Client name is too long")
 const TaskNameSchema = z.string().trim().min(1, "Task name is required").max(255, "Task name is too long")
 const RecurrenceInputSchema = z.object({
   lmsAllocationId: z.string().uuid("Select a valid LMS client"),
@@ -42,14 +44,18 @@ function normalizeTaskName(value: string) {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ro-RO")
 }
 
+function normalizeClientName(value: string) {
+  return value.normalize("NFKC").trim().replace(/\s+/g, " ")
+}
+
 function revalidateWorkLog() {
   revalidatePath("/lms-analysis/work-log")
   revalidatePath("/lms-analysis/data")
 }
 
-function handleActionError(error: unknown, fallback: string) {
+function handleActionError(error: unknown, fallback: string, duplicateMessage = "A task with this name already exists") {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return { success: false as const, error: "A task with this name already exists" }
+    return { success: false as const, error: duplicateMessage }
   }
   return { success: false as const, error: getActionErrorMessage(error, fallback) }
 }
@@ -219,6 +225,42 @@ export async function deleteLmsWorkEntry(entryId: string) {
     return { success: true as const }
   } catch (error) {
     return handleActionError(error, "Failed to delete work entry")
+  }
+}
+
+export async function createLmsWorkClient(name: string) {
+  try {
+    const session = await requireAuth()
+    const clientName = normalizeClientName(ClientNameSchema.parse(name))
+    const syncKey = buildLmsAllocationSyncKey(clientName)
+    if (!syncKey) {
+      throw new ActionError("INVALID_LMS_CLIENT", "Enter a client name with letters or numbers")
+    }
+    const existing = await prisma.lmsAllocation.findUnique({
+      where: { syncKey },
+      select: { id: true, client: true },
+    })
+    if (existing) {
+      return { success: true as const, client: existing, existed: true as const }
+    }
+
+    const client = await prisma.lmsAllocation.create({
+      data: {
+        syncKey,
+        client: clientName,
+        specialist: LMS_CRM_EMPLOYEE_NAME,
+      },
+      select: { id: true, client: true },
+    })
+    await logSessionAuditEvent(session, {
+      action: "LMS_WORK_CLIENT_CREATED",
+      details: `lmsAllocationId=${client.id}`,
+    })
+    revalidateWorkLog()
+    revalidatePath("/lms-analysis/projects")
+    return { success: true as const, client, existed: false as const }
+  } catch (error) {
+    return handleActionError(error, "Failed to add client", "A client with this name already exists")
   }
 }
 

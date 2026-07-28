@@ -7,6 +7,7 @@ import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { Prisma } from "@prisma/client"
 import { z } from "zod"
+import { logger } from "@/lib/logger"
 
 const ServicePayloadSchema = z.object({
     serviceName: z.string().trim().min(1, "Service name is required").max(255),
@@ -159,7 +160,7 @@ export async function searchProjectServices(
 
         return JSON.parse(JSON.stringify(services))
     } catch (error) {
-        console.error("[services] searchProjectServices failed", error)
+        logger.error("service.search_failed", { error })
         return []
     }
 }

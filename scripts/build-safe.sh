@@ -35,4 +35,4 @@ if [[ -f "${LOCK_FILE}" ]]; then
   fi
 fi
 
-exec npx next build
+exec npx next build --webpack

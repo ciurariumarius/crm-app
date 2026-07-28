@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { ZodError } from "zod"
 import { ActionError } from "@/lib/action-errors"
+import { logger } from "@/lib/logger"
 
 export function apiOk<T>(data: T, status = 200) {
     return NextResponse.json(data, { status })
@@ -27,7 +28,7 @@ export function apiMethodNotAllowed(allowed: string[]) {
 }
 
 export function apiInternalError(error: unknown, fallbackMessage = "Internal Server Error") {
-    console.error("API error:", error)
+    logger.error("api.internal_error", { error })
     return apiError(fallbackMessage, 500, { code: "INTERNAL_ERROR" })
 }
 
@@ -66,6 +67,10 @@ export function apiRouteError(error: unknown, options?: ApiRouteErrorOptions) {
         return apiError(error.userMessage, 400, { code: error.code, headers })
     }
 
-    console.error(options?.logLabel || "API route error:", error)
+    logger.error("api.route_error", {
+        label: options?.logLabel || "API route error",
+        code: fallbackCode,
+        error,
+    })
     return apiError(fallbackMessage, 500, { code: fallbackCode, headers })
 }

@@ -3,12 +3,11 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/providers/providers"
-import { getActiveTimer } from "@/lib/actions/time"
-import { getSession } from "@/lib/auth"
 import type { TimerPreferences } from "@/components/providers/timer-provider"
-import prisma from "@/lib/prisma"
 import { runSecurityPreflight } from "@/lib/security/preflight"
 import { DEFAULT_THEME_MODE, THEME_STORAGE_KEY } from "@/lib/theme"
+import { headers } from "next/headers"
+import { getAppShellData, getCachedSession } from "@/lib/server/app-shell"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -71,10 +70,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession()
-  const activeTimerResult = session ? await getActiveTimer() : { success: true, data: null, status: "idle" as const }
-  const rawActiveTimer = activeTimerResult.success && activeTimerResult.data
-    ? { ...activeTimerResult.data, status: activeTimerResult.status }
+  const nonce = (await headers()).get("x-nonce") || undefined
+  const session = await getCachedSession()
+  const shellData = session ? await getAppShellData(session.userId) : null
+  const rawActiveTimer = shellData?.timer
+    ? { ...shellData.timer, status: shellData.timerStatus }
     : null
   const initialActiveTimer = rawActiveTimer ? JSON.parse(JSON.stringify(rawActiveTimer)) : null
   let timerPreferenceRecord: {
@@ -83,25 +83,7 @@ export default async function RootLayout({
     timerReminderIntervalMinutes: number | null
   } | null = null
 
-  if (session) {
-    try {
-      timerPreferenceRecord = (await prisma.user.findFirst({
-        where: { id: session.userId },
-        select: {
-          timerIdlePauseMinutes: true,
-          timerHardCapHours: true,
-          timerReminderIntervalMinutes: true,
-        }
-      })) as {
-        timerIdlePauseMinutes: number | null
-        timerHardCapHours: number | null
-        timerReminderIntervalMinutes: number | null
-      } | null
-    } catch (error) {
-      console.warn("[layout] Timer preference fields unavailable; using defaults.", error)
-      timerPreferenceRecord = null
-    }
-  }
+  if (shellData?.preferences) timerPreferenceRecord = shellData.preferences
   const timerPreferences: TimerPreferences | null = timerPreferenceRecord
     ? {
       idlePauseMinutes: timerPreferenceRecord.timerIdlePauseMinutes,
@@ -114,7 +96,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning className={plusJakartaSans.variable}>
       <head>
         <meta name="color-scheme" content="light dark" />
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="font-sans">
         <Providers initialActiveTimer={initialActiveTimer} timerPreferences={timerPreferences}>

@@ -7,6 +7,27 @@ import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { revalidatePath } from "next/cache"
 import { DEFAULT_NOTE_TITLE, deriveNoteTitleFromContent } from "@/lib/notes/derived-note-text"
+import {
+  NOTE_UPDATED_WITHIN_OPTIONS,
+  deriveNoteContentFeatures,
+  extractNoteTagNames,
+  isValidUpdatedWithinDays,
+  type NoteSmartFolderMatchMode,
+} from "@/lib/notes/apple-notes"
+import { runDeletedNotesRetention } from "@/lib/notes/retention.server"
+import {
+  getNotesWorkspaceBootstrap,
+  getPersonalNoteDetail,
+  queryPersonalNoteList,
+  type NoteListQueryInput,
+} from "@/lib/notes/queries.server"
+
+export type NoteTagRecord = {
+  id: string
+  name: string
+  normalizedName: string
+  count?: number
+}
 
 export type NoteRecord = {
   id: string
@@ -17,6 +38,10 @@ export type NoteRecord = {
   contentText: string
   archived: boolean
   pinned: boolean
+  deletedAt?: string | null
+  hasChecklist?: boolean
+  hasAttachment?: boolean
+  tags?: NoteTagRecord[]
   createdAt: string
   updatedAt: string
   sourceType?: "note" | "project" | "task"
@@ -27,8 +52,25 @@ export type NoteRecord = {
 
 export type NoteFolderRecord = {
   id: string
+  parentId?: string | null
   name: string
   isDefault: boolean
+  sortOrder?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type NoteSmartFolderRecord = {
+  id: string
+  name: string
+  matchMode: NoteSmartFolderMatchMode
+  requirePinned: boolean | null
+  requireChecklist: boolean | null
+  requireAttachment: boolean | null
+  updatedWithinDays: number | null
+  sortOrder: number
+  tags: NoteTagRecord[]
+  count?: number
   createdAt: string
   updatedAt: string
 }
@@ -41,6 +83,16 @@ type NoteEntity = {
   contentText: string
   archived: boolean
   pinned: boolean
+  deletedAt?: Date | null
+  hasChecklist?: boolean
+  hasAttachment?: boolean
+  tags?: Array<{
+    tag: {
+      id: string
+      name: string
+      normalizedName: string
+    }
+  }>
   createdAt: Date
   updatedAt: Date
 }
@@ -56,8 +108,10 @@ type NoteDelegate = {
 
 type NoteFolderEntity = {
   id: string
+  parentId?: string | null
   name: string
   isDefault: boolean
+  sortOrder?: number
   createdAt: Date
   updatedAt: Date
 }
@@ -115,11 +169,83 @@ const ListNotesSchema = z.object({
 
 const CreateFolderSchema = z.object({
   name: z.string().trim().min(1).max(80),
+  parentId: z.string().trim().min(1).max(120).nullable().optional(),
 })
 
 const RenameFolderSchema = z.object({
   name: z.string().trim().min(1).max(80),
 })
+
+const MoveFolderSchema = z.object({
+  parentId: z.string().trim().min(1).max(120).nullable(),
+  sortOrder: z.number().int().min(0).max(1_000_000),
+})
+
+const SmartFolderInputSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    matchMode: z.enum(["all", "any"]).default("all"),
+    tagIds: z.array(z.string().trim().min(1).max(120)).max(20).default([]),
+    requirePinned: z.boolean().nullable().default(null),
+    requireChecklist: z.boolean().nullable().default(null),
+    requireAttachment: z.boolean().nullable().default(null),
+    updatedWithinDays: z.number().int().nullable().default(null),
+  })
+
+  .superRefine((value, context) => {
+    if (!isValidUpdatedWithinDays(value.updatedWithinDays)) {
+      context.addIssue({
+        code: "custom",
+        path: ["updatedWithinDays"],
+        message: `Use one of ${NOTE_UPDATED_WITHIN_OPTIONS.join(", ")} days`,
+      })
+    }
+    const hasCriteria =
+      value.tagIds.length > 0 ||
+      value.requirePinned != null ||
+      value.requireChecklist != null ||
+      value.requireAttachment != null ||
+      value.updatedWithinDays != null
+    if (!hasCriteria) {
+      context.addIssue({
+        code: "custom",
+        message: "Choose at least one smart folder rule",
+      })
+    }
+  })
+
+export async function queryNoteList(input: NoteListQueryInput = {}) {
+  try {
+    await requireAuth()
+    const data = await queryPersonalNoteList(input)
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to load notes") }
+  }
+}
+
+export async function getNoteDetail(noteId: string) {
+  try {
+    await requireAuth()
+    const validatedNoteId = NoteIdSchema.parse(noteId)
+    const data = await getPersonalNoteDetail(validatedNoteId)
+    return data
+      ? { success: true, data }
+      : { success: false, error: "Note not found" }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to load note") }
+  }
+}
+
+export async function getNotesWorkspaceBootstrapAction() {
+  try {
+    await requireAuth()
+    const data = await getNotesWorkspaceBootstrap()
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to load Notes workspace") }
+  }
+}
 
 function normalizeNoteTitle(value: string | null | undefined) {
   const title = (value || "").trim()
@@ -144,6 +270,15 @@ function serializeNote(note: NoteEntity): NoteRecord {
     contentText: note.contentText,
     archived: note.archived,
     pinned: note.pinned,
+    deletedAt: note.deletedAt?.toISOString() ?? null,
+    hasChecklist: note.hasChecklist ?? false,
+    hasAttachment: note.hasAttachment ?? /<img\b/i.test(note.content),
+    tags:
+      note.tags?.map(({ tag }) => ({
+        id: tag.id,
+        name: tag.name,
+        normalizedName: tag.normalizedName,
+      })) ?? [],
     createdAt: note.createdAt.toISOString(),
     updatedAt: note.updatedAt.toISOString(),
   }
@@ -152,11 +287,106 @@ function serializeNote(note: NoteEntity): NoteRecord {
 function serializeFolder(folder: NoteFolderEntity): NoteFolderRecord {
   return {
     id: folder.id,
+    parentId: folder.parentId ?? null,
     name: folder.name,
     isDefault: folder.isDefault,
+    sortOrder: folder.sortOrder ?? 1000,
     createdAt: folder.createdAt.toISOString(),
     updatedAt: folder.updatedAt.toISOString(),
   }
+}
+
+function serializeSmartFolder(smartFolder: {
+  id: string
+  name: string
+  matchMode: string
+  requirePinned: boolean | null
+  requireChecklist: boolean | null
+  requireAttachment: boolean | null
+  updatedWithinDays: number | null
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+  tags?: Array<{
+    tag: {
+      id: string
+      name: string
+      normalizedName: string
+    }
+  }>
+}): NoteSmartFolderRecord {
+  return {
+    id: smartFolder.id,
+    name: smartFolder.name,
+    matchMode: smartFolder.matchMode === "any" ? "any" : "all",
+    requirePinned: smartFolder.requirePinned,
+    requireChecklist: smartFolder.requireChecklist,
+    requireAttachment: smartFolder.requireAttachment,
+    updatedWithinDays: smartFolder.updatedWithinDays,
+    sortOrder: smartFolder.sortOrder,
+    tags:
+      smartFolder.tags?.map(({ tag }) => ({
+        id: tag.id,
+        name: tag.name,
+        normalizedName: tag.normalizedName,
+      })) ?? [],
+    createdAt: smartFolder.createdAt.toISOString(),
+    updatedAt: smartFolder.updatedAt.toISOString(),
+  }
+}
+
+async function findSerializedNote(noteId: string) {
+  const note = await prisma.note.findUnique({
+    where: { id: noteId },
+    include: {
+      tags: {
+        include: { tag: true },
+        orderBy: { tag: { normalizedName: "asc" } },
+      },
+    },
+  })
+  return note ? serializeNote(note) : null
+}
+
+async function syncNoteContentMetadata(noteId: string, content: string) {
+  const contentText = toNoteContentText(content)
+  const features = deriveNoteContentFeatures(content)
+  const tagNames = extractNoteTagNames(contentText)
+
+  await prisma.$transaction(async (transaction) => {
+    await transaction.note.update({
+      where: { id: noteId },
+      data: {
+        content,
+        contentText,
+        title: deriveNoteTitleFromContent(content, DEFAULT_NOTE_TITLE),
+        hasChecklist: features.hasChecklist,
+        hasAttachment: features.hasAttachment,
+      },
+    })
+
+    const tagIds: string[] = []
+    for (const tagName of tagNames) {
+      const tag = await transaction.noteTag.upsert({
+        where: { normalizedName: tagName.normalizedName },
+        update: {},
+        create: {
+          name: tagName.name,
+          normalizedName: tagName.normalizedName,
+        },
+      })
+      tagIds.push(tag.id)
+    }
+
+    await transaction.noteTagAssignment.deleteMany({
+      where: { noteId },
+    })
+    if (tagIds.length) {
+      await transaction.noteTagAssignment.createMany({
+        data: tagIds.map((tagId) => ({ noteId, tagId })),
+      })
+    }
+  })
 }
 
 function isUnknownFolderFieldError(error: unknown) {
@@ -263,6 +493,7 @@ export async function listNotes(input?: { query?: string; archived?: boolean; li
     const notes = (await noteDelegate.findMany({
       where: {
         archived,
+        deletedAt: null,
         ...(query
           ? {
               OR: [
@@ -271,6 +502,11 @@ export async function listNotes(input?: { query?: string; archived?: boolean; li
               ],
             }
           : {}),
+      },
+      include: {
+        tags: {
+          include: { tag: true },
+        },
       },
       orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
       take: limit,
@@ -294,6 +530,7 @@ export async function createNote(input?: { title?: string; content?: string; pin
     const content = validated.content || ""
     const title = deriveNoteTitleFromContent(content, normalizeNoteTitle(validated.title))
     const contentText = toNoteContentText(content)
+    const contentFeatures = deriveNoteContentFeatures(content)
 
     let resolvedFolderId: string | null = null
     let shouldWriteFolderId = false
@@ -325,6 +562,9 @@ export async function createNote(input?: { title?: string; content?: string; pin
       contentText,
       pinned: validated.pinned ?? false,
       archived: validated.archived ?? false,
+      deletedAt: null,
+      hasChecklist: contentFeatures.hasChecklist,
+      hasAttachment: contentFeatures.hasAttachment,
     }
 
     let note: NoteEntity
@@ -341,13 +581,24 @@ export async function createNote(input?: { title?: string; content?: string; pin
       })) as NoteEntity
     }
 
+    try {
+      await syncNoteContentMetadata(note.id, content)
+    } catch (error) {
+      await prisma.note.delete({ where: { id: note.id } }).catch(() => undefined)
+      throw error
+    }
+    const serializedNote = await findSerializedNote(note.id)
+    if (!serializedNote) {
+      return { success: false, error: "Failed to load created note" }
+    }
+
     await logSessionAuditEvent(session, {
       action: "NOTE_CREATED",
       details: `noteId=${note.id}`,
     })
     revalidatePath("/notes")
 
-    return { success: true, data: serializeNote(note) as NoteRecord }
+    return { success: true, data: serializedNote }
   } catch (error) {
     return { success: false, error: getActionErrorMessage(error, "Failed to create note") }
   }
@@ -382,12 +633,12 @@ export async function updateNote(
       pinned?: boolean
       archived?: boolean
       folderId?: string | null
+      hasChecklist?: boolean
+      hasAttachment?: boolean
     } = {}
 
     if (validated.content !== undefined) {
-      updateData.content = validated.content
-      updateData.contentText = toNoteContentText(validated.content)
-      updateData.title = deriveNoteTitleFromContent(validated.content, normalizeNoteTitle(validated.title))
+      // Content, derived metadata and tag assignments are committed together below.
     } else if (validated.title !== undefined) {
       updateData.title = normalizeNoteTitle(validated.title)
     }
@@ -407,18 +658,29 @@ export async function updateNote(
       updateData.folderId = folderResolution.folderId
     }
 
+    if (validated.content !== undefined) {
+      await syncNoteContentMetadata(validatedNoteId, validated.content)
+    }
+
     if (Object.keys(updateData).length === 0) {
-      const unchangedNote = (await noteDelegate.findFirst({
-        where: { id: validatedNoteId },
-      })) as NoteEntity | null
+      const unchangedNote = await findSerializedNote(validatedNoteId)
       if (!unchangedNote) return { success: false, error: "Note not found" }
-      return { success: true, data: serializeNote(unchangedNote) as NoteRecord }
+      await logSessionAuditEvent(session, {
+        action: "NOTE_UPDATED",
+        details: `noteId=${validatedNoteId}`,
+      })
+      revalidatePath("/notes")
+      return { success: true, data: unchangedNote }
     }
 
     const note = (await noteDelegate.update({
       where: { id: validatedNoteId },
       data: updateData,
     })) as NoteEntity
+    const serializedNote = await findSerializedNote(note.id)
+    if (!serializedNote) {
+      return { success: false, error: "Failed to load updated note" }
+    }
 
     await logSessionAuditEvent(session, {
       action: "NOTE_UPDATED",
@@ -426,7 +688,7 @@ export async function updateNote(
     })
     revalidatePath("/notes")
 
-    return { success: true, data: serializeNote(note) as NoteRecord }
+    return { success: true, data: serializedNote }
   } catch (error) {
     return { success: false, error: getActionErrorMessage(error, "Failed to update note") }
   }
@@ -448,9 +710,12 @@ export async function deleteNote(noteId: string) {
       return { success: false, error: "Note not found" }
     }
 
-    await noteDelegate.delete({ where: { id: note.id } })
+    await noteDelegate.update({
+      where: { id: note.id },
+      data: { deletedAt: new Date(), pinned: false },
+    })
     await logSessionAuditEvent(session, {
-      action: "NOTE_DELETED",
+      action: "NOTE_MOVED_TO_TRASH",
       details: `noteId=${note.id}`,
     })
     revalidatePath("/notes")
@@ -458,6 +723,83 @@ export async function deleteNote(noteId: string) {
     return { success: true }
   } catch (error) {
     return { success: false, error: getActionErrorMessage(error, "Failed to delete note") }
+  }
+}
+
+export async function restoreNote(noteId: string) {
+  try {
+    const session = await requireAuth()
+    const validatedNoteId = NoteIdSchema.parse(noteId)
+    const note = await prisma.note.findUnique({
+      where: { id: validatedNoteId },
+      select: { id: true, deletedAt: true },
+    })
+    if (!note) return { success: false, error: "Note not found" }
+    if (!note.deletedAt) {
+      const unchanged = await findSerializedNote(note.id)
+      return unchanged
+        ? { success: true, data: unchanged }
+        : { success: false, error: "Note not found" }
+    }
+
+    await prisma.note.update({
+      where: { id: note.id },
+      data: { deletedAt: null },
+    })
+    const restored = await findSerializedNote(note.id)
+    await logSessionAuditEvent(session, {
+      action: "NOTE_RESTORED",
+      details: `noteId=${note.id}`,
+    })
+    revalidatePath("/notes")
+    return restored
+      ? { success: true, data: restored }
+      : { success: false, error: "Failed to load restored note" }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to restore note") }
+  }
+}
+
+export async function permanentlyDeleteNote(noteId: string) {
+  try {
+    const session = await requireAuth()
+    const validatedNoteId = NoteIdSchema.parse(noteId)
+    const note = await prisma.note.findUnique({
+      where: { id: validatedNoteId },
+      select: { id: true },
+    })
+    if (!note) return { success: false, error: "Note not found" }
+
+    await prisma.note.delete({ where: { id: note.id } })
+    await logSessionAuditEvent(session, {
+      action: "NOTE_PERMANENTLY_DELETED",
+      details: `noteId=${note.id}`,
+    })
+    revalidatePath("/notes")
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to permanently delete note") }
+  }
+}
+
+export async function purgeDeletedNotes(input?: { dryRun?: boolean; now?: string }) {
+  try {
+    await requireAuth()
+    const now = input?.now ? new Date(input.now) : new Date()
+    if (Number.isNaN(now.getTime())) {
+      return { success: false, error: "Invalid purge date" }
+    }
+    const summary = await runDeletedNotesRetention({
+      dryRun: Boolean(input?.dryRun),
+      now,
+    })
+    if (!input?.dryRun && summary.deletedCount) revalidatePath("/notes")
+    return {
+      success: true,
+      data: summary,
+    }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to purge deleted notes") }
   }
 }
 
@@ -480,7 +822,7 @@ export async function listNoteFolders() {
     await ensureSingleDefaultFolder(folderDelegate)
 
     const folders = (await folderDelegate.findMany({
-      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+      orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { isDefault: "desc" }, { name: "asc" }],
     })) as NoteFolderEntity[]
 
     return { success: true, data: folders.map(serializeFolder) as NoteFolderRecord[] }
@@ -493,7 +835,7 @@ export async function listNoteFolders() {
   }
 }
 
-export async function createNoteFolder(input: { name: string }) {
+export async function createNoteFolder(input: { name: string; parentId?: string | null }) {
   try {
     const session = await requireAuth()
     const folderDelegate = getNoteFolderDelegate()
@@ -509,10 +851,30 @@ export async function createNoteFolder(input: { name: string }) {
       return { success: false, error: "Folder name already exists" }
     }
 
+    let parentId: string | null = null
+    if (validated.parentId) {
+      const parent = await prisma.noteFolder.findUnique({
+        where: { id: validated.parentId },
+        select: { id: true, parentId: true },
+      })
+      if (!parent) return { success: false, error: "Parent folder not found" }
+      if (parent.parentId) {
+        return { success: false, error: "Folders support one nested level" }
+      }
+      parentId = parent.id
+    }
+
+    const highestSibling = await prisma.noteFolder.findFirst({
+      where: { parentId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    })
     const folder = (await folderDelegate.create({
       data: {
         name: normalizedName,
         isDefault: false,
+        parentId,
+        sortOrder: (highestSibling?.sortOrder ?? 0) + 1000,
       },
     })) as NoteFolderEntity
 
@@ -572,6 +934,57 @@ export async function renameNoteFolder(folderId: string, input: { name: string }
   }
 }
 
+export async function moveNoteFolder(
+  folderId: string,
+  input: { parentId: string | null; sortOrder: number }
+) {
+  try {
+    const session = await requireAuth()
+    const validatedFolderId = NoteIdSchema.parse(folderId)
+    const validated = MoveFolderSchema.parse(input)
+    const folder = await prisma.noteFolder.findUnique({
+      where: { id: validatedFolderId },
+      include: { children: { select: { id: true } } },
+    })
+    if (!folder) return { success: false, error: "Folder not found" }
+    if (folder.isDefault && validated.parentId) {
+      return { success: false, error: "The default folder must stay at the top level" }
+    }
+    if (validated.parentId === folder.id) {
+      return { success: false, error: "A folder cannot contain itself" }
+    }
+    if (validated.parentId) {
+      const parent = await prisma.noteFolder.findUnique({
+        where: { id: validated.parentId },
+        select: { id: true, parentId: true },
+      })
+      if (!parent) return { success: false, error: "Parent folder not found" }
+      if (parent.parentId) {
+        return { success: false, error: "Folders support one nested level" }
+      }
+      if (folder.children.length) {
+        return { success: false, error: "A folder with subfolders must stay at the top level" }
+      }
+    }
+
+    const updated = await prisma.noteFolder.update({
+      where: { id: folder.id },
+      data: {
+        parentId: validated.parentId,
+        sortOrder: validated.sortOrder,
+      },
+    })
+    await logSessionAuditEvent(session, {
+      action: "NOTE_FOLDER_MOVED",
+      details: `folderId=${updated.id};parentId=${updated.parentId || "root"}`,
+    })
+    revalidatePath("/notes")
+    return { success: true, data: serializeFolder(updated) }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to move folder") }
+  }
+}
+
 export async function deleteNoteFolder(folderId: string) {
   try {
     const session = await requireAuth()
@@ -603,6 +1016,15 @@ export async function deleteNoteFolder(folderId: string) {
     await (prisma as unknown as {
       $transaction: (fn: (tx: { note: NoteDelegate; noteFolder: NoteFolderDelegate }) => Promise<void>) => Promise<void>
     }).$transaction(async (tx) => {
+      await tx.noteFolder.updateMany({
+        where: {
+          parentId: validatedFolderId,
+        },
+        data: {
+          parentId: null,
+        },
+      })
+
       await tx.note.updateMany({
         where: {
           folderId: validatedFolderId,
@@ -635,5 +1057,226 @@ export async function deleteNoteFolder(folderId: string) {
     }
   } catch (error) {
     return { success: false, error: getActionErrorMessage(error, "Failed to delete folder") }
+  }
+}
+
+export async function listNoteTags() {
+  try {
+    await requireAuth()
+    const tags = await prisma.noteTag.findMany({
+      orderBy: { normalizedName: "asc" },
+      include: {
+        _count: {
+          select: {
+            notes: {
+              where: {
+                note: { deletedAt: null, archived: false },
+              },
+            },
+          },
+        },
+      },
+    })
+    return {
+      success: true,
+      data: tags.map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        normalizedName: tag.normalizedName,
+        count: tag._count.notes,
+      })) satisfies NoteTagRecord[],
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: getActionErrorMessage(error, "Failed to list note tags"),
+      data: [] as NoteTagRecord[],
+    }
+  }
+}
+
+export async function listNoteSmartFolders() {
+  try {
+    await requireAuth()
+    const smartFolders = await prisma.noteSmartFolder.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: {
+        tags: {
+          include: { tag: true },
+        },
+      },
+    })
+    return {
+      success: true,
+      data: smartFolders.map(serializeSmartFolder),
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: getActionErrorMessage(error, "Failed to list smart folders"),
+      data: [] as NoteSmartFolderRecord[],
+    }
+  }
+}
+
+export async function createNoteSmartFolder(input: {
+  name: string
+  matchMode?: NoteSmartFolderMatchMode
+  tagIds?: string[]
+  requirePinned?: boolean | null
+  requireChecklist?: boolean | null
+  requireAttachment?: boolean | null
+  updatedWithinDays?: number | null
+}) {
+  try {
+    const session = await requireAuth()
+    const validated = SmartFolderInputSchema.parse(input)
+    const normalizedName = validated.name.trim().toLocaleLowerCase()
+    const duplicate = await prisma.noteSmartFolder.findMany({
+      select: { name: true },
+    })
+    if (duplicate.some((folder) => folder.name.trim().toLocaleLowerCase() === normalizedName)) {
+      return { success: false, error: "Smart folder name already exists" }
+    }
+
+    const uniqueTagIds = [...new Set(validated.tagIds)]
+    if (uniqueTagIds.length) {
+      const existingTagCount = await prisma.noteTag.count({
+        where: { id: { in: uniqueTagIds } },
+      })
+      if (existingTagCount !== uniqueTagIds.length) {
+        return { success: false, error: "One or more tags no longer exist" }
+      }
+    }
+    const highest = await prisma.noteSmartFolder.findFirst({
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    })
+    const smartFolder = await prisma.noteSmartFolder.create({
+      data: {
+        name: validated.name.trim(),
+        matchMode: validated.matchMode,
+        requirePinned: validated.requirePinned,
+        requireChecklist: validated.requireChecklist,
+        requireAttachment: validated.requireAttachment,
+        updatedWithinDays: validated.updatedWithinDays,
+        sortOrder: (highest?.sortOrder ?? 0) + 1000,
+        tags: {
+          create: uniqueTagIds.map((tagId) => ({
+            tag: { connect: { id: tagId } },
+          })),
+        },
+      },
+      include: {
+        tags: { include: { tag: true } },
+      },
+    })
+    await logSessionAuditEvent(session, {
+      action: "NOTE_SMART_FOLDER_CREATED",
+      details: `smartFolderId=${smartFolder.id}`,
+    })
+    revalidatePath("/notes")
+    return { success: true, data: serializeSmartFolder(smartFolder) }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to create smart folder") }
+  }
+}
+
+export async function updateNoteSmartFolder(
+  smartFolderId: string,
+  input: {
+    name: string
+    matchMode?: NoteSmartFolderMatchMode
+    tagIds?: string[]
+    requirePinned?: boolean | null
+    requireChecklist?: boolean | null
+    requireAttachment?: boolean | null
+    updatedWithinDays?: number | null
+  }
+) {
+  try {
+    const session = await requireAuth()
+    const validatedId = NoteIdSchema.parse(smartFolderId)
+    const validated = SmartFolderInputSchema.parse(input)
+    const existing = await prisma.noteSmartFolder.findUnique({
+      where: { id: validatedId },
+      select: { id: true },
+    })
+    if (!existing) return { success: false, error: "Smart folder not found" }
+
+    const duplicate = await prisma.noteSmartFolder.findMany({
+      where: { id: { not: validatedId } },
+      select: { name: true },
+    })
+    const normalizedName = validated.name.trim().toLocaleLowerCase()
+    if (duplicate.some((folder) => folder.name.trim().toLocaleLowerCase() === normalizedName)) {
+      return { success: false, error: "Smart folder name already exists" }
+    }
+
+    const uniqueTagIds = [...new Set(validated.tagIds)]
+    if (uniqueTagIds.length) {
+      const existingTagCount = await prisma.noteTag.count({
+        where: { id: { in: uniqueTagIds } },
+      })
+      if (existingTagCount !== uniqueTagIds.length) {
+        return { success: false, error: "One or more tags no longer exist" }
+      }
+    }
+
+    const updated = await prisma.$transaction(async (transaction) => {
+      await transaction.noteSmartFolderTag.deleteMany({
+        where: { smartFolderId: validatedId },
+      })
+      await transaction.noteSmartFolder.update({
+        where: { id: validatedId },
+        data: {
+          name: validated.name.trim(),
+          matchMode: validated.matchMode,
+          requirePinned: validated.requirePinned,
+          requireChecklist: validated.requireChecklist,
+          requireAttachment: validated.requireAttachment,
+          updatedWithinDays: validated.updatedWithinDays,
+        },
+      })
+      if (uniqueTagIds.length) {
+        await transaction.noteSmartFolderTag.createMany({
+          data: uniqueTagIds.map((tagId) => ({ smartFolderId: validatedId, tagId })),
+        })
+      }
+      return transaction.noteSmartFolder.findUnique({
+        where: { id: validatedId },
+        include: { tags: { include: { tag: true } } },
+      })
+    })
+    if (!updated) return { success: false, error: "Smart folder not found" }
+    await logSessionAuditEvent(session, {
+      action: "NOTE_SMART_FOLDER_UPDATED",
+      details: `smartFolderId=${updated.id}`,
+    })
+    revalidatePath("/notes")
+    return { success: true, data: serializeSmartFolder(updated) }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to update smart folder") }
+  }
+}
+
+export async function deleteNoteSmartFolder(smartFolderId: string) {
+  try {
+    const session = await requireAuth()
+    const validatedId = NoteIdSchema.parse(smartFolderId)
+    const existing = await prisma.noteSmartFolder.findUnique({
+      where: { id: validatedId },
+      select: { id: true },
+    })
+    if (!existing) return { success: false, error: "Smart folder not found" }
+    await prisma.noteSmartFolder.delete({ where: { id: validatedId } })
+    await logSessionAuditEvent(session, {
+      action: "NOTE_SMART_FOLDER_DELETED",
+      details: `smartFolderId=${validatedId}`,
+    })
+    revalidatePath("/notes")
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: getActionErrorMessage(error, "Failed to delete smart folder") }
   }
 }

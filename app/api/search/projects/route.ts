@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
-import { normalizeProjectStatus } from "@/lib/status"
-import { formatProjectServiceList } from "@/lib/utils"
 import { buildProjectWhereInput, normalizeProjectFilters } from "@/lib/filters/project-filters"
-import { Prisma } from "@prisma/client"
 import { apiRouteError } from "@/lib/api-response"
+import { getProjectSummaryPage, type ProjectSummarySort } from "@/lib/projects/summary"
 
 export const dynamic = "force-dynamic"
 
@@ -52,50 +50,6 @@ function parseSort(raw: string | null): ProjectSortValue {
         : DEFAULT_PROJECT_SORT
 }
 
-function resolveOrderBy(sort: ProjectSortValue): Prisma.ProjectOrderByWithRelationInput[] {
-    switch (sort) {
-        case "created_desc":
-            return [{ createdAt: "desc" }, { id: "asc" }]
-        case "created_asc":
-            return [{ createdAt: "asc" }, { id: "asc" }]
-        case "amount_desc":
-            return [{ currentFee: "desc" }, { id: "asc" }]
-        case "amount_asc":
-            return [{ currentFee: "asc" }, { id: "asc" }]
-        case "name_asc":
-            return [{ site: { domainName: "asc" } }, { id: "asc" }]
-        case "name_desc":
-            return [{ site: { domainName: "desc" } }, { id: "asc" }]
-        case "updated_desc":
-        default:
-            return [{ updatedAt: "desc" }, { id: "asc" }]
-    }
-}
-
-const projectInclude = {
-    site: {
-        include: {
-            partner: true,
-        },
-    },
-    services: true,
-    tasks: {
-        orderBy: { createdAt: "asc" as const },
-        include: { timeLogs: true },
-    },
-    timeLogs: {
-        orderBy: { startTime: "desc" as const },
-        include: { task: true },
-    },
-    _count: {
-        select: {
-            tasks: true,
-        },
-    },
-} satisfies Prisma.ProjectInclude
-
-type ProjectRow = Prisma.ProjectGetPayload<{ include: typeof projectInclude }>
-
 export async function GET(request: Request) {
     try {
         await requireAuth()
@@ -123,88 +77,13 @@ export async function GET(request: Request) {
         const shouldPaginate = total > PAGINATION_THRESHOLD
         const totalPages = shouldPaginate ? Math.max(1, Math.ceil(total / perPage)) : 1
         const page = shouldPaginate ? Math.min(requestedPage, totalPages) : 1
-        const queryBase = {
+        const projects = await getProjectSummaryPage({
             where,
-            include: projectInclude,
-            orderBy: resolveOrderBy(sort),
-        }
-        let projectsRaw: ProjectRow[] = []
-
-        if (sort === "time_desc" || sort === "time_asc") {
-            const candidates = await prisma.project.findMany({
-                where,
-                select: {
-                    id: true,
-                    updatedAt: true,
-                    timeLogs: {
-                        select: { durationSeconds: true },
-                    },
-                },
-            })
-
-            const sortedIds = candidates
-                .map((candidate) => ({
-                    id: candidate.id,
-                    updatedAt: candidate.updatedAt,
-                    secondsLogged: candidate.timeLogs.reduce((sum, log) => sum + Number(log.durationSeconds ?? 0), 0),
-                }))
-                .sort((a, b) => {
-                    if (sort === "time_desc") {
-                        if (b.secondsLogged !== a.secondsLogged) return b.secondsLogged - a.secondsLogged
-                    } else {
-                        if (a.secondsLogged !== b.secondsLogged) return a.secondsLogged - b.secondsLogged
-                    }
-                    if (b.updatedAt.getTime() !== a.updatedAt.getTime()) {
-                        return b.updatedAt.getTime() - a.updatedAt.getTime()
-                    }
-                    return a.id.localeCompare(b.id)
-                })
-                .map((entry) => entry.id)
-
-            const sliceStart = shouldPaginate ? (page - 1) * perPage : 0
-            const sliceEnd = shouldPaginate ? sliceStart + perPage : Math.min(limit, MAX_LIMIT)
-            const pageIds = sortedIds.slice(sliceStart, sliceEnd)
-
-            if (pageIds.length > 0) {
-                const rows: ProjectRow[] = await prisma.project.findMany({
-                    ...queryBase,
-                    where: {
-                        ...where,
-                        id: { in: pageIds },
-                    },
-                })
-                const byId = new Map(rows.map((row) => [row.id, row] as const))
-                projectsRaw = pageIds
-                    .map((id) => byId.get(id))
-                    .filter((project): project is ProjectRow => Boolean(project))
-            }
-        } else {
-            projectsRaw = shouldPaginate
-                ? await prisma.project.findMany({
-                      ...queryBase,
-                      skip: (page - 1) * perPage,
-                      take: perPage,
-                  })
-                : await prisma.project.findMany({
-                      ...queryBase,
-                      take: Math.min(limit, MAX_LIMIT),
-                  })
-        }
-
-        const projects = projectsRaw.map((project) => {
-            const completedTasks = project.tasks.filter((task) => task.status === "Completed").length
-            const secondsLogged = project.timeLogs.reduce((sum, log) => sum + (log.durationSeconds ?? 0), 0)
-            const isRecurring = project.services.some((service) => service.isRecurring)
-            const serviceLabel = formatProjectServiceList(project.services, "No service")
-            return {
-                ...project,
-                status: normalizeProjectStatus(project.status),
-                completedTasks,
-                secondsLogged,
-                isRecurring,
-                serviceLabel,
-                amount: Number(project.currentFee ?? 0),
-            }
+            sort: sort as ProjectSummarySort,
+            page,
+            pageSize: perPage,
+            paginate: shouldPaginate,
+            limit: Math.min(limit, MAX_LIMIT),
         })
         const pageStart = total === 0 ? 0 : (page - 1) * perPage + 1
         const pageEnd = shouldPaginate ? Math.min(page * perPage, total) : total

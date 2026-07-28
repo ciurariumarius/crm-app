@@ -10,21 +10,41 @@ import {
     updateSession,
 } from './lib/auth'
 import { runSecurityPreflight } from './lib/security/preflight'
+import {
+    BLOCKED_PUBLIC_DIAGNOSTIC_PATTERN,
+    PUBLIC_ASSET_PATH_SET,
+} from './lib/security/public-assets'
+import { buildContentSecurityPolicy } from './lib/security/csp'
 
-const PUBLIC_PATHS = ['/login', '/manifest.json', '/sw.js']
+const PUBLIC_PATHS = ['/login']
 // Cron routes perform their own timing-safe CRON_SECRET authentication.
-const PUBLIC_API_PATHS = ['/api/cron/rollover', '/api/cron/lms-daily-admin-work']
-const STATIC_ASSET_PATTERN = /\.(ico|png|svg|jpg|jpeg|gif|webp|txt|xml)$/i
+const PUBLIC_API_PATHS = [
+    '/api/cron/rollover',
+    '/api/cron/lms-daily-admin-work',
+    '/api/cron/notes-retention',
+    '/api/health',
+]
 
 runSecurityPreflight()
+
+function applySecurityHeaders(response: NextResponse, csp: string, requestId: string) {
+    response.headers.set('Content-Security-Policy', csp)
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('Referrer-Policy', 'same-origin')
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    response.headers.set('X-DNS-Prefetch-Control', 'on')
+    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+    response.headers.set('X-Request-Id', requestId)
+    return response
+}
 
 // Protected routes configuration
 const isProtectedRoute = (path: string) => {
     if (PUBLIC_PATHS.some((publicPath) => path === publicPath || path.startsWith(`${publicPath}/`))) return false
     if (PUBLIC_API_PATHS.some((publicPath) => path === publicPath || path.startsWith(`${publicPath}/`))) return false
 
-    // Allow static assets, images, icons, next build files
-    if (path.startsWith('/_next') || path.startsWith('/icons') || STATIC_ASSET_PATTERN.test(path)) return false
+    if (path.startsWith('/_next') || PUBLIC_ASSET_PATH_SET.has(path)) return false
 
     return true
 }
@@ -41,47 +61,60 @@ const unauthorizedResponse = (request: NextRequest) => {
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
+    const nonce = crypto.randomUUID().replaceAll('-', '')
+    const requestId = request.headers.get('x-request-id')?.slice(0, 128) || crypto.randomUUID()
+    const csp = buildContentSecurityPolicy(nonce, process.env.NODE_ENV === 'development')
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-nonce', nonce)
+    requestHeaders.set('x-request-id', requestId)
+    requestHeaders.set('Content-Security-Policy', csp)
+    const nextResponse = () => NextResponse.next({ request: { headers: requestHeaders } })
+    const secure = (response: NextResponse) => applySecurityHeaders(response, csp, requestId)
+
+    if (BLOCKED_PUBLIC_DIAGNOSTIC_PATTERN.test(pathname)) {
+        return secure(NextResponse.json({ error: 'Not found' }, { status: 404 }))
+    }
 
     // Ignore non-protected routes
     if (!isProtectedRoute(pathname)) {
-        return NextResponse.next()
+        return secure(nextResponse())
     }
 
     // Check for session cookie
     const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value
 
     if (!sessionCookie) {
-        return unauthorizedResponse(request)
+        return secure(unauthorizedResponse(request))
     }
 
     // Verify session
     const session = await decrypt<SessionPayload>(sessionCookie)
 
     if (!session) {
-        return unauthorizedResponse(request)
+        return secure(unauthorizedResponse(request))
     }
 
     if (!session.userId) {
-        return unauthorizedResponse(request)
+        return secure(unauthorizedResponse(request))
     }
 
     if ((isSessionRegistryEnabled() || isSessionRegistryRequired()) && !session.sid) {
-        return unauthorizedResponse(request)
+        return secure(unauthorizedResponse(request))
     }
 
     if (isSessionPastAbsoluteMax(session)) {
-        return unauthorizedResponse(request)
+        return secure(unauthorizedResponse(request))
     }
 
     // Enforce 2FA: if user has 2FA enabled but hasn't completed it, redirect to login
     if (session.twoFactorVerified === false) {
-        return unauthorizedResponse(request)
+        return secure(unauthorizedResponse(request))
     }
 
-    const refreshed = await updateSession(request)
-    if (refreshed) return refreshed
+    const refreshed = await updateSession(request, requestHeaders)
+    if (refreshed) return secure(refreshed)
 
-    return NextResponse.next()
+    return secure(nextResponse())
 }
 
 // Config to run middleware on all routes

@@ -12,10 +12,10 @@ import { GlobalCreateTaskDialog, type TaskDialogProject } from "@/components/tas
 import type { PartnerWithSites } from "@/types"
 import type { Service } from "@prisma/client"
 
-type MobileBottomNavProps = {
-    quickActionPartners: PartnerWithSites[]
-    quickActionServices: Service[]
-    quickActionProjects: TaskDialogProject[]
+type QuickActionOptions = {
+    partners: PartnerWithSites[]
+    services: Service[]
+    projects: TaskDialogProject[]
 }
 
 function isActivePath(pathname: string, href: string) {
@@ -58,11 +58,7 @@ function NavLink({
     )
 }
 
-export function MobileBottomNav({
-    quickActionPartners,
-    quickActionServices,
-    quickActionProjects,
-}: MobileBottomNavProps) {
+export function MobileBottomNav() {
     const pathname = usePathname()
     const homeActive = isActivePath(pathname, "/")
     const tasksActive = isActivePath(pathname, "/tasks")
@@ -72,6 +68,13 @@ export function MobileBottomNav({
     const [quickActionsOpen, setQuickActionsOpen] = React.useState(false)
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
+    const [quickActionOptions, setQuickActionOptions] = React.useState<QuickActionOptions>({
+        partners: [],
+        services: [],
+        projects: [],
+    })
+    const [quickActionOptionsLoaded, setQuickActionOptionsLoaded] = React.useState(false)
+    const [quickActionOptionsLoading, setQuickActionOptionsLoading] = React.useState(false)
     const [isDockHidden, setIsDockHidden] = React.useState(false)
     const lastScrollYRef = React.useRef(0)
     const directionalTravelRef = React.useRef(0)
@@ -85,6 +88,50 @@ export function MobileBottomNav({
     React.useEffect(() => {
         appScrollContainerRef.current = document.getElementById("app-scroll-container")
     }, [])
+
+    React.useEffect(() => {
+        if (
+            quickActionOptionsLoaded ||
+            quickActionOptionsLoading ||
+            (!quickActionsOpen && !createProjectOpen && !createTaskOpen)
+        ) {
+            return
+        }
+
+        const controller = new AbortController()
+        setQuickActionOptionsLoading(true)
+        fetch("/api/quick-actions/options?page=1&pageSize=100", {
+            cache: "no-store",
+            signal: controller.signal,
+        })
+            .then(async (response) => {
+                const payload = await response.json() as {
+                    success?: boolean
+                    data?: QuickActionOptions
+                    error?: string
+                }
+                if (!response.ok || !payload.success || !payload.data) {
+                    throw new Error(payload.error || "Failed to load quick actions")
+                }
+                setQuickActionOptions(payload.data)
+                setQuickActionOptionsLoaded(true)
+            })
+            .catch((error) => {
+                if (controller.signal.aborted) return
+                console.error("Quick action options failed", error)
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setQuickActionOptionsLoading(false)
+            })
+
+        return () => controller.abort()
+    }, [
+        createProjectOpen,
+        createTaskOpen,
+        quickActionOptionsLoaded,
+        quickActionOptionsLoading,
+        quickActionsOpen,
+    ])
 
     React.useEffect(() => {
         const currentY = Math.max(
@@ -327,13 +374,13 @@ export function MobileBottomNav({
             <GlobalCreateTaskDialog
                 open={createTaskOpen}
                 onOpenChange={setCreateTaskOpen}
-                projects={quickActionProjects}
+                projects={quickActionOptions.projects}
             />
             <GlobalCreateProjectDialog
                 open={createProjectOpen}
                 onOpenChange={setCreateProjectOpen}
-                partners={quickActionPartners}
-                services={quickActionServices}
+                partners={quickActionOptions.partners}
+                services={quickActionOptions.services}
             />
         </>
     )

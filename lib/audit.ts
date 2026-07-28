@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma"
-import { headers } from "next/headers"
 import type { SessionPayload } from "@/lib/auth"
+import { getTrustedRequestContext } from "@/lib/security/request-context"
 
 export async function logAuditEvent(data: {
     action: string
@@ -8,9 +8,12 @@ export async function logAuditEvent(data: {
     actorUserId?: string | null
     ipAddress?: string | null
     userAgent?: string | null
+    requestId?: string | null
     details?: string | null
 }) {
     try {
+        const requestDetail = data.requestId ? `requestId=${data.requestId}` : ""
+        const details = [requestDetail, data.details || ""].filter(Boolean).join("; ") || null
         await prisma.auditLog.create({
             data: {
                 action: data.action,
@@ -18,7 +21,7 @@ export async function logAuditEvent(data: {
                 actorUserId: data.actorUserId ?? null,
                 ipAddress: data.ipAddress ?? null,
                 userAgent: data.userAgent ?? null,
-                details: data.details ?? null,
+                details,
             },
         })
     } catch {
@@ -27,15 +30,7 @@ export async function logAuditEvent(data: {
 }
 
 export async function getAuditRequestContext() {
-    try {
-        const hdrs = await headers()
-        const forwardedFor = hdrs.get("x-forwarded-for")
-        const ipAddress = forwardedFor?.split(",")[0]?.trim() || hdrs.get("x-real-ip") || "unknown"
-        const userAgent = hdrs.get("user-agent") || "unknown"
-        return { ipAddress, userAgent }
-    } catch {
-        return { ipAddress: "unknown", userAgent: "unknown" }
-    }
+    return getTrustedRequestContext()
 }
 
 export async function logSessionAuditEvent(
@@ -46,7 +41,7 @@ export async function logSessionAuditEvent(
         details?: string | null
     }
 ) {
-    const { ipAddress, userAgent } = await getAuditRequestContext()
+    const { ipAddress, userAgent, requestId } = await getAuditRequestContext()
     await logAuditEvent({
         action: data.action,
         success: data.success,
@@ -54,5 +49,6 @@ export async function logSessionAuditEvent(
         actorUserId: session.userId,
         ipAddress,
         userAgent,
+        requestId,
     })
 }

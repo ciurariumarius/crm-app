@@ -94,6 +94,7 @@ export async function getLmsWorkLogPageData(args?: {
     totalEntries,
     unexportedEntries,
     aggregate,
+    workedDates,
     durationFrequencies,
     clientFrequencies,
     taskFrequencies,
@@ -106,6 +107,10 @@ export async function getLmsWorkLogPageData(args?: {
     prisma.lmsWorkEntry.count({ where }),
     prisma.lmsWorkEntry.count({ where: { ...where, exportedAt: null } }),
     prisma.lmsWorkEntry.aggregate({ where, _sum: { durationMinutes: true } }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["workDate"],
+      where,
+    }),
     prisma.lmsWorkEntry.groupBy({
       by: ["durationMinutes"],
       _count: { _all: true },
@@ -189,6 +194,7 @@ export async function getLmsWorkLogPageData(args?: {
     totalEntries,
     unexportedEntries,
     totalMinutes: aggregate._sum.durationMinutes ?? 0,
+    workedDays: workedDates.length,
     page,
     pageSize,
     totalPages,

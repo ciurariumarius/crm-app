@@ -27,6 +27,29 @@ export type LmsModuleData = {
   allocationsSourceFile: string | null
 }
 
+export type LmsDataAggregates = {
+  totalMinutes: number
+  datedTasks: number
+  undatedTasks: number
+  uniqueClients: number
+  uniqueExecutants: number
+  minDate: string | null
+  maxDate: string | null
+}
+
+export type LmsPagedData = {
+  rows: TaskLog[]
+  allocations: ClientAllocation[]
+  page: number
+  pageSize: number
+  total: number
+  totalPages: number
+  aggregates: LmsDataAggregates
+  lastUpdatedAt: string | null
+  tasksSourceFile: string | null
+  allocationsSourceFile: string | null
+}
+
 export type LmsSyncMode = "replace" | "merge"
 
 export type LmsSyncSummary = {

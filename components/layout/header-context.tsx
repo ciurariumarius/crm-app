@@ -14,20 +14,19 @@ interface HeaderContextType {
     setIsMobileMenuOpen: (open: boolean) => void
     isSidebarCollapsed: boolean
     setIsSidebarCollapsed: (collapsed: boolean) => void
-    isSidebarFocusExpanded: boolean
-    setIsSidebarFocusExpanded: (expanded: boolean) => void
 }
 
 const HeaderContext = createContext<HeaderContextType | undefined>(undefined)
-const SIDEBAR_COLLAPSED_STORAGE_KEY = "ui:sidebar-collapsed"
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "ui:sidebar-collapsed-v2"
 const SIDEBAR_COLLAPSED_CHANGE_EVENT = "ui:sidebar-collapsed-change"
 
 const getSidebarCollapsedSnapshot = () => {
-    if (typeof window === "undefined") return false
-    return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "1"
+    if (typeof window === "undefined") return true
+    const storedValue = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)
+    return storedValue === null ? true : storedValue === "1"
 }
 
-const getServerSidebarCollapsedSnapshot = () => false
+const getServerSidebarCollapsedSnapshot = () => true
 
 const subscribeToSidebarCollapsed = (onStoreChange: () => void) => {
     const handleStorage = (event: StorageEvent) => {
@@ -51,7 +50,6 @@ const subscribeToSidebarCollapsed = (onStoreChange: () => void) => {
 export function HeaderProvider({ children }: { children: ReactNode }) {
     const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([])
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [isSidebarFocusExpanded, setIsSidebarFocusExpanded] = useState(false)
     const isSidebarCollapsed = useSyncExternalStore(
         subscribeToSidebarCollapsed,
         getSidebarCollapsedSnapshot,
@@ -71,8 +69,6 @@ export function HeaderProvider({ children }: { children: ReactNode }) {
             setIsMobileMenuOpen,
             isSidebarCollapsed,
             setIsSidebarCollapsed,
-            isSidebarFocusExpanded,
-            setIsSidebarFocusExpanded,
         }}>
             {children}
         </HeaderContext.Provider>

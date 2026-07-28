@@ -252,8 +252,10 @@ export function InlineQuickAddRow({
             let targetSiteId = matchedSite?.id ?? ""
 
             if (!targetSiteId) {
-                const site = await createSite(selectedPartnerId, normalizedDomain)
-                targetSiteId = site.id
+                const result = await createSite(selectedPartnerId, normalizedDomain)
+                if (!result.success) throw new Error(result.error)
+                targetSiteId = result.site.id
+                if (result.warning) toast.warning(result.warning.message)
             }
 
             const result = await createProject({

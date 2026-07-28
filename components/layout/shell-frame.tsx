@@ -10,30 +10,20 @@ import { PWARegister } from "@/components/pwa-register"
 import { cn } from "@/lib/utils"
 import { useHeader } from "@/components/layout/header-context"
 import { useResponsiveProfile } from "@/hooks/use-responsive-profile"
-import type { Service } from "@prisma/client"
-import type { PartnerWithSites } from "@/types"
-import type { TaskDialogProject } from "@/components/tasks/global-create-task-dialog"
-
 type ShellFrameProps = {
     user?: { name: string | null, username: string, profilePic: string | null }
-    quickActionPartners: PartnerWithSites[]
-    quickActionServices: Service[]
-    quickActionProjects: TaskDialogProject[]
     children: React.ReactNode
 }
 
 export function ShellFrame({
     user,
-    quickActionPartners,
-    quickActionServices,
-    quickActionProjects,
     children,
 }: ShellFrameProps) {
-    const { isSidebarCollapsed, isSidebarFocusExpanded } = useHeader()
+    const { isSidebarCollapsed } = useHeader()
     const pathname = usePathname()
     const responsiveProfile = useResponsiveProfile()
     const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
-    const isDesktopCollapsed = isSidebarCollapsed && !isSidebarFocusExpanded
+    const isDesktopCollapsed = isSidebarCollapsed
 
     React.useEffect(() => {
         const container = scrollContainerRef.current
@@ -59,11 +49,7 @@ export function ShellFrame({
                     {children}
                 </main>
             </div>
-            <MobileBottomNav
-                quickActionPartners={quickActionPartners}
-                quickActionServices={quickActionServices}
-                quickActionProjects={quickActionProjects}
-            />
+            <MobileBottomNav />
             <GlobalTimer />
             <Toaster />
             <PWARegister />

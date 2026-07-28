@@ -128,7 +128,12 @@ export function parseAndValidateExternalUrl(input: string) {
 }
 
 export async function assertPublicResolvableHost(hostname: string) {
-    const addresses = await lookup(hostname, { all: true, verbatim: true })
+    let addresses: Array<{ address: string; family: number }>
+    try {
+        addresses = await lookup(hostname, { all: true, verbatim: true })
+    } catch {
+        throw new DomainValidationError("DNS_RESOLVE_FAILED", "Could not resolve domain")
+    }
     if (!addresses.length) {
         throw new DomainValidationError("DNS_RESOLVE_FAILED", "Could not resolve domain")
     }

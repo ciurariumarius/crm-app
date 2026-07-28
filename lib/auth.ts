@@ -387,7 +387,7 @@ function shouldRefreshSession(parsed: SessionPayload) {
     return expiresAtMs - Date.now() <= getSessionRefreshWindowMs()
 }
 
-export async function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest, forwardedHeaders?: Headers) {
     const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value
     if (!sessionCookie) return null
 
@@ -453,7 +453,9 @@ export async function updateSession(request: NextRequest) {
         })
     }
 
-    const res = NextResponse.next()
+    const res = NextResponse.next(
+        forwardedHeaders ? { request: { headers: forwardedHeaders } } : undefined
+    )
     res.cookies.set({
         name: SESSION_COOKIE_NAME,
         value: await encrypt(refreshedPayload, { expiresAt }),

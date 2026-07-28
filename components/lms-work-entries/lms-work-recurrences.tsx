@@ -12,7 +12,9 @@ import {
 import {
   LMS_RECURRENCE_WEEKDAYS,
   LMS_RECURRENCE_WORKDAYS,
+  LMS_STANDARD_WORK_WEEK_MINUTES,
   formatRecurrenceSchedule,
+  getLmsRecurrenceWeeklyMinutes,
 } from "@/lib/lms-work-entries/recurrence"
 import type {
   LmsWorkRecurrenceInput,
@@ -49,6 +51,13 @@ function formatLastRun(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value))}`
+}
+
+function formatWeeklyDuration(value: number) {
+  const hours = Math.floor(value / 60)
+  const minutes = value % 60
+  if (hours === 0) return `${minutes}m`
+  return minutes ? `${hours}h ${minutes}m` : `${hours}h`
 }
 
 export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }) {
@@ -138,6 +147,16 @@ export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }
   }
 
   const activeRecurrences = data.recurrences.filter((rule) => rule.isActive)
+  const runnableRecurrences = activeRecurrences.filter((rule) => !rule.clientDetached && !rule.taskInactive)
+  const excludedRecurrences = activeRecurrences.length - runnableRecurrences.length
+  const weeklyRecurringMinutes = runnableRecurrences.reduce(
+    (total, rule) => total + getLmsRecurrenceWeeklyMinutes(rule.durationMinutes, rule.weekdays),
+    0
+  )
+  const weeklyRemainingMinutes = Math.max(0, LMS_STANDARD_WORK_WEEK_MINUTES - weeklyRecurringMinutes)
+  const weeklyUtilizationPercent = Math.round(
+    (weeklyRecurringMinutes / LMS_STANDARD_WORK_WEEK_MINUTES) * 100
+  )
 
   return (
     <Card className="rounded-2xl border-[var(--line-subtle)]">
@@ -304,10 +323,17 @@ export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }
                       })}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2 text-[var(--brand-primary)]">
+                  <div className="flex items-center gap-2.5 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2 text-[var(--brand-primary)]">
                     <Clock3 className="h-5 w-5" />
-                    <span className="text-xl font-bold leading-none">{rule.durationMinutes}</span>
-                    <span className="text-sm font-semibold">min</span>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold leading-none">
+                        {rule.durationMinutes} min <span className="text-xs text-[var(--text-muted)]">/ run</span>
+                      </p>
+                      <p className="mt-1 text-base font-bold leading-none">
+                        {formatWeeklyDuration(getLmsRecurrenceWeeklyMinutes(rule.durationMinutes, rule.weekdays))}
+                        <span className="ml-1 text-xs font-semibold text-[var(--text-muted)]">/ week</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
                 {warning ? (
@@ -344,6 +370,60 @@ export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }
               </article>
             )
           })}
+        </div>
+
+        <div className="space-y-3 border-t border-[var(--line-subtle)] pt-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-4 py-3">
+              <CalendarClock className="h-5 w-5 shrink-0 text-[var(--brand-primary)]" />
+              <div>
+                <p className="text-xs font-medium text-[var(--text-muted)]">Recurring work / week</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {formatWeeklyDuration(weeklyRecurringMinutes)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-4 py-3">
+              <Clock3 className="h-5 w-5 shrink-0 text-[var(--brand-primary)]" />
+              <div>
+                <p className="text-xs font-medium text-[var(--text-muted)]">Standard work week</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {formatWeeklyDuration(LMS_STANDARD_WORK_WEEK_MINUTES)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium">
+              <span className="text-[var(--text-secondary)]">Weekly recurring load</span>
+              <span className="text-[var(--brand-primary)]">{weeklyUtilizationPercent}% of 40h</span>
+            </div>
+            <div
+              role="progressbar"
+              aria-label="Weekly recurring work load"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.min(weeklyUtilizationPercent, 100)}
+              className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--bg-surface-soft)]"
+            >
+              <div
+                className="h-full rounded-full bg-[var(--brand-primary)] transition-[width]"
+                style={{ width: `${Math.min(weeklyUtilizationPercent, 100)}%` }}
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+              <span>{formatWeeklyDuration(weeklyRemainingMinutes)} remaining</span>
+              <span>{runnableRecurrences.length} active {runnableRecurrences.length === 1 ? "rule" : "rules"}</span>
+            </div>
+          </div>
+
+          {excludedRecurrences > 0 ? (
+            <p className="flex items-center gap-1.5 text-xs text-amber-800">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {excludedRecurrences} {excludedRecurrences === 1 ? "rule needs" : "rules need"} attention and {excludedRecurrences === 1 ? "is" : "are"} excluded from the weekly total.
+            </p>
+          ) : null}
         </div>
       </CardContent>
     </Card>

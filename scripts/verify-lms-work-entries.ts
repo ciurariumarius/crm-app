@@ -2,10 +2,10 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import ExcelJS from "exceljs"
+import { buildLmsAllocationSyncKey } from "../lib/lms-tasks/client-key"
 import { matchesLmsClientSearch } from "../lib/lms-work-entries/client-search"
 import { LMS_CRM_EMPLOYEE_NAME } from "../lib/lms-work-entries/crm-template"
 import {
-  DEFAULT_LMS_WORK_DURATION_MINUTES,
   LMS_WORK_DURATION_FALLBACK_SHORTCUTS,
   LMS_WORK_DURATION_PRESETS,
   buildLmsWorkDurationShortcuts,
@@ -26,7 +26,9 @@ import {
 } from "../lib/lms-work-entries/date"
 import { LMS_RECURRENCE_SOURCE_PREFIX } from "../lib/lms-work-entries/daily-admin-automation"
 import {
+  LMS_STANDARD_WORK_WEEK_MINUTES,
   formatRecurrenceSchedule,
+  getLmsRecurrenceWeeklyMinutes,
   maskToWeekdays,
   recurrenceRunsOnDate,
   weekdaysToMask,
@@ -94,8 +96,10 @@ async function run() {
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "CLIENT-800")).length, 1)
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "școala")).length, 1)
   assert.equal(importedClients.filter((client) => matchesLmsClientSearch(client, "missing-client")).length, 0)
+  assert.equal(buildLmsAllocationSyncKey("example.ro"), "client:example ro")
+  assert.equal(buildLmsAllocationSyncKey(" Școala-Exemplu.ro "), "client:scoala exemplu ro")
+  assert.equal(buildLmsAllocationSyncKey("..."), null)
   assert.deepEqual(Array.from(LMS_WORK_DURATION_PRESETS), [10, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240, 300, 360])
-  assert.equal(DEFAULT_LMS_WORK_DURATION_MINUTES, 120)
   assert.deepEqual(Array.from(LMS_WORK_DURATION_FALLBACK_SHORTCUTS), [30, 60, 120, 180, 240, 360])
   assert.equal(parseCustomLmsWorkDuration("1"), 1)
   assert.equal(parseCustomLmsWorkDuration("1440"), 1440)
@@ -143,6 +147,9 @@ async function run() {
   assert.equal(LMS_RECURRENCE_SOURCE_PREFIX, "recurrence:")
   assert.equal(weekdaysToMask([1, 2, 3, 4, 5]), 31)
   assert.equal(weekdaysToMask([2, 4]), 10)
+  assert.equal(LMS_STANDARD_WORK_WEEK_MINUTES, 2400)
+  assert.equal(getLmsRecurrenceWeeklyMinutes(60, [1, 2, 3, 4, 5]), 300)
+  assert.equal(getLmsRecurrenceWeeklyMinutes(90, [1, 3, 3, 5]), 270)
   assert.deepEqual(maskToWeekdays(10), [2, 4])
   assert.equal(recurrenceRunsOnDate(10, "2026-07-21"), true)
   assert.equal(recurrenceRunsOnDate(10, "2026-07-22"), false)
@@ -199,10 +206,26 @@ async function run() {
   assert.doesNotMatch(workLogSource, /_120px_150px/)
   assert.match(workLogSource, /\/lms-analysis\/data#task-catalog/)
   assert.match(workLogSource, /LMS_WORK_DURATION_PRESETS\.map/)
-  assert.match(workLogSource, /DEFAULT_LMS_WORK_DURATION_MINUTES/)
+  assert.doesNotMatch(workLogSource, /DEFAULT_LMS_WORK_DURATION_MINUTES/)
+  assert.match(workLogSource, /const \[durationSelection, setDurationSelection\] = React\.useState\(""\)/)
+  assert.match(workLogSource, /setDurationSelection\(""\)/)
+  assert.match(workLogSource, /Select the time spent to continue\./)
+  assert.match(workLogSource, /Enter custom minutes to continue\./)
   assert.match(workLogSource, /xl:grid-cols-\[minmax\(0,11fr\)_minmax\(420px,9fr\)\]/)
-  assert.match(workLogSource, /xl:col-start-2 xl:row-span-2 xl:row-start-1/)
-  assert.match(workLogSource, /xl:col-start-1 xl:row-start-2/)
+  assert.match(workLogSource, /xl:col-start-2 xl:row-start-1/)
+  assert.match(workLogSource, /xl:col-span-2 xl:row-start-2/)
+  assert.match(workLogSource, /hasSelection/)
+  assert.equal(workLogSource.match(/<Command shouldFilter=\{false\}>/g)?.length, 2)
+  assert.match(workLogSource, /CommandInput[\s\S]*placeholder="Search clients\.\.\."/)
+  assert.match(workLogSource, /CommandInput[\s\S]*placeholder="Search tasks\.\.\."/)
+  assert.equal(workLogSource.match(/role="combobox"/g)?.length, 2)
+  assert.match(workLogSource, /Saving…/)
+  assert.match(workLogSource, /workDatePickerOpen/)
+  assert.match(workLogSource, /w-\[min\(92vw,420px\)\]/)
+  assert.match(workLogSource, /--cell-size:clamp\(40px,11vw,48px\)/)
+  assert.match(workLogSource, /disabled=\{isWeekend\}/)
+  assert.match(workLogSource, /if \(!date \|\| isWeekend\(date\)\) return/)
+  assert.match(workLogSource, /Choose a work day/)
   assert.match(workLogSource, /formatLmsWorkDateLabel/)
   assert.match(workLogSource, /workCapacity\.hours}h · \$\{workUtilizationPercent}%/)
   assert.match(workLogSource, /workUtilizationPercent}%/)
@@ -217,15 +240,25 @@ async function run() {
   assert.match(workLogSource, /Frequently used/)
   assert.match(workLogSource, /Frequently used clients/)
   assert.match(workLogSource, /Frequently used tasks/)
-  assert.equal(workLogSource.match(/aria-autocomplete="list"/g)?.length, 2)
+  assert.match(workLogSource, /toLocaleLowerCase\("ro"\) === "\[intern\]"/)
+  assert.match(workLogSource, /client\.id !== internalClient\?\.id/)
+  assert.match(workLogSource, /grid grid-cols-3 gap-1\.5/)
+  assert.match(workLogSource, /<TaskCombobox tasks=\{data\.tasks\} value=\{taskTypeId\} onValueChange=\{setTaskTypeId\} large \/>/)
+  assert.match(workLogSource, /xl:h-full xl:grid-rows-2/)
   assert.match(workLogSource, /clients\.filter\(\(client\) => matchesLmsClientSearch\(client\.client, search\)\)/)
   assert.match(workLogSource, /options\.filter\(\(task\) => matchesLmsClientSearch\(task\.name, search\)\)/)
-  assert.doesNotMatch(workLogSource, /CommandInput placeholder="Search all LMS clients/)
-  assert.doesNotMatch(workLogSource, /CommandInput placeholder="Search predefined tasks/)
+  assert.equal(workLogSource.match(/setSearch\(""\)/g)?.length, 2)
   assert.match(workLogSource, /Save work/)
   assert.match(workLogSource, /!hasSelectedClient/)
   assert.match(workLogSource, /!hasSelectedTask/)
+  assert.match(workLogSource, /Add client/)
+  assert.match(workLogSource, /createLmsWorkClient/)
+  assert.match(workLogSource, /setLmsAllocationId\(client\.id\)/)
+  assert.match(workLogSource, /Days logged/)
+  assert.match(workLogSource, /data\.workedDays/)
   assert.match(workLogDbSource, /prisma\.lmsWorkEntry\.groupBy/)
+  assert.match(workLogDbSource, /by: \["workDate"\]/)
+  assert.match(workLogDbSource, /workedDays: workedDates\.length/)
   assert.match(workLogDbSource, /by: \["lmsAllocationId"\]/)
   assert.match(workLogDbSource, /by: \["taskTypeId"\]/)
   assert.doesNotMatch(workLogDbSource, /tenantId|userId|requireTenantContext/)
@@ -236,6 +269,10 @@ async function run() {
   assert.match(workTaskCatalogSource, /reorderLmsWorkTasks/)
   assert.match(workTaskCatalogSource, /Alt\+ArrowUp Alt\+ArrowDown/)
   assert.match(workEntryActionsSource, /export async function reorderLmsWorkTasks/)
+  assert.match(workEntryActionsSource, /export async function createLmsWorkClient/)
+  assert.match(workEntryActionsSource, /buildLmsAllocationSyncKey/)
+  assert.match(workEntryActionsSource, /specialist: LMS_CRM_EMPLOYEE_NAME/)
+  assert.match(workEntryActionsSource, /LMS_WORK_CLIENT_CREATED/)
   assert.match(workEntryActionsSource, /where: \{ id \}/)
   assert.doesNotMatch(workEntryActionsSource, /tenantId|userId|requireTenantContext/)
   assert.match(workEntryActionsSource, /employeeNameSnapshot: LMS_CRM_EMPLOYEE_NAME/)
@@ -336,6 +373,12 @@ async function run() {
   assert.match(recurringWorkSource, /setLmsWorkRecurrenceActive/)
   assert.match(workLogDbSource, /where: \{ isActive: true \}/)
   assert.match(recurringWorkSource, /activeRecurrences/)
+  assert.match(recurringWorkSource, /Recurring work \/ week/)
+  assert.match(recurringWorkSource, /Standard work week/)
+  assert.match(recurringWorkSource, /Weekly recurring load/)
+  assert.match(recurringWorkSource, /weeklyRecurringMinutes/)
+  assert.match(recurringWorkSource, /\/ run/)
+  assert.match(recurringWorkSource, /\/ week/)
   assert.doesNotMatch(recurringWorkSource, /deleteLmsWorkRecurrence/)
 
   const buffer = await buildLmsCrmExportBuffer([

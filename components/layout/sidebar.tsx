@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, type ComponentType, type FocusEvent } from "react"
+import { useState, type ComponentType } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useHeader } from "./header-context"
@@ -85,15 +85,12 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
     setIsMobileMenuOpen,
     isSidebarCollapsed,
     setIsSidebarCollapsed,
-    isSidebarFocusExpanded,
-    setIsSidebarFocusExpanded,
   } = useHeader()
-  const asideRef = useRef<HTMLElement | null>(null)
   const [databaseOpen, setDatabaseOpen] = useState(false)
   const [ppcOpen, setPpcOpen] = useState(false)
   const [lmsAnalysisOpen, setLmsAnalysisOpen] = useState(false)
 
-  const isDesktopCollapsed = isSidebarCollapsed && !isSidebarFocusExpanded
+  const isDesktopCollapsed = isSidebarCollapsed
   const isDatabaseActive = databaseNav.some((item) => isActivePath(pathname, item.href))
   const isPpcActive = ppcNav.some((item) => isActivePath(pathname, item.href))
   const isLmsAnalysisActive = lmsAnalysisNav.some((item) => isActivePath(pathname, item.href))
@@ -107,18 +104,6 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
   const handleLogout = async () => {
     await logoutUser()
     window.location.href = "/login"
-  }
-
-  const handleDesktopFocusCapture = () => {
-    if (!isSidebarCollapsed) return
-    setIsSidebarFocusExpanded(true)
-  }
-
-  const handleDesktopBlurCapture = (event: FocusEvent<HTMLElement>) => {
-    if (!isSidebarCollapsed) return
-    const nextFocused = event.relatedTarget as Node | null
-    if (nextFocused && asideRef.current?.contains(nextFocused)) return
-    setIsSidebarFocusExpanded(false)
   }
 
   const renderDesktopItem = (item: NavItem) => {
@@ -177,6 +162,54 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
     items: NavItem[]
   ) => {
     const GroupIcon = icon
+    if (isDesktopCollapsed) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "group relative flex w-full items-center justify-center rounded-[10px] border border-transparent px-0 py-2.5 text-[13px] font-medium transition-colors",
+                isActive
+                  ? "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-primary)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
+              )}
+              title={label}
+              aria-label={`Open ${label} menu`}
+            >
+              {isActive ? (
+                <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-[var(--brand-cyan)]" />
+              ) : null}
+              <GroupIcon className="h-[16px] w-[16px] shrink-0" strokeWidth={1.8} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start" sideOffset={10} className="w-56">
+            <DropdownMenuLabel>{label}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {items.map((item) => {
+              const itemIsActive = isActivePath(pathname, item.href)
+              return (
+                <DropdownMenuItem
+                  key={item.href}
+                  asChild
+                  className={cn(
+                    "cursor-pointer gap-2.5 py-2",
+                    itemIsActive && "bg-[var(--bg-surface-soft)] font-semibold text-[var(--text-primary)]"
+                  )}
+                >
+                  <Link href={item.href}>
+                    <item.icon className="h-4 w-4" strokeWidth={1.8} />
+                    <span className="flex-1">{item.name}</span>
+                    {itemIsActive ? <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-cyan)]" /> : null}
+                  </Link>
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    }
+
     return (
       <div className="space-y-1">
       <button
@@ -184,27 +217,19 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         onClick={onToggle}
         className={cn(
           "group relative flex w-full items-center gap-3 rounded-[10px] border border-transparent px-3 py-2.5 text-[13px] xl:text-[14px] font-medium transition-colors",
-          isDesktopCollapsed && "justify-center px-0",
           isActive
             ? "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--line-subtle)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
         )}
-        title={isDesktopCollapsed ? label : undefined}
       >
         {isActive ? (
           <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-[var(--brand-cyan)]" />
         ) : null}
-        {isDesktopCollapsed ? (
-          <GroupIcon className="h-[16px] w-[16px] shrink-0" strokeWidth={1.8} />
-        ) : (
-          <>
-            <GroupIcon className="h-[16px] w-[16px] shrink-0" strokeWidth={1.8} />
-            <span className="truncate">{label}</span>
-            <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", expanded && "rotate-180")} />
-          </>
-        )}
+        <GroupIcon className="h-[16px] w-[16px] shrink-0" strokeWidth={1.8} />
+        <span className="truncate">{label}</span>
+        <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", expanded && "rotate-180")} />
       </button>
-      {!isDesktopCollapsed && expanded ? (
+      {expanded ? (
         <div className="space-y-1 pl-3">{items.map(renderDesktopItem)}</div>
       ) : null}
       </div>
@@ -313,9 +338,6 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
       </Sheet>
 
       <aside
-        ref={asideRef}
-        onFocusCapture={handleDesktopFocusCapture}
-        onBlurCapture={handleDesktopBlurCapture}
         className={cn(
           "fixed left-0 top-0 z-50 hidden h-screen border-r border-[var(--line-subtle)] bg-[var(--bg-sidebar)] md:flex transition-[width] duration-300",
           isDesktopCollapsed
@@ -328,7 +350,6 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
           onClick={() => {
             if (isSidebarCollapsed) {
               setIsSidebarCollapsed(false)
-              setIsSidebarFocusExpanded(false)
               return
             }
             setIsSidebarCollapsed(true)

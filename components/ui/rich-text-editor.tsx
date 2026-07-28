@@ -7,6 +7,8 @@ import { mergeAttributes, Node } from "@tiptap/core"
 import type { Editor as TiptapEditor } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
+import TaskList from "@tiptap/extension-task-list"
+import TaskItem from "@tiptap/extension-task-item"
 import { Table } from "@tiptap/extension-table"
 import { TableRow } from "@tiptap/extension-table-row"
 import { TableCell } from "@tiptap/extension-table-cell"
@@ -21,6 +23,7 @@ import {
     Download,
     ImagePlus,
     List,
+    ListChecks,
     Table as TableIcon,
     Minus,
     Plus,
@@ -81,6 +84,7 @@ interface RichTextEditorProps {
     panelStyle?: "default" | "borderless"
     documentLayout?: "center" | "left"
     documentWidth?: "full" | "reading"
+    readOnly?: boolean
 }
 
 type UploadState = {
@@ -150,6 +154,7 @@ export function RichTextEditor({
     panelStyle = "default",
     documentLayout = "center",
     documentWidth = "full",
+    readOnly = false,
 }: RichTextEditorProps) {
     const [isFocused, setIsFocused] = React.useState(false)
     const [uploadState, setUploadState] = React.useState<UploadState | null>(null)
@@ -485,6 +490,10 @@ export function RichTextEditor({
     const editor = useEditor({
         extensions: [
             StarterKit,
+            TaskList,
+            TaskItem.configure({
+                nested: true,
+            }),
             Table.configure({
                 resizable: true,
             }),
@@ -498,11 +507,13 @@ export function RichTextEditor({
                     "is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:pointer-events-none before:h-0",
             }),
         ],
+        editable: !readOnly,
         content: stripAnchorTags(value),
         editorProps: {
             attributes: {
                 class: cn(
                     "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-amber-200 [&_pre]:bg-amber-50/60 [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-amber-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li>label]:mt-1 [&_ul[data-type=taskList]_li>div]:min-w-0 [&_ul[data-type=taskList]_input]:accent-[#b38300]",
                     mode === "document" && "min-h-full",
                     notesFirstLineClass
                 ),
@@ -531,6 +542,7 @@ export function RichTextEditor({
                 return false
             },
             handlePaste(_, event) {
+                if (readOnly) return false
                 const files = Array.from(event.clipboardData?.files || []).filter((file) =>
                     file.type.startsWith("image/")
                 )
@@ -540,6 +552,7 @@ export function RichTextEditor({
                 return true
             },
             handleDrop(view, event) {
+                if (readOnly) return false
                 const files = Array.from(event.dataTransfer?.files || []).filter((file) =>
                     file.type.startsWith("image/")
                 )
@@ -598,6 +611,11 @@ export function RichTextEditor({
             updateCodeCopyAnchor(editor)
         }
     }, [editor, syncImageSources, updateCodeCopyAnchor])
+
+    React.useEffect(() => {
+        if (!editor) return
+        editor.setEditable(!readOnly)
+    }, [editor, readOnly])
 
     React.useEffect(() => {
         const viewport = editorViewportRef.current
@@ -710,7 +728,7 @@ export function RichTextEditor({
     const resolvedToolbarTone = notesMode ? "quiet" : toolbarTone
     const resolvedToolbarPlacement = notesMode ? "top-right" : toolbarPlacement
     const isToolbarPinned = resolvedToolbarPinned
-    const showToolbar = isToolbarPinned || resolvedToolbarVisibility === "always" || isFocused
+    const showToolbar = !readOnly && (isToolbarPinned || resolvedToolbarVisibility === "always" || isFocused)
     const isMinimalToolbar = resolvedToolbarPreset === "minimal"
     const isCompactToolbar = isMinimalToolbar || isToolbarPinned
     const isTopRightToolbar = resolvedToolbarPlacement === "top-right"
@@ -723,7 +741,7 @@ export function RichTextEditor({
     const compactIconClass = notesMode ? "h-[1rem] w-[1rem] md:h-[0.94rem] md:w-[0.94rem] lg:h-[0.86rem] lg:w-[0.86rem]" : "h-4 w-4"
     const notesControlClass = notesMode
         ? isAppleNotesAppearance
-            ? "rounded-full border border-transparent text-[#6b7280] data-[state=on]:border-[#d8dee8] data-[state=on]:bg-[#f2f4f8] data-[state=on]:text-[#1f2937] hover:bg-[#f2f4f8] hover:text-[#1f2937]"
+            ? "rounded-full border border-transparent text-[#716a5d] data-[state=on]:border-[#ddc66f] data-[state=on]:bg-[#fff0ad] data-[state=on]:text-[#3b3010] hover:bg-[#f1ede3] hover:text-[#302b22] focus-visible:ring-[#b38300]"
             : "rounded-full border border-transparent text-[var(--text-secondary)] data-[state=on]:border-[var(--line-subtle)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
         : ""
 
@@ -759,7 +777,7 @@ export function RichTextEditor({
                             "flex items-center",
                             isTopRightToolbar &&
                                 (isAppleNotesAppearance
-                                    ? "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[#e3e7ef] bg-[color:color-mix(in_srgb,#f8f9fb_95%,white)] shadow-[0_4px_10px_-12px_rgba(15,23,42,0.34)] supports-[backdrop-filter]:backdrop-blur-xl"
+                                    ? "fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-1.25rem)] -translate-x-1/2 rounded-full border border-[#d8d0be] bg-[color:color-mix(in_srgb,#fffdf7_95%,white)] shadow-[0_8px_24px_rgba(63,52,20,0.18)] supports-[backdrop-filter]:backdrop-blur-xl md:absolute md:bottom-auto md:left-auto md:right-2.5 md:top-2.5 md:max-w-[calc(100%-1.25rem)] md:translate-x-0"
                                     : "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_10px_20px_-18px_rgba(15,23,42,0.46)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3"),
                             isCompactToolbar ? "gap-1 px-1.5 py-1 md:px-2" : "gap-1.5 p-1.5",
                             isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",
@@ -838,6 +856,22 @@ export function RichTextEditor({
                                 <div className="mx-1 h-4 w-px bg-border/50" />
                             </>
                         ) : null}
+                        {notesMode ? (
+                            <Toggle
+                                size="sm"
+                                pressed={editor.isActive("heading", { level: 2 })}
+                                onPressedChange={(pressed) =>
+                                    pressed
+                                        ? editor.chain().focus().setHeading({ level: 2 }).run()
+                                        : editor.chain().focus().setParagraph().run()
+                                }
+                                className={cn(compactControlClass, "p-0 text-[12px] font-semibold", notesControlClass)}
+                                aria-label="Text format"
+                                title="Text format"
+                            >
+                                Aa
+                            </Toggle>
+                        ) : null}
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("bold")}
@@ -860,6 +894,39 @@ export function RichTextEditor({
                         >
                             <List className={compactIconClass} />
                         </Toggle>
+                        {notesMode ? (
+                            <Toggle
+                                size="sm"
+                                pressed={editor.isActive("taskList")}
+                                onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
+                                className={cn(compactControlClass, "p-0", notesControlClass)}
+                                aria-label="Checklist"
+                                title="Checklist"
+                            >
+                                <ListChecks className={compactIconClass} />
+                            </Toggle>
+                        ) : null}
+                        {notesMode ? (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    editor
+                                        .chain()
+                                        .focus()
+                                        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                                        .run()
+                                }
+                                className={cn(
+                                    "inline-flex items-center justify-center border border-transparent transition",
+                                    compactControlClass,
+                                    notesControlClass
+                                )}
+                                aria-label="Insert table"
+                                title="Insert table"
+                            >
+                                <TableIcon className={compactIconClass} />
+                            </button>
+                        ) : null}
                         <Toggle
                             size="sm"
                             pressed={editor.isActive("codeBlock")}

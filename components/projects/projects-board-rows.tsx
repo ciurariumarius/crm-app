@@ -29,7 +29,6 @@ import { ProjectBoardHeaderRow } from "@/components/projects/project-board-heade
 import { ProjectBoardSummaryCards } from "@/components/projects/project-board-summary-cards"
 import { StatusChip, statusToneFromLabel } from "@/components/ui/status-chip"
 import { CloseProjectDialog } from "@/components/projects/close-project-dialog"
-import type { ProjectWithDetails } from "@/types"
 import type { SearchPaginationState } from "@/types/search-pagination"
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
@@ -547,7 +546,7 @@ export function ProjectsBoardRows({
     const monthlyCount = monthlyProjects.length
 
     const openDetails = (project: BoardProject) => {
-        openProject(project.id, project as unknown as ProjectWithDetails)
+        openProject(project.id)
     }
 
     const getDisplayStatus = (project: BoardProject) =>

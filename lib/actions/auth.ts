@@ -16,15 +16,11 @@ import { logAuditEvent } from "@/lib/audit"
 import { decryptSensitiveValue, encryptSensitiveValue, shouldRotateSensitiveValue } from "@/lib/crypto"
 import bcrypt from "bcryptjs"
 import * as OTPAuth from "otpauth"
-import { headers } from "next/headers"
-
-async function getRequestContext() {
-    const hdrs = await headers()
-    const forwardedFor = hdrs.get("x-forwarded-for")
-    const ipAddress = forwardedFor?.split(",")[0]?.trim() || hdrs.get("x-real-ip") || "unknown"
-    const userAgent = hdrs.get("user-agent") || "unknown"
-    return { ipAddress, userAgent }
-}
+import {
+    getTrustedRequestContext as getRequestContext,
+    normalizeAccountIdentifier,
+} from "@/lib/security/request-context"
+import { logger } from "@/lib/logger"
 
 function parseRememberDeviceValue(value: FormDataEntryValue | undefined) {
     if (typeof value !== "string") return false
@@ -56,7 +52,7 @@ async function checkRateLimitSafe(
     try {
         return await checkRateLimit(key, options)
     } catch (error) {
-        console.error(`[auth] rate limit check failed for key "${key}"`, error)
+        logger.error("auth.rate_limit_unavailable", { key, error })
         return blockRequestWhenRateLimitUnavailable()
     }
 }
@@ -88,8 +84,10 @@ async function revokeOtherActiveSessionsForUser(args: {
 
 export async function loginUser(formData: FormData) {
     const data = Object.fromEntries(formData.entries())
-    const username = data.username as string
-    const password = data.password as string
+    const username = typeof data.username === "string"
+        ? normalizeAccountIdentifier(data.username)
+        : ""
+    const password = typeof data.password === "string" ? data.password : ""
     const rememberDevice = parseRememberDeviceValue(data.rememberDevice as FormDataEntryValue | undefined)
 
     if (!username || !password) {
@@ -120,6 +118,18 @@ export async function loginUser(formData: FormData) {
                 details: `username=${username}`,
             })
             return { success: false, error: "Too many login attempts. Please try again later." }
+        }
+
+        const accountRl = await checkRateLimitSafe(`login_account:${username}`, { maxAttempts: 15 })
+        if (!accountRl.allowed) {
+            await logAuditEvent({
+                action: "AUTH_LOGIN_ACCOUNT_RATE_LIMITED",
+                success: false,
+                ipAddress,
+                userAgent,
+                details: `username=${username}`,
+            })
+            return { success: false, error: "Too many login attempts for this account. Please try again later." }
         }
 
         const user = await prisma.user.findUnique({ where: { username } })
@@ -189,7 +199,7 @@ export async function loginUser(formData: FormData) {
         return { success: true }
 
     } catch (error) {
-        console.error("[auth] loginUser failed", error)
+        logger.error("auth.login_failed", { error })
         return { success: false, error: "Login failed. Please try again." }
     }
 }
@@ -231,6 +241,18 @@ export async function verifyTwoFactor(challengeToken: string, token: string) {
                 userAgent,
             })
             return { success: false, error: "Too many verification attempts. Please try again later." }
+        }
+
+        const accountRl = await checkRateLimitSafe(`2fa_account:${userId}`, { maxAttempts: 10 })
+        if (!accountRl.allowed) {
+            await logAuditEvent({
+                action: "AUTH_2FA_ACCOUNT_RATE_LIMITED",
+                success: false,
+                actorUserId: userId,
+                ipAddress,
+                userAgent,
+            })
+            return { success: false, error: "Too many verification attempts for this account. Please try again later." }
         }
 
         const user = await prisma.user.findUnique({ where: { id: userId } })

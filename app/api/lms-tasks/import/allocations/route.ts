@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { apiRouteError } from "@/lib/api-response"
 import { requireAuth } from "@/lib/auth"
-import { getLmsModuleData, syncLmsAllocations } from "@/lib/lms-tasks/db"
+import { syncLmsAllocations } from "@/lib/lms-tasks/db"
 
 export const dynamic = "force-dynamic"
 
@@ -27,9 +27,8 @@ export async function POST(request: Request) {
     await requireAuth()
     const parsed = bodySchema.parse(await request.json())
     const summary = await syncLmsAllocations(parsed.records, parsed.syncMode)
-    const data = await getLmsModuleData()
     return NextResponse.json(
-      { success: true, summary, data },
+      { success: true, summary },
       {
         headers: {
           "Cache-Control": "no-store",

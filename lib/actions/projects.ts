@@ -10,6 +10,7 @@ import { PROJECT_STATUS_VALUES, taskStatusSortOrder } from "@/lib/status"
 import { formatProjectName } from "@/lib/utils"
 import { z } from "zod"
 import { format } from "date-fns"
+import { logger } from "@/lib/logger"
 
 function revalidateProjectPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/projects")
@@ -240,7 +241,6 @@ export async function updateProject(projectId: string, data: {
         if (data.currentFee !== undefined) updateData.currentFee = data.currentFee
         if (data.serviceIds !== undefined) updateData.serviceIds = data.serviceIds
 
-        console.log(`[projects] Updating project ${projectId}`, updateData)
         const validated = UpdateProjectSchema.parse(updateData)
 
         // serviceIds is handled through relation updates below and must not be passed as a scalar field.
@@ -382,7 +382,7 @@ export async function updateProject(projectId: string, data: {
         revalidateProjectPaths(projectId, project.site.partnerId, project.siteId)
         return { success: true }
     } catch (error: unknown) {
-        console.error("Update project failed:", error)
+        logger.error("project.update_failed", { projectId, error })
         return { success: false, error: getActionErrorMessage(error, "Failed to update project") }
     }
 }

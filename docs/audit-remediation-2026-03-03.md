@@ -1,5 +1,9 @@
 # CRM App Audit Remediation Plan (2026-03-03)
 
+> Historical document. It describes the application at the time of the
+> 2026-03-03 audit. Current single-owner security and deployment controls are
+> documented in `README.md` and `docs/technical-audit-2026-07-23.md`.
+
 This document tracks findings and concrete fixes from architecture, code quality, performance, and security audit.
 
 ## UI/UX + Mobile audit (2026-03-03, localhost run)

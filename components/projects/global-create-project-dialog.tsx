@@ -213,13 +213,18 @@ export function GlobalCreateProjectDialog({
         if (!domain || !resolvedPartnerId) return
         setAddingSite(true)
         try {
-            const newSite = await createSite(resolvedPartnerId, domain)
-            toast.success("Site added successfully")
-            setSiteId(newSite.id)
+            const result = await createSite(resolvedPartnerId, domain)
+            if (!result.success) {
+                toast.error(result.error)
+                return
+            }
+            if (result.warning) toast.warning(result.warning.message)
+            else toast.success("Site added successfully")
+            setSiteId(result.site.id)
             setSiteComboboxOpen(false)
             setSiteQuery("")
-        } catch {
-            toast.error("Failed to add site")
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to add site")
         } finally {
             setAddingSite(false)
         }

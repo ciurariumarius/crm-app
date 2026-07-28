@@ -1,8 +1,7 @@
 import prisma from "@/lib/prisma"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
-import { formatProjectName, formatProjectServiceList } from "@/lib/utils"
-import { normalizeProjectStatus } from "@/lib/status"
+import { formatProjectName } from "@/lib/utils"
 import { requireAuth } from "@/lib/auth"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
@@ -11,6 +10,7 @@ import { ProjectsSearchInput } from "@/components/projects/projects-search-input
 import { ProjectsSearchProvider } from "@/components/projects/projects-search-context"
 import { ProjectsPaginationBar } from "@/components/projects/projects-pagination-bar"
 import { buildProjectWhereInput, normalizeProjectFilters } from "@/lib/filters/project-filters"
+import { getProjectSummaryPage, type ProjectSummarySort } from "@/lib/projects/summary"
 
 export const dynamic = "force-dynamic"
 
@@ -118,32 +118,14 @@ export default async function ProjectsPage({
     const shouldPaginate = totalProjects > PAGINATION_THRESHOLD
     const page = shouldPaginate ? requestedPage : 1
 
-    const [projectsRaw, partnersFullRaw, servicesRaw] = await Promise.all([
-        prisma.project.findMany({
+    const [projects, partnersFullRaw, servicesRaw] = await Promise.all([
+        getProjectSummaryPage({
             where: projectWhere,
-            include: {
-                site: {
-                    include: {
-                        partner: true,
-                    },
-                },
-                services: true,
-                tasks: {
-                    orderBy: { createdAt: "asc" },
-                    include: { timeLogs: true },
-                },
-                timeLogs: {
-                    orderBy: { startTime: "desc" },
-                    include: { task: true },
-                },
-                _count: {
-                    select: {
-                        tasks: true,
-                    },
-                },
-            },
-            orderBy: { updatedAt: "desc" },
-            ...(shouldPaginate ? { skip: (page - 1) * perPage, take: perPage } : {}),
+            sort: sort as ProjectSummarySort,
+            page,
+            pageSize: perPage,
+            paginate: shouldPaginate,
+            limit: totalProjects,
         }),
         prisma.partner.findMany({
             include: {
@@ -160,22 +142,6 @@ export default async function ProjectsPage({
 
     const partnersList = partnersFullRaw.map((partner) => ({ id: partner.id, name: partner.name }))
     const boardSort = resolveBoardSort(sort)
-
-    const projects = projectsRaw.map((project) => {
-        const completedTasks = project.tasks.filter((task) => task.status === "Completed").length
-        const secondsLogged = project.timeLogs.reduce((sum, log) => sum + (log.durationSeconds ?? 0), 0)
-        const isRecurring = project.services.some((service) => service.isRecurring)
-        const serviceLabel = formatProjectServiceList(project.services, "No service")
-        return {
-            ...project,
-            status: normalizeProjectStatus(project.status),
-            completedTasks,
-            secondsLogged,
-            isRecurring,
-            serviceLabel,
-            amount: Number(project.currentFee ?? 0),
-        }
-    })
     const selectedProject = projectId ? projects.find((project) => project.id === projectId) : null
     const selectedProjectLabel = selectedProject ? formatProjectName(selectedProject) : undefined
 

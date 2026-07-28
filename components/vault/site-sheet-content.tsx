@@ -134,11 +134,16 @@ export function SiteSheetContent({ site, onUpdate, onClose }: SiteSheetContentPr
                 competitors: marketingData.competitors.split("\n").filter(Boolean),
             })
 
-            await updateSiteDetails(site.id, {
+            const result = await updateSiteDetails(site.id, {
                 ...formData,
                 marketingVault: vaultJson,
             })
-            toast.success("Saved successfully!")
+            if (!result.success) {
+                toast.error(result.error || "Failed to save.")
+                return
+            }
+            if (result.warning) toast.warning(result.warning.message)
+            else toast.success("Saved successfully!")
             if (onUpdate) {
                 onUpdate({ ...site, ...formData, marketingVault: vaultJson })
             }

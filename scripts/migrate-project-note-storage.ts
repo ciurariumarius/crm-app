@@ -13,10 +13,16 @@ import {
 
 const prisma = new PrismaClient()
 const PROJECT_NOTE_URL_PATTERN = /\/api\/project-notes\/file\?[^"'<>\s]+/g
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const LEGACY_PUBLIC_URL_PATTERN = /\/uploads\/project-notes\/[^"'<>\s]+/g
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 type ContentRow = { id: string; content: string }
-type FileMove = { sourceRelativePath: string; destinationRelativePath: string; hash: string }
+type FileMove = {
+  sourceAbsolutePath: string
+  sourceRelativePath: string
+  destinationRelativePath: string
+  hash: string
+}
 
 async function exists(filePath: string) {
   try {
@@ -96,7 +102,7 @@ function buildRewrittenUrl(relativePath: string, expiresAtUnix: number | undefin
 function migrateContentUrls(content: string, legacyTenantIds: Set<string>) {
   let rewrittenCount = 0
   const referencedPaths: string[] = []
-  const nextContent = content.replace(PROJECT_NOTE_URL_PATTERN, (rawUrl) => {
+  const signedContent = content.replace(PROJECT_NOTE_URL_PATTERN, (rawUrl) => {
     const parsed = parseProjectNoteUrl(rawUrl)
     if (!parsed) return rawUrl
     const segments = parsed.relativePath.split("/")
@@ -107,14 +113,32 @@ function migrateContentUrls(content: string, legacyTenantIds: Set<string>) {
     rewrittenCount += 1
     return buildRewrittenUrl(nextRelativePath, parsed.expiresAtUnix, parsed.htmlEscaped)
   })
+  const nextContent = signedContent.replace(LEGACY_PUBLIC_URL_PATTERN, (rawUrl) => {
+    const encodedRelativePath = rawUrl.slice("/uploads/project-notes/".length)
+    let publicRelativePath: string
+    try {
+      publicRelativePath = decodeURIComponent(encodedRelativePath)
+    } catch {
+      publicRelativePath = encodedRelativePath
+    }
+    const segments = publicRelativePath.split("/").filter(Boolean)
+    const isLegacy = segments.length >= 3 && legacyTenantIds.has(segments[0] || "")
+    const nextRelativePath = isLegacy ? segments.slice(1).join("/") : segments.join("/")
+    if (!nextRelativePath) return rawUrl
+    referencedPaths.push(nextRelativePath)
+    rewrittenCount += 1
+    return createSignedProjectNoteUrl(nextRelativePath)
+  })
   return { content: nextContent, referencedPaths, rewrittenCount }
 }
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run")
   const storageRoot = path.resolve(getProjectNotesStorageRoot())
+  const legacyPublicRoot = path.resolve(process.cwd(), "public", "uploads", "project-notes")
   const files = await listFiles(storageRoot)
-  const legacyTenantIds = await getLegacyTenantIds(files)
+  const legacyPublicFiles = await listFiles(legacyPublicRoot)
+  const legacyTenantIds = await getLegacyTenantIds([...files, ...legacyPublicFiles])
   if (legacyTenantIds.size > 1) {
     throw new Error(`Refusing storage migration: found ${legacyTenantIds.size} legacy tenant directories`)
   }
@@ -135,7 +159,38 @@ async function main() {
         continue
       }
     }
-    moves.push({ sourceRelativePath, destinationRelativePath, hash: sourceHash })
+    moves.push({
+      sourceAbsolutePath,
+      sourceRelativePath,
+      destinationRelativePath,
+      hash: sourceHash,
+    })
+  }
+  for (const sourceRelativePath of legacyPublicFiles) {
+    const segments = sourceRelativePath.split("/")
+    const isLegacy = segments.length >= 3 && legacyTenantIds.has(segments[0] || "")
+    const destinationRelativePath = isLegacy ? segments.slice(1).join("/") : sourceRelativePath
+    const sourceAbsolutePath = path.resolve(legacyPublicRoot, ...segments)
+    const publicRootWithSeparator = `${legacyPublicRoot}${path.sep}`
+    if (!sourceAbsolutePath.startsWith(publicRootWithSeparator)) {
+      failures.push(`unsafe legacy public path: ${sourceRelativePath}`)
+      continue
+    }
+    const destinationAbsolutePath = resolveProjectNoteAbsolutePath(destinationRelativePath)
+    const sourceHash = await sha256(sourceAbsolutePath)
+    if (await exists(destinationAbsolutePath)) {
+      const destinationHash = await sha256(destinationAbsolutePath)
+      if (destinationHash !== sourceHash) {
+        failures.push(`collision: public/${sourceRelativePath} -> ${destinationRelativePath}`)
+        continue
+      }
+    }
+    moves.push({
+      sourceAbsolutePath,
+      sourceRelativePath: `public/${sourceRelativePath}`,
+      destinationRelativePath,
+      hash: sourceHash,
+    })
   }
 
   const [projects, notes] = await Promise.all([
@@ -166,7 +221,20 @@ async function main() {
     const legacyExists = legacyTenantId
       ? await exists(resolveProjectNoteAbsolutePath(`${legacyTenantId}/${relativePath}`))
       : false
-    if (!destinationExists && !legacyExists) failures.push(`missing referenced file: ${relativePath}`)
+    const publicCandidates = [
+      path.resolve(legacyPublicRoot, relativePath),
+      ...(legacyTenantId ? [path.resolve(legacyPublicRoot, legacyTenantId, relativePath)] : []),
+    ]
+    const publicExists = (
+      await Promise.all(
+        publicCandidates.map(async (candidate) =>
+          candidate.startsWith(`${legacyPublicRoot}${path.sep}`) && await exists(candidate)
+        )
+      )
+    ).some(Boolean)
+    if (!destinationExists && !legacyExists && !publicExists) {
+      failures.push(`missing referenced file: ${relativePath}`)
+    }
   }
 
   const summary = {
@@ -174,6 +242,7 @@ async function main() {
     storageRoot,
     legacyTenantIds: [...legacyTenantIds],
     filesInventoried: files.length,
+    legacyPublicFilesInventoried: legacyPublicFiles.length,
     filesToMove: moves.length,
     projectRowsToRewrite: projectUpdates.length,
     noteRowsToRewrite: noteUpdates.length,
@@ -186,10 +255,9 @@ async function main() {
   if (dryRun) return
 
   for (const move of moves) {
-    const source = resolveProjectNoteAbsolutePath(move.sourceRelativePath)
     const destination = resolveProjectNoteAbsolutePath(move.destinationRelativePath)
     await mkdir(path.dirname(destination), { recursive: true })
-    if (!await exists(destination)) await copyFile(source, destination, constants.COPYFILE_EXCL)
+    if (!await exists(destination)) await copyFile(move.sourceAbsolutePath, destination, constants.COPYFILE_EXCL)
     if (await sha256(destination) !== move.hash) throw new Error(`Copy verification failed: ${move.destinationRelativePath}`)
   }
 
@@ -216,6 +284,9 @@ async function main() {
     const tenantRoot = path.dirname(resolveProjectNoteAbsolutePath(`${tenantId}/verification-placeholder`))
     if (path.dirname(tenantRoot) !== storageRoot) throw new Error("Refusing to remove unexpected storage directory")
     if (await exists(tenantRoot)) await rm(tenantRoot, { recursive: true })
+  }
+  if (await exists(legacyPublicRoot)) {
+    await rm(legacyPublicRoot, { recursive: true })
   }
 
   process.stdout.write("Project-note storage migration completed and verified.\n")

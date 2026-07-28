@@ -9,6 +9,17 @@ export const LMS_RECURRENCE_WEEKDAYS = [
 ] as const
 
 export const LMS_RECURRENCE_WORKDAYS = [1, 2, 3, 4, 5] as const
+export const LMS_STANDARD_WORK_WEEK_MINUTES = 5 * 8 * 60
+
+export function getLmsRecurrenceWeeklyMinutes(durationMinutes: number, weekdays: number[]) {
+  const normalizedDuration = Number.isFinite(durationMinutes)
+    ? Math.max(0, Math.round(durationMinutes))
+    : 0
+  const scheduledDays = new Set(
+    weekdays.filter((weekday) => Number.isInteger(weekday) && weekday >= 1 && weekday <= 7)
+  ).size
+  return normalizedDuration * scheduledDays
+}
 
 export function weekdaysToMask(weekdays: number[]) {
   return weekdays.reduce((mask, weekday) => mask | (1 << (weekday - 1)), 0)
