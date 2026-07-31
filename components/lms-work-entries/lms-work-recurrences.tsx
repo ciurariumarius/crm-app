@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { AlertTriangle, CalendarClock, Clock3, Loader2, Pencil, Plus, X } from "lucide-react"
+import { AlertTriangle, CalendarClock, Clock3, Loader2, Pencil, Plus, UserPlus, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -21,7 +21,11 @@ import type {
   LmsWorkRecurrencePageData,
   LmsWorkRecurrenceRow,
 } from "@/lib/lms-work-entries/types"
-import { ClientCombobox, TaskCombobox } from "@/components/lms-work-entries/lms-work-log-workspace"
+import {
+  AddClientDialog,
+  ClientCombobox,
+  TaskCombobox,
+} from "@/components/lms-work-entries/lms-work-log-workspace"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -66,11 +70,18 @@ export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const [editorOpen, setEditorOpen] = React.useState(false)
   const [busyId, setBusyId] = React.useState<string | null>(null)
+  const [clientOptions, setClientOptions] = React.useState(data.clients)
+  const [addClientOpen, setAddClientOpen] = React.useState(false)
+  const [addClientInitialName, setAddClientInitialName] = React.useState("")
   const duration = Number(draft.durationText)
   const durationValid = Number.isInteger(duration) && duration >= 1 && duration <= 1440
   const canSave = Boolean(
     draft.lmsAllocationId && draft.taskTypeId && draft.weekdays.length && durationValid && !busyId
   )
+
+  React.useEffect(() => {
+    setClientOptions(data.clients)
+  }, [data.clients])
 
   function resetEditor() {
     setEditingId(null)
@@ -100,6 +111,11 @@ export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }
     requestAnimationFrame(() => {
       document.getElementById("recurring-work-editor")?.scrollIntoView({ behavior: "smooth", block: "center" })
     })
+  }
+
+  function openAddClient(name = "") {
+    setAddClientInitialName(name)
+    setAddClientOpen(true)
   }
 
   function toggleWeekday(weekday: number) {
@@ -195,11 +211,25 @@ export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-2">
-              <Label>Client</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label>Client</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs font-semibold text-[var(--brand-primary)]"
+                  onClick={() => openAddClient()}
+                  disabled={Boolean(busyId)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add client
+                </Button>
+              </div>
               <ClientCombobox
-                clients={data.clients}
+                clients={clientOptions}
                 value={draft.lmsAllocationId}
                 onValueChange={(value) => setDraft((current) => ({ ...current, lmsAllocationId: value }))}
+                onCreateRequest={openAddClient}
                 large
                 disabled={Boolean(busyId)}
               />
@@ -425,6 +455,19 @@ export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }
             </p>
           ) : null}
         </div>
+        <AddClientDialog
+          open={addClientOpen}
+          onOpenChange={setAddClientOpen}
+          initialName={addClientInitialName}
+          onCreated={(client) => {
+            setClientOptions((current) => {
+              const withoutClient = current.filter((option) => option.id !== client.id)
+              return [...withoutClient, client].sort((a, b) => a.client.localeCompare(b.client, "ro"))
+            })
+            setDraft((current) => ({ ...current, lmsAllocationId: client.id }))
+            router.refresh()
+          }}
+        />
       </CardContent>
     </Card>
   )

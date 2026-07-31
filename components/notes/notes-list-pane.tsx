@@ -11,7 +11,7 @@ export function NotesListPane({
   return (
     <section
       aria-label="Notes list"
-      className={cn("min-h-0 overflow-hidden bg-[#f7f5f0]", className)}
+      className={cn("min-h-0 overflow-hidden bg-[var(--surface-lowest)]", className)}
     >
       {children}
     </section>

@@ -11,7 +11,7 @@ export function NotesEditorPane({
   return (
     <section
       aria-label="Note editor"
-      className={cn("min-h-0 min-w-0 overflow-hidden bg-white", className)}
+      className={cn("min-h-0 min-w-0 overflow-hidden bg-[var(--surface-lowest)]", className)}
     >
       {children}
     </section>

@@ -244,14 +244,27 @@ export async function createLmsWorkClient(name: string) {
       return { success: true as const, client: existing, existed: true as const }
     }
 
-    const client = await prisma.lmsAllocation.create({
-      data: {
-        syncKey,
-        client: clientName,
-        specialist: LMS_CRM_EMPLOYEE_NAME,
-      },
-      select: { id: true, client: true },
-    })
+    let client: { id: string; client: string }
+    try {
+      client = await prisma.lmsAllocation.create({
+        data: {
+          syncKey,
+          client: clientName,
+          specialist: LMS_CRM_EMPLOYEE_NAME,
+        },
+        select: { id: true, client: true },
+      })
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+        throw error
+      }
+      const concurrentlyCreated = await prisma.lmsAllocation.findUnique({
+        where: { syncKey },
+        select: { id: true, client: true },
+      })
+      if (!concurrentlyCreated) throw error
+      return { success: true as const, client: concurrentlyCreated, existed: true as const }
+    }
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_CLIENT_CREATED",
       details: `lmsAllocationId=${client.id}`,

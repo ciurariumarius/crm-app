@@ -224,6 +224,51 @@ export async function queryNoteList(input: NoteListQueryInput = {}) {
   }
 }
 
+export async function queryNoteRecordPage(input: NoteListQueryInput = {}) {
+  try {
+    await requireAuth()
+    const page = await queryPersonalNoteList(input)
+    const ids = page.rows.map((row) => row.id)
+    const records = ids.length
+      ? await prisma.note.findMany({
+          where: { id: { in: ids } },
+          include: {
+            folder: { select: { name: true } },
+            tags: {
+              include: { tag: true },
+              orderBy: { tag: { normalizedName: "asc" } },
+            },
+          },
+        })
+      : []
+    const byId = new Map(
+      records.map((note) => [
+        note.id,
+        {
+          ...serializeNote(note),
+          folderName: note.folder?.name ?? null,
+          sourceType: "note" as const,
+        },
+      ])
+    )
+    return {
+      success: true,
+      data: {
+        notes: ids.flatMap((id) => {
+          const note = byId.get(id)
+          return note ? [note] : []
+        }),
+        nextCursor: page.nextCursor,
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: getActionErrorMessage(error, "Failed to load notes"),
+    }
+  }
+}
+
 export async function getNoteDetail(noteId: string) {
   try {
     await requireAuth()

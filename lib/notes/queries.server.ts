@@ -1,5 +1,5 @@
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
-import { matchesNoteSmartFolder } from "@/lib/notes/apple-notes"
 
 export type NotesQueryView =
   | "all"
@@ -73,7 +73,7 @@ function serializeListRow(note: {
   }
 }
 
-function buildBaseWhere(view: NotesQueryView) {
+function buildBaseWhere(view: NotesQueryView): Prisma.NoteWhereInput {
   if (view === "pinned") return { archived: false, deletedAt: null, pinned: true }
   if (view === "archived") return { archived: true, deletedAt: null }
   if (view === "deleted") return { deletedAt: { not: null } }
@@ -94,26 +94,91 @@ function buildBaseWhere(view: NotesQueryView) {
   return { archived: false, deletedAt: null }
 }
 
+function buildSmartFolderWhere(smartFolder: {
+  matchMode: string
+  requirePinned: boolean | null
+  requireChecklist: boolean | null
+  requireAttachment: boolean | null
+  updatedWithinDays: number | null
+  tags: Array<{ tagId: string }>
+}): Prisma.NoteWhereInput {
+  const tagIds = smartFolder.tags.map((tag) => tag.tagId)
+  const checks: Prisma.NoteWhereInput[] = []
+
+  if (tagIds.length) {
+    if (smartFolder.matchMode === "all") {
+      checks.push(
+        ...tagIds.map((tagId) => ({
+          tags: { some: { tagId } },
+        }))
+      )
+    } else {
+      checks.push({ tags: { some: { tagId: { in: tagIds } } } })
+    }
+  }
+  if (smartFolder.requirePinned != null) {
+    checks.push({ pinned: smartFolder.requirePinned })
+  }
+  if (smartFolder.requireChecklist != null) {
+    checks.push({ hasChecklist: smartFolder.requireChecklist })
+  }
+  if (smartFolder.requireAttachment != null) {
+    checks.push({ hasAttachment: smartFolder.requireAttachment })
+  }
+  if (smartFolder.updatedWithinDays != null) {
+    checks.push({
+      updatedAt: {
+        gte: new Date(
+          Date.now() - smartFolder.updatedWithinDays * 24 * 60 * 60 * 1000
+        ),
+      },
+    })
+  }
+
+  return {
+    archived: false,
+    deletedAt: null,
+    ...(smartFolder.matchMode === "any" ? { OR: checks } : { AND: checks }),
+  }
+}
+
 export async function queryPersonalNoteList(input: NoteListQueryInput = {}) {
   const view = input.view ?? "all"
   const searchScope = input.searchScope ?? "view"
   const q = input.q?.trim().slice(0, 200) || ""
   const sort = input.sort ?? "modified"
   const pageSize = Math.min(100, Math.max(10, input.pageSize ?? 50))
-  const smartFolderId = view.startsWith("smart:") ? view.slice("smart:".length) : null
-  const where = {
-    ...(searchScope === "all" && q
+  const smartFolderId =
+    searchScope === "view" && view.startsWith("smart:")
+      ? view.slice("smart:".length)
+      : null
+  const smartFolder = smartFolderId
+    ? await prisma.noteSmartFolder.findUnique({
+        where: { id: smartFolderId },
+        include: { tags: { select: { tagId: true } } },
+      })
+    : null
+
+  const scopedWhere: Prisma.NoteWhereInput =
+    searchScope === "all"
       ? { archived: false, deletedAt: null }
-      : buildBaseWhere(view)),
-    ...(q
-      ? {
-          OR: [
-            { title: { contains: q } },
-            { contentText: { contains: q } },
-          ],
-        }
-      : {}),
-  }
+      : smartFolderId
+        ? smartFolder
+          ? buildSmartFolderWhere(smartFolder)
+          : { id: "__missing_smart_folder__" }
+        : buildBaseWhere(view)
+
+  const searchWhere: Prisma.NoteWhereInput | null = q
+    ? {
+        OR: [
+          { title: { contains: q } },
+          { contentText: { contains: q } },
+        ],
+      }
+    : null
+  const where: Prisma.NoteWhereInput = searchWhere
+    ? { AND: [scopedWhere, searchWhere] }
+    : scopedWhere
 
   const orderBy =
     sort === "title"
@@ -122,54 +187,24 @@ export async function queryPersonalNoteList(input: NoteListQueryInput = {}) {
         ? [{ createdAt: "desc" as const }, { id: "desc" as const }]
         : [{ pinned: "desc" as const }, { updatedAt: "desc" as const }, { id: "desc" as const }]
 
-  const queryTake = smartFolderId ? 500 : pageSize + 1
   const rows = await prisma.note.findMany({
     where,
     include: {
       tags: { select: { tagId: true } },
     },
     orderBy,
-    ...(input.cursor && !smartFolderId
+    ...(input.cursor
       ? { cursor: { id: input.cursor }, skip: 1 }
       : {}),
-    take: queryTake,
+    take: pageSize + 1,
   })
 
-  let filtered = rows
-  if (smartFolderId) {
-    const smartFolder = await prisma.noteSmartFolder.findUnique({
-      where: { id: smartFolderId },
-      include: { tags: { select: { tagId: true } } },
-    })
-    filtered = smartFolder
-      ? rows.filter((note) =>
-          matchesNoteSmartFolder(
-            {
-              pinned: note.pinned,
-              hasChecklist: note.hasChecklist,
-              hasAttachment: note.hasAttachment,
-              updatedAt: note.updatedAt,
-              tagIds: note.tags.map((tag) => tag.tagId),
-            },
-            {
-              matchMode: smartFolder.matchMode === "any" ? "any" : "all",
-              tagIds: smartFolder.tags.map((tag) => tag.tagId),
-              requirePinned: smartFolder.requirePinned,
-              requireChecklist: smartFolder.requireChecklist,
-              requireAttachment: smartFolder.requireAttachment,
-              updatedWithinDays: smartFolder.updatedWithinDays as 1 | 7 | 30 | 90 | null,
-            }
-          )
-        )
-      : []
-  }
-
-  const page = filtered.slice(0, pageSize)
+  const page = rows.slice(0, pageSize)
   return {
     rows: page.map(serializeListRow),
     pageSize,
     nextCursor:
-      filtered.length > pageSize && page.length
+      rows.length > pageSize && page.length
         ? page[page.length - 1]?.id ?? null
         : null,
   }

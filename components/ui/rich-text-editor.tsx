@@ -85,6 +85,8 @@ interface RichTextEditorProps {
     documentLayout?: "center" | "left"
     documentWidth?: "full" | "reading"
     readOnly?: boolean
+    imageUploadFallback?: "data-url" | "error"
+    onBlur?: () => void
 }
 
 type UploadState = {
@@ -155,6 +157,8 @@ export function RichTextEditor({
     documentLayout = "center",
     documentWidth = "full",
     readOnly = false,
+    imageUploadFallback = "data-url",
+    onBlur,
 }: RichTextEditorProps) {
     const [isFocused, setIsFocused] = React.useState(false)
     const [uploadState, setUploadState] = React.useState<UploadState | null>(null)
@@ -258,13 +262,18 @@ export function RichTextEditor({
                 if (payload.success && payload.urls?.[0]) {
                     return payload.urls[0]
                 }
-            } catch {
-                // Fall back to local data URL when upload endpoint is unavailable.
+            } catch (error) {
+                if (imageUploadFallback === "error") {
+                    throw error instanceof Error ? error : new Error("Upload failed")
+                }
             }
 
+            if (imageUploadFallback === "error") {
+                throw new Error("Upload failed")
+            }
             return await fileToDataUrl(file)
         },
-        [uploadProjectId]
+        [imageUploadFallback, uploadProjectId]
     )
 
     const uploadAndInsertFiles = React.useCallback(
@@ -483,7 +492,7 @@ export function RichTextEditor({
 
     const notesFirstLineClass = notesMode
         ? notesAppearance === "apple"
-            ? "[&>*:first-child]:mt-0 [&>*:first-child]:mb-1 [&>*:first-child]:text-[1.45rem] [&>*:first-child]:font-semibold [&>*:first-child]:tracking-[-0.02em] [&>*:first-child]:leading-[1.2] [&>*:first-child]:text-[#1f2937] md:[&>*:first-child]:text-[1.62rem]"
+            ? "[&>*:first-child]:mt-0 [&>*:first-child]:mb-1 [&>*:first-child]:text-[1.45rem] [&>*:first-child]:font-semibold [&>*:first-child]:tracking-[-0.02em] [&>*:first-child]:leading-[1.2] [&>*:first-child]:text-[var(--text-primary)] md:[&>*:first-child]:text-[1.62rem]"
             : "[&>*:first-child]:mt-0 [&>*:first-child]:mb-0.5 [&>*:first-child]:text-[1.08rem] [&>*:first-child]:font-medium [&>*:first-child]:tracking-[-0.01em] [&>*:first-child]:leading-[1.34] [&>*:first-child]:text-[var(--text-primary)] md:[&>*:first-child]:text-[1.15rem]"
         : ""
 
@@ -512,8 +521,8 @@ export function RichTextEditor({
         editorProps: {
             attributes: {
                 class: cn(
-                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-amber-200 [&_pre]:bg-amber-50/60 [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-amber-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
-                    "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li>label]:mt-1 [&_ul[data-type=taskList]_li>div]:min-w-0 [&_ul[data-type=taskList]_input]:accent-[#b38300]",
+                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-[var(--line-subtle)] [&_pre]:bg-[var(--surface-low)] [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_70%,transparent)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-[var(--surface-low)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li>label]:mt-1 [&_ul[data-type=taskList]_li>div]:min-w-0 [&_ul[data-type=taskList]_input]:accent-[var(--brand-primary)]",
                     mode === "document" && "min-h-full",
                     notesFirstLineClass
                 ),
@@ -600,6 +609,7 @@ export function RichTextEditor({
             setIsFocused(false)
             setCodeCopyAnchor(null)
             setActiveCodeBlockElement(null)
+            onBlur?.()
         },
         immediatelyRender: false,
     })
@@ -741,7 +751,7 @@ export function RichTextEditor({
     const compactIconClass = notesMode ? "h-[1rem] w-[1rem] md:h-[0.94rem] md:w-[0.94rem] lg:h-[0.86rem] lg:w-[0.86rem]" : "h-4 w-4"
     const notesControlClass = notesMode
         ? isAppleNotesAppearance
-            ? "rounded-full border border-transparent text-[#716a5d] data-[state=on]:border-[#ddc66f] data-[state=on]:bg-[#fff0ad] data-[state=on]:text-[#3b3010] hover:bg-[#f1ede3] hover:text-[#302b22] focus-visible:ring-[#b38300]"
+            ? "rounded-full border border-transparent text-[var(--text-secondary)] data-[state=on]:border-[color:color-mix(in_srgb,var(--brand-cyan)_34%,var(--line-subtle))] data-[state=on]:bg-[color:color-mix(in_srgb,var(--brand-cyan)_13%,var(--surface-lowest))] data-[state=on]:text-[var(--primary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] focus-visible:ring-[var(--brand-cyan)]"
             : "rounded-full border border-transparent text-[var(--text-secondary)] data-[state=on]:border-[var(--line-subtle)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
         : ""
 
@@ -777,7 +787,7 @@ export function RichTextEditor({
                             "flex items-center",
                             isTopRightToolbar &&
                                 (isAppleNotesAppearance
-                                    ? "fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-1.25rem)] -translate-x-1/2 rounded-full border border-[#d8d0be] bg-[color:color-mix(in_srgb,#fffdf7_95%,white)] shadow-[0_8px_24px_rgba(63,52,20,0.18)] supports-[backdrop-filter]:backdrop-blur-xl md:absolute md:bottom-auto md:left-auto md:right-2.5 md:top-2.5 md:max-w-[calc(100%-1.25rem)] md:translate-x-0"
+                                    ? "fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-1.25rem)] -translate-x-1/2 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,var(--surface-low)_8%)] shadow-[0_10px_28px_-16px_rgba(15,23,42,0.26)] supports-[backdrop-filter]:backdrop-blur-xl md:absolute md:bottom-auto md:left-auto md:right-2.5 md:top-2.5 md:max-w-[calc(100%-1.25rem)] md:translate-x-0"
                                     : "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_10px_20px_-18px_rgba(15,23,42,0.46)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3"),
                             isCompactToolbar ? "gap-1 px-1.5 py-1 md:px-2" : "gap-1.5 p-1.5",
                             isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",
@@ -1059,12 +1069,12 @@ export function RichTextEditor({
                             }}
                             style={{ top: codeCopyAnchor.top, left: codeCopyAnchor.left }}
                             className={cn(
-                                "absolute z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-200 bg-[var(--surface-lowest)] shadow-sm transition",
+                                "absolute z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-sm transition",
                                 codeCopyState === "copied"
                                     ? "text-emerald-600"
                                     : codeCopyState === "error"
                                         ? "text-rose-600"
-                                        : "text-[var(--text-secondary)] hover:bg-amber-50"
+                                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             )}
                             aria-label="Copy code"
                             title="Copy code"

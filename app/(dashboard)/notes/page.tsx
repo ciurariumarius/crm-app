@@ -25,7 +25,7 @@ function sortUnifiedNotes(items: NoteRecord[]) {
 export default async function NotesPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ note?: string; view?: string }>
+  searchParams?: Promise<{ note?: string; view?: string; scope?: string }>
 }) {
   await requireAuth()
   const params = (await searchParams) || {}
@@ -415,6 +415,7 @@ export default async function NotesPage({
       initialNotes={initialNotes}
       initialSelectedNoteId={initialSelectedNoteId}
       initialView={resolvedInitialView}
+      initialSearchScope={params.scope === "all" ? "all" : "view"}
       initialFolders={folders}
       initialTags={tags}
       initialSmartFolders={smartFolders}

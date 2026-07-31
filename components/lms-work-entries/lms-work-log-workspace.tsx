@@ -135,12 +135,14 @@ export function ClientCombobox({
   clients,
   value,
   onValueChange,
+  onCreateRequest,
   disabled,
   large,
 }: {
   clients: LmsWorkClientOption[]
   value: string
   onValueChange: (value: string) => void
+  onCreateRequest?: (suggestedName: string) => void
   disabled?: boolean
   large?: boolean
 }) {
@@ -180,10 +182,11 @@ export function ClientCombobox({
             hasSelection && "border-[color:color-mix(in_srgb,var(--brand-primary)_58%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_10%,var(--surface-lowest))] font-medium text-[var(--text-primary)]",
             large && "h-14 px-4 text-base"
           )}
-          disabled={disabled || clients.length === 0}
+          disabled={disabled || (clients.length === 0 && !onCreateRequest)}
         >
           <span className={cn("min-w-0 flex-1 truncate", !hasSelection && "text-[var(--text-muted)]")}>
-            {selectedClient?.client ?? (clients.length ? "Select LMS client" : "No LMS clients imported")}
+            {selectedClient?.client
+              ?? (clients.length ? "Select LMS client" : onCreateRequest ? "Add first LMS client" : "No LMS clients imported")}
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
             {hasSelection ? <CheckCircle2 className="h-4 w-4 text-[var(--brand-primary)]" /> : null}
@@ -225,6 +228,22 @@ export function ClientCombobox({
                 <span className="truncate">{client.client}</span>
               </CommandItem>
             ))}
+            {onCreateRequest ? (
+              <CommandItem
+                value={`add-client ${search}`}
+                onSelect={() => {
+                  const suggestedName = search.trim()
+                  changeOpen(false)
+                  onCreateRequest(suggestedName)
+                }}
+                className="border-t border-[var(--line-subtle)] py-2.5 text-[var(--brand-primary)]"
+              >
+                <UserPlus className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {search.trim() ? `Use or add “${search.trim()}”` : "Add a new LMS client"}
+                </span>
+              </CommandItem>
+            ) : null}
           </CommandList>
         </Command>
       </PopoverContent>
@@ -507,17 +526,23 @@ function EditEntryDialog({
   )
 }
 
-function AddClientDialog({
+export function AddClientDialog({
   open,
   onOpenChange,
   onCreated,
+  initialName = "",
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (client: LmsWorkClientOption) => void
+  initialName?: string
 }) {
-  const [name, setName] = React.useState("")
+  const [name, setName] = React.useState(initialName)
   const [saving, setSaving] = React.useState(false)
+
+  React.useEffect(() => {
+    if (open) setName(initialName)
+  }, [initialName, open])
 
   function changeOpen(nextOpen: boolean) {
     if (!nextOpen && !saving) setName("")
@@ -548,7 +573,7 @@ function AddClientDialog({
         <DialogHeader>
           <DialogTitle>Add client</DialogTitle>
           <DialogDescription>
-            Add a client to LMS Projects and select it immediately for this work entry.
+            Enter the LMS client name or domain. If it already exists, it will be selected instead of duplicated.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -596,6 +621,7 @@ export function LmsWorkLogWorkspace({
   const [clientOptions, setClientOptions] = React.useState(data.clients)
   const [lmsAllocationId, setLmsAllocationId] = React.useState("")
   const [addClientOpen, setAddClientOpen] = React.useState(false)
+  const [addClientInitialName, setAddClientInitialName] = React.useState("")
   const [taskTypeId, setTaskTypeId] = React.useState("")
   const [durationSelection, setDurationSelection] = React.useState("")
   const [customMinutes, setCustomMinutes] = React.useState("")
@@ -680,6 +706,11 @@ export function LmsWorkLogWorkspace({
     if (value === CUSTOM_DURATION_VALUE) {
       window.requestAnimationFrame(() => customMinutesRef.current?.focus())
     }
+  }
+
+  function openAddClient(name = "") {
+    setAddClientInitialName(name)
+    setAddClientOpen(true)
   }
 
   async function handleCreate(event: React.FormEvent) {
@@ -782,13 +813,19 @@ export function LmsWorkLogWorkspace({
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2 text-xs font-semibold text-[var(--brand-primary)]"
-                    onClick={() => setAddClientOpen(true)}
+                    onClick={() => openAddClient()}
                   >
                     <UserPlus className="h-4 w-4" />
                     Add client
                   </Button>
                 </div>
-                <ClientCombobox clients={clientOptions} value={lmsAllocationId} onValueChange={setLmsAllocationId} large />
+                <ClientCombobox
+                  clients={clientOptions}
+                  value={lmsAllocationId}
+                  onValueChange={setLmsAllocationId}
+                  onCreateRequest={openAddClient}
+                  large
+                />
                 <FrequentWorkOptions
                   ariaLabel="Frequently used clients"
                   options={frequentClientOptions.map((client) => ({ id: client.id, label: client.client }))}
@@ -1144,6 +1181,7 @@ export function LmsWorkLogWorkspace({
       <AddClientDialog
         open={addClientOpen}
         onOpenChange={setAddClientOpen}
+        initialName={addClientInitialName}
         onCreated={(client) => {
           setClientOptions((current) => {
             const withoutClient = current.filter((option) => option.id !== client.id)

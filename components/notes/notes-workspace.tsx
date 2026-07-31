@@ -45,11 +45,13 @@ import {
   setNoteArchived,
   setNotePinned,
   updateNote,
+  queryNoteRecordPage,
   type NoteFolderRecord,
   type NoteRecord,
   type NoteSmartFolderRecord,
   type NoteTagRecord,
 } from "@/lib/actions/notes"
+import type { NotesQueryView } from "@/lib/notes/queries.server"
 import { updateProject } from "@/lib/actions/projects"
 import { updateTask } from "@/lib/actions/tasks"
 import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
@@ -86,6 +88,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { NotesSearchInput } from "@/components/notes/notes-search-input"
+import { NotesScopeSwitch } from "@/components/notes/notes-scope-switch"
 import { NotesSidebarPane } from "@/components/notes/notes-sidebar-pane"
 import { NotesListPane } from "@/components/notes/notes-list-pane"
 import { NotesEditorPane } from "@/components/notes/notes-editor-pane"
@@ -100,11 +103,16 @@ import {
   deriveNoteTitleFromContent,
   derivePreviewBodyFromContent,
 } from "@/lib/notes/derived-note-text"
+import {
+  enqueueSerializedNoteSave,
+  resolveNotesScope,
+} from "@/lib/notes/workspace-state"
 
 type NotesWorkspaceProps = {
   initialNotes: NoteRecord[]
   initialSelectedNoteId: string | null
   initialView?: string
+  initialSearchScope?: SearchScope
   initialFolders: NoteFolderRecord[]
   initialTags?: NoteTagRecord[]
   initialSmartFolders?: NoteSmartFolderRecord[]
@@ -128,6 +136,14 @@ type SearchScope = "view" | "all"
 type MobilePane = "folders" | "list" | "editor"
 type SaveState = "idle" | "saving" | "saved" | "error"
 
+type PersonalListPageState = {
+  key: string
+  noteIds: string[]
+  nextCursor: string | null
+  loadingMore: boolean
+  error: string | null
+}
+
 type DateGroup = {
   key: "pinned" | "today" | "yesterday" | "previous30" | "older"
   label: string
@@ -136,7 +152,7 @@ type DateGroup = {
 
 const NO_FOLDER_VALUE = "__none__"
 const DEFAULT_RAIL_KEY: RailKey = "all"
-const NOTE_SURFACE_FONT = "[font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Segoe UI',sans-serif]"
+const NOTE_SURFACE_FONT = "[font-family:var(--font-plus-jakarta-sans),sans-serif]"
 
 const PROJECT_REQUIREMENTS_TEMPLATE = [
   "<h2>Requirements</h2>",
@@ -277,7 +293,49 @@ function extractFirstImageSrc(content: string) {
   }
 }
 
-function getFilteredByRail(notes: NoteRecord[], rail: RailKey) {
+function getFilteredByRail(
+  notes: NoteRecord[],
+  rail: RailKey,
+  smartFolders: NoteSmartFolderRecord[] = []
+) {
+  if (rail.startsWith("tag:")) {
+    const tagId = rail.slice("tag:".length)
+    return notes.filter(
+      (note) =>
+        getNoteSourceType(note) === "note" &&
+        !note.archived &&
+        !note.deletedAt &&
+        note.tags?.some((tag) => tag.id === tagId)
+    )
+  }
+  if (rail.startsWith("smart:")) {
+    const smartFolderId = rail.slice("smart:".length)
+    const smartFolder = smartFolders.find((folder) => folder.id === smartFolderId)
+    if (!smartFolder) return []
+    return notes.filter(
+      (note) =>
+        getNoteSourceType(note) === "note" &&
+        !note.archived &&
+        !note.deletedAt &&
+        matchesNoteSmartFolder(
+          {
+            pinned: note.pinned,
+            hasChecklist: Boolean(note.hasChecklist),
+            hasAttachment: Boolean(note.hasAttachment),
+            updatedAt: note.updatedAt,
+            tagIds: (note.tags || []).map((tag) => tag.id),
+          },
+          {
+            matchMode: smartFolder.matchMode,
+            requirePinned: smartFolder.requirePinned,
+            requireChecklist: smartFolder.requireChecklist,
+            requireAttachment: smartFolder.requireAttachment,
+            updatedWithinDays: smartFolder.updatedWithinDays as 1 | 7 | 30 | 90 | null,
+            tagIds: smartFolder.tags.map((tag) => tag.id),
+          }
+        )
+    )
+  }
   if (rail === "all") {
     return notes.filter(
       (note) =>
@@ -367,6 +425,7 @@ export function NotesWorkspace({
   initialNotes,
   initialSelectedNoteId,
   initialView,
+  initialSearchScope = "view",
   initialFolders,
   initialTags = [],
   initialSmartFolders = [],
@@ -401,7 +460,7 @@ export function NotesWorkspace({
     initialSelectedNoteId ? "editor" : "folders"
   )
   const [tabletSidebarOpen, setTabletSidebarOpen] = React.useState(false)
-  const [searchScope, setSearchScope] = React.useState<SearchScope>("view")
+  const [searchScope, setSearchScope] = React.useState<SearchScope>(initialSearchScope)
   const {
     sidebarWidth,
     setSidebarWidth,
@@ -413,6 +472,10 @@ export function NotesWorkspace({
     setNoteSort,
   } = useNotesWorkspacePreferences()
   const [saveState, setSaveState] = React.useState<SaveState>("idle")
+  const [personalListPage, setPersonalListPage] =
+    React.useState<PersonalListPageState | null>(null)
+  const [isPersonalListLoading, setIsPersonalListLoading] = React.useState(false)
+  const [personalListReloadToken, setPersonalListReloadToken] = React.useState(0)
   const [rowMenuNoteId, setRowMenuNoteId] = React.useState<string | null>(null)
   const [isCreating, setIsCreating] = React.useState(false)
   const [pendingDeleteNote, setPendingDeleteNote] = React.useState<NoteRecord | null>(null)
@@ -447,28 +510,40 @@ export function NotesWorkspace({
   const [movingNoteId, setMovingNoteId] = React.useState<string | null>(null)
 
   const searchRef = React.useRef<HTMLInputElement | null>(null)
-  const lastSyncedRef = React.useRef<{ id: string | null; title: string; content: string }>({
-    id: null,
-    title: "",
-    content: "",
-  })
-  const transientEmptyNoteIdsRef = React.useRef<Set<string>>(new Set())
-  const discardingNoteIdsRef = React.useRef<Set<string>>(new Set())
-  const previousSelectedNoteIdRef = React.useRef<string | null>(initialSelectedNoteId)
+  const notesRef = React.useRef(notes)
+  const selectedNoteIdRef = React.useRef<string | null>(initialSelectedNoteId)
+  const contentDraftRef = React.useRef("")
+  const noteDraftsRef = React.useRef<Map<string, string>>(new Map())
+  const syncedSnapshotsRef = React.useRef<Map<string, { title: string; content: string }>>(
+    new Map()
+  )
+  const saveQueuesRef = React.useRef<Map<string, Promise<boolean>>>(new Map())
+  const editorNoteIdRef = React.useRef<string | null>(null)
   const bootstrappedRef = React.useRef(false)
   const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const draftCreateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const draftCreateInFlightRef = React.useRef(false)
   const draggedNoteIdRef = React.useRef<string | null>(null)
   const dragPreviewRef = React.useRef<HTMLDivElement | null>(null)
+  const personalListRequestRef = React.useRef(0)
+
+  React.useEffect(() => {
+    notesRef.current = notes
+  }, [notes])
+
+  React.useEffect(() => {
+    selectedNoteIdRef.current = selectedNoteId
+  }, [selectedNoteId])
 
   React.useEffect(() => {
     const url = new URL(window.location.href)
     url.searchParams.set("view", activeRailKey)
+    if (searchScope === "all") url.searchParams.set("scope", "all")
+    else url.searchParams.delete("scope")
     if (selectedNoteId) url.searchParams.set("note", selectedNoteId)
     else url.searchParams.delete("note")
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`)
-  }, [activeRailKey, selectedNoteId])
+  }, [activeRailKey, searchScope, selectedNoteId])
 
   const beginPaneResize = React.useCallback(
     (
@@ -560,77 +635,210 @@ export function NotesWorkspace({
   React.useEffect(() => {
     setSaveState("idle")
     if (!selectedNote) {
+      editorNoteIdRef.current = null
       setContentDraft("")
-      lastSyncedRef.current = { id: null, title: "", content: "" }
+      contentDraftRef.current = ""
       return
     }
 
+    if (editorNoteIdRef.current === selectedNote.id) return
+    editorNoteIdRef.current = selectedNote.id
     const normalizedContent = normalizeNoteContentForEditor(selectedNote.content || "")
-    setContentDraft(normalizedContent)
-    lastSyncedRef.current = {
-      id: selectedNote.id,
-      title:
-        selectedNoteSourceType === "note"
-          ? deriveNoteTitleFromContent(normalizedContent, selectedNote.title || DEFAULT_NOTE_TITLE)
-          : selectedNote.title,
-      content: normalizedContent,
+    const draftContent = noteDraftsRef.current.get(selectedNote.id) ?? normalizedContent
+    noteDraftsRef.current.set(selectedNote.id, draftContent)
+    contentDraftRef.current = draftContent
+    setContentDraft(draftContent)
+    if (!syncedSnapshotsRef.current.has(selectedNote.id)) {
+      syncedSnapshotsRef.current.set(selectedNote.id, {
+        title:
+          selectedNoteSourceType === "note"
+            ? deriveNoteTitleFromContent(normalizedContent, selectedNote.title || DEFAULT_NOTE_TITLE)
+            : selectedNote.title,
+        content: normalizedContent,
+      })
     }
     setEmptyEditorDraft("")
   }, [selectedNote, selectedNoteSourceType])
 
   const railFilteredNotes = React.useMemo(() => {
-    if (activeRailKey.startsWith("tag:")) {
-      const tagId = activeRailKey.slice("tag:".length)
-      return notes.filter(
-        (note) =>
-          getNoteSourceType(note) === "note" &&
-          !note.archived &&
-          !note.deletedAt &&
-          note.tags?.some((tag) => tag.id === tagId)
-      )
-    }
-    if (activeRailKey.startsWith("smart:")) {
-      const smartFolderId = activeRailKey.slice("smart:".length)
-      const smartFolder = smartFolders.find((folder) => folder.id === smartFolderId)
-      if (!smartFolder) return []
-      return notes.filter(
-        (note) =>
-          getNoteSourceType(note) === "note" &&
-          !note.archived &&
-          !note.deletedAt &&
-          matchesNoteSmartFolder(
-            {
-              pinned: note.pinned,
-              hasChecklist: Boolean(note.hasChecklist),
-              hasAttachment: Boolean(note.hasAttachment),
-              updatedAt: note.updatedAt,
-              tagIds: (note.tags || []).map((tag) => tag.id),
-            },
-            {
-              matchMode: smartFolder.matchMode,
-              requirePinned: smartFolder.requirePinned,
-              requireChecklist: smartFolder.requireChecklist,
-              requireAttachment: smartFolder.requireAttachment,
-              updatedWithinDays: smartFolder.updatedWithinDays as 1 | 7 | 30 | 90 | null,
-              tagIds: smartFolder.tags.map((tag) => tag.id),
-            }
-          )
-      )
-    }
-    return getFilteredByRail(notes, activeRailKey)
+    return getFilteredByRail(notes, activeRailKey, smartFolders)
   }, [notes, activeRailKey, smartFolders])
+
+  const personalQueryView = React.useMemo<NotesQueryView | null>(() => {
+    if (searchScope === "all") return "all"
+    if (activeRailKey === "projects" || activeRailKey === "tasks") return null
+    return activeRailKey as NotesQueryView
+  }, [activeRailKey, searchScope])
+
+  const personalQueryKey = React.useMemo(
+    () =>
+      personalQueryView
+        ? JSON.stringify([
+            personalQueryView,
+            search.trim(),
+            searchScope,
+            noteSort,
+          ])
+        : "",
+    [noteSort, personalQueryView, search, searchScope]
+  )
+
+  const mergePersonalRecords = React.useCallback((records: NoteRecord[]) => {
+    setNotes((current) => {
+      const byId = new Map(current.map((note) => [note.id, note]))
+      for (const record of records) {
+        byId.set(record.id, {
+          ...byId.get(record.id),
+          ...record,
+          sourceType: "note",
+        })
+      }
+      return sortNotes([...byId.values()])
+    })
+  }, [])
+
+  React.useEffect(() => {
+    if (!personalQueryView) {
+      setPersonalListPage(null)
+      setIsPersonalListLoading(false)
+      return
+    }
+
+    const requestId = personalListRequestRef.current + 1
+    personalListRequestRef.current = requestId
+    setIsPersonalListLoading(true)
+    const timeout = window.setTimeout(() => {
+      void queryNoteRecordPage({
+        view: personalQueryView,
+        q: search.trim(),
+        searchScope,
+        sort: noteSort,
+        pageSize: 100,
+      }).then((result) => {
+        if (personalListRequestRef.current !== requestId) return
+        setIsPersonalListLoading(false)
+        if (!result.success || !result.data) {
+          setPersonalListPage({
+            key: personalQueryKey,
+            noteIds: [],
+            nextCursor: null,
+            loadingMore: false,
+            error: result.error || "Failed to load notes",
+          })
+          return
+        }
+
+        mergePersonalRecords(result.data.notes)
+        const noteIds = result.data.notes.map((note) => note.id)
+        const currentSelectedId = selectedNoteIdRef.current
+        if (currentSelectedId && !search.trim() && !noteIds.includes(currentSelectedId)) {
+          const eligibleNotes =
+            searchScope === "all"
+              ? resolveNotesScope(notesRef.current, [], "all")
+              : getFilteredByRail(notesRef.current, activeRailKey, smartFolders)
+          if (eligibleNotes.some((note) => note.id === currentSelectedId)) {
+            noteIds.unshift(currentSelectedId)
+          }
+        }
+        setPersonalListPage({
+          key: personalQueryKey,
+          noteIds,
+          nextCursor: result.data.nextCursor,
+          loadingMore: false,
+          error: null,
+        })
+      })
+    }, 250)
+
+    return () => window.clearTimeout(timeout)
+  }, [
+    activeRailKey,
+    mergePersonalRecords,
+    noteSort,
+    personalQueryKey,
+    personalQueryView,
+    personalListReloadToken,
+    search,
+    searchScope,
+    smartFolders,
+  ])
+
+  const handleLoadMorePersonalNotes = React.useCallback(async () => {
+    if (
+      !personalQueryView ||
+      !personalListPage?.nextCursor ||
+      personalListPage.loadingMore ||
+      personalListPage.key !== personalQueryKey
+    ) {
+      return
+    }
+    const cursor = personalListPage.nextCursor
+    setPersonalListPage((current) =>
+      current?.key === personalQueryKey ? { ...current, loadingMore: true } : current
+    )
+    const result = await queryNoteRecordPage({
+      view: personalQueryView,
+      q: search.trim(),
+      searchScope,
+      sort: noteSort,
+      cursor,
+      pageSize: 100,
+    })
+    if (!result.success || !result.data) {
+      setPersonalListPage((current) =>
+        current?.key === personalQueryKey
+          ? {
+              ...current,
+              loadingMore: false,
+              error: result.error || "Failed to load more notes",
+            }
+          : current
+      )
+      return
+    }
+    mergePersonalRecords(result.data.notes)
+    setPersonalListPage((current) => {
+      if (!current || current.key !== personalQueryKey) return current
+      return {
+        ...current,
+        noteIds: [
+          ...current.noteIds,
+          ...result.data.notes
+            .map((note) => note.id)
+            .filter((id) => !current.noteIds.includes(id)),
+        ],
+        nextCursor: result.data.nextCursor,
+        loadingMore: false,
+        error: null,
+      }
+    })
+  }, [
+    mergePersonalRecords,
+    noteSort,
+    personalListPage,
+    personalQueryKey,
+    personalQueryView,
+    search,
+    searchScope,
+  ])
 
   const filteredNotes = React.useMemo(() => {
     const needle = search.trim().toLowerCase()
+    const serverPageNotes =
+      personalListPage?.key === personalQueryKey && !personalListPage.error
+        ? personalListPage.noteIds.flatMap((id) => {
+            const note = notes.find((candidate) => candidate.id === id)
+            return note ? [note] : []
+          })
+        : null
+    const serverScopedNotes =
+      serverPageNotes === null
+        ? null
+        : searchScope === "all"
+          ? resolveNotesScope(serverPageNotes, [], "all")
+          : getFilteredByRail(serverPageNotes, activeRailKey, smartFolders)
     const searchBase =
-      searchScope === "all" && search.trim()
-        ? notes.filter(
-            (note) =>
-              getNoteSourceType(note) === "note" &&
-              !note.archived &&
-              !note.deletedAt
-          )
-        : railFilteredNotes
+      serverScopedNotes ?? resolveNotesScope(notes, railFilteredNotes, searchScope)
     const visible = searchBase.filter((note) => {
       if (!needle) return true
       return (
@@ -652,17 +860,19 @@ export function NotesWorkspace({
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     })
     return sorted
-  }, [noteSort, notes, railFilteredNotes, search, searchScope])
+  }, [
+    activeRailKey,
+    noteSort,
+    notes,
+    personalListPage,
+    personalQueryKey,
+    railFilteredNotes,
+    search,
+    searchScope,
+    smartFolders,
+  ])
 
   const groupedNotes = React.useMemo(() => groupNotesByDate(filteredNotes), [filteredNotes])
-
-  React.useEffect(() => {
-    if (!selectedNoteId) return
-    const existsInRail = filteredNotes.some((note) => note.id === selectedNoteId)
-    if (existsInRail) return
-    const nextFallback = filteredNotes[0]?.id ?? null
-    setSelectedNoteId(nextFallback)
-  }, [filteredNotes, selectedNoteId])
 
   const editorUploadContextId = React.useMemo(() => {
     if (!selectedNote) return undefined
@@ -675,26 +885,26 @@ export function NotesWorkspace({
     return selectedNote.id
   }, [selectedNote, selectedNoteSourceType])
 
-  const persistNote = React.useCallback(
+  const persistNoteImmediately = React.useCallback(
     async (noteId: string, contentValue: string) => {
-      const existingNote = notes.find((item) => item.id === noteId) ?? null
+      const existingNote = notesRef.current.find((item) => item.id === noteId) ?? null
       if (!existingNote) return false
       const sourceType = getNoteSourceType(existingNote)
       const normalizedTitle =
         sourceType === "note"
           ? deriveNoteTitleFromContent(contentValue, existingNote.title || DEFAULT_NOTE_TITLE)
           : existingNote.title
-      const snapshot = lastSyncedRef.current
-      if (snapshot.id === noteId && snapshot.title === normalizedTitle && snapshot.content === contentValue) {
+      const snapshot = syncedSnapshotsRef.current.get(noteId)
+      if (snapshot?.title === normalizedTitle && snapshot.content === contentValue) {
         return true
       }
-      setSaveState("saving")
+      if (selectedNoteIdRef.current === noteId) setSaveState("saving")
 
       if (sourceType === "project") {
         const projectId = existingNote.sourceId || existingNote.id.replace(/^project:/, "")
         const result = await updateProject(projectId, { description: contentValue })
         if (!result.success) {
-          setSaveState("error")
+          if (selectedNoteIdRef.current === noteId) setSaveState("error")
           toast.error(result.error || "Failed to save project note")
           return false
         }
@@ -713,12 +923,11 @@ export function NotesWorkspace({
             )
           )
         )
-        lastSyncedRef.current = {
-          id: existingNote.id,
+        syncedSnapshotsRef.current.set(existingNote.id, {
           title: existingNote.title,
           content: contentValue,
-        }
-        setSaveState("saved")
+        })
+        if (selectedNoteIdRef.current === noteId) setSaveState("saved")
         return true
       }
 
@@ -726,7 +935,7 @@ export function NotesWorkspace({
         const taskId = existingNote.sourceId || existingNote.id.replace(/^task:/, "")
         const result = await updateTask(taskId, { description: contentValue })
         if (!result.success) {
-          setSaveState("error")
+          if (selectedNoteIdRef.current === noteId) setSaveState("error")
           toast.error(result.error || "Failed to save task note")
           return false
         }
@@ -745,17 +954,16 @@ export function NotesWorkspace({
             )
           )
         )
-        lastSyncedRef.current = {
-          id: existingNote.id,
+        syncedSnapshotsRef.current.set(existingNote.id, {
           title: existingNote.title,
           content: contentValue,
-        }
-        setSaveState("saved")
+        })
+        if (selectedNoteIdRef.current === noteId) setSaveState("saved")
         return true
       }
 
       if (storageUnavailable) {
-        setSaveState("error")
+        if (selectedNoteIdRef.current === noteId) setSaveState("error")
         toast.error("Notes storage is not ready yet")
         return false
       }
@@ -765,22 +973,51 @@ export function NotesWorkspace({
       })
 
       if (!result.success || !result.data) {
-        setSaveState("error")
+        if (selectedNoteIdRef.current === noteId) setSaveState("error")
         toast.error(result.error || "Failed to save note")
         return false
       }
 
       setNotes((current) => upsertNote(current, result.data as NoteRecord))
-      lastSyncedRef.current = {
-        id: result.data.id,
+      syncedSnapshotsRef.current.set(result.data.id, {
         title: result.data.title,
         content: result.data.content,
-      }
-      setSaveState("saved")
+      })
+      if (selectedNoteIdRef.current === noteId) setSaveState("saved")
       return true
     },
-    [notes, storageUnavailable]
+    [storageUnavailable]
   )
+
+  const queuePersistNote = React.useCallback(
+    (noteId: string, contentValue: string) => {
+      return enqueueSerializedNoteSave(
+        saveQueuesRef.current,
+        noteId,
+        () => persistNoteImmediately(noteId, contentValue)
+      )
+    },
+    [persistNoteImmediately]
+  )
+
+  const flushSelectedNote = React.useCallback(() => {
+    const noteId = selectedNoteIdRef.current
+    if (!noteId) return Promise.resolve(true)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    const draft = contentDraftRef.current
+    noteDraftsRef.current.set(noteId, draft)
+    return queuePersistNote(noteId, draft)
+  }, [queuePersistNote])
+
+  const handleContentDraftChange = React.useCallback((value: string) => {
+    contentDraftRef.current = value
+    const noteId = selectedNoteIdRef.current
+    if (noteId) noteDraftsRef.current.set(noteId, value)
+    setContentDraft(value)
+  }, [])
 
   const handleCreateNote = React.useCallback(
     async (prefill?: { content?: string }) => {
@@ -801,8 +1038,23 @@ export function NotesWorkspace({
         }
 
         setNotes((current) => upsertNote(current, result.data as NoteRecord))
-        if (hasMeaningfulContent(prefill?.content || "")) transientEmptyNoteIdsRef.current.delete(result.data.id)
-        else transientEmptyNoteIdsRef.current.add(result.data.id)
+        const createdContent = normalizeNoteContentForEditor(result.data.content || "")
+        noteDraftsRef.current.set(result.data.id, createdContent)
+        syncedSnapshotsRef.current.set(result.data.id, {
+          title: result.data.title,
+          content: createdContent,
+        })
+        setPersonalListPage((current) =>
+          current?.key === personalQueryKey
+            ? {
+                ...current,
+                noteIds: [
+                  result.data.id,
+                  ...current.noteIds.filter((id) => id !== result.data.id),
+                ],
+              }
+            : current
+        )
         if (activeFolderId) {
           const createdFolderId = result.data.folderId || activeFolderId
           setActiveRailKey(folderRailKey(createdFolderId))
@@ -817,8 +1069,54 @@ export function NotesWorkspace({
         setIsCreating(false)
       }
     },
-    [activeRailKey, storageUnavailable]
+    [activeRailKey, personalQueryKey, storageUnavailable]
   )
+
+  const beginNewNote = React.useCallback(() => {
+    void flushSelectedNote()
+    setSearch("")
+    setEmptyEditorDraft("")
+    setSelectedNoteId(null)
+    setSearchScope("view")
+    setSaveState("idle")
+    setEditorFocusToken((current) => current + 1)
+    setIsMobileRailOpen(false)
+  }, [flushSelectedNote])
+
+  const handleSelectNote = React.useCallback(
+    (noteId: string | null) => {
+      if (noteId === selectedNoteIdRef.current) return
+      void flushSelectedNote()
+      setSelectedNoteId(noteId)
+    },
+    [flushSelectedNote]
+  )
+
+  const handleSelectRail = React.useCallback(
+    (rail: RailKey) => {
+      void flushSelectedNote()
+      setSearchScope("view")
+      setActiveRailKey(rail)
+    },
+    [flushSelectedNote]
+  )
+
+  const handleSelectSearchScope = React.useCallback(
+    (scope: SearchScope) => {
+      if (scope === searchScope) return
+      void flushSelectedNote()
+      setSearchScope(scope)
+    },
+    [flushSelectedNote, searchScope]
+  )
+
+  React.useEffect(() => {
+    if (!selectedNoteId) return
+    const existsInScope = filteredNotes.some((note) => note.id === selectedNoteId)
+    if (existsInScope) return
+    void flushSelectedNote()
+    setSelectedNoteId(filteredNotes[0]?.id ?? null)
+  }, [filteredNotes, flushSelectedNote, selectedNoteId])
 
   const handleCreateFolder = React.useCallback(async () => {
     const name = newFolderName.trim()
@@ -974,12 +1272,8 @@ export function NotesWorkspace({
       if (getNoteSourceType(note) !== "note") return
       if (note.folderId === folderId) return
 
-      if (
-        note.id === selectedNoteId &&
-        lastSyncedRef.current.id === note.id &&
-        lastSyncedRef.current.content !== contentDraft
-      ) {
-        const saved = await persistNote(note.id, contentDraft)
+      if (note.id === selectedNoteId) {
+        const saved = await flushSelectedNote()
         if (!saved) return
       }
 
@@ -1032,7 +1326,7 @@ export function NotesWorkspace({
       )
       toast.success(`Moved to ${nextFolderName}`)
     },
-    [contentDraft, folders, foldersEnabled, persistNote, selectedNoteId]
+    [folders, foldersEnabled, flushSelectedNote, selectedNoteId]
   )
 
   const clearNoteDragState = React.useCallback(() => {
@@ -1124,47 +1418,15 @@ export function NotesWorkspace({
   }, [notes, selectedNoteId])
 
   React.useEffect(() => {
-    const currentSelectedId = selectedNoteId
-    const previousSelectedId = previousSelectedNoteIdRef.current
-    if (previousSelectedId && previousSelectedId !== currentSelectedId) {
-      if (
-        transientEmptyNoteIdsRef.current.has(previousSelectedId) &&
-        !discardingNoteIdsRef.current.has(previousSelectedId)
-      ) {
-        transientEmptyNoteIdsRef.current.delete(previousSelectedId)
-        discardingNoteIdsRef.current.add(previousSelectedId)
-        void permanentlyDeleteNote(previousSelectedId)
-          .then((result) => {
-            if (result.success) {
-              setNotes((current) => current.filter((item) => item.id !== previousSelectedId))
-            }
-          })
-          .finally(() => {
-            discardingNoteIdsRef.current.delete(previousSelectedId)
-          })
-      }
-    }
-    previousSelectedNoteIdRef.current = currentSelectedId
-  }, [selectedNoteId])
-
-  React.useEffect(() => {
-    if (!selectedNoteId) return
-    if (!transientEmptyNoteIdsRef.current.has(selectedNoteId)) return
-    if (!hasMeaningfulContent(contentDraft)) return
-    transientEmptyNoteIdsRef.current.delete(selectedNoteId)
-  }, [contentDraft, selectedNoteId])
-
-  React.useEffect(() => {
     if (!selectedNoteId) return
     if (selectedNoteSourceType === "note" && storageUnavailable) return
     const normalizedTitle =
       selectedNoteSourceType === "note"
         ? deriveNoteTitleFromContent(contentDraft, selectedNote?.title || DEFAULT_NOTE_TITLE)
         : selectedNote?.title || DEFAULT_NOTE_TITLE
-    const currentSnapshot = lastSyncedRef.current
+    const currentSnapshot = syncedSnapshotsRef.current.get(selectedNoteId)
     if (
-      currentSnapshot.id === selectedNoteId &&
-      currentSnapshot.title === normalizedTitle &&
+      currentSnapshot?.title === normalizedTitle &&
       currentSnapshot.content === contentDraft
     ) {
       return
@@ -1172,25 +1434,26 @@ export function NotesWorkspace({
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
-      void persistNote(selectedNoteId, contentDraft)
+      saveTimeoutRef.current = null
+      void queuePersistNote(selectedNoteId, contentDraft)
     }, 700)
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [contentDraft, persistNote, selectedNote?.title, selectedNoteId, selectedNoteSourceType, storageUnavailable])
+  }, [contentDraft, queuePersistNote, selectedNote?.title, selectedNoteId, selectedNoteSourceType, storageUnavailable])
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
         if (storageUnavailable) return
         event.preventDefault()
-        void handleCreateNote({ content: "" })
+        beginNewNote()
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         if (!selectedNoteId) return
         event.preventDefault()
-        void persistNote(selectedNoteId, contentDraft)
+        void flushSelectedNote()
       }
       if (!event.metaKey && !event.ctrlKey && event.key === "/") {
         const target = event.target as HTMLElement | null
@@ -1206,7 +1469,22 @@ export function NotesWorkspace({
 
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [contentDraft, handleCreateNote, persistNote, selectedNoteId, storageUnavailable])
+  }, [beginNewNote, flushSelectedNote, selectedNoteId, storageUnavailable])
+
+  React.useEffect(() => {
+    const flushBeforePageExit = () => {
+      void flushSelectedNote()
+    }
+    const flushWhenHidden = () => {
+      if (document.visibilityState === "hidden") void flushSelectedNote()
+    }
+    window.addEventListener("pagehide", flushBeforePageExit)
+    document.addEventListener("visibilitychange", flushWhenHidden)
+    return () => {
+      window.removeEventListener("pagehide", flushBeforePageExit)
+      document.removeEventListener("visibilitychange", flushWhenHidden)
+    }
+  }, [flushSelectedNote])
 
   React.useEffect(() => {
     return () => {
@@ -1239,6 +1517,10 @@ export function NotesWorkspace({
   const handleArchiveToggle = React.useCallback(
     async (note: NoteRecord) => {
       if (getNoteSourceType(note) !== "note") return
+      if (note.id === selectedNoteIdRef.current) {
+        const saved = await flushSelectedNote()
+        if (!saved) return
+      }
       const nextArchived = !note.archived
       const result = await setNoteArchived(note.id, nextArchived)
       if (!result.success || !result.data) {
@@ -1251,24 +1533,38 @@ export function NotesWorkspace({
         setSelectedNoteId(filteredNotes.find((candidate) => candidate.id !== note.id)?.id ?? null)
       }
     },
-    [filteredNotes, selectedNoteId]
+    [filteredNotes, flushSelectedNote, selectedNoteId]
   )
 
-  const handlePinToggle = React.useCallback(async (note: NoteRecord) => {
-    if (getNoteSourceType(note) !== "note") return
-    const result = await setNotePinned(note.id, !note.pinned)
-    if (!result.success || !result.data) {
-      toast.error(result.error || "Failed to update note")
-      return
-    }
-    setNotes((current) => upsertNote(current, result.data as NoteRecord))
-  }, [])
+  const handlePinToggle = React.useCallback(
+    async (note: NoteRecord) => {
+      if (getNoteSourceType(note) !== "note") return
+      if (note.id === selectedNoteIdRef.current) {
+        const saved = await flushSelectedNote()
+        if (!saved) return
+      }
+      const result = await setNotePinned(note.id, !note.pinned)
+      if (!result.success || !result.data) {
+        toast.error(result.error || "Failed to update note")
+        return
+      }
+      setNotes((current) => upsertNote(current, result.data as NoteRecord))
+    },
+    [flushSelectedNote]
+  )
 
-  const handleDelete = React.useCallback(async (note: NoteRecord, permanent = false) => {
-    if (getNoteSourceType(note) !== "note") return
-    setDeletePermanently(permanent)
-    setPendingDeleteNote(note)
-  }, [])
+  const handleDelete = React.useCallback(
+    async (note: NoteRecord, permanent = false) => {
+      if (getNoteSourceType(note) !== "note") return
+      if (note.id === selectedNoteIdRef.current) {
+        const saved = await flushSelectedNote()
+        if (!saved) return
+      }
+      setDeletePermanently(permanent)
+      setPendingDeleteNote(note)
+    },
+    [flushSelectedNote]
+  )
 
   const handleRestore = React.useCallback(async (note: NoteRecord) => {
     if (getNoteSourceType(note) !== "note" || !note.deletedAt) return
@@ -1279,9 +1575,9 @@ export function NotesWorkspace({
     }
     setNotes((current) => upsertNote(current, result.data as NoteRecord))
     setActiveRailKey(result.data.archived ? "archived" : "all")
-    setSelectedNoteId(note.id)
+    handleSelectNote(note.id)
     toast.success("Note restored")
-  }, [])
+  }, [handleSelectNote])
 
   React.useEffect(() => {
     const onWorkspaceKeyDown = (event: KeyboardEvent) => {
@@ -1305,7 +1601,7 @@ export function NotesWorkspace({
         const nextNote = filteredNotes[nextIndex]
         if (nextNote) {
           event.preventDefault()
-          setSelectedNoteId(nextNote.id)
+          handleSelectNote(nextNote.id)
         }
         return
       }
@@ -1317,7 +1613,7 @@ export function NotesWorkspace({
     }
     window.addEventListener("keydown", onWorkspaceKeyDown)
     return () => window.removeEventListener("keydown", onWorkspaceKeyDown)
-  }, [filteredNotes, handleDelete, selectedNote, selectedNoteId])
+  }, [filteredNotes, handleDelete, handleSelectNote, selectedNote, selectedNoteId])
 
   const confirmDelete = React.useCallback(async () => {
     if (!pendingDeleteNote) return
@@ -1442,12 +1738,12 @@ export function NotesWorkspace({
       "group grid h-9 w-full grid-cols-[minmax(0,1fr)_32px] items-center gap-2 rounded-lg border px-2.5 text-left text-[12px] font-medium transition-colors",
       NOTE_SURFACE_FONT,
       active
-        ? "border-[#ead99f] bg-[#fff3bd] text-[#2b2619]"
-        : "border-transparent text-[#5f5a50] hover:bg-white/70 hover:text-[#2b2925]"
+        ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))] text-[var(--text-primary)]"
+        : "border-transparent text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_78%,transparent)] hover:text-[var(--text-primary)]"
     )
 
   const railCountBadgeClass =
-    "inline-flex h-6 w-8 shrink-0 items-center justify-center justify-self-end rounded-full bg-white/75 px-1 text-[10px] tabular-nums text-[#7d766a] shadow-[inset_0_0_0_1px_rgba(205,198,185,0.55)]"
+    "inline-flex h-6 w-8 shrink-0 items-center justify-center justify-self-end rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_82%,transparent)] px-1 text-[10px] tabular-nums text-[var(--text-muted)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--line-subtle)_80%,transparent)]"
 
   const renderLeftRail = (isMobile = false, compact = false) => (
     <div className={cn(compact ? "flex shrink-0 flex-col" : "flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
@@ -1472,21 +1768,21 @@ export function NotesWorkspace({
             <div
               className={cn(
                 "mb-1.5 flex h-9 items-center justify-between rounded-xl px-2 transition-colors",
-                draggedNoteId && "border border-[#ddc66f] bg-[#fff3bd] text-[#5e4900]"
+                draggedNoteId && "border border-[var(--brand-cyan)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] text-[var(--primary)]"
               )}
             >
               <h3
                 id={isMobile ? "mobile-note-folders" : "desktop-note-folders"}
                 className={cn(
                   "inline-flex min-w-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]",
-                  draggedNoteId ? "text-[#8a6700]" : "text-[#8f8879]"
+                  draggedNoteId ? "text-[var(--primary)]" : "text-[var(--text-muted)]"
                 )}
               >
                 {draggedNoteId ? <FolderInput className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
                 <span className="truncate">Folders</span>
               </h3>
               {draggedNoteId ? (
-                <FolderInput className="h-4 w-4 shrink-0 text-[#9a7000]" aria-label="Choose a destination folder" />
+                <FolderInput className="h-4 w-4 shrink-0 text-[var(--primary)]" aria-label="Choose a destination folder" />
               ) : (
                 <button
                   type="button"
@@ -1495,7 +1791,7 @@ export function NotesWorkspace({
                     setNewFolderName("")
                     setNewFolderParentId(null)
                   }}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-[#756f65] transition-colors hover:border-[#d8d0c0] hover:bg-white hover:text-[#302b22] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b38300]"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-[var(--text-secondary)] transition-colors hover:border-[var(--line-subtle)] hover:bg-[var(--surface-lowest)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
                   disabled={isCreatingFolder || storageUnavailable}
                   aria-label="New folder"
                   title="New folder"
@@ -1506,7 +1802,7 @@ export function NotesWorkspace({
             </div>
 
             {isAddingFolder ? (
-              <div className="mb-1 flex h-10 items-center gap-1 rounded-xl border border-[#ddc66f] bg-white px-1.5">
+              <div className="mb-1 flex h-10 items-center gap-1 rounded-xl border border-[var(--brand-cyan)] bg-[var(--surface-lowest)] px-1.5">
                 <Input
                   value={newFolderName}
                   onChange={(event) => setNewFolderName(event.target.value)}
@@ -1529,7 +1825,7 @@ export function NotesWorkspace({
                 <button
                   type="button"
                   onClick={() => void handleCreateFolder()}
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#8a6700] hover:bg-[#fff3bd]"
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--primary)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))]"
                   disabled={isCreatingFolder || storageUnavailable}
                   aria-label="Create folder"
                 >
@@ -1542,7 +1838,7 @@ export function NotesWorkspace({
                     setNewFolderParentId(null)
                     setIsAddingFolder(false)
                   }}
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#667085] hover:bg-[#f1f3f6]"
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                   disabled={isCreatingFolder}
                   aria-label="Cancel new folder"
                 >
@@ -1554,7 +1850,7 @@ export function NotesWorkspace({
             <div className="space-y-1">
               {folders.map((folder) => {
                 const key = folderRailKey(folder.id)
-                const active = activeRailKey === key
+                const active = activeRailKey === key && searchScope === "view"
                 const isEditing = editingFolderId === folder.id
                 const isDropTarget = dragOverFolderId === folder.id
                 const draggedNote = draggedNoteId
@@ -1587,18 +1883,18 @@ export function NotesWorkspace({
                       folder.parentId && "ml-4",
                       !draggedNoteId && (
                         active
-                          ? "border-[#ead99f] bg-[#fff3bd]"
-                          : "border-transparent hover:bg-white"
+                          ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))]"
+                          : "border-transparent hover:bg-[var(--surface-lowest)]"
                       ),
-                      draggedNoteId && canAcceptDraggedNote && !isDropTarget && "cursor-copy border-dashed border-[#d7b84b] bg-[#fff7d6] ring-1 ring-[#ead99f]",
-                      draggedNoteId && isCurrentFolder && "cursor-not-allowed border-[#e1e5eb] bg-[#f1f3f6] opacity-65",
-                      isDropTarget && "z-10 scale-[1.015] cursor-copy border-[#b38300] bg-[#ffe884] ring-2 ring-[#e1c24e] shadow-[0_8px_18px_-12px_rgba(125,91,0,0.7)]"
+                      draggedNoteId && canAcceptDraggedNote && !isDropTarget && "cursor-copy border-dashed border-[var(--brand-cyan)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_8%,var(--surface-lowest))] ring-1 ring-[color:color-mix(in_srgb,var(--brand-cyan)_24%,transparent)]",
+                      draggedNoteId && isCurrentFolder && "cursor-not-allowed border-[var(--line-subtle)] bg-[var(--surface-low)] opacity-65",
+                      isDropTarget && "z-10 scale-[1.015] cursor-copy border-[var(--primary)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] ring-2 ring-[color:color-mix(in_srgb,var(--brand-cyan)_34%,transparent)] shadow-[0_8px_18px_-12px_rgba(8,122,145,0.5)]"
                     )}
                   >
-                    {active && !draggedNoteId ? <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[#b38300]" aria-hidden="true" /> : null}
+                    {active && !draggedNoteId ? <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[var(--brand-cyan)]" aria-hidden="true" /> : null}
                     {isEditing ? (
                       <>
-                        <Folder className="h-4 w-4 shrink-0 text-[#9a7000]" />
+                        <Folder className="h-4 w-4 shrink-0 text-[var(--primary)]" />
                         <Input
                           value={editingFolderName}
                           onChange={(event) => setEditingFolderName(event.target.value)}
@@ -1612,13 +1908,13 @@ export function NotesWorkspace({
                               cancelRenameFolder()
                             }
                           }}
-                          className="h-8 min-w-0 flex-1 rounded-lg border-[#ddc66f] bg-white px-2 text-[12px] shadow-none focus-visible:ring-[#b38300]"
+                          className="h-8 min-w-0 flex-1 rounded-lg border-[var(--brand-cyan)] bg-[var(--surface-lowest)] px-2 text-[12px] shadow-none focus-visible:ring-[var(--brand-cyan)]"
                           autoFocus
                         />
                         <button
                           type="button"
                           onClick={() => void commitRenameFolder()}
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#8a6700] hover:bg-[#fff3bd]"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--primary)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))]"
                           disabled={isRenamingFolder}
                           aria-label={`Save folder name ${folder.name}`}
                         >
@@ -1627,7 +1923,7 @@ export function NotesWorkspace({
                         <button
                           type="button"
                           onClick={cancelRenameFolder}
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#667085] hover:bg-[#f1f3f6]"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                           disabled={isRenamingFolder}
                           aria-label={`Cancel renaming ${folder.name}`}
                         >
@@ -1639,19 +1935,19 @@ export function NotesWorkspace({
                       <button
                         type="button"
                         data-note-view
-                        onClick={() => setActiveRailKey(key)}
+                        onClick={() => handleSelectRail(key)}
                         className={cn(
                           "flex min-w-0 flex-1 items-center gap-2 self-stretch text-left text-[13px] font-medium focus-visible:outline-none",
-                          active ? "text-[#17212f]" : "text-[#596577]"
+                          active ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
                         )}
                       >
                         {isDropTarget ? (
-                          <FolderInput className="h-4 w-4 shrink-0 text-[#8a6700]" />
+                          <FolderInput className="h-4 w-4 shrink-0 text-[var(--primary)]" />
                         ) : (
                           <Folder
                             className={cn(
                               "h-4 w-4 shrink-0",
-                              active || (draggedNoteId && canAcceptDraggedNote) ? "text-[#8a6700]" : "text-[#7c7569]"
+                              active || (draggedNoteId && canAcceptDraggedNote) ? "text-[var(--primary)]" : "text-[var(--text-muted)]"
                             )}
                           />
                         )}
@@ -1661,9 +1957,9 @@ export function NotesWorkspace({
                         <span
                           className={cn(
                             "inline-flex h-6 w-7 shrink-0 items-center justify-center rounded-full",
-                            isDropTarget && "bg-[#b38300] text-white shadow-sm",
-                            canAcceptDraggedNote && !isDropTarget && "border border-[#ddc66f] bg-white text-[#8a6700]",
-                            isCurrentFolder && "border border-[#d8dee8] bg-white/80 text-[#7b8796]"
+                            isDropTarget && "bg-[var(--primary)] text-white shadow-sm",
+                            canAcceptDraggedNote && !isDropTarget && "border border-[var(--brand-cyan)] bg-[var(--surface-lowest)] text-[var(--primary)]",
+                            isCurrentFolder && "border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_80%,transparent)] text-[var(--text-muted)]"
                           )}
                           aria-label={isDropTarget ? "Drop here" : canAcceptDraggedNote ? "Move here" : "Current folder"}
                         >
@@ -1682,7 +1978,7 @@ export function NotesWorkspace({
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className="absolute inset-0 inline-flex items-center justify-center rounded-lg text-[#667085] opacity-0 transition-opacity hover:bg-[#eef1f5] hover:text-[#273344] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 group-hover:opacity-100 data-[state=open]:bg-[#eef1f5] data-[state=open]:opacity-100"
+                                className="absolute inset-0 inline-flex items-center justify-center rounded-lg text-[var(--text-secondary)] opacity-0 transition-opacity hover:bg-[var(--surface-highest)] hover:text-[var(--text-primary)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_30%,transparent)] group-hover:opacity-100 data-[state=open]:bg-[var(--surface-highest)] data-[state=open]:opacity-100"
                                 aria-label={`Folder actions for ${folder.name}`}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
@@ -1690,7 +1986,7 @@ export function NotesWorkspace({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
-                              className="min-w-[150px] rounded-xl border-[#dfe4eb] bg-white p-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.14)]"
+                              className="min-w-[150px] rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.14)]"
                             >
                               {!folder.parentId ? (
                                 <DropdownMenuItem
@@ -1728,7 +2024,7 @@ export function NotesWorkspace({
                               </DropdownMenuItem>
                               {!folder.isDefault ? (
                                 <>
-                                  <DropdownMenuSeparator className="bg-[#e7eaf0]" />
+                                  <DropdownMenuSeparator className="bg-[var(--line-subtle)]" />
                                   <DropdownMenuItem
                                     variant="destructive"
                                     className="rounded-lg px-2.5 py-2 text-[12px]"
@@ -1754,30 +2050,30 @@ export function NotesWorkspace({
 
         <section
           aria-labelledby={isMobile ? "mobile-note-collections" : "desktop-note-collections"}
-          className="mt-3 border-t border-[#e3e7ed] pt-2.5"
+          className="mt-3 border-t border-[var(--line-subtle)] pt-2.5"
         >
           <div className="mb-1.5 flex h-7 items-center px-2">
             <h3
               id={isMobile ? "mobile-note-collections" : "desktop-note-collections"}
-              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#98a2b3]"
+              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
             >
               Collections
             </h3>
           </div>
           <div className="space-y-1">
-            <button data-note-view type="button" onClick={() => setActiveRailKey("all")} className={railButtonClass(activeRailKey === "all")}>
+            <button data-note-view type="button" onClick={() => handleSelectRail("all")} className={railButtonClass(activeRailKey === "all" && searchScope === "view")}>
               <span className="inline-flex min-w-0 items-center gap-2"><NotebookPen className="h-4 w-4 shrink-0" /><span className="truncate">All Notes</span></span>
               <span className={railCountBadgeClass}>{smartCollectionCounts.all}</span>
             </button>
-            <button data-note-view type="button" onClick={() => setActiveRailKey("pinned")} className={railButtonClass(activeRailKey === "pinned")}>
+            <button data-note-view type="button" onClick={() => handleSelectRail("pinned")} className={railButtonClass(activeRailKey === "pinned" && searchScope === "view")}>
               <span className="inline-flex min-w-0 items-center gap-2"><Pin className="h-4 w-4 shrink-0" /><span className="truncate">Pinned</span></span>
               <span className={railCountBadgeClass}>{smartCollectionCounts.pinned}</span>
             </button>
-            <button data-note-view type="button" onClick={() => setActiveRailKey("archived")} className={railButtonClass(activeRailKey === "archived")}>
+            <button data-note-view type="button" onClick={() => handleSelectRail("archived")} className={railButtonClass(activeRailKey === "archived" && searchScope === "view")}>
               <span className="inline-flex min-w-0 items-center gap-2"><Archive className="h-4 w-4 shrink-0" /><span className="truncate">Archived</span></span>
               <span className={railCountBadgeClass}>{smartCollectionCounts.archived}</span>
             </button>
-            <button data-note-view type="button" onClick={() => setActiveRailKey("deleted")} className={railButtonClass(activeRailKey === "deleted")}>
+            <button data-note-view type="button" onClick={() => handleSelectRail("deleted")} className={railButtonClass(activeRailKey === "deleted" && searchScope === "view")}>
               <span className="inline-flex min-w-0 items-center gap-2"><Trash2 className="h-4 w-4 shrink-0" /><span className="truncate">Recently Deleted</span></span>
               <span className={railCountBadgeClass}>{smartCollectionCounts.deleted}</span>
             </button>
@@ -1785,15 +2081,15 @@ export function NotesWorkspace({
         </section>
 
         {productivityFeaturesEnabled ? (
-          <section className="mt-3 border-t border-[#ddd8cc] pt-2.5" aria-label="Smart Folders and Tags">
+          <section className="mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Smart Folders and Tags">
             <div className="mb-1.5 flex h-7 items-center justify-between px-2">
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8f8879]">
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 Smart Folders &amp; Tags
               </h3>
               <button
                 type="button"
                 onClick={() => setIsSmartFolderDialogOpen(true)}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#756f65] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b38300]"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
                 aria-label="New smart folder"
                 title="New smart folder"
               >
@@ -1827,7 +2123,7 @@ export function NotesWorkspace({
                     )
                 ).length
                 return (
-                  <button data-note-view key={folder.id} type="button" onClick={() => setActiveRailKey(key)} className={railButtonClass(activeRailKey === key)}>
+                  <button data-note-view key={folder.id} type="button" onClick={() => handleSelectRail(key)} className={railButtonClass(activeRailKey === key && searchScope === "view")}>
                     <span className="inline-flex min-w-0 items-center gap-2"><Sparkles className="h-4 w-4 shrink-0" /><span className="truncate">{folder.name}</span></span>
                     <span className={railCountBadgeClass}>{count}</span>
                   </button>
@@ -1836,7 +2132,7 @@ export function NotesWorkspace({
               {tags.map((tag) => {
                 const key = `tag:${tag.id}` as RailKey
                 return (
-                  <button data-note-view key={tag.id} type="button" onClick={() => setActiveRailKey(key)} className={railButtonClass(activeRailKey === key)}>
+                  <button data-note-view key={tag.id} type="button" onClick={() => handleSelectRail(key)} className={railButtonClass(activeRailKey === key && searchScope === "view")}>
                     <span className="inline-flex min-w-0 items-center gap-2"><Hash className="h-4 w-4 shrink-0" /><span className="truncate">{tag.name}</span></span>
                     <span className={railCountBadgeClass}>{tagCounts.get(tag.id) || 0}</span>
                   </button>
@@ -1846,18 +2142,18 @@ export function NotesWorkspace({
           </section>
         ) : null}
 
-        <section className="mt-3 border-t border-[#ddd8cc] pt-2.5" aria-label="Linked Notes">
+        <section className="mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Linked Notes">
           <div className="mb-1.5 flex h-7 items-center px-2">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8f8879]">
+            <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
               Linked Notes
             </h3>
           </div>
           <div className="space-y-1">
-            <button data-note-view type="button" onClick={() => setActiveRailKey("projects")} className={railButtonClass(activeRailKey === "projects")}>
+            <button data-note-view type="button" onClick={() => handleSelectRail("projects")} className={railButtonClass(activeRailKey === "projects" && searchScope === "view")}>
               <span className="inline-flex min-w-0 items-center gap-2"><FolderKanban className="h-4 w-4 shrink-0" /><span className="truncate">Project Notes</span></span>
               <span className={railCountBadgeClass}>{smartCollectionCounts.projects}</span>
             </button>
-            <button data-note-view type="button" onClick={() => setActiveRailKey("tasks")} className={railButtonClass(activeRailKey === "tasks")}>
+            <button data-note-view type="button" onClick={() => handleSelectRail("tasks")} className={railButtonClass(activeRailKey === "tasks" && searchScope === "view")}>
               <span className="inline-flex min-w-0 items-center gap-2"><ListTodo className="h-4 w-4 shrink-0" /><span className="truncate">Task Notes</span></span>
               <span className={railCountBadgeClass}>{smartCollectionCounts.tasks}</span>
             </button>
@@ -1869,21 +2165,23 @@ export function NotesWorkspace({
 
   const renderMiddleList = (isMobile = false) => (
     <div className={cn("flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className="border-b border-[#ddd8ce] bg-[#f7f5f0] px-3 pb-3 pt-3">
+      <div className="border-b border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 pb-3 pt-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[#2b2925]">
-              {searchQuery ? "Search Results" : activeRailLabel}
+            <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
+              {searchQuery ? "Search Results" : effectiveListLabel}
             </p>
-            <p className="text-[11px] tabular-nums text-[#8f887c]">
-              {filteredNotes.length} {filteredNotes.length === 1 ? "note" : "notes"}
+            <p className="text-[11px] tabular-nums text-[var(--text-muted)]">
+              {filteredNotes.length}
+              {personalListPage?.key === personalQueryKey && personalListPage.nextCursor ? "+" : ""}{" "}
+              {filteredNotes.length === 1 ? "note" : "notes"}
             </p>
           </div>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setListMode((current) => (current === "list" ? "gallery" : "list"))}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#756d5d] hover:bg-[#ece8df] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b38300]"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
               aria-label={listMode === "list" ? "Show gallery" : "Show list"}
               title={listMode === "list" ? "Gallery view" : "List view"}
             >
@@ -1893,7 +2191,7 @@ export function NotesWorkspace({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#756d5d] hover:bg-[#ece8df] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b38300]"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
                   aria-label="Sort notes"
                   title="Sort notes"
                 >
@@ -1925,40 +2223,20 @@ export function NotesWorkspace({
           variant="apple"
           density="compact"
         />
-        <div className="mt-2 grid grid-cols-2 rounded-lg bg-[#eae6dd] p-0.5 text-[11px] font-medium">
-          <button
-            type="button"
-            className={cn(
-              "rounded-md px-2 py-1.5 transition-colors",
-              searchScope === "view" ? "bg-white text-[#373126] shadow-sm" : "text-[#756f65]"
-            )}
-            onClick={() => setSearchScope("view")}
-          >
-            Current View
-          </button>
-          <button
-            type="button"
-            className={cn(
-              "rounded-md px-2 py-1.5 transition-colors",
-              searchScope === "all" ? "bg-white text-[#373126] shadow-sm" : "text-[#756f65]"
-            )}
-            onClick={() => setSearchScope("all")}
-          >
-            All Notes
-          </button>
-        </div>
+        <NotesScopeSwitch value={searchScope} onChange={handleSelectSearchScope} />
       </div>
       <div
         data-notes-list
         className={cn("ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5")}
       >
         {groupedNotes.length ? (
-          <div className="space-y-4">
-            {groupedNotes.map((group) => (
-              <div key={group.key}>
-                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#98a2b3]">{group.label}</p>
-                <div className={cn("mt-1.5", listMode === "gallery" ? "grid grid-cols-2 gap-2" : "space-y-1")}>
-                  {group.notes.map((note) => {
+          <>
+            <div className="space-y-4">
+              {groupedNotes.map((group) => (
+                <div key={group.key}>
+                  <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{group.label}</p>
+                  <div className={cn("mt-1.5", listMode === "gallery" ? "grid grid-cols-2 gap-2" : "space-y-1")}>
+                    {group.notes.map((note) => {
                     const selected = note.id === selectedNoteId
                     const sourceType = getNoteSourceType(note)
                     const imageSrc = extractFirstImageSrc(note.content || "")
@@ -1973,11 +2251,11 @@ export function NotesWorkspace({
                         onContextMenu={(event) => {
                           if (isLinked) return
                           event.preventDefault()
-                          setSelectedNoteId(note.id)
+                          handleSelectNote(note.id)
                           setRowMenuNoteId(note.id)
                         }}
                         onClick={() => {
-                          setSelectedNoteId(note.id)
+                          handleSelectNote(note.id)
                           if (isMobile) setMobilePane("editor")
                         }}
                         role="button"
@@ -1985,14 +2263,16 @@ export function NotesWorkspace({
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault()
-                            setSelectedNoteId(note.id)
+                            handleSelectNote(note.id)
                             if (isMobile) setMobilePane("editor")
                           }
                         }}
                         className={cn(
-                          "group rounded-[9px] border border-transparent px-2.5 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b38300]",
+                          "group rounded-[10px] border border-transparent px-2.5 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]",
                           !isLinked && !note.deletedAt && foldersEnabled && !storageUnavailable && "cursor-grab active:cursor-grabbing",
-                          selected ? "border-[#ead99f] bg-[#fff0ad]" : "hover:bg-[#efede8]",
+                          selected
+                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))]"
+                            : "hover:bg-[var(--surface-low)]",
                           draggedNoteId === note.id && "scale-[0.99] opacity-45",
                           movingNoteId === note.id && "pointer-events-none opacity-55",
                           listMode === "gallery" && "min-h-[132px] p-3"
@@ -2005,16 +2285,16 @@ export function NotesWorkspace({
                       >
                         <div className="flex items-start gap-2.5">
                           {imageSrc ? (
-                            <div className={cn("mt-0.5 shrink-0 overflow-hidden rounded-lg bg-[#e9edf2]", listMode === "gallery" ? "h-16 w-16" : "h-10 w-10")}>
+                            <div className={cn("mt-0.5 shrink-0 overflow-hidden rounded-lg bg-[var(--surface-highest)]", listMode === "gallery" ? "h-16 w-16" : "h-10 w-10")}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={imageSrc} alt="Note preview" className="h-full w-full object-cover" />
                             </div>
                           ) : null}
                           <div className="min-w-0 flex-1">
-                            <p className="line-clamp-1 text-[14px] font-semibold tracking-[-0.01em] text-[#1f2937]">{getNoteDisplayTitle(note)}</p>
-                            <p className="mt-0.5 line-clamp-1 text-[12px] text-[#667085]">{getNotePreview(note)}</p>
+                            <p className="line-clamp-1 text-[14px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{getNoteDisplayTitle(note)}</p>
+                            <p className="mt-0.5 line-clamp-1 text-[12px] text-[var(--text-secondary)]">{getNotePreview(note)}</p>
                             <div className="mt-1.5 flex items-center justify-between gap-2">
-                              <p className="truncate text-[11px] text-[#98a2b3]">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</p>
+                              <p className="truncate text-[11px] text-[var(--text-muted)]">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</p>
                               <div className="flex items-center gap-0.5">
                                 {!isLinked ? (
                                   <DropdownMenu
@@ -2027,7 +2307,7 @@ export function NotesWorkspace({
                                       <button
                                         type="button"
                                         onClick={(event) => event.stopPropagation()}
-                                        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#746f66] opacity-0 hover:bg-white/70 focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                                        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-secondary)] opacity-0 hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_76%,transparent)] focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
                                         aria-label={`Actions for ${getNoteDisplayTitle(note)}`}
                                       >
                                         <MoreHorizontal className="h-4 w-4" />
@@ -2074,7 +2354,7 @@ export function NotesWorkspace({
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 ) : (
-                                  <span className="rounded-md bg-[#eef1f6] px-1.5 py-0.5 text-[10px] text-[#667085]">
+                                  <span className="rounded-md bg-[var(--surface-low)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
                                     {sourceType === "project" ? "Project" : "Task"}
                                   </span>
                                 )}
@@ -2084,22 +2364,62 @@ export function NotesWorkspace({
                         </div>
                       </div>
                     )
-                  })}
+                    })}
+                  </div>
                 </div>
+              ))}
+            </div>
+            {personalQueryView ? (
+              <div className="mt-4 flex flex-col items-center gap-2 px-2 pb-2">
+                {personalListPage?.error ? (
+                  <button
+                    type="button"
+                    onClick={() => setPersonalListReloadToken((current) => current + 1)}
+                    className="text-[12px] font-semibold text-rose-600 hover:underline"
+                  >
+                    Couldn&apos;t refresh notes · Retry
+                  </button>
+                ) : null}
+                {personalListPage?.key === personalQueryKey && personalListPage.nextCursor ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-[12px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
+                    onClick={() => void handleLoadMorePersonalNotes()}
+                    disabled={personalListPage.loadingMore}
+                  >
+                    {personalListPage.loadingMore ? "Loading…" : "Load more"}
+                  </Button>
+                ) : null}
+                {isPersonalListLoading ? (
+                  <span className="text-[11px] text-[var(--text-muted)]">Refreshing…</span>
+                ) : null}
               </div>
-            ))}
-          </div>
+            ) : null}
+          </>
         ) : (
-          <div className="rounded-xl border border-dashed border-[#d8dee8] bg-[#f7f8fa] p-5 text-center">
-            <p className="text-sm font-medium text-[#4b5563]">
+          <div className="rounded-xl border border-dashed border-[var(--line-subtle)] bg-[var(--surface-low)] p-5 text-center">
+            <p className="text-sm font-medium text-[var(--text-primary)]">
               {searchQuery ? `No results for "${searchQuery}"` : "No notes in this view"}
             </p>
-            <p className="mt-1 text-[12px] text-[#8b95a3]">
+            <p className="mt-1 text-[12px] text-[var(--text-muted)]">
               {searchQuery ? "Try another keyword or clear search." : "Create a note or switch collection."}
             </p>
             {searchQuery ? (
               <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setSearch("")}>
                 Clear search
+              </Button>
+            ) : null}
+            {personalListPage?.error ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => setPersonalListReloadToken((current) => current + 1)}
+              >
+                Retry
               </Button>
             ) : null}
           </div>
@@ -2128,12 +2448,14 @@ export function NotesWorkspace({
     return folders.find((folder) => folder.id === folderId)?.name || "Folder"
   }, [activeRailKey, folders, smartFolders, tags])
 
+  const effectiveListLabel = searchScope === "all" ? "All Notes" : activeRailLabel
+
   const renderEditor = (isMobile = false) => {
     if (!selectedNote) {
       return (
-        <div className="flex h-full min-h-0 flex-col bg-white">
-          <div className="flex h-12 items-center border-b border-[#e2ded5] px-5 text-[12px] text-[#8c8579]">
-            {activeRailLabel}
+        <div className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
+          <div className="flex h-12 items-center border-b border-[var(--line-subtle)] px-5 text-[12px] text-[var(--text-muted)]">
+            {effectiveListLabel}
           </div>
           <div className="ui-scrollbar flex-1 overflow-y-auto px-5 py-5 lg:px-8">
             <RichTextEditor
@@ -2144,8 +2466,10 @@ export function NotesWorkspace({
               mode="document"
               notesMode
               notesAppearance="apple"
+              focusToken={editorFocusToken}
               documentLayout="left"
               documentWidth="reading"
+              imageUploadFallback="error"
               className="bg-transparent"
               minHeightClassName="min-h-[60vh]"
             />
@@ -2156,14 +2480,23 @@ export function NotesWorkspace({
 
     const isDeleted = Boolean(selectedNote.deletedAt)
     return (
-      <div className="flex h-full min-h-0 flex-col bg-white">
-        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[#e2ded5] px-4 py-2 lg:px-6">
-          <div className="min-w-0 text-[11px] text-[#8c8579]">
+      <div className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
+        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--line-subtle)] px-4 py-2 lg:px-6">
+          <div className="min-w-0 text-[11px] text-[var(--text-muted)]">
             <span>
               Edited {format(new Date(selectedNote.updatedAt), "d MMM yyyy, HH:mm")}
             </span>
-            {saveState === "saving" ? <span className="ml-2 text-[#9a7000]">Saving…</span> : null}
-            {saveState === "error" ? <span className="ml-2 text-rose-600">Save failed</span> : null}
+            {saveState === "saving" ? <span className="ml-2 text-[var(--primary)]">Saving…</span> : null}
+            {saveState === "saved" ? <span className="ml-2 text-emerald-600">Saved</span> : null}
+            {saveState === "error" ? (
+              <button
+                type="button"
+                onClick={() => void flushSelectedNote()}
+                className="ml-2 font-semibold text-rose-600 underline-offset-2 hover:underline"
+              >
+                Save failed · Retry
+              </button>
+            ) : null}
             {isDeleted ? <span className="ml-2 font-medium text-rose-600">Recently Deleted</span> : null}
           </div>
           {!selectedNoteIsLinked ? (
@@ -2171,7 +2504,7 @@ export function NotesWorkspace({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#746f66] hover:bg-[#f0ede7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b38300]"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
                   aria-label="Note actions"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -2230,7 +2563,7 @@ export function NotesWorkspace({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <span className="rounded-md bg-[#f0eee9] px-2 py-1 text-[10px] font-medium text-[#746f66]">
+            <span className="rounded-md bg-[var(--surface-low)] px-2 py-1 text-[10px] font-medium text-[var(--text-secondary)]">
               {selectedNoteSourceType === "project" ? "Project" : "Task"}
               {selectedNote.sourceLabel ? ` · ${selectedNote.sourceLabel}` : ""}
             </span>
@@ -2239,7 +2572,7 @@ export function NotesWorkspace({
         <div className={cn("ui-scrollbar ui-scrollbar-inset flex-1 min-h-0 overflow-y-auto", isMobile ? "px-3 pb-16 pt-3" : "px-6 py-4 lg:px-9")}>
           <RichTextEditor
             value={contentDraft}
-            onChange={setContentDraft}
+            onChange={handleContentDraftChange}
             placeholder="Start writing"
             variant="plain"
             mode="document"
@@ -2249,7 +2582,9 @@ export function NotesWorkspace({
             documentLayout="left"
             uploadProjectId={editorUploadContextId}
             documentWidth="reading"
+            imageUploadFallback="error"
             readOnly={isDeleted}
+            onBlur={() => void flushSelectedNote()}
             toolbarActions={
               selectedNoteIsLinked ? (
                 <Button
@@ -2257,7 +2592,7 @@ export function NotesWorkspace({
                   variant="ghost"
                   size="icon"
                   onClick={appendTemplate}
-                  className="h-8 w-8 rounded-full text-[#756f65] hover:bg-[#f0ede7]"
+                  className="h-8 w-8 rounded-full text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                   aria-label="Add template"
                   title="Add template"
                 >
@@ -2281,31 +2616,30 @@ export function NotesWorkspace({
         ref={dragPreviewRef}
         data-note-drag-preview
         aria-hidden="true"
-        className="pointer-events-none fixed -top-[1000px] left-0 z-50 inline-flex h-9 w-max max-w-[240px] items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-[10px] border border-[#d8dee8] bg-white px-3 text-[13px] font-semibold text-[#1f2937] shadow-[0_8px_20px_rgba(15,23,42,0.16)]"
+        className="pointer-events-none fixed -top-[1000px] left-0 z-50 inline-flex h-9 w-max max-w-[240px] items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-[10px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[13px] font-semibold text-[var(--text-primary)] shadow-[0_8px_20px_rgba(15,23,42,0.16)]"
       />
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#d8d3ca] bg-[#f7f5f0] px-3 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <NotebookPen className="h-5 w-5 shrink-0 text-[#9a7000]" />
-          <h1 className="truncate text-[18px] font-semibold tracking-[-0.02em] text-[#292722]">
-            Notes
-          </h1>
-        </div>
-        <Button
-          type="button"
-          className="h-9 rounded-lg border border-[#d7be65] bg-[#ffd84d] px-3 text-[#3b3010] shadow-none hover:bg-[#f4ca37]"
-          onClick={() => {
-            void handleCreateNote({ content: "" }).then((id) => {
-              if (id) setMobilePane("editor")
-            })
-          }}
-          disabled={isCreating || storageUnavailable || activeRailKey === "deleted"}
-        >
-          <FilePlus2 className="h-4 w-4" />
-          New Note
-        </Button>
-      </header>
+      <div className="shrink-0 rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+        <DashboardPageHeader
+          title="Notes"
+          showMobile
+          actions={
+            <Button
+              type="button"
+              className="!h-10 !w-auto !rounded-[20px] !bg-[var(--primary)] !px-5 !text-white hover:!bg-[var(--brand-primary-strong)]"
+              onClick={() => {
+                beginNewNote()
+                setMobilePane("editor")
+              }}
+              disabled={isCreating || storageUnavailable || activeRailKey === "deleted"}
+            >
+              <FilePlus2 className="h-4 w-4" />
+              New Note
+            </Button>
+          }
+        />
+      </div>
 
-      <main className="min-h-0 flex-1 overflow-hidden border border-[#d8d3ca] bg-white xl:grid"
+      <main className="min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_12px_28px_-30px_rgba(15,23,42,0.52)] xl:grid"
         style={{
           gridTemplateColumns: `${sidebarWidth}px 5px ${listWidth}px 5px minmax(520px, 1fr)`,
         }}
@@ -2316,7 +2650,7 @@ export function NotesWorkspace({
         <button
           type="button"
           aria-label="Resize folders pane"
-          className="hidden cursor-col-resize border-x border-[#d8d3ca] bg-[#e8e4dc] hover:bg-[#d9b843] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b38300] xl:block"
+          className="hidden cursor-col-resize border-x border-[var(--line-subtle)] bg-[var(--surface-highest)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--surface-highest))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] xl:block"
           onPointerDown={(event) => beginPaneResize(event, "sidebar")}
         />
         <NotesListPane className="hidden xl:block">
@@ -2325,7 +2659,7 @@ export function NotesWorkspace({
         <button
           type="button"
           aria-label="Resize notes list"
-          className="hidden cursor-col-resize border-x border-[#d8d3ca] bg-[#e8e4dc] hover:bg-[#d9b843] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b38300] xl:block"
+          className="hidden cursor-col-resize border-x border-[var(--line-subtle)] bg-[var(--surface-highest)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--surface-highest))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] xl:block"
           onPointerDown={(event) => beginPaneResize(event, "list")}
         />
         <NotesEditorPane className="hidden xl:block">
@@ -2333,17 +2667,17 @@ export function NotesWorkspace({
         </NotesEditorPane>
 
         <div className="hidden h-full min-h-0 md:grid md:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] xl:hidden">
-          <NotesListPane className="border-r border-[#d8d3ca]">
-            <div className="flex h-10 items-center border-b border-[#d8d3ca] px-2">
+          <NotesListPane className="border-r border-[var(--line-subtle)]">
+            <div className="flex h-10 items-center border-b border-[var(--line-subtle)] px-2">
               <Sheet open={tabletSidebarOpen} onOpenChange={setTabletSidebarOpen}>
                 <SheetTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="h-8 text-[#615b50]">
+                  <Button type="button" variant="ghost" size="sm" className="h-8 text-[var(--text-secondary)]">
                     <PanelLeft className="h-4 w-4" />
                     Folders
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] border-r border-[#d8d3ca] bg-[#efede8] p-0">
-                  <SheetHeader className="border-b border-[#d8d3ca] px-4 py-3">
+                <SheetContent side="left" className="w-[300px] border-r border-[var(--line-subtle)] bg-[var(--surface-low)] p-0">
+                  <SheetHeader className="border-b border-[var(--line-subtle)] px-4 py-3">
                     <SheetTitle>Notes</SheetTitle>
                   </SheetHeader>
                   <div
@@ -2366,10 +2700,10 @@ export function NotesWorkspace({
 
         <div className="h-full min-h-0 md:hidden">
           {mobilePane === "folders" ? (
-            <section className="h-full bg-[#efede8]">
-              <div className="flex h-11 items-center justify-between border-b border-[#d8d3ca] px-3">
-                <span className="text-[15px] font-semibold text-[#2d2922]">Folders</span>
-                <span className="text-[11px] text-[#8a8378]">{smartCollectionCounts.all} notes</span>
+            <section className="h-full bg-[var(--surface-low)]">
+              <div className="flex h-11 items-center justify-between border-b border-[var(--line-subtle)] px-3">
+                <span className="text-[15px] font-semibold text-[var(--text-primary)]">Folders</span>
+                <span className="text-[11px] text-[var(--text-muted)]">{smartCollectionCounts.all} notes</span>
               </div>
               <div
                 className="h-[calc(100%-44px)]"
@@ -2384,9 +2718,9 @@ export function NotesWorkspace({
             </section>
           ) : null}
           {mobilePane === "list" ? (
-            <section className="flex h-full min-h-0 flex-col bg-[#f7f5f0]">
-              <div className="flex h-11 shrink-0 items-center border-b border-[#d8d3ca] px-2">
-                <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[#8a6700]" onClick={() => setMobilePane("folders")}>
+            <section className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
+              <div className="flex h-11 shrink-0 items-center border-b border-[var(--line-subtle)] px-2">
+                <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[var(--primary)]" onClick={() => setMobilePane("folders")}>
                   <ChevronLeft className="h-4 w-4" />
                   Folders
                 </Button>
@@ -2395,9 +2729,9 @@ export function NotesWorkspace({
             </section>
           ) : null}
           {mobilePane === "editor" ? (
-            <section className="flex h-full min-h-0 flex-col bg-white">
-              <div className="flex h-11 shrink-0 items-center border-b border-[#d8d3ca] px-2">
-                <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[#8a6700]" onClick={() => setMobilePane("list")}>
+            <section className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
+              <div className="flex h-11 shrink-0 items-center border-b border-[var(--line-subtle)] px-2">
+                <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[var(--primary)]" onClick={() => setMobilePane("list")}>
                   <ChevronLeft className="h-4 w-4" />
                   Notes
                 </Button>
@@ -2432,7 +2766,7 @@ export function NotesWorkspace({
             <Button
               type="button"
               className="!h-10 !w-auto !min-w-0 !rounded-[12px] !border !border-[#d5dae3] !bg-[color:color-mix(in_srgb,#f4f6fa_94%,white)] !px-5 !text-[#1f2937] hover:!bg-[#eceff4]"
-              onClick={() => void handleCreateNote({ content: "" })}
+              onClick={beginNewNote}
               disabled={isCreating || storageUnavailable}
             >
               <FilePlus2 className="h-4 w-4" />
@@ -2443,7 +2777,7 @@ export function NotesWorkspace({
             <Button
               type="button"
               className="!h-10 !w-auto !min-w-0 !rounded-[12px] !border !border-[#d5dae3] !bg-[color:color-mix(in_srgb,#f4f6fa_94%,white)] !px-5 !text-[#1f2937] hover:!bg-[#eceff4]"
-              onClick={() => void handleCreateNote({ content: "" })}
+              onClick={beginNewNote}
               disabled={isCreating || storageUnavailable}
             >
               <FilePlus2 className="h-4 w-4" />
@@ -2475,7 +2809,7 @@ export function NotesWorkspace({
                   <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-4 lg:pr-3">
                     <RichTextEditor
                       value={contentDraft}
-                      onChange={setContentDraft}
+                      onChange={handleContentDraftChange}
                       placeholder="Start writing"
                       variant="plain"
                       mode="document"
@@ -2485,6 +2819,7 @@ export function NotesWorkspace({
                       documentLayout="left"
                       uploadProjectId={editorUploadContextId}
                       documentWidth="reading"
+                      imageUploadFallback="error"
                       toolbarActions={
                         selectedNoteIsLinked ? (
                           <Button
@@ -2603,7 +2938,7 @@ export function NotesWorkspace({
                   <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2">
                     <RichTextEditor
                       value={contentDraft}
-                      onChange={setContentDraft}
+                      onChange={handleContentDraftChange}
                       placeholder="Start writing"
                       variant="plain"
                       mode="document"
@@ -2613,6 +2948,7 @@ export function NotesWorkspace({
                       documentLayout="left"
                       uploadProjectId={editorUploadContextId}
                       documentWidth="reading"
+                      imageUploadFallback="error"
                       toolbarActions={
                         selectedNoteIsLinked ? (
                           <Button
@@ -2743,12 +3079,12 @@ export function NotesWorkspace({
                 ["Checklist", smartFolderChecklist, setSmartFolderChecklist],
                 ["Attachment", smartFolderAttachment, setSmartFolderAttachment],
               ].map(([label, checked, setter]) => (
-                <label key={String(label)} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ded8cb] px-3 py-2 text-sm">
+                <label key={String(label)} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--line-subtle)] px-3 py-2 text-sm">
                   <input
                     type="checkbox"
                     checked={Boolean(checked)}
                     onChange={(event) => (setter as React.Dispatch<React.SetStateAction<boolean>>)(event.target.checked)}
-                    className="accent-[#b38300]"
+                    className="accent-[var(--brand-primary)]"
                   />
                   {String(label)}
                 </label>
@@ -2756,7 +3092,7 @@ export function NotesWorkspace({
             </div>
             {tags.length ? (
               <div>
-                <p className="mb-2 text-xs font-medium text-[#70695d]">Tags</p>
+                <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">Tags</p>
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => {
                     const selected = smartFolderTagIds.includes(tag.id)
@@ -2774,8 +3110,8 @@ export function NotesWorkspace({
                         className={cn(
                           "rounded-full border px-3 py-1.5 text-xs",
                           selected
-                            ? "border-[#c7a62f] bg-[#fff0ad] text-[#4a3a00]"
-                            : "border-[#ded8cb] bg-white text-[#70695d]"
+                            ? "border-[var(--brand-cyan)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] text-[var(--primary)]"
+                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
                         )}
                       >
                         #{tag.name}
@@ -2792,7 +3128,7 @@ export function NotesWorkspace({
             </Button>
             <Button
               type="button"
-              className="bg-[#ffd84d] text-[#3b3010] hover:bg-[#f4ca37]"
+              className="bg-[var(--primary)] text-white hover:bg-[var(--brand-primary-strong)]"
               onClick={() => void handleCreateSmartFolder()}
               disabled={isCreatingSmartFolder}
             >

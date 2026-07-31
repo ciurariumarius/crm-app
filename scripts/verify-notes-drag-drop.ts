@@ -7,6 +7,14 @@ async function run() {
     "components/notes/use-notes-workspace-preferences.ts",
     "utf8"
   )
+  const scopeSwitchSource = await readFile(
+    "components/notes/notes-scope-switch.tsx",
+    "utf8"
+  )
+  const editorSource = await readFile(
+    "components/ui/rich-text-editor.tsx",
+    "utf8"
+  )
 
   assert.match(source, /data-note-drag-id=\{note\.id\}/)
   assert.match(source, /draggable=\{!isLinked && !note\.deletedAt && foldersEnabled && !storageUnavailable/)
@@ -39,15 +47,24 @@ async function run() {
   assert.match(preferencesSource, /notes\.listWidth/)
   assert.match(preferencesSource, /notes\.listMode/)
   assert.match(preferencesSource, /notes\.sort/)
-  assert.match(source, /Current View/)
-  assert.match(source, /All Notes/)
+  assert.match(scopeSwitchSource, /Current View/)
+  assert.match(scopeSwitchSource, /All Notes/)
+  assert.match(source, /resolveNotesScope\(notes, railFilteredNotes, searchScope\)/)
+  assert.match(source, /enqueueSerializedNoteSave/)
+  assert.match(source, /queryNoteRecordPage/)
+  assert.match(source, /nextCursor/)
+  assert.match(source, /const beginNewNote =/)
+  assert.doesNotMatch(source, /transientEmptyNoteIdsRef/)
+  assert.doesNotMatch(source, /#(?:fff0ad|fff3bd|ffd84d|b38300|8a6700|9a7000)/i)
+  assert.doesNotMatch(editorSource, /(?:amber-|#b38300|#fff0ad)/i)
   assert.match(source, /Recently Deleted/)
   assert.match(source, /Smart Folders &amp; Tags/)
   assert.match(source, /Linked Notes/)
   assert.match(source, /mobilePane === "folders"/)
   assert.match(source, /mobilePane === "list"/)
   assert.match(source, /mobilePane === "editor"/)
-  assert.match(source, /bg-\[#fff0ad\]/)
+  assert.match(scopeSwitchSource, /var\(--surface-lowest\)/)
+  assert.match(scopeSwitchSource, /var\(--text-primary\)/)
 
   process.stdout.write("verify-notes-drag-drop: ok\n")
 }
