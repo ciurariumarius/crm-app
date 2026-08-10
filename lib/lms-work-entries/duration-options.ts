@@ -1,4 +1,4 @@
-export const LMS_WORK_DURATION_PRESETS = [10, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240, 300, 360] as const
+export const LMS_WORK_DURATION_PRESETS = [30, 60, 120, 180, 240] as const
 
 export const LMS_WORK_DURATION_FALLBACK_SHORTCUTS = [30, 60, 120, 180, 240, 360] as const
 export const LMS_WORK_DURATION_SHORTCUT_LIMIT = 6
@@ -23,6 +23,15 @@ export function parseCustomLmsWorkDuration(value: string) {
   if (!trimmed) return null
   const parsed = Number(trimmed)
   return isValidLmsWorkDuration(parsed) ? parsed : null
+}
+
+export function formatCompactLmsWorkDuration(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "—"
+  const minutes = Math.max(0, Math.trunc(value))
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  return remainder ? `${hours}h${remainder}` : `${hours}h`
 }
 
 export function getLmsWorkDefaultDurationSelection(value: number | null | undefined) {

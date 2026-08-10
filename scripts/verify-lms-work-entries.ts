@@ -9,11 +9,15 @@ import {
   LMS_WORK_DURATION_FALLBACK_SHORTCUTS,
   LMS_WORK_DURATION_PRESETS,
   buildLmsWorkDurationShortcuts,
+  formatCompactLmsWorkDuration,
   getLmsWorkDefaultDurationSelection,
   getLmsWorkUtilizationPercent,
   parseCustomLmsWorkDuration,
 } from "../lib/lms-work-entries/duration-options"
-import { rankLmsWorkOptionsByFrequency } from "../lib/lms-work-entries/frequent-options"
+import {
+  mergeLmsWorkOptionShortcuts,
+  rankLmsWorkOptionsByFrequency,
+} from "../lib/lms-work-entries/frequent-options"
 import {
   LMS_WORK_EXPORT_STATUSES,
   buildLmsWorkEntryWhere,
@@ -27,10 +31,13 @@ import {
 } from "../lib/lms-work-entries/pagination"
 import {
   addDateOnlyDays,
+  addLmsWorkdays,
   formatLmsWorkDateLabel,
   getBucharestDateOnly,
   getDateOnlyRange,
+  getDefaultLmsWorkDate,
   getLmsWorkCapacity,
+  getLmsWorkWeekDates,
   isRomanianWorkday,
   isRomanianLegalHoliday,
   isValidDateOnly,
@@ -72,6 +79,25 @@ async function run() {
   assert.equal(getBucharestDateOnly(new Date("2026-12-31T22:30:00.000Z")), "2027-01-01")
   assert.equal(addDateOnlyDays("2024-02-28", 1), "2024-02-29")
   assert.equal(addDateOnlyDays("2026-01-01", -1), "2025-12-31")
+  assert.equal(getDefaultLmsWorkDate("2026-08-08"), "2026-08-07")
+  assert.equal(getDefaultLmsWorkDate("2026-08-09"), "2026-08-07")
+  assert.equal(getDefaultLmsWorkDate("2026-08-10"), "2026-08-10")
+  assert.deepEqual(getLmsWorkWeekDates("2026-08-04"), [
+    "2026-08-03",
+    "2026-08-04",
+    "2026-08-05",
+    "2026-08-06",
+    "2026-08-07",
+  ])
+  assert.deepEqual(getLmsWorkWeekDates("2026-01-01"), [
+    "2025-12-29",
+    "2025-12-30",
+    "2025-12-31",
+    "2026-01-01",
+    "2026-01-02",
+  ])
+  assert.equal(addLmsWorkdays("2026-08-10", -1), "2026-08-07")
+  assert.equal(addLmsWorkdays("2026-08-07", 1), "2026-08-10")
   assert.deepEqual(getDateOnlyRange("2026-07-17", "2026-07-21"), [
     "2026-07-17",
     "2026-07-18",
@@ -164,7 +190,7 @@ async function run() {
   assert.equal(buildLmsAllocationSyncKey("example.ro"), "client:example ro")
   assert.equal(buildLmsAllocationSyncKey(" Școala-Exemplu.ro "), "client:scoala exemplu ro")
   assert.equal(buildLmsAllocationSyncKey("..."), null)
-  assert.deepEqual(Array.from(LMS_WORK_DURATION_PRESETS), [10, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240, 300, 360])
+  assert.deepEqual(Array.from(LMS_WORK_DURATION_PRESETS), [30, 60, 120, 180, 240])
   assert.deepEqual(Array.from(LMS_WORK_DURATION_FALLBACK_SHORTCUTS), [30, 60, 120, 180, 240, 360])
   assert.equal(parseCustomLmsWorkDuration("1"), 1)
   assert.equal(parseCustomLmsWorkDuration("1440"), 1440)
@@ -172,6 +198,10 @@ async function run() {
   assert.equal(parseCustomLmsWorkDuration("0"), null)
   assert.equal(parseCustomLmsWorkDuration("30.5"), null)
   assert.equal(parseCustomLmsWorkDuration("1441"), null)
+  assert.equal(formatCompactLmsWorkDuration(0), "—")
+  assert.equal(formatCompactLmsWorkDuration(30), "30m")
+  assert.equal(formatCompactLmsWorkDuration(420), "7h")
+  assert.equal(formatCompactLmsWorkDuration(390), "6h30")
   assert.deepEqual(getLmsWorkDefaultDurationSelection(60), {
     durationSelection: "60",
     customMinutes: "",
@@ -220,6 +250,13 @@ async function run() {
       (option) => option.label
     ).map((option) => option.id),
     ["client-a", "client-b", "client-c"]
+  )
+  assert.deepEqual(
+    mergeLmsWorkOptionShortcuts(
+      [{ id: "task-client", label: "Client task" }, { id: "task-shared", label: "Shared" }],
+      [{ id: "task-shared", label: "Shared" }, { id: "task-global", label: "Global task" }]
+    ).map((option) => option.id),
+    ["task-client", "task-shared", "task-global"]
   )
   assert.equal(canonicalizeLmsWorkTaskName("Meeting / videocall client"), "Meeting / videocall client ")
   assert.equal(canonicalizeLmsWorkTaskName("Meeting / videocall client "), "Meeting / videocall client ")
@@ -297,18 +334,25 @@ async function run() {
   assert.doesNotMatch(workLogSource, /DEFAULT_LMS_WORK_DURATION_MINUTES/)
   assert.match(workLogSource, /const \[durationSelection, setDurationSelection\] = React\.useState\(""\)/)
   assert.match(workLogSource, /setDurationSelection\(""\)/)
-  assert.match(workLogSource, /Select the time spent to continue\./)
-  assert.match(workLogSource, /Enter custom minutes to continue\./)
-  assert.match(workLogSource, /xl:grid-cols-\[minmax\(0,11fr\)_minmax\(420px,9fr\)\]/)
-  assert.match(workLogSource, /xl:col-start-2 xl:row-start-1/)
-  assert.match(workLogSource, /xl:col-span-2 xl:row-start-2/)
+  assert.doesNotMatch(workLogSource, /Select the time spent to continue\./)
+  assert.doesNotMatch(workLogSource, /Enter custom minutes to continue\./)
+  assert.match(workLogSource, /xl:grid-cols-\[minmax\(0,29fr\)_minmax\(360px,21fr\)\]/)
+  assert.match(workLogSource, /<WorkWeekNavigator/)
+  assert.match(workLogSource, /grid grid-cols-5 gap-1\.5/)
+  assert.match(workLogSource, /aria-current=\{isSelected \? "date" : undefined\}/)
+  assert.match(workLogSource, /addLmsWorkdays\(date, -1\)/)
+  assert.match(workLogSource, /addLmsWorkdays\(date, 1\)/)
+  assert.match(workLogSource, /event\.metaKey \|\| event\.ctrlKey/)
+  assert.match(workLogSource, /setTaskTypeId\(""\)/)
+  assert.match(workLogSource, /taskTriggerRef\.current\?\.focus\(\)/)
+  assert.doesNotMatch(workLogSource, /setWorkDate\(today\)|setLmsAllocationId\(""\)|Other date/)
   assert.match(workLogSource, /hasSelection/)
   assert.equal(workLogSource.match(/<Command shouldFilter=\{false\}>/g)?.length, 3)
   assert.match(workLogSource, /CommandInput[\s\S]*placeholder="Search clients\.\.\."/)
   assert.match(workLogSource, /CommandInput[\s\S]*placeholder="Search tasks\.\.\."/)
   assert.equal(workLogSource.match(/role="combobox"/g)?.length, 3)
   assert.match(workLogSource, /Saving…/)
-  assert.equal(workLogSource.match(/<WorkDatePicker/g)?.length, 2)
+  assert.equal(workLogSource.match(/<WorkDatePicker/g)?.length, 1)
   assert.match(workLogSource, /id="edit-work-date"/)
   assert.match(workLogSource, /ariaLabel="Edit work date"/)
   assert.doesNotMatch(workLogSource, /id="edit-work-date" type="date"/)
@@ -319,8 +363,14 @@ async function run() {
   assert.match(workLogSource, /format\(selectedDate, "EEEE"\)/)
   assert.match(workLogSource, /Monday–Friday/)
   assert.match(workLogSource, />\s*Today\s*<\/Button>/)
-  assert.match(workLogSource, /Choose a work day/)
-  assert.match(workLogSource, /formatLmsWorkDateLabel/)
+  assert.match(workLogSource, /Already logged:/)
+  assert.match(workLogSource, /Save \$\{durationMinutes} min ·/)
+  assert.match(workLogSource, /composerContext\.frequentTasks/)
+  assert.match(workLogSource, /composerRequestRef/)
+  assert.match(workLogPageSource, /getLmsWorkComposerContextData/)
+  assert.match(workLogDbSource, /where: \{ workDate: \{ gte: weekStart, lte: weekEnd \} \}/)
+  assert.match(workLogDbSource, /mergeLmsWorkOptionShortcuts/)
+  assert.match(workEntryActionsSource, /getLmsWorkComposerContext/)
   assert.match(workLogSource, /workCapacity\.hours}h · \$\{workUtilizationPercent}%/)
   assert.match(workLogSource, /workUtilizationPercent}%/)
   assert.match(workLogSource, /ExportStatusBadge/)
@@ -330,19 +380,32 @@ async function run() {
   assert.match(workLogSource, /id="export-all-entries"/)
   assert.match(workLogSource, /includeExported/)
   assert.match(workLogSource, /Export all/)
+  assert.match(workLogSource, /const \[selectedEntryIds, setSelectedEntryIds\] = React\.useState<string\[]>\(\[\]\)/)
+  assert.match(workLogSource, /const \[exportingSelected, setExportingSelected\] = React\.useState\(false\)/)
+  assert.match(workLogSource, /toggleEntrySelection/)
+  assert.match(workLogSource, /toggleVisibleEntries/)
+  assert.match(workLogSource, /someVisibleEntriesSelected \? "indeterminate" : false/)
+  assert.match(workLogSource, /Select all \$\{data\.entries\.length\} visible work entries/)
+  assert.match(workLogSource, /Select all \{data\.entries\.length\} visible rows/)
+  assert.match(workLogSource, /Export selected/)
+  assert.match(workLogSource, /method: "POST"/)
+  assert.match(workLogSource, /body: JSON\.stringify\(\{ ids: selectedEntryIds \}\)/)
+  assert.match(workLogSource, /downloadExportResponse\(response, selectedEntryIds\.length\)/)
+  assert.match(workLogSource, /const visibleIds = new Set\(data\.entries\.map/)
+  assert.match(workLogSource, /colSpan=\{7\}/)
   assert.doesNotMatch(workLogSource, /Romanian workdays × 8h/)
   assert.match(workLogSource, /Frequently used/)
   assert.match(workLogSource, /Frequently used clients/)
   assert.match(workLogSource, /Frequently used tasks/)
   assert.match(workLogSource, /toLocaleLowerCase\("ro"\) === "\[intern\]"/)
   assert.match(workLogSource, /client\.id !== internalClient\?\.id/)
-  assert.match(workLogSource, /grid grid-cols-3 gap-1\.5/)
-  assert.match(workLogSource, /<TaskCombobox tasks=\{data\.tasks\} value=\{taskTypeId\} onValueChange=\{selectTask\} large \/>/)
-  assert.match(workLogSource, /xl:h-full xl:grid-rows-2/)
+  assert.match(workLogSource, /grid grid-cols-3 gap-2/)
+  assert.match(workLogSource, /triggerRef=\{taskTriggerRef\}/)
+  assert.match(workLogSource, /flex h-full flex-col gap-4/)
   assert.match(workLogSource, /clients\.filter\(\(client\) => matchesLmsClientSearch\(client\.client, search\)\)/)
   assert.match(workLogSource, /options\.filter\(\(task\) => matchesLmsClientSearch\(task\.name, search\)\)/)
   assert.equal(workLogSource.match(/setSearch\(""\)/g)?.length, 3)
-  assert.match(workLogSource, /Save work/)
+  assert.match(workLogSource, /Save \$\{durationMinutes} min/)
   assert.match(workLogSource, /!hasSelectedClient/)
   assert.match(workLogSource, /!hasSelectedTask/)
   assert.match(workLogSource, /Add client/)
@@ -467,6 +530,16 @@ async function run() {
   assert.match(workEntryExportRouteSource, /: \{ exportedAt: null \}/)
   assert.match(workEntryExportRouteSource, /data: \{ exportedAt \}/)
   assert.match(workEntryExportRouteSource, /LMS_WORK_EXPORT_CONFLICT/)
+  assert.match(workEntryExportRouteSource, /const SelectedExportSchema/)
+  assert.match(workEntryExportRouteSource, /\.min\(1\)\.max\(250\)/)
+  assert.match(workEntryExportRouteSource, /export async function POST\(request: NextRequest\)/)
+  assert.match(workEntryExportRouteSource, /const ids = Array\.from\(new Set\(parsed\.data\.ids\)\)/)
+  assert.match(workEntryExportRouteSource, /where: \{ id: \{ in: ids \} \}/)
+  assert.match(workEntryExportRouteSource, /requireUnexported: false/)
+  assert.match(workEntryExportRouteSource, /expectedCount: ids\.length/)
+  assert.match(workEntryExportRouteSource, /LMS_WORK_SELECTION_STALE/)
+  assert.match(workEntryExportRouteSource, /TASK_IMPORT_SELECTED_/)
+  assert.match(workEntryExportRouteSource, /auditDetails: "mode=selected"/)
   assert.match(workEntryExportRouteSource, /X-Exported-Entry-Count/)
   assert.match(prismaSchemaSource, /sortOrder\s+Int\s+@default\(1000\)\s+@map\("sort_order"\)/)
   assert.match(prismaSchemaSource, /defaultDurationMinutes\s+Int\?\s+@map\("default_duration_minutes"\)/)

@@ -25,3 +25,15 @@ export function rankLmsWorkOptionsByFrequency<T extends { id: string }>(
     ))
     .slice(0, Math.max(0, Math.trunc(limit)))
 }
+
+export function mergeLmsWorkOptionShortcuts<T extends { id: string }>(
+  primary: T[],
+  fallback: T[],
+  limit = 6
+) {
+  const options = new Map<string, T>()
+  for (const option of [...primary, ...fallback]) {
+    if (!options.has(option.id)) options.set(option.id, option)
+  }
+  return Array.from(options.values()).slice(0, Math.max(0, Math.trunc(limit)))
+}

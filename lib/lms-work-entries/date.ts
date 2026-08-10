@@ -70,6 +70,44 @@ export function addDateOnlyDays(value: string, days: number) {
   return formatUtcDateOnly(new Date(Date.UTC(year, month - 1, day) + days * DAY_IN_MILLISECONDS))
 }
 
+export function isLmsWorkWeekday(value: string) {
+  if (!isValidDateOnly(value)) return false
+  const [year, month, day] = value.split("-").map(Number)
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  return weekday >= 1 && weekday <= 5
+}
+
+export function getDefaultLmsWorkDate(value: string) {
+  const validated = DateOnlySchema.parse(value)
+  const [year, month, day] = validated.split("-").map(Number)
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  if (weekday === 6) return addDateOnlyDays(validated, -1)
+  if (weekday === 0) return addDateOnlyDays(validated, -2)
+  return validated
+}
+
+export function getLmsWorkWeekDates(value: string) {
+  const validated = DateOnlySchema.parse(value)
+  const [year, month, day] = validated.split("-").map(Number)
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday
+  const monday = addDateOnlyDays(validated, mondayOffset)
+  return Array.from({ length: 5 }, (_, index) => addDateOnlyDays(monday, index))
+}
+
+export function addLmsWorkdays(value: string, workdays: number) {
+  let current = DateOnlySchema.parse(value)
+  const direction = workdays < 0 ? -1 : 1
+  let remaining = Math.abs(Math.trunc(workdays))
+
+  while (remaining > 0) {
+    current = addDateOnlyDays(current, direction)
+    if (isLmsWorkWeekday(current)) remaining -= 1
+  }
+
+  return current
+}
+
 export function getDateOnlyRange(from: string, to: string) {
   const normalized = normalizeDateRange(from, to)
   if (!normalized.from || !normalized.to) return []

@@ -12,6 +12,25 @@ export type LmsWorkTaskOption = {
   defaultDurationMinutes: number | null
 }
 
+export type LmsWorkComposerDay = {
+  date: string
+  totalMinutes: number
+}
+
+export type LmsWorkComposerContext = {
+  selectedDate: string
+  lmsAllocationId: string | null
+  weekStart: string
+  weekEnd: string
+  days: LmsWorkComposerDay[]
+  frequentTasks: LmsWorkTaskOption[]
+}
+
+export type LmsWorkComposerContextInput = {
+  selectedDate: string
+  lmsAllocationId?: string | null
+}
+
 export type LmsWorkEntryFilterOption = {
   id: string
   label: string

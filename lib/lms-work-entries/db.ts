@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
-import { normalizeDateRange } from "@/lib/lms-work-entries/date"
+import { DateOnlySchema, getLmsWorkWeekDates, normalizeDateRange } from "@/lib/lms-work-entries/date"
 import { buildLmsWorkDurationShortcuts } from "@/lib/lms-work-entries/duration-options"
 import {
   buildLmsWorkEntryWhere,
@@ -8,10 +8,18 @@ import {
   normalizeLmsWorkExportStatus,
 } from "@/lib/lms-work-entries/filters"
 import type { LmsWorkExportStatus } from "@/lib/lms-work-entries/filters"
-import { rankLmsWorkOptionsByFrequency } from "@/lib/lms-work-entries/frequent-options"
+import {
+  mergeLmsWorkOptionShortcuts,
+  rankLmsWorkOptionsByFrequency,
+} from "@/lib/lms-work-entries/frequent-options"
 import { normalizeLmsWorkLogPageSize } from "@/lib/lms-work-entries/pagination"
 import { maskToWeekdays } from "@/lib/lms-work-entries/recurrence"
-import type { LmsWorkLogPageData, LmsWorkRecurrencePageData } from "@/lib/lms-work-entries/types"
+import type {
+  LmsWorkComposerContext,
+  LmsWorkComposerContextInput,
+  LmsWorkLogPageData,
+  LmsWorkRecurrencePageData,
+} from "@/lib/lms-work-entries/types"
 
 async function findLmsWorkTasks() {
   return prisma.lmsWorkTask.findMany({
@@ -23,6 +31,73 @@ async function findLmsWorkTasks() {
 export async function getLmsWorkTaskOptions() {
   await requireAuth()
   return findLmsWorkTasks()
+}
+
+export async function getLmsWorkComposerContextData(
+  input: LmsWorkComposerContextInput
+): Promise<LmsWorkComposerContext> {
+  await requireAuth()
+  const selectedDate = DateOnlySchema.parse(input.selectedDate)
+  const lmsAllocationId = input.lmsAllocationId?.trim() || null
+  const weekDates = getLmsWorkWeekDates(selectedDate)
+  const weekStart = weekDates[0]
+  const weekEnd = weekDates[weekDates.length - 1]
+
+  const [tasks, dayTotals, globalTaskFrequencies, clientTaskFrequencies] = await Promise.all([
+    findLmsWorkTasks(),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["workDate"],
+      where: { workDate: { gte: weekStart, lte: weekEnd } },
+      _sum: { durationMinutes: true },
+    }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["taskTypeId"],
+      _count: { _all: true },
+    }),
+    lmsAllocationId
+      ? prisma.lmsWorkEntry.groupBy({
+          by: ["taskTypeId"],
+          where: { lmsAllocationId },
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+  ])
+
+  const activeTasks = tasks.filter((task) => task.isActive)
+  const globalFrequentTasks = rankLmsWorkOptionsByFrequency(
+    activeTasks,
+    globalTaskFrequencies.map((frequency) => ({
+      id: frequency.taskTypeId,
+      count: frequency._count._all,
+    })),
+    (task) => task.name
+  )
+  const clientFrequentTasks = rankLmsWorkOptionsByFrequency(
+    activeTasks,
+    clientTaskFrequencies.map((frequency) => ({
+      id: frequency.taskTypeId,
+      count: frequency._count._all,
+    })),
+    (task) => task.name
+  )
+  const totalsByDate = new Map(
+    dayTotals.map((total) => [total.workDate, total._sum.durationMinutes ?? 0])
+  )
+
+  return {
+    selectedDate,
+    lmsAllocationId,
+    weekStart,
+    weekEnd,
+    days: weekDates.map((date) => ({
+      date,
+      totalMinutes: totalsByDate.get(date) ?? 0,
+    })),
+    frequentTasks: mergeLmsWorkOptionShortcuts(
+      lmsAllocationId ? clientFrequentTasks : [],
+      globalFrequentTasks
+    ),
+  }
 }
 
 export async function getLmsWorkRecurrencePageData(): Promise<LmsWorkRecurrencePageData> {

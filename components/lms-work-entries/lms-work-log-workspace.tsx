@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { format, isValid, isWeekend, parseISO, startOfMonth, subDays } from "date-fns"
 import type { DateRange } from "react-day-picker"
 import {
-  AlertTriangle,
   CalendarCheck2,
   CalendarDays,
   Check,
@@ -32,13 +31,21 @@ import {
   createLmsWorkClient,
   createLmsWorkEntry,
   deleteLmsWorkEntry,
+  getLmsWorkComposerContext,
   updateLmsWorkEntry,
 } from "@/lib/actions/lms-work-entries"
 import { getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
 import { matchesLmsClientSearch } from "@/lib/lms-work-entries/client-search"
-import { formatLmsWorkDateLabel, getLmsWorkCapacity } from "@/lib/lms-work-entries/date"
+import {
+  addDateOnlyDays,
+  addLmsWorkdays,
+  getDefaultLmsWorkDate,
+  getLmsWorkCapacity,
+  getLmsWorkWeekDates,
+} from "@/lib/lms-work-entries/date"
 import {
   LMS_WORK_DURATION_PRESETS,
+  formatCompactLmsWorkDuration,
   getLmsWorkDefaultDurationSelection,
   getLmsWorkUtilizationPercent,
   isLmsWorkDurationPreset,
@@ -46,6 +53,7 @@ import {
 } from "@/lib/lms-work-entries/duration-options"
 import { LMS_WORK_LOG_PAGE_SIZES } from "@/lib/lms-work-entries/pagination"
 import type {
+  LmsWorkComposerContext,
   LmsWorkEntryInput,
   LmsWorkEntryRow,
   LmsWorkClientOption,
@@ -197,9 +205,9 @@ function WorkDatePicker({
             type="button"
             variant="ghost"
             size="sm"
-            disabled={!isSelectableWorkDate(today)}
+            disabled={!today}
             onClick={() => {
-              onValueChange(today)
+              onValueChange(getDefaultLmsWorkDate(today))
               setOpen(false)
             }}
           >
@@ -208,6 +216,171 @@ function WorkDatePicker({
         </div>
       </PopoverContent>
     </Popover>
+  )
+}
+
+function formatWorkWeekLabel(dates: string[]) {
+  const first = parseISO(dates[0])
+  const last = parseISO(dates[dates.length - 1])
+  if (!isValid(first) || !isValid(last)) return "Work week"
+  if (format(first, "yyyy-MM") === format(last, "yyyy-MM")) {
+    return `${format(first, "d")}–${format(last, "d MMM yyyy")}`.toUpperCase()
+  }
+  return `${format(first, "d MMM")}–${format(last, "d MMM yyyy")}`.toUpperCase()
+}
+
+function formatSelectedWorkDate(value: string) {
+  const parsed = parseISO(value)
+  return isValid(parsed) ? format(parsed, "EEE · d MMM").toUpperCase() : "CHOOSE DATE"
+}
+
+function formatSaveWorkDate(value: string) {
+  const parsed = parseISO(value)
+  return isValid(parsed) ? format(parsed, "d MMM") : "date"
+}
+
+function WorkWeekNavigator({
+  selectedDate,
+  today,
+  context,
+  loading,
+  onSelectDate,
+}: {
+  selectedDate: string
+  today: string
+  context: LmsWorkComposerContext
+  loading: boolean
+  onSelectDate: (value: string) => void
+}) {
+  const [calendarOpen, setCalendarOpen] = React.useState(false)
+  const rootRef = React.useRef<HTMLDivElement | null>(null)
+  const weekDates = React.useMemo(() => getLmsWorkWeekDates(selectedDate), [selectedDate])
+  const contextMatchesWeek = context.weekStart === weekDates[0]
+  const totalsByDate = React.useMemo(
+    () => new Map(context.days.map((day) => [day.date, day.totalMinutes])),
+    [context.days]
+  )
+  const selected = parseISO(selectedDate)
+
+  function chooseDate(value: string, focus = false) {
+    if (!isSelectableWorkDate(value)) return
+    onSelectDate(value)
+    if (focus) {
+      window.requestAnimationFrame(() => {
+        rootRef.current?.querySelector<HTMLElement>(`[data-work-date="${value}"]`)?.focus()
+      })
+    }
+  }
+
+  function chooseCalendarDate(date: Date | undefined) {
+    if (!date || isWeekend(date)) return
+    chooseDate(format(date, "yyyy-MM-dd"), true)
+    setCalendarOpen(false)
+  }
+
+  return (
+    <div ref={rootRef} className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-2.5 sm:p-3">
+      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Previous work week"
+            onClick={() => chooseDate(addDateOnlyDays(selectedDate, -7), true)}
+          >
+            <ChevronLeft />
+          </Button>
+          <p className="min-w-40 text-center text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+            {formatWorkWeekLabel(weekDates)}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Next work week"
+            onClick={() => chooseDate(addDateOnlyDays(selectedDate, 7), true)}
+          >
+            <ChevronRight />
+          </Button>
+        </div>
+        <div className="ml-auto flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={!today}
+            onClick={() => chooseDate(getDefaultLmsWorkDate(today), true)}
+            className="h-8 px-2.5 text-xs"
+          >
+            Today
+          </Button>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" size="sm" className="h-8 px-2.5 text-xs" aria-label="Choose work date">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Calendar
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={8} className="w-auto rounded-2xl p-3">
+              <Calendar
+                mode="single"
+                selected={isValid(selected) ? selected : undefined}
+                defaultMonth={isValid(selected) ? selected : undefined}
+                disabled={isWeekend}
+                onSelect={chooseCalendarDate}
+                initialFocus
+              />
+              <p className="border-t border-[var(--line-subtle)] pt-2 text-center text-xs text-[var(--text-muted)]">
+                Monday–Friday
+              </p>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+      <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Work date">
+        {weekDates.map((date) => {
+          const parsed = parseISO(date)
+          const isSelected = date === selectedDate
+          const showLoading = loading && !contextMatchesWeek
+          return (
+            <button
+              key={date}
+              type="button"
+              data-work-date={date}
+              tabIndex={isSelected ? 0 : -1}
+              aria-current={isSelected ? "date" : undefined}
+              aria-label={`${format(parsed, "EEEE d MMMM")}, ${formatCompactLmsWorkDuration(totalsByDate.get(date) ?? 0)} logged`}
+              onClick={() => chooseDate(date)}
+              onKeyDown={(event) => {
+                let nextDate: string | null = null
+                if (event.key === "ArrowLeft") nextDate = addLmsWorkdays(date, -1)
+                if (event.key === "ArrowRight") nextDate = addLmsWorkdays(date, 1)
+                if (event.key === "Home") nextDate = weekDates[0]
+                if (event.key === "End") nextDate = weekDates[weekDates.length - 1]
+                if (!nextDate) return
+                event.preventDefault()
+                chooseDate(nextDate, true)
+              }}
+              className={cn(
+                "min-w-0 rounded-lg border px-1.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2",
+                isSelected
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-sm"
+                  : "border-transparent bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--line-strong)] hover:bg-[var(--surface-low)]"
+              )}
+            >
+              <span className={cn("block text-[10px] font-bold tracking-[0.08em]", isSelected ? "text-white" : "text-[var(--text-muted)]")}>
+                {format(parsed, "EEE").toUpperCase()}
+              </span>
+              <span className="mt-0.5 block text-sm font-bold">{format(parsed, "d")}</span>
+              <span className={cn("mt-0.5 block text-[11px] font-semibold", isSelected ? "text-white/90" : "text-[var(--text-muted)]")}>
+                {showLoading ? "…" : formatCompactLmsWorkDuration(totalsByDate.get(date) ?? 0)}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -368,6 +541,20 @@ function ExportStatusBadge({ exportedAt }: { exportedAt: string | null }) {
 function getDownloadFilename(disposition: string | null) {
   const match = disposition?.match(/filename="([^"]+)"/i)
   return match?.[1] || "TASK_IMPORT.xlsx"
+}
+
+async function downloadExportResponse(response: Response, fallbackCount: number) {
+  const exportedCount = Number(response.headers.get("x-exported-entry-count")) || fallbackCount
+  const blob = await response.blob()
+  const href = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = href
+  anchor.download = getDownloadFilename(response.headers.get("content-disposition"))
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(href)
+  return exportedCount
 }
 
 function WorkEntryFilterCombobox({
@@ -538,7 +725,7 @@ export function ClientCombobox({
           className={cn(
             "w-full justify-between gap-3 px-3 text-left font-normal",
             hasSelection && "border-[color:color-mix(in_srgb,var(--brand-primary)_58%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_10%,var(--surface-lowest))] font-medium text-[var(--text-primary)]",
-            large && "h-14 px-4 text-base"
+            large && "h-12 px-4 text-sm"
           )}
           disabled={disabled || (clients.length === 0 && !onCreateRequest)}
         >
@@ -615,12 +802,14 @@ export function TaskCombobox({
   onValueChange,
   disabled,
   large,
+  triggerRef,
 }: {
   tasks: LmsWorkTaskOption[]
   value: string
   onValueChange: (value: string) => void
   disabled?: boolean
   large?: boolean
+  triggerRef?: React.Ref<HTMLButtonElement>
 }) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
@@ -642,6 +831,7 @@ export function TaskCombobox({
     <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           type="button"
           variant="outline"
           role="combobox"
@@ -656,7 +846,7 @@ export function TaskCombobox({
           }}
           className={cn(
             "w-full justify-between gap-3 rounded-xl px-4 text-left text-sm font-normal",
-            large ? "h-14 text-base" : "h-12",
+            large ? "h-12 text-sm" : "h-12",
             hasSelection && "border-[color:color-mix(in_srgb,var(--brand-primary)_58%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_10%,var(--surface-lowest))] font-medium text-[var(--text-primary)]"
           )}
           disabled={disabled || options.length === 0}
@@ -970,16 +1160,19 @@ export function AddClientDialog({
 export function LmsWorkLogWorkspace({
   data,
   activePeriod,
+  initialComposerContext,
 }: {
   data: LmsWorkLogPageData
   activePeriod: string
+  initialComposerContext: LmsWorkComposerContext
 }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [today, setToday] = React.useState("")
-  const [differentDate, setDifferentDate] = React.useState(false)
-  const [workDate, setWorkDate] = React.useState("")
+  const [workDate, setWorkDate] = React.useState(initialComposerContext.selectedDate)
+  const [composerContext, setComposerContext] = React.useState(initialComposerContext)
+  const [composerContextLoading, setComposerContextLoading] = React.useState(false)
   const [clientOptions, setClientOptions] = React.useState(data.clients)
   const [lmsAllocationId, setLmsAllocationId] = React.useState("")
   const [addClientOpen, setAddClientOpen] = React.useState(false)
@@ -987,9 +1180,13 @@ export function LmsWorkLogWorkspace({
   const [taskTypeId, setTaskTypeId] = React.useState("")
   const [durationSelection, setDurationSelection] = React.useState("")
   const [customMinutes, setCustomMinutes] = React.useState("")
+  const [customMinutesTouched, setCustomMinutesTouched] = React.useState(false)
+  const [formAttempted, setFormAttempted] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
+  const [exportingSelected, setExportingSelected] = React.useState(false)
   const [exportAll, setExportAll] = React.useState(false)
+  const [selectedEntryIds, setSelectedEntryIds] = React.useState<string[]>([])
   const [editingEntry, setEditingEntry] = React.useState<LmsWorkEntryRow | null>(null)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [period, setPeriod] = React.useState(activePeriod)
@@ -997,6 +1194,8 @@ export function LmsWorkLogWorkspace({
   const [customTo, setCustomTo] = React.useState(data.to || "")
   const [customRangeOpen, setCustomRangeOpen] = React.useState(false)
   const customMinutesRef = React.useRef<HTMLInputElement | null>(null)
+  const taskTriggerRef = React.useRef<HTMLButtonElement | null>(null)
+  const composerRequestRef = React.useRef(0)
   const presets = React.useMemo(() => getLmsDatePresets(), [])
   const selectedPeriodName = period === CUSTOM_PERIOD
     ? "Custom"
@@ -1025,12 +1224,17 @@ export function LmsWorkLogWorkspace({
   const durationMinutes = customDurationEnabled
     ? parseCustomLmsWorkDuration(customMinutes)
     : isLmsWorkDurationPreset(selectedPresetMinutes) ? selectedPresetMinutes : null
-  const customDurationInvalid = customDurationEnabled && customMinutes.trim().length > 0 && durationMinutes === null
-  const customWorkDateValid = isSelectableWorkDate(workDate)
-  const effectiveWorkDate = differentDate ? (customWorkDateValid ? workDate : "") : today
-  const effectiveDateLabel = differentDate && !customWorkDateValid
-    ? "Choose a work day"
-    : formatLmsWorkDateLabel(effectiveWorkDate, today)
+  const customDurationInvalid = customDurationEnabled && durationMinutes === null
+  const effectiveWorkDate = isSelectableWorkDate(workDate) ? workDate : ""
+  const selectedDayTotal = composerContext.days.find((day) => day.date === workDate)?.totalMinutes ?? 0
+  const composerCanSubmit = Boolean(
+    effectiveWorkDate
+    && hasSelectedClient
+    && hasSelectedTask
+    && clientOptions.length > 0
+    && activeTasks.length > 0
+    && durationMinutes !== null
+  )
   const workCapacity = React.useMemo(() => getLmsWorkCapacity(data.from, data.to), [data.from, data.to])
   const workUtilizationPercent = workCapacity
     ? getLmsWorkUtilizationPercent(data.totalMinutes, workCapacity.hours)
@@ -1040,12 +1244,46 @@ export function LmsWorkLogWorkspace({
   const exportAllEntryCount = data.exportStatus === "not-exported"
     ? data.allMatchingEntries
     : data.totalEntries
+  const selectedEntryIdSet = React.useMemo(() => new Set(selectedEntryIds), [selectedEntryIds])
+  const allVisibleEntriesSelected = data.entries.length > 0
+    && data.entries.every((entry) => selectedEntryIdSet.has(entry.id))
+  const someVisibleEntriesSelected = data.entries.some((entry) => selectedEntryIdSet.has(entry.id))
+  const exportBusy = exporting || exportingSelected
 
   React.useEffect(() => {
     const value = localToday()
     setToday(value)
-    setWorkDate((current) => current || value)
   }, [])
+
+  const refreshComposerContext = React.useCallback(async (
+    selectedDate: string,
+    selectedClientId: string,
+    showError = true
+  ) => {
+    const requestId = composerRequestRef.current + 1
+    composerRequestRef.current = requestId
+    setComposerContextLoading(true)
+    const result = await getLmsWorkComposerContext({
+      selectedDate,
+      lmsAllocationId: selectedClientId || null,
+    })
+    if (requestId !== composerRequestRef.current) return
+    setComposerContextLoading(false)
+    if (!result.success) {
+      if (showError) toast.error(result.error)
+      return
+    }
+    setComposerContext(result.context)
+  }, [])
+
+  React.useEffect(() => {
+    const weekStart = getLmsWorkWeekDates(workDate)[0]
+    if (
+      composerContext.weekStart === weekStart
+      && composerContext.lmsAllocationId === (lmsAllocationId || null)
+    ) return
+    void refreshComposerContext(workDate, lmsAllocationId)
+  }, [composerContext.lmsAllocationId, composerContext.weekStart, lmsAllocationId, refreshComposerContext, workDate])
 
   React.useEffect(() => {
     setPeriod(activePeriod)
@@ -1056,6 +1294,14 @@ export function LmsWorkLogWorkspace({
   React.useEffect(() => {
     setClientOptions(data.clients)
   }, [data.clients])
+
+  React.useEffect(() => {
+    const visibleIds = new Set(data.entries.map((entry) => entry.id))
+    setSelectedEntryIds((current) => {
+      const next = current.filter((id) => visibleIds.has(id))
+      return next.length === current.length ? current : next
+    })
+  }, [data.entries])
 
   function navigateToRange(nextPeriod: string, from: string | null, to: string | null) {
     const next = new URLSearchParams(searchParams.toString())
@@ -1105,9 +1351,19 @@ export function LmsWorkLogWorkspace({
 
   function selectDuration(value: string) {
     setDurationSelection(value)
+    setCustomMinutesTouched(false)
     if (value === CUSTOM_DURATION_VALUE) {
       window.requestAnimationFrame(() => customMinutesRef.current?.focus())
     }
+  }
+
+  function selectWorkDate(value: string) {
+    if (!isSelectableWorkDate(value)) return
+    setWorkDate(value)
+    const nextWeekStart = getLmsWorkWeekDates(value)[0]
+    setComposerContext((current) => current.weekStart === nextWeekStart
+      ? { ...current, selectedDate: value }
+      : current)
   }
 
   function selectTask(value: string) {
@@ -1116,6 +1372,17 @@ export function LmsWorkLogWorkspace({
     const selection = getLmsWorkDefaultDurationSelection(task?.defaultDurationMinutes)
     setDurationSelection(selection.durationSelection)
     setCustomMinutes(selection.customMinutes)
+    setCustomMinutesTouched(false)
+  }
+
+  function toggleEntrySelection(id: string, checked: boolean) {
+    setSelectedEntryIds((current) => checked
+      ? current.includes(id) ? current : [...current, id]
+      : current.filter((entryId) => entryId !== id))
+  }
+
+  function toggleVisibleEntries(checked: boolean) {
+    setSelectedEntryIds(checked ? data.entries.map((entry) => entry.id) : [])
   }
 
   function openAddClient(name = "") {
@@ -1123,16 +1390,16 @@ export function LmsWorkLogWorkspace({
     setAddClientOpen(true)
   }
 
-  async function handleCreate(event: React.FormEvent) {
-    event.preventDefault()
+  async function submitWorkEntry() {
     const entry: LmsWorkEntryInput = {
       workDate: effectiveWorkDate,
       lmsAllocationId,
       taskTypeId,
       durationMinutes: durationMinutes ?? 0,
     }
-    if (!entry.workDate || !entry.lmsAllocationId || !entry.taskTypeId || durationMinutes === null) {
-      toast.error("Complete all fields with valid values")
+    if (!composerCanSubmit || !entry.workDate || durationMinutes === null) {
+      setFormAttempted(true)
+      if (customDurationEnabled) setCustomMinutesTouched(true)
       return
     }
 
@@ -1145,13 +1412,35 @@ export function LmsWorkLogWorkspace({
     }
 
     toast.success("Work recorded")
-    setLmsAllocationId("")
+    setComposerContext((current) => {
+      if (!current.days.some((day) => day.date === entry.workDate)) return current
+      return {
+        ...current,
+        days: current.days.map((day) => day.date === entry.workDate
+          ? { ...day, totalMinutes: day.totalMinutes + entry.durationMinutes }
+          : day),
+      }
+    })
     setTaskTypeId("")
-    setDifferentDate(false)
-    setWorkDate(today)
     setDurationSelection("")
     setCustomMinutes("")
+    setCustomMinutesTouched(false)
+    setFormAttempted(false)
+    void refreshComposerContext(entry.workDate, entry.lmsAllocationId, false)
     router.refresh()
+    window.requestAnimationFrame(() => taskTriggerRef.current?.focus())
+  }
+
+  async function handleCreate(event: React.FormEvent) {
+    event.preventDefault()
+    await submitWorkEntry()
+  }
+
+  function handleComposerKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault()
+      if (!saving) void submitWorkEntry()
+    }
   }
 
   async function handleDelete(entry: LmsWorkEntryRow) {
@@ -1184,23 +1473,40 @@ export function LmsWorkLogWorkspace({
         throw new Error(payload?.error || "Export failed")
       }
       const expectedExportCount = exportAll ? exportAllEntryCount : data.unexportedEntries
-      const exportedCount = Number(response.headers.get("x-exported-entry-count")) || expectedExportCount
-      const blob = await response.blob()
-      const href = URL.createObjectURL(blob)
-      const anchor = document.createElement("a")
-      anchor.href = href
-      anchor.download = getDownloadFilename(response.headers.get("content-disposition"))
-      document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
-      URL.revokeObjectURL(href)
+      const exportedCount = await downloadExportResponse(response, expectedExportCount)
       toast.success(`${exportedCount} ${exportedCount === 1 ? "entry" : "entries"} exported and marked`)
       setExportAll(false)
+      setSelectedEntryIds([])
       router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Export failed")
     } finally {
       setExporting(false)
+    }
+  }
+
+  async function handleExportSelected() {
+    if (selectedEntryIds.length === 0) return
+    setExportingSelected(true)
+    try {
+      const response = await fetch("/api/lms-work-entries/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedEntryIds }),
+        cache: "no-store",
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(payload?.error || "Selected export failed")
+      }
+      const exportedCount = await downloadExportResponse(response, selectedEntryIds.length)
+      toast.success(`${exportedCount} selected ${exportedCount === 1 ? "entry" : "entries"} exported and marked`)
+      setSelectedEntryIds([])
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Selected export failed")
+    } finally {
+      setExportingSelected(false)
     }
   }
 
@@ -1212,14 +1518,28 @@ export function LmsWorkLogWorkspace({
 
   return (
     <div className="space-y-6 pb-8">
-      <Card className="gap-4 py-6">
-        <CardHeader className="px-5 sm:px-7">
+      <Card className="gap-3 py-4">
+        <CardHeader className="px-4 sm:px-6">
           <CardTitle className="flex items-center gap-2 text-lg"><Clock3 className="h-5 w-5 text-[var(--brand-primary)]" />Record work</CardTitle>
         </CardHeader>
-        <CardContent className="px-5 sm:px-7">
-          <form onSubmit={handleCreate} className="grid gap-x-6 gap-y-5 xl:grid-cols-[minmax(0,11fr)_minmax(420px,9fr)]">
-            <div className="grid gap-5 xl:col-start-1 xl:row-start-1 xl:h-full xl:grid-rows-2">
-              <div className="content-start space-y-3">
+        <CardContent className="px-4 sm:px-6">
+          <form
+            onSubmit={handleCreate}
+            onKeyDown={handleComposerKeyDown}
+            className="grid gap-x-6 gap-y-4 xl:grid-cols-[minmax(0,29fr)_minmax(360px,21fr)]"
+          >
+            <div className="xl:col-span-2">
+              <WorkWeekNavigator
+                selectedDate={workDate}
+                today={today}
+                context={composerContext}
+                loading={composerContextLoading}
+                onSelectDate={selectWorkDate}
+              />
+            </div>
+
+            <div className="grid content-start gap-5">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between gap-3">
                   <Label className="flex items-center gap-2 text-sm font-semibold"><UserRound className="h-4 w-4 text-[var(--brand-primary)]" />Client</Label>
                   <Button
@@ -1246,64 +1566,42 @@ export function LmsWorkLogWorkspace({
                   value={lmsAllocationId}
                   onValueChange={setLmsAllocationId}
                 />
+                {formAttempted && !hasSelectedClient ? (
+                  <p className="text-xs font-medium text-red-600">Select a client.</p>
+                ) : null}
               </div>
-              <div className="content-start space-y-3">
+              <div className="space-y-2.5">
                 <Label className="flex items-center gap-2 text-sm font-semibold"><ListChecks className="h-4 w-4 text-[var(--brand-primary)]" />Task</Label>
-                <TaskCombobox tasks={data.tasks} value={taskTypeId} onValueChange={selectTask} large />
+                <TaskCombobox
+                  tasks={data.tasks}
+                  value={taskTypeId}
+                  onValueChange={selectTask}
+                  triggerRef={taskTriggerRef}
+                  large
+                />
                 <FrequentWorkOptions
                   ariaLabel="Frequently used tasks"
-                  options={data.frequentTasks.map((task) => ({ id: task.id, label: task.name }))}
+                  options={composerContext.frequentTasks.map((task) => ({ id: task.id, label: task.name }))}
                   value={taskTypeId}
                   onValueChange={selectTask}
                   twoRows
                 />
+                {formAttempted && !hasSelectedTask ? (
+                  <p className="text-xs font-medium text-red-600">Select a task.</p>
+                ) : null}
               </div>
             </div>
 
-            <div className="h-full space-y-5 border-t border-[var(--line-subtle)] pt-5 xl:col-start-2 xl:row-start-1 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
-              <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <Label className="flex items-center gap-2 text-sm font-semibold"><CalendarDays className="h-4 w-4 text-[var(--brand-primary)]" />Date</Label>
-                    <p className="mt-1.5 truncate text-base font-semibold text-[var(--text-primary)]" aria-live="polite">
-                      {effectiveDateLabel}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2 pt-1">
-                    <Checkbox
-                      id="different-work-date"
-                      checked={differentDate}
-                      onCheckedChange={(checked) => {
-                        const next = checked === true
-                        setDifferentDate(next)
-                        if (next) setWorkDate(isSelectableWorkDate(today) ? today : "")
-                      }}
-                    />
-                    <Label htmlFor="different-work-date" className="cursor-pointer whitespace-nowrap text-xs font-medium text-[var(--text-secondary)]">
-                      Other date
-                    </Label>
-                  </div>
-                </div>
-                {differentDate ? (
-                  <WorkDatePicker
-                    id="record-work-date"
-                    value={workDate}
-                    onValueChange={setWorkDate}
-                    ariaLabel="Work date"
-                    className="mt-3"
-                  />
-                ) : null}
-              </div>
-
+            <div className="flex h-full flex-col gap-4 border-t border-[var(--line-subtle)] pt-4 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
               <div className="space-y-2.5">
                 <Label className="flex items-center gap-2 text-sm font-semibold"><Clock3 className="h-4 w-4 text-[var(--brand-primary)]" />Minutes</Label>
                 <div
                   role="group"
                   aria-label="Minutes"
-                  aria-describedby={customDurationInvalid
-                    ? "custom-duration-error"
-                    : durationMinutes === null ? "duration-selection-warning" : undefined}
-                  className="grid grid-cols-3 gap-1.5 sm:grid-cols-4"
+                  aria-describedby={(customMinutesTouched || formAttempted) && durationMinutes === null
+                    ? "duration-selection-error"
+                    : undefined}
+                  className="grid grid-cols-3 gap-2"
                 >
                   {LMS_WORK_DURATION_PRESETS.map((preset) => (
                     <Button
@@ -1313,10 +1611,9 @@ export function LmsWorkLogWorkspace({
                       aria-pressed={durationMinutes === preset}
                       onClick={() => selectDuration(String(preset))}
                       title={`${preset} minutes`}
-                      className="h-10 gap-1.5 rounded-lg px-2 text-sm font-semibold"
+                      className="h-9 rounded-lg px-2 text-xs font-semibold sm:text-sm"
                     >
-                      <Clock3 className="h-3.5 w-3.5" />
-                      {preset}
+                      {preset} min
                     </Button>
                   ))}
                   <Button
@@ -1324,7 +1621,7 @@ export function LmsWorkLogWorkspace({
                     variant={customDurationEnabled ? "default" : "outline"}
                     aria-pressed={customDurationEnabled}
                     onClick={() => selectDuration(CUSTOM_DURATION_VALUE)}
-                    className="h-10 rounded-lg px-2 text-sm font-semibold"
+                    className="h-9 rounded-lg px-2 text-xs font-semibold sm:text-sm"
                   >
                     Custom
                   </Button>
@@ -1334,8 +1631,10 @@ export function LmsWorkLogWorkspace({
                     <Input
                       ref={customMinutesRef}
                       aria-label="Custom minutes"
-                      aria-invalid={customDurationInvalid}
-                      aria-describedby={customDurationInvalid ? "custom-duration-error" : undefined}
+                      aria-invalid={(customMinutesTouched || formAttempted) && customDurationInvalid}
+                      aria-describedby={(customMinutesTouched || formAttempted) && customDurationInvalid
+                        ? "duration-selection-error"
+                        : undefined}
                       type="number"
                       min={1}
                       max={1440}
@@ -1343,47 +1642,50 @@ export function LmsWorkLogWorkspace({
                       inputMode="numeric"
                       value={customMinutes}
                       onChange={(event) => setCustomMinutes(event.target.value)}
+                      onBlur={() => setCustomMinutesTouched(true)}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Escape") return
+                        event.preventDefault()
+                        setDurationSelection("")
+                        setCustomMinutes("")
+                        setCustomMinutesTouched(false)
+                      }}
                       placeholder="Enter minutes"
                       className="h-10! pr-11 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                     <Clock3 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
                   </div>
                 ) : null}
-                {customDurationInvalid ? (
-                  <p id="custom-duration-error" className="text-xs font-medium text-red-600">Enter 1–1440 whole minutes.</p>
-                ) : null}
-                {durationMinutes === null && !customDurationInvalid ? (
-                  <p
-                    id="duration-selection-warning"
-                    role="status"
-                    aria-live="polite"
-                    className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
-                  >
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                    {customDurationEnabled
-                      ? "Enter custom minutes to continue."
-                      : "Select the time spent to continue."}
+                {(customMinutesTouched || formAttempted) && durationMinutes === null ? (
+                  <p id="duration-selection-error" className="text-xs font-medium text-red-600">
+                    {customDurationInvalid ? "Enter 1–1440 whole minutes." : "Select a duration."}
                   </p>
                 ) : null}
               </div>
-            </div>
 
-            <div className="border-t border-[var(--line-subtle)] pt-5 xl:col-span-2 xl:row-start-2">
+              <div className="flex items-end justify-between gap-4 border-t border-[var(--line-subtle)] pt-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold tracking-wide text-[var(--text-primary)]">
+                    {formatSelectedWorkDate(workDate)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]" aria-live="polite">
+                    Already logged: <span className="font-semibold text-[var(--text-secondary)]">{formatCompactLmsWorkDuration(selectedDayTotal)}</span>
+                  </p>
+                </div>
+                {composerContextLoading ? <Loader2 className="h-4 w-4 animate-spin text-[var(--text-muted)]" aria-label="Updating work totals" /> : null}
+              </div>
+
               <Button
                 type="submit"
-                className="h-12! w-full rounded-xl text-sm font-semibold"
-                disabled={
-                  saving
-                  || !effectiveWorkDate
-                  || !hasSelectedClient
-                  || !hasSelectedTask
-                  || clientOptions.length === 0
-                  || activeTasks.length === 0
-                  || durationMinutes === null
-                }
+                className="mt-auto h-11! w-full rounded-xl text-sm font-semibold"
+                disabled={saving || !composerCanSubmit}
               >
                 {saving ? <Loader2 className="animate-spin" /> : <Plus />}
-                {saving ? "Saving…" : "Save work"}
+                {saving
+                  ? "Saving…"
+                  : durationMinutes === null
+                    ? `Save · ${formatSaveWorkDate(workDate)}`
+                    : `Save ${durationMinutes} min · ${formatSaveWorkDate(workDate)}`}
               </Button>
             </div>
           </form>
@@ -1440,7 +1742,7 @@ export function LmsWorkLogWorkspace({
                 id="export-all-entries"
                 checked={exportAll}
                 onCheckedChange={(checked) => setExportAll(checked === true)}
-                disabled={exporting || exportAllEntryCount === 0}
+                disabled={exportBusy || exportAllEntryCount === 0}
               />
               <Label
                 htmlFor="export-all-entries"
@@ -1454,7 +1756,7 @@ export function LmsWorkLogWorkspace({
               className="shrink-0"
               type="button"
               onClick={handleExport}
-              disabled={exporting || (exportAll ? exportAllEntryCount === 0 : data.unexportedEntries === 0)}
+              disabled={exportBusy || (exportAll ? exportAllEntryCount === 0 : data.unexportedEntries === 0)}
             >
               {exporting ? <Loader2 className="animate-spin" /> : <Download />}
               {exportAll
@@ -1516,10 +1818,47 @@ export function LmsWorkLogWorkspace({
               fullWidth
             />
           </div>
+          {data.entries.length > 0 ? (
+            <div className="flex items-center gap-2 md:hidden">
+              <Checkbox
+                id="select-visible-work-entries-mobile"
+                checked={allVisibleEntriesSelected ? true : someVisibleEntriesSelected ? "indeterminate" : false}
+                onCheckedChange={(checked) => toggleVisibleEntries(checked === true)}
+                disabled={exportBusy}
+              />
+              <Label htmlFor="select-visible-work-entries-mobile" className="cursor-pointer text-xs font-medium text-[var(--text-secondary)]">
+                Select all {data.entries.length} visible rows
+              </Label>
+            </div>
+          ) : null}
+          {selectedEntryIds.length > 0 ? (
+            <div className="flex flex-col gap-3 rounded-xl border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_7%,var(--bg-surface))] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
+                {selectedEntryIds.length} {selectedEntryIds.length === 1 ? "row" : "rows"} selected
+              </span>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedEntryIds([])} disabled={exportBusy}>
+                  Clear
+                </Button>
+                <Button type="button" size="sm" onClick={handleExportSelected} disabled={exportBusy}>
+                  {exportingSelected ? <Loader2 className="animate-spin" /> : <Download />}
+                  Export selected
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <div className="hidden overflow-hidden rounded-2xl border border-[var(--line-subtle)] md:block">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={allVisibleEntriesSelected ? true : someVisibleEntriesSelected ? "indeterminate" : false}
+                      onCheckedChange={(checked) => toggleVisibleEntries(checked === true)}
+                      disabled={exportBusy || data.entries.length === 0}
+                      aria-label={`Select all ${data.entries.length} visible work entries`}
+                    />
+                  </TableHead>
                   <TableHead>
                     <WorkEntryFilterCombobox
                       ariaLabel="Filter work entries by date"
@@ -1582,7 +1921,18 @@ export function LmsWorkLogWorkspace({
               </TableHeader>
               <TableBody>
                 {data.entries.map((entry) => (
-                  <TableRow key={entry.id}>
+                  <TableRow
+                    key={entry.id}
+                    className={cn(selectedEntryIdSet.has(entry.id) && "bg-[color:color-mix(in_srgb,var(--brand-cyan)_6%,transparent)]")}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedEntryIdSet.has(entry.id)}
+                        onCheckedChange={(checked) => toggleEntrySelection(entry.id, checked === true)}
+                        disabled={exportBusy}
+                        aria-label={`Select ${entry.taskName} for ${entry.clientDomain}`}
+                      />
+                    </TableCell>
                     <TableCell>{formatEntryDate(entry.workDate)}</TableCell>
                     <TableCell className="font-medium">{entry.clientDomain}</TableCell>
                     <TableCell>{entry.taskName}</TableCell>
@@ -1593,7 +1943,7 @@ export function LmsWorkLogWorkspace({
                 ))}
                 {data.entries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center">
+                    <TableCell colSpan={7} className="py-12 text-center">
                       <p className="font-semibold text-[var(--text-primary)]">No work entries match these filters</p>
                       <p className="mt-1 text-sm text-[var(--text-muted)]">Change the date, client, task, export status, or range.</p>
                     </TableCell>
@@ -1611,8 +1961,26 @@ export function LmsWorkLogWorkspace({
           ) : (
             <div className="space-y-3 md:hidden">
               {data.entries.map((entry) => (
-                <div key={entry.id} className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-4">
-                  <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-[var(--text-primary)]">{entry.taskName}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">{entry.clientDomain}</p></div><Badge variant="secondary">{formatMinutes(entry.durationMinutes)}</Badge></div>
+                <div
+                  key={entry.id}
+                  className={cn(
+                    "rounded-2xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-4",
+                    selectedEntryIdSet.has(entry.id) && "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_6%,var(--bg-surface-soft))]"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      className="mt-1"
+                      checked={selectedEntryIdSet.has(entry.id)}
+                      onCheckedChange={(checked) => toggleEntrySelection(entry.id, checked === true)}
+                      disabled={exportBusy}
+                      aria-label={`Select ${entry.taskName} for ${entry.clientDomain}`}
+                    />
+                    <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                      <div className="min-w-0"><p className="font-semibold text-[var(--text-primary)]">{entry.taskName}</p><p className="mt-1 truncate text-sm text-[var(--text-secondary)]">{entry.clientDomain}</p></div>
+                      <Badge variant="secondary">{formatMinutes(entry.durationMinutes)}</Badge>
+                    </div>
+                  </div>
                   <div className="mt-4 flex items-end justify-between gap-3">
                     <div className="space-y-2">
                       <span className="block text-xs text-[var(--text-muted)]">{formatEntryDate(entry.workDate)}</span>

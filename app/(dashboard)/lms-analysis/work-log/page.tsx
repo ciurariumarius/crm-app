@@ -1,5 +1,6 @@
 import { detectLmsDatePresetId, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
-import { getLmsWorkLogPageData } from "@/lib/lms-work-entries/db"
+import { getBucharestDateOnly, getDefaultLmsWorkDate } from "@/lib/lms-work-entries/date"
+import { getLmsWorkComposerContextData, getLmsWorkLogPageData } from "@/lib/lms-work-entries/db"
 import { normalizeLmsWorkDateFilter, normalizeLmsWorkExportStatus } from "@/lib/lms-work-entries/filters"
 import { normalizeLmsWorkLogPageSize } from "@/lib/lms-work-entries/pagination"
 import { LmsWorkLogWorkspace } from "@/components/lms-work-entries/lms-work-log-workspace"
@@ -29,16 +30,26 @@ export default async function LmsWorkLogPage({
   const from = hasExplicitRange ? params.from || null : preset.from
   const to = hasExplicitRange ? params.to || null : preset.to
   const activePeriod = detectLmsDatePresetId(from, to, params.period)
-  const data = await getLmsWorkLogPageData({
-    from,
-    to,
-    clientId: params.client,
-    taskId: params.task,
-    workDate: normalizeLmsWorkDateFilter(params.date, from, to),
-    exportStatus: normalizeLmsWorkExportStatus(params.exportStatus),
-    page: requestedPage,
-    pageSize,
-  })
+  const initialSelectedDate = getDefaultLmsWorkDate(getBucharestDateOnly())
+  const [data, initialComposerContext] = await Promise.all([
+    getLmsWorkLogPageData({
+      from,
+      to,
+      clientId: params.client,
+      taskId: params.task,
+      workDate: normalizeLmsWorkDateFilter(params.date, from, to),
+      exportStatus: normalizeLmsWorkExportStatus(params.exportStatus),
+      page: requestedPage,
+      pageSize,
+    }),
+    getLmsWorkComposerContextData({ selectedDate: initialSelectedDate }),
+  ])
 
-  return <LmsWorkLogWorkspace data={data} activePeriod={activePeriod} />
+  return (
+    <LmsWorkLogWorkspace
+      data={data}
+      activePeriod={activePeriod}
+      initialComposerContext={initialComposerContext}
+    />
+  )
 }

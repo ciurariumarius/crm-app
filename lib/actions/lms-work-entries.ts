@@ -7,10 +7,17 @@ import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { buildLmsAllocationSyncKey } from "@/lib/lms-tasks/client-key"
 import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
-import { addDateOnlyDays, DateOnlySchema, getBucharestDateOnly } from "@/lib/lms-work-entries/date"
+import {
+  addDateOnlyDays,
+  DateOnlySchema,
+  getBucharestDateOnly,
+  isLmsWorkWeekday,
+} from "@/lib/lms-work-entries/date"
+import { getLmsWorkComposerContextData } from "@/lib/lms-work-entries/db"
 import { weekdaysToMask } from "@/lib/lms-work-entries/recurrence"
 import { canonicalizeLmsWorkTaskName } from "@/lib/lms-work-entries/task-names"
 import type {
+  LmsWorkComposerContextInput,
   LmsWorkEntryInput,
   LmsWorkEntryUpdateInput,
   LmsWorkRecurrenceInput,
@@ -27,6 +34,10 @@ const WorkEntryInputSchema = z.object({
   lmsAllocationId: z.string().uuid("Select a valid LMS client"),
   taskTypeId: z.string().uuid("Select a valid task"),
   durationMinutes: z.number().int("Minutes must be a whole number").min(1, "Minutes must be at least 1").max(1440, "Minutes cannot exceed 1440"),
+})
+const WorkComposerContextInputSchema = z.object({
+  selectedDate: DateOnlySchema.refine(isLmsWorkWeekday, "Choose a Monday-Friday work date"),
+  lmsAllocationId: z.string().uuid("Select a valid LMS client").nullable().optional(),
 })
 const WorkEntryUpdateInputSchema = WorkEntryInputSchema.extend({
   lmsAllocationId: z.string().uuid("Select a valid LMS client").nullable(),
@@ -144,6 +155,16 @@ export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
     return { success: true as const, id: entry.id }
   } catch (error) {
     return handleActionError(error, "Failed to save work entry")
+  }
+}
+
+export async function getLmsWorkComposerContext(data: LmsWorkComposerContextInput) {
+  try {
+    const validated = WorkComposerContextInputSchema.parse(data)
+    const context = await getLmsWorkComposerContextData(validated)
+    return { success: true as const, context }
+  } catch (error) {
+    return handleActionError(error, "Failed to load work-entry context")
   }
 }
 
