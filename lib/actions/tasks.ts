@@ -7,6 +7,11 @@ import { requireAuth } from "@/lib/auth"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { TASK_STATUS_VALUES, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
+import {
+    hasCurrentNotesWriteProtocol,
+    NOTES_CLIENT_REFRESH_MESSAGE,
+    NOTES_CLIENT_REFRESH_REQUIRED,
+} from "@/lib/notes/write-protocol"
 import { z } from "zod"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
@@ -208,11 +213,26 @@ export async function updateTask(taskId: string, data: {
     isCompleted?: boolean
     deadline?: Date | null
     estimatedMinutes?: number | null
-}) {
+}, options: { notesWriteProtocol?: string } = {}) {
     try {
         const session = await requireAuth()
         const validated = UpdateTaskSchema.parse({ taskId, ...data })
         const { isCompleted, taskId: validatedTaskId, ...restData } = validated
+        if (
+            validated.description !== undefined
+            && !hasCurrentNotesWriteProtocol(options.notesWriteProtocol)
+        ) {
+            await logSessionAuditEvent(session, {
+                action: "NOTE_WRITE_PROTOCOL_REJECTED",
+                success: false,
+                details: `taskId=${validatedTaskId}; reason=stale_notes_client`,
+            })
+            return {
+                success: false,
+                error: NOTES_CLIENT_REFRESH_MESSAGE,
+                code: NOTES_CLIENT_REFRESH_REQUIRED,
+            }
+        }
         const updateData: Prisma.TaskUpdateInput = { ...restData }
         if (restData.urgency !== undefined) {
             updateData.urgency = normalizeTaskUrgency(restData.urgency)

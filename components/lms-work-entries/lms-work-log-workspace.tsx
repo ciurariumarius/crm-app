@@ -3,7 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { format, isValid, isWeekend, parseISO } from "date-fns"
+import { format, isValid, isWeekend, parseISO, startOfMonth, subDays } from "date-fns"
+import type { DateRange } from "react-day-picker"
 import {
   AlertTriangle,
   CalendarCheck2,
@@ -17,6 +18,7 @@ import {
   Clock3,
   Download,
   FileSpreadsheet,
+  ListFilter,
   ListChecks,
   Loader2,
   Pencil,
@@ -37,10 +39,12 @@ import { matchesLmsClientSearch } from "@/lib/lms-work-entries/client-search"
 import { formatLmsWorkDateLabel, getLmsWorkCapacity } from "@/lib/lms-work-entries/date"
 import {
   LMS_WORK_DURATION_PRESETS,
+  getLmsWorkDefaultDurationSelection,
   getLmsWorkUtilizationPercent,
   isLmsWorkDurationPreset,
   parseCustomLmsWorkDuration,
 } from "@/lib/lms-work-entries/duration-options"
+import { LMS_WORK_LOG_PAGE_SIZES } from "@/lib/lms-work-entries/pagination"
 import type {
   LmsWorkEntryInput,
   LmsWorkEntryRow,
@@ -77,6 +81,10 @@ import { cn } from "@/lib/utils"
 
 const CUSTOM_PERIOD = "custom"
 const CUSTOM_DURATION_VALUE = "custom"
+const EXPORT_STATUS_FILTER_OPTIONS = [
+  { id: "not-exported", label: "Not exported" },
+  { id: "exported", label: "Exported" },
+]
 
 function localToday() {
   return format(new Date(), "yyyy-MM-dd")
@@ -87,10 +95,241 @@ function formatEntryDate(value: string) {
   return isValid(parsed) ? format(parsed, "dd MMM yyyy") : value
 }
 
+function formatEntryDateSpan(first: string | null, last: string | null) {
+  if (!first || !last) return "—"
+  if (first === last) return formatEntryDate(first)
+  return `${formatEntryDate(first)} – ${formatEntryDate(last)}`
+}
+
 function isSelectableWorkDate(value: string) {
   if (!value) return false
   const parsed = parseISO(value)
   return isValid(parsed) && !isWeekend(parsed)
+}
+
+function WorkDatePicker({
+  id,
+  value,
+  onValueChange,
+  ariaLabel,
+  className,
+}: {
+  id: string
+  value: string
+  onValueChange: (value: string) => void
+  ariaLabel: string
+  className?: string
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [today, setToday] = React.useState("")
+  const selectedDate = React.useMemo(() => {
+    if (!value) return undefined
+    const parsed = parseISO(value)
+    return isValid(parsed) ? parsed : undefined
+  }, [value])
+
+  React.useEffect(() => {
+    setToday(localToday())
+  }, [])
+
+  function chooseDate(date: Date | undefined) {
+    if (!date || isWeekend(date)) return
+    onValueChange(format(date, "yyyy-MM-dd"))
+    setOpen(false)
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          type="button"
+          variant="outline"
+          aria-label={ariaLabel}
+          aria-expanded={open}
+          className={cn("h-14 w-full justify-between rounded-xl px-4 text-left font-medium", className)}
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <CalendarDays className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+            <span className="flex min-w-0 flex-col items-start leading-tight">
+              <span className="truncate">{selectedDate ? formatEntryDate(value) : "Choose a date"}</span>
+              {selectedDate ? (
+                <span className="mt-1 text-xs font-normal text-[var(--text-muted)]">
+                  {format(selectedDate, "EEEE")}
+                </span>
+              ) : null}
+            </span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="w-[min(92vw,420px)] overflow-hidden rounded-2xl p-0"
+      >
+        <div className="w-full p-4 [&_[data-slot=calendar]]:![--cell-size:clamp(40px,11vw,48px)] [&_.rdp-month_grid]:!w-full [&_.rdp-weeks]:!w-full">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            defaultMonth={selectedDate}
+            disabled={isWeekend}
+            onSelect={chooseDate}
+            initialFocus
+            className="w-full bg-transparent p-0"
+            classNames={{
+              root: "w-full",
+              month: "w-full",
+              months: "w-full",
+              month_grid: "w-full table-fixed",
+              weekdays: "grid w-full grid-cols-7",
+              weekday: "text-sm font-medium",
+              week: "mt-2 grid w-full grid-cols-7",
+              day: "w-full",
+              day_button: "text-base font-medium",
+              caption_label: "text-base font-semibold",
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between border-t border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-4 py-3">
+          <span className="text-xs text-[var(--text-muted)]">Monday–Friday</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={!isSelectableWorkDate(today)}
+            onClick={() => {
+              onValueChange(today)
+              setOpen(false)
+            }}
+          >
+            Today
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function WorkEntryCustomRangePicker({
+  open,
+  onOpenChange,
+  from,
+  to,
+  onRangeChange,
+  onApply,
+  onCancel,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  from: string
+  to: string
+  onRangeChange: (from: string, to: string) => void
+  onApply: () => void
+  onCancel: () => void
+}) {
+  const [calendarMonths, setCalendarMonths] = React.useState(1)
+  const selectedRange = React.useMemo<DateRange | undefined>(() => {
+    const parsedFrom = from ? parseISO(from) : undefined
+    const parsedTo = to ? parseISO(to) : undefined
+    return parsedFrom && isValid(parsedFrom)
+      ? { from: parsedFrom, to: parsedTo && isValid(parsedTo) ? parsedTo : undefined }
+      : undefined
+  }, [from, to])
+  const rangeLabel = from && to
+    ? `${formatEntryDate(from)} – ${formatEntryDate(to)}`
+    : from ? `${formatEntryDate(from)} – choose end` : "Choose start and end"
+
+  React.useEffect(() => {
+    const media = window.matchMedia("(min-width: 768px)")
+    const updateMonthCount = () => setCalendarMonths(media.matches ? 2 : 1)
+    updateMonthCount()
+    media.addEventListener("change", updateMonthCount)
+    return () => media.removeEventListener("change", updateMonthCount)
+  }, [])
+
+  function selectRange(range: DateRange | undefined) {
+    onRangeChange(
+      range?.from ? format(range.from, "yyyy-MM-dd") : "",
+      range?.to ? format(range.to, "yyyy-MM-dd") : ""
+    )
+  }
+
+  function selectQuickRange(kind: "today" | "seven-days" | "this-month") {
+    const today = new Date()
+    const start = kind === "today"
+      ? today
+      : kind === "seven-days" ? subDays(today, 6) : startOfMonth(today)
+    onRangeChange(format(start, "yyyy-MM-dd"), format(today, "yyyy-MM-dd"))
+  }
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          aria-label="Choose custom date range"
+          aria-expanded={open}
+          className="h-9 w-full justify-between gap-2 rounded-lg px-3 text-sm font-medium sm:w-auto sm:min-w-56"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <CalendarDays className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+            <span className="truncate">{rangeLabel}</span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="max-h-[min(88vh,760px)] w-[min(94vw,760px)] overflow-y-auto rounded-2xl border-[var(--line-subtle)] p-0 shadow-xl"
+      >
+        <div className="border-b border-[var(--line-subtle)] px-4 py-3">
+          <p className="font-semibold text-[var(--text-primary)]">Custom date range</p>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+            {from && !to ? "Now choose the end date." : "Choose a start date and an end date."}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 px-4 pt-4">
+          <Button type="button" variant="outline" size="sm" onClick={() => selectQuickRange("today")}>Today</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => selectQuickRange("seven-days")}>Last 7 days</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => selectQuickRange("this-month")}>This month</Button>
+        </div>
+        <div className="w-full p-4 [&_[data-slot=calendar]]:![--cell-size:clamp(36px,8vw,44px)] [&_.rdp-month_grid]:!w-full [&_.rdp-weeks]:!w-full">
+          <Calendar
+            mode="range"
+            selected={selectedRange}
+            defaultMonth={selectedRange?.from}
+            onSelect={selectRange}
+            numberOfMonths={calendarMonths}
+            fixedWeeks
+            initialFocus
+            className="w-full bg-transparent p-0"
+            classNames={{
+              root: "w-full",
+              months: "grid w-full gap-5 md:grid-cols-2",
+              month: "w-full",
+              month_grid: "w-full table-fixed",
+              weekdays: "grid w-full grid-cols-7",
+              weekday: "text-sm font-medium",
+              week: "mt-2 grid w-full grid-cols-7",
+              day: "w-full",
+              day_button: "text-sm font-medium",
+              caption_label: "text-base font-semibold",
+            }}
+          />
+        </div>
+        <div className="flex flex-col gap-3 border-t border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="min-w-0 truncate text-sm font-medium text-[var(--text-secondary)]">{rangeLabel}</span>
+          <div className="flex shrink-0 justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
+            <Button type="button" size="sm" onClick={onApply} disabled={!from || !to}>Apply range</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 function formatMinutes(value: number) {
@@ -129,6 +368,125 @@ function ExportStatusBadge({ exportedAt }: { exportedAt: string | null }) {
 function getDownloadFilename(disposition: string | null) {
   const match = disposition?.match(/filename="([^"]+)"/i)
   return match?.[1] || "TASK_IMPORT.xlsx"
+}
+
+function WorkEntryFilterCombobox({
+  ariaLabel,
+  allLabel,
+  searchPlaceholder,
+  emptyLabel,
+  unavailableLabel,
+  options,
+  value,
+  onValueChange,
+  selectedValueLabel,
+  triggerLabel,
+  fullWidth,
+  allValue = "",
+}: {
+  ariaLabel: string
+  allLabel: string
+  searchPlaceholder: string
+  emptyLabel: string
+  unavailableLabel: string
+  options: Array<{ id: string; label: string }>
+  value: string
+  onValueChange: (value: string) => void
+  selectedValueLabel?: string
+  triggerLabel?: string
+  fullWidth?: boolean
+  allValue?: string
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState("")
+  const selected = options.find((option) => option.id === value)
+  const listboxId = React.useId()
+  const filteredOptions = React.useMemo(
+    () => options.filter((option) => matchesLmsClientSearch(option.label, search)),
+    [options, search]
+  )
+  const hasActiveFilter = value !== allValue
+
+  function changeOpen(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) setSearch("")
+  }
+
+  return (
+    <Popover open={open} onOpenChange={changeOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant={triggerLabel ? "ghost" : "outline"}
+          role="combobox"
+          aria-label={ariaLabel}
+          aria-expanded={open}
+          aria-controls={listboxId}
+          title={selected?.label ?? selectedValueLabel ?? allLabel}
+          className={cn(
+            "justify-between gap-2",
+            triggerLabel
+              ? "-ml-2 h-8 px-2 text-xs font-semibold uppercase tracking-[0.08em]"
+              : "w-full px-3 font-normal",
+            !triggerLabel && !fullWidth && "sm:w-52",
+            hasActiveFilter && triggerLabel && "text-[var(--brand-primary)]"
+          )}
+        >
+          <span className="truncate">
+            {triggerLabel ?? selected?.label ?? selectedValueLabel ?? (value ? unavailableLabel : allLabel)}
+          </span>
+          {triggerLabel ? (
+            <ListFilter className={cn("h-3.5 w-3.5 shrink-0", hasActiveFilter ? "opacity-100" : "opacity-55")} />
+          ) : (
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[var(--radix-popover-trigger-width)] min-w-[280px] max-w-[min(92vw,520px)] p-0"
+      >
+        <Command shouldFilter={false}>
+          <CommandInput
+            autoFocus
+            placeholder={searchPlaceholder}
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList id={listboxId} aria-label={ariaLabel} className="max-h-[320px]">
+            <CommandItem
+              value={allLabel}
+              aria-current={value === allValue}
+              onSelect={() => {
+                onValueChange(allValue)
+                changeOpen(false)
+              }}
+              className={cn(value === allValue && "bg-[var(--bg-surface-soft)]")}
+            >
+              <Check className={cn("mr-2 h-4 w-4 shrink-0", value === allValue ? "opacity-100" : "opacity-0")} />
+              <span className="truncate">{allLabel}</span>
+            </CommandItem>
+            {filteredOptions.length === 0 ? <CommandEmpty>{emptyLabel}</CommandEmpty> : null}
+            {filteredOptions.map((option) => (
+              <CommandItem
+                key={option.id}
+                value={`${option.label} ${option.id}`}
+                aria-current={value === option.id}
+                onSelect={() => {
+                  onValueChange(option.id)
+                  changeOpen(false)
+                }}
+                className={cn(value === option.id && "bg-[var(--bg-surface-soft)]")}
+              >
+                <Check className={cn("mr-2 h-4 w-4 shrink-0", value === option.id ? "opacity-100" : "opacity-0")} />
+                <span className="truncate">{option.label}</span>
+              </CommandItem>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 export function ClientCombobox({
@@ -494,7 +852,12 @@ function EditEntryDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="edit-work-date">Date</Label>
-            <Input id="edit-work-date" type="date" value={workDate} onChange={(event) => setWorkDate(event.target.value)} required />
+            <WorkDatePicker
+              id="edit-work-date"
+              value={workDate}
+              onValueChange={setWorkDate}
+              ariaLabel="Edit work date"
+            />
           </div>
           <div className="space-y-2">
             <Label>Client</Label>
@@ -617,7 +980,6 @@ export function LmsWorkLogWorkspace({
   const [today, setToday] = React.useState("")
   const [differentDate, setDifferentDate] = React.useState(false)
   const [workDate, setWorkDate] = React.useState("")
-  const [workDatePickerOpen, setWorkDatePickerOpen] = React.useState(false)
   const [clientOptions, setClientOptions] = React.useState(data.clients)
   const [lmsAllocationId, setLmsAllocationId] = React.useState("")
   const [addClientOpen, setAddClientOpen] = React.useState(false)
@@ -633,8 +995,16 @@ export function LmsWorkLogWorkspace({
   const [period, setPeriod] = React.useState(activePeriod)
   const [customFrom, setCustomFrom] = React.useState(data.from || "")
   const [customTo, setCustomTo] = React.useState(data.to || "")
+  const [customRangeOpen, setCustomRangeOpen] = React.useState(false)
   const customMinutesRef = React.useRef<HTMLInputElement | null>(null)
   const presets = React.useMemo(() => getLmsDatePresets(), [])
+  const selectedPeriodName = period === CUSTOM_PERIOD
+    ? "Custom"
+    : presets.find((preset) => preset.id === period)?.label || "All Time"
+  const matchingTaskDateSpan = data.firstWorkDate && data.lastWorkDate
+    ? formatEntryDateSpan(data.firstWorkDate, data.lastWorkDate)
+    : "no tasks"
+  const periodDisplayLabel = `${selectedPeriodName} (${matchingTaskDateSpan})`
   const activeTasks = data.tasks.filter((task) => task.isActive)
   const internalClient = clientOptions.find(
     (client) => client.client.trim().toLocaleLowerCase("ro") === "[intern]"
@@ -661,11 +1031,15 @@ export function LmsWorkLogWorkspace({
   const effectiveDateLabel = differentDate && !customWorkDateValid
     ? "Choose a work day"
     : formatLmsWorkDateLabel(effectiveWorkDate, today)
-  const selectedWorkDate = customWorkDateValid ? parseISO(workDate) : undefined
   const workCapacity = React.useMemo(() => getLmsWorkCapacity(data.from, data.to), [data.from, data.to])
   const workUtilizationPercent = workCapacity
     ? getLmsWorkUtilizationPercent(data.totalMinutes, workCapacity.hours)
     : null
+  const firstVisibleEntry = data.totalEntries === 0 ? 0 : (data.page - 1) * data.pageSize + 1
+  const lastVisibleEntry = Math.min(data.page * data.pageSize, data.totalEntries)
+  const exportAllEntryCount = data.exportStatus === "not-exported"
+    ? data.allMatchingEntries
+    : data.totalEntries
 
   React.useEffect(() => {
     const value = localToday()
@@ -690,15 +1064,43 @@ export function LmsWorkLogWorkspace({
     else next.delete("from")
     if (to) next.set("to", to)
     else next.delete("to")
+    next.delete("date")
     next.delete("page")
     router.replace(`${pathname}?${next.toString()}`)
   }
 
   function selectPeriod(value: string) {
     setPeriod(value)
-    if (value === CUSTOM_PERIOD) return
+    if (value === CUSTOM_PERIOD) {
+      setCustomFrom(data.from || "")
+      setCustomTo(data.to || "")
+      window.requestAnimationFrame(() => setCustomRangeOpen(true))
+      return
+    }
+    setCustomRangeOpen(false)
     const preset = resolveLmsDatePreset(value)
     navigateToRange(value, preset.from, preset.to)
+  }
+
+  function cancelCustomRange() {
+    setCustomRangeOpen(false)
+    setPeriod(activePeriod)
+    setCustomFrom(data.from || "")
+    setCustomTo(data.to || "")
+  }
+
+  function applyCustomRange() {
+    if (!customFrom || !customTo) return
+    setCustomRangeOpen(false)
+    navigateToRange(CUSTOM_PERIOD, customFrom, customTo)
+  }
+
+  function updateListFilter(name: "date" | "client" | "task" | "exportStatus" | "pageSize", value: string) {
+    const next = new URLSearchParams(searchParams.toString())
+    if (value) next.set(name, value)
+    else next.delete(name)
+    next.delete("page")
+    router.replace(`${pathname}?${next.toString()}`)
   }
 
   function selectDuration(value: string) {
@@ -706,6 +1108,14 @@ export function LmsWorkLogWorkspace({
     if (value === CUSTOM_DURATION_VALUE) {
       window.requestAnimationFrame(() => customMinutesRef.current?.focus())
     }
+  }
+
+  function selectTask(value: string) {
+    setTaskTypeId(value)
+    const task = activeTasks.find((option) => option.id === value)
+    const selection = getLmsWorkDefaultDurationSelection(task?.defaultDurationMinutes)
+    setDurationSelection(selection.durationSelection)
+    setCustomMinutes(selection.customMinutes)
   }
 
   function openAddClient(name = "") {
@@ -763,13 +1173,17 @@ export function LmsWorkLogWorkspace({
       const query = new URLSearchParams()
       if (data.from) query.set("from", data.from)
       if (data.to) query.set("to", data.to)
+      if (data.workDate) query.set("date", data.workDate)
+      if (data.clientId) query.set("client", data.clientId)
+      if (data.taskId) query.set("task", data.taskId)
+      query.set("exportStatus", data.exportStatus)
       if (exportAll) query.set("includeExported", "true")
       const response = await fetch(`/api/lms-work-entries/export?${query.toString()}`, { cache: "no-store" })
       if (!response.ok) {
         const payload = await response.json().catch(() => null)
         throw new Error(payload?.error || "Export failed")
       }
-      const expectedExportCount = exportAll ? data.totalEntries : data.unexportedEntries
+      const expectedExportCount = exportAll ? exportAllEntryCount : data.unexportedEntries
       const exportedCount = Number(response.headers.get("x-exported-entry-count")) || expectedExportCount
       const blob = await response.blob()
       const href = URL.createObjectURL(blob)
@@ -835,12 +1249,12 @@ export function LmsWorkLogWorkspace({
               </div>
               <div className="content-start space-y-3">
                 <Label className="flex items-center gap-2 text-sm font-semibold"><ListChecks className="h-4 w-4 text-[var(--brand-primary)]" />Task</Label>
-                <TaskCombobox tasks={data.tasks} value={taskTypeId} onValueChange={setTaskTypeId} large />
+                <TaskCombobox tasks={data.tasks} value={taskTypeId} onValueChange={selectTask} large />
                 <FrequentWorkOptions
                   ariaLabel="Frequently used tasks"
                   options={data.frequentTasks.map((task) => ({ id: task.id, label: task.name }))}
                   value={taskTypeId}
-                  onValueChange={setTaskTypeId}
+                  onValueChange={selectTask}
                   twoRows
                 />
               </div>
@@ -863,7 +1277,6 @@ export function LmsWorkLogWorkspace({
                         const next = checked === true
                         setDifferentDate(next)
                         if (next) setWorkDate(isSelectableWorkDate(today) ? today : "")
-                        else setWorkDatePickerOpen(false)
                       }}
                     />
                     <Label htmlFor="different-work-date" className="cursor-pointer whitespace-nowrap text-xs font-medium text-[var(--text-secondary)]">
@@ -872,55 +1285,13 @@ export function LmsWorkLogWorkspace({
                   </div>
                 </div>
                 {differentDate ? (
-                  <Popover open={workDatePickerOpen} onOpenChange={setWorkDatePickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        aria-label="Work date"
-                        aria-expanded={workDatePickerOpen}
-                        className="mt-3 h-12 w-full justify-between rounded-xl px-4 text-sm font-medium"
-                      >
-                        <span className="flex min-w-0 items-center gap-2">
-                          <CalendarDays className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
-                          <span className="truncate">{workDate ? formatEntryDate(workDate) : "Choose a date"}</span>
-                        </span>
-                        <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="end"
-                      className="w-[min(92vw,420px)] overflow-hidden rounded-2xl p-0"
-                    >
-                      <div className="w-full p-4 [&_[data-slot=calendar]]:![--cell-size:clamp(40px,11vw,48px)] [&_.rdp-month_grid]:!w-full [&_.rdp-weeks]:!w-full">
-                        <Calendar
-                          mode="single"
-                          selected={selectedWorkDate}
-                          defaultMonth={selectedWorkDate}
-                          disabled={isWeekend}
-                          onSelect={(date) => {
-                            if (!date || isWeekend(date)) return
-                            setWorkDate(format(date, "yyyy-MM-dd"))
-                            setWorkDatePickerOpen(false)
-                          }}
-                          initialFocus
-                          className="w-full bg-transparent p-0"
-                          classNames={{
-                            root: "w-full",
-                            month: "w-full",
-                            months: "w-full",
-                            month_grid: "w-full table-fixed",
-                            weekdays: "grid w-full grid-cols-7",
-                            weekday: "text-sm font-medium",
-                            week: "mt-2 grid w-full grid-cols-7",
-                            day: "w-full",
-                            day_button: "text-base font-medium",
-                            caption_label: "text-base font-semibold",
-                          }}
-                        />
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <WorkDatePicker
+                    id="record-work-date"
+                    value={workDate}
+                    onValueChange={setWorkDate}
+                    ariaLabel="Work date"
+                    className="mt-3"
+                  />
                 ) : null}
               </div>
 
@@ -1030,114 +1401,253 @@ export function LmsWorkLogWorkspace({
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg"><FileSpreadsheet className="h-5 w-5 text-[var(--brand-primary)]" />Work entries</CardTitle>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Date range</Label>
-                <Select value={period} onValueChange={selectPeriod}>
-                  <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
-                  <SelectContent align="start">
-                    {presets.map((preset) => <SelectItem key={preset.id} value={preset.id}>{preset.label}</SelectItem>)}
-                    <SelectItem value={CUSTOM_PERIOD}>Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {period === CUSTOM_PERIOD ? (
-                <>
-                  <div className="space-y-1.5"><Label htmlFor="range-from" className="text-xs">From</Label><Input id="range-from" type="date" value={customFrom} onChange={(event) => setCustomFrom(event.target.value)} /></div>
-                  <div className="space-y-1.5"><Label htmlFor="range-to" className="text-xs">To</Label><Input id="range-to" type="date" value={customTo} onChange={(event) => setCustomTo(event.target.value)} /></div>
-                  <Button type="button" variant="outline" onClick={() => navigateToRange(CUSTOM_PERIOD, customFrom || null, customTo || null)} disabled={!customFrom && !customTo}>Apply</Button>
-                </>
-              ) : null}
-              <div className="flex h-9 items-center gap-2 px-1">
-                <Checkbox
-                  id="export-all-entries"
-                  checked={exportAll}
-                  onCheckedChange={(checked) => setExportAll(checked === true)}
-                  disabled={exporting || data.totalEntries === 0}
-                />
-                <Label
-                  htmlFor="export-all-entries"
-                  className="cursor-pointer whitespace-nowrap text-xs font-medium"
-                  title="Include entries that were already exported"
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center xl:flex-nowrap">
+            <CardTitle className="flex h-9 shrink-0 items-center gap-2 text-lg xl:mr-auto"><FileSpreadsheet className="h-5 w-5 text-[var(--brand-primary)]" />Work entries</CardTitle>
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
+              <Select value={period} onValueChange={selectPeriod}>
+                <SelectTrigger
+                  className="w-full sm:w-[360px]"
+                  aria-label={`Date range: ${periodDisplayLabel}`}
+                  title={periodDisplayLabel}
                 >
-                  Export all
-                </Label>
-              </div>
-              <Button
-                type="button"
-                onClick={handleExport}
-                disabled={exporting || (exportAll ? data.totalEntries === 0 : data.unexportedEntries === 0)}
-              >
-                {exporting ? <Loader2 className="animate-spin" /> : <Download />}
-                {exportAll
-                  ? `Export all ${data.totalEntries}`
-                  : data.unexportedEntries > 0
-                    ? `Export ${data.unexportedEntries} new`
-                    : "All exported"}
-              </Button>
+                  <SelectValue>{periodDisplayLabel}</SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start">
+                  {presets.map((preset) => <SelectItem key={preset.id} value={preset.id}>{preset.label}</SelectItem>)}
+                  <SelectItem value={CUSTOM_PERIOD}>Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {period === CUSTOM_PERIOD ? (
+                <WorkEntryCustomRangePicker
+                  open={customRangeOpen}
+                  onOpenChange={(nextOpen) => {
+                    if (nextOpen) setCustomRangeOpen(true)
+                    else cancelCustomRange()
+                  }}
+                  from={customFrom}
+                  to={customTo}
+                  onRangeChange={(from, to) => {
+                    setCustomFrom(from)
+                    setCustomTo(to)
+                  }}
+                  onApply={applyCustomRange}
+                  onCancel={cancelCustomRange}
+                />
+              ) : null}
             </div>
+            <div className="flex h-9 shrink-0 items-center gap-2 px-1">
+              <Checkbox
+                id="export-all-entries"
+                checked={exportAll}
+                onCheckedChange={(checked) => setExportAll(checked === true)}
+                disabled={exporting || exportAllEntryCount === 0}
+              />
+              <Label
+                htmlFor="export-all-entries"
+                className="cursor-pointer whitespace-nowrap text-xs font-medium"
+                title="Include entries that were already exported"
+              >
+                Export all
+              </Label>
+            </div>
+            <Button
+              className="shrink-0"
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || (exportAll ? exportAllEntryCount === 0 : data.unexportedEntries === 0)}
+            >
+              {exporting ? <Loader2 className="animate-spin" /> : <Download />}
+              {exportAll
+                ? `Export all ${exportAllEntryCount}`
+                : data.unexportedEntries > 0
+                  ? `Export ${data.unexportedEntries} new`
+                  : "All exported"}
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid gap-2 sm:grid-cols-2 md:hidden">
+            <WorkEntryFilterCombobox
+              ariaLabel="Filter work entries by date"
+              allLabel="All dates"
+              searchPlaceholder="Search dates..."
+              emptyLabel="No matching date in these results."
+              unavailableLabel="Unavailable date"
+              options={data.dateFilterOptions.map((date) => ({ id: date, label: formatEntryDate(date) }))}
+              value={data.workDate || ""}
+              selectedValueLabel={data.workDate ? formatEntryDate(data.workDate) : undefined}
+              onValueChange={(value) => updateListFilter("date", value)}
+              fullWidth
+            />
+            <WorkEntryFilterCombobox
+              ariaLabel="Filter work entries by client"
+              allLabel="All clients"
+              searchPlaceholder="Search clients..."
+              emptyLabel="No matching client in these results."
+              unavailableLabel="Unavailable client"
+              options={data.clientFilterOptions}
+              value={data.clientId || ""}
+              selectedValueLabel={clientOptions.find((client) => client.id === data.clientId)?.client}
+              onValueChange={(value) => updateListFilter("client", value)}
+              fullWidth
+            />
+            <WorkEntryFilterCombobox
+              ariaLabel="Filter work entries by task"
+              allLabel="All tasks"
+              searchPlaceholder="Search tasks..."
+              emptyLabel="No matching task in these results."
+              unavailableLabel="Unavailable task"
+              options={data.taskFilterOptions}
+              value={data.taskId || ""}
+              selectedValueLabel={data.tasks.find((task) => task.id === data.taskId)?.name}
+              onValueChange={(value) => updateListFilter("task", value)}
+              fullWidth
+            />
+            <WorkEntryFilterCombobox
+              ariaLabel="Filter work entries by CRM export status"
+              allLabel="All export statuses"
+              allValue="all"
+              searchPlaceholder="Search export status..."
+              emptyLabel="No export status found."
+              unavailableLabel="Unavailable export status"
+              options={EXPORT_STATUS_FILTER_OPTIONS}
+              value={data.exportStatus}
+              onValueChange={(value) => updateListFilter("exportStatus", value)}
+              fullWidth
+            />
+          </div>
+          <div className="hidden overflow-hidden rounded-2xl border border-[var(--line-subtle)] md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <WorkEntryFilterCombobox
+                      ariaLabel="Filter work entries by date"
+                      allLabel="All dates"
+                      searchPlaceholder="Search dates..."
+                      emptyLabel="No matching date in these results."
+                      unavailableLabel="Unavailable date"
+                      options={data.dateFilterOptions.map((date) => ({ id: date, label: formatEntryDate(date) }))}
+                      value={data.workDate || ""}
+                      selectedValueLabel={data.workDate ? formatEntryDate(data.workDate) : undefined}
+                      onValueChange={(value) => updateListFilter("date", value)}
+                      triggerLabel="Date"
+                    />
+                  </TableHead>
+                  <TableHead>
+                    <WorkEntryFilterCombobox
+                      ariaLabel="Filter work entries by client"
+                      allLabel="All clients"
+                      searchPlaceholder="Search clients..."
+                      emptyLabel="No matching client in these results."
+                      unavailableLabel="Unavailable client"
+                      options={data.clientFilterOptions}
+                      value={data.clientId || ""}
+                      selectedValueLabel={clientOptions.find((client) => client.id === data.clientId)?.client}
+                      onValueChange={(value) => updateListFilter("client", value)}
+                      triggerLabel="Client"
+                    />
+                  </TableHead>
+                  <TableHead>
+                    <WorkEntryFilterCombobox
+                      ariaLabel="Filter work entries by task"
+                      allLabel="All tasks"
+                      searchPlaceholder="Search tasks..."
+                      emptyLabel="No matching task in these results."
+                      unavailableLabel="Unavailable task"
+                      options={data.taskFilterOptions}
+                      value={data.taskId || ""}
+                      selectedValueLabel={data.tasks.find((task) => task.id === data.taskId)?.name}
+                      onValueChange={(value) => updateListFilter("task", value)}
+                      triggerLabel="Task"
+                    />
+                  </TableHead>
+                  <TableHead className="text-right">Minutes</TableHead>
+                  <TableHead>
+                    <WorkEntryFilterCombobox
+                      ariaLabel="Filter work entries by CRM export status"
+                      allLabel="All export statuses"
+                      allValue="all"
+                      searchPlaceholder="Search export status..."
+                      emptyLabel="No export status found."
+                      unavailableLabel="Unavailable export status"
+                      options={EXPORT_STATUS_FILTER_OPTIONS}
+                      value={data.exportStatus}
+                      onValueChange={(value) => updateListFilter("exportStatus", value)}
+                      triggerLabel="CRM export"
+                    />
+                  </TableHead>
+                  <TableHead className="w-24 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.entries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{formatEntryDate(entry.workDate)}</TableCell>
+                    <TableCell className="font-medium">{entry.clientDomain}</TableCell>
+                    <TableCell>{entry.taskName}</TableCell>
+                    <TableCell className="text-right font-mono font-semibold">{entry.durationMinutes}</TableCell>
+                    <TableCell><ExportStatusBadge exportedAt={entry.exportedAt} /></TableCell>
+                    <TableCell><div className="flex justify-end gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div></TableCell>
+                  </TableRow>
+                ))}
+                {data.entries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-12 text-center">
+                      <p className="font-semibold text-[var(--text-primary)]">No work entries match these filters</p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">Change the date, client, task, export status, or range.</p>
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
           {data.entries.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--line-subtle)] px-4 py-12 text-center">
+            <div className="rounded-2xl border border-dashed border-[var(--line-subtle)] px-4 py-12 text-center md:hidden">
               <CalendarDays className="mx-auto mb-3 h-8 w-8 text-[var(--text-muted)]" />
-              <p className="font-semibold text-[var(--text-primary)]">No work entries in this range</p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Record work above or choose a different date range.</p>
+              <p className="font-semibold text-[var(--text-primary)]">No work entries match these filters</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Change the date, client, task, export status, or range.</p>
             </div>
           ) : (
-            <>
-              <div className="hidden overflow-hidden rounded-2xl border border-[var(--line-subtle)] md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Task</TableHead>
-                      <TableHead className="text-right">Minutes</TableHead>
-                      <TableHead>CRM export</TableHead>
-                      <TableHead className="w-24 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.entries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{formatEntryDate(entry.workDate)}</TableCell>
-                        <TableCell className="font-medium">{entry.clientDomain}</TableCell>
-                        <TableCell>{entry.taskName}</TableCell>
-                        <TableCell className="text-right font-mono font-semibold">{entry.durationMinutes}</TableCell>
-                        <TableCell><ExportStatusBadge exportedAt={entry.exportedAt} /></TableCell>
-                        <TableCell><div className="flex justify-end gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="space-y-3 md:hidden">
-                {data.entries.map((entry) => (
-                  <div key={entry.id} className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-4">
-                    <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-[var(--text-primary)]">{entry.taskName}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">{entry.clientDomain}</p></div><Badge variant="secondary">{formatMinutes(entry.durationMinutes)}</Badge></div>
-                    <div className="mt-4 flex items-end justify-between gap-3">
-                      <div className="space-y-2">
-                        <span className="block text-xs text-[var(--text-muted)]">{formatEntryDate(entry.workDate)}</span>
-                        <ExportStatusBadge exportedAt={entry.exportedAt} />
-                      </div>
-                      <div className="flex gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div>
+            <div className="space-y-3 md:hidden">
+              {data.entries.map((entry) => (
+                <div key={entry.id} className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] p-4">
+                  <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-[var(--text-primary)]">{entry.taskName}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">{entry.clientDomain}</p></div><Badge variant="secondary">{formatMinutes(entry.durationMinutes)}</Badge></div>
+                  <div className="mt-4 flex items-end justify-between gap-3">
+                    <div className="space-y-2">
+                      <span className="block text-xs text-[var(--text-muted)]">{formatEntryDate(entry.workDate)}</span>
+                      <ExportStatusBadge exportedAt={entry.exportedAt} />
                     </div>
+                    <div className="flex gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div>
                   </div>
-                ))}
-              </div>
-            </>
+                </div>
+              ))}
+            </div>
           )}
 
-          {data.totalPages > 1 ? (
-            <div className="flex items-center justify-between border-t border-[var(--line-subtle)] pt-4">
-              <p className="text-xs text-[var(--text-muted)]">Page {data.page} of {data.totalPages}</p>
-              <div className="flex gap-2">
+          {data.totalEntries > 0 ? (
+            <div className="flex flex-col gap-3 border-t border-[var(--line-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
+                <span>Showing {firstVisibleEntry}–{lastVisibleEntry} of {data.totalEntries}</span>
+                <div className="flex items-center gap-2">
+                  <Label className="whitespace-nowrap text-xs" htmlFor="work-entry-page-size">Rows per page</Label>
+                  <Select
+                    value={String(data.pageSize)}
+                    onValueChange={(value) => updateListFilter("pageSize", value)}
+                  >
+                    <SelectTrigger id="work-entry-page-size" className="h-8! w-20" aria-label="Rows per page">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      {LMS_WORK_LOG_PAGE_SIZES.map((size) => (
+                        <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span>Page {data.page} of {data.totalPages}</span>
+              </div>
+              <div className="flex gap-2 sm:justify-end">
                 {data.page > 1 ? (
                   <Button asChild variant="outline" size="sm"><Link href={buildPageHref(data.page - 1)}><ChevronLeft /> Previous</Link></Button>
                 ) : (

@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import {
+    hasCurrentNotesWriteProtocol,
+    NOTES_CLIENT_REFRESH_MESSAGE,
+    NOTES_CLIENT_REFRESH_REQUIRED,
+} from "@/lib/notes/write-protocol"
 import { requireAuth } from "@/lib/auth"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
@@ -225,6 +230,9 @@ export async function updateProject(projectId: string, data: {
     createdAt?: Date | string
     currentFee?: number | null
     serviceIds?: string[]
+}, options?: {
+    expectedDescription?: string | null
+    notesWriteProtocol?: string
 }) {
     try {
         const session = await requireAuth()
@@ -288,6 +296,7 @@ export async function updateProject(projectId: string, data: {
                 closedAt: true,
                 closedMonthKey: true,
                 isHeavyRevenueMonth: true,
+                description: true,
             },
         })
         if (!existingProject) {
@@ -297,6 +306,39 @@ export async function updateProject(projectId: string, data: {
                 details: `projectId=${validatedProjectId}; reason=not_found`,
             })
             return { success: false, error: "Project not found" }
+        }
+
+        if (
+            data.description !== undefined
+            && !hasCurrentNotesWriteProtocol(options?.notesWriteProtocol)
+        ) {
+            await logSessionAuditEvent(session, {
+                action: "NOTE_WRITE_PROTOCOL_REJECTED",
+                success: false,
+                details: `projectId=${validatedProjectId}; reason=stale_notes_client`,
+            })
+            return {
+                success: false,
+                error: NOTES_CLIENT_REFRESH_MESSAGE,
+                code: NOTES_CLIENT_REFRESH_REQUIRED,
+            }
+        }
+
+        if (
+            data.description !== undefined
+            && options
+            && Object.prototype.hasOwnProperty.call(options, "expectedDescription")
+            && (existingProject.description ?? null) !== (options.expectedDescription ?? null)
+        ) {
+            await logSessionAuditEvent(session, {
+                action: "PROJECT_NOTE_UPDATE_CONFLICT",
+                success: false,
+                details: `projectId=${validatedProjectId}; reason=stale_description`,
+            })
+            return {
+                success: false,
+                error: "Project notes changed in another view. Reload before saving again.",
+            }
         }
 
         if (

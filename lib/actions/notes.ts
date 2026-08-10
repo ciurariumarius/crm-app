@@ -21,6 +21,11 @@ import {
   queryPersonalNoteList,
   type NoteListQueryInput,
 } from "@/lib/notes/queries.server"
+import {
+  hasCurrentNotesWriteProtocol,
+  NOTES_CLIENT_REFRESH_MESSAGE,
+  NOTES_CLIENT_REFRESH_REQUIRED,
+} from "@/lib/notes/write-protocol"
 
 export type NoteTagRecord = {
   id: string
@@ -160,6 +165,20 @@ const UpdateNoteSchema = z.object({
   archived: z.boolean().optional(),
   folderId: z.string().trim().min(1).max(120).nullable().optional(),
 })
+
+const UpdateNoteOptionsSchema = z.object({
+  expectedContent: z.string().max(200000).optional(),
+  notesWriteProtocol: z.string().max(80).optional(),
+})
+
+const NOTE_CONTENT_UPDATE_CONFLICT = "NOTE_CONTENT_UPDATE_CONFLICT"
+
+class NoteContentUpdateConflictError extends Error {
+  constructor() {
+    super(NOTE_CONTENT_UPDATE_CONFLICT)
+    this.name = "NoteContentUpdateConflictError"
+  }
+}
 
 const ListNotesSchema = z.object({
   query: z.string().trim().max(200).optional(),
@@ -393,22 +412,35 @@ async function findSerializedNote(noteId: string) {
   return note ? serializeNote(note) : null
 }
 
-async function syncNoteContentMetadata(noteId: string, content: string) {
+async function syncNoteContentMetadata(
+  noteId: string,
+  content: string,
+  expectedContent?: string
+) {
   const contentText = toNoteContentText(content)
   const features = deriveNoteContentFeatures(content)
   const tagNames = extractNoteTagNames(contentText)
 
   await prisma.$transaction(async (transaction) => {
-    await transaction.note.update({
-      where: { id: noteId },
-      data: {
-        content,
-        contentText,
-        title: deriveNoteTitleFromContent(content, DEFAULT_NOTE_TITLE),
-        hasChecklist: features.hasChecklist,
-        hasAttachment: features.hasAttachment,
-      },
-    })
+    const noteData = {
+      content,
+      contentText,
+      title: deriveNoteTitleFromContent(content, DEFAULT_NOTE_TITLE),
+      hasChecklist: features.hasChecklist,
+      hasAttachment: features.hasAttachment,
+    }
+    if (expectedContent === undefined) {
+      await transaction.note.update({
+        where: { id: noteId },
+        data: noteData,
+      })
+    } else {
+      const updated = await transaction.note.updateMany({
+        where: { id: noteId, content: expectedContent },
+        data: noteData,
+      })
+      if (updated.count !== 1) throw new NoteContentUpdateConflictError()
+    }
 
     const tagIds: string[] = []
     for (const tagName of tagNames) {
@@ -651,7 +683,8 @@ export async function createNote(input?: { title?: string; content?: string; pin
 
 export async function updateNote(
   noteId: string,
-  input: { title?: string; content?: string; pinned?: boolean; archived?: boolean; folderId?: string | null }
+  input: { title?: string; content?: string; pinned?: boolean; archived?: boolean; folderId?: string | null },
+  options: { expectedContent?: string; notesWriteProtocol?: string } = {}
 ) {
   try {
     const session = await requireAuth()
@@ -662,6 +695,22 @@ export async function updateNote(
     }
     const validatedNoteId = NoteIdSchema.parse(noteId)
     const validated = UpdateNoteSchema.parse(input || {})
+    const validatedOptions = UpdateNoteOptionsSchema.parse(options || {})
+    if (
+      validated.content !== undefined
+      && !hasCurrentNotesWriteProtocol(validatedOptions.notesWriteProtocol)
+    ) {
+      await logSessionAuditEvent(session, {
+        action: "NOTE_WRITE_PROTOCOL_REJECTED",
+        success: false,
+        details: `noteId=${validatedNoteId}; reason=stale_notes_client`,
+      })
+      return {
+        success: false,
+        error: NOTES_CLIENT_REFRESH_MESSAGE,
+        code: NOTES_CLIENT_REFRESH_REQUIRED,
+      }
+    }
 
     const existing = (await noteDelegate.findFirst({
       where: { id: validatedNoteId },
@@ -669,6 +718,17 @@ export async function updateNote(
     })) as { id: string; content: string; createdAt: Date } | null
     if (!existing) {
       return { success: false, error: "Note not found" }
+    }
+    if (
+      validated.content !== undefined
+      && validatedOptions.expectedContent !== undefined
+      && existing.content !== validatedOptions.expectedContent
+    ) {
+      return {
+        success: false,
+        error: "This note changed before your draft could save. Your draft was kept; reopen the note and review it before retrying.",
+        code: NOTE_CONTENT_UPDATE_CONFLICT,
+      }
     }
 
     const updateData: {
@@ -704,7 +764,11 @@ export async function updateNote(
     }
 
     if (validated.content !== undefined) {
-      await syncNoteContentMetadata(validatedNoteId, validated.content)
+      await syncNoteContentMetadata(
+        validatedNoteId,
+        validated.content,
+        validatedOptions.expectedContent
+      )
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -735,6 +799,13 @@ export async function updateNote(
 
     return { success: true, data: serializedNote }
   } catch (error) {
+    if (error instanceof NoteContentUpdateConflictError) {
+      return {
+        success: false,
+        error: "This note changed before your draft could save. Your draft was kept; reopen the note and review it before retrying.",
+        code: NOTE_CONTENT_UPDATE_CONFLICT,
+      }
+    }
     return { success: false, error: getActionErrorMessage(error, "Failed to update note") }
   }
 }

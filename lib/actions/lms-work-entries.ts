@@ -33,6 +33,16 @@ const WorkEntryUpdateInputSchema = WorkEntryInputSchema.extend({
 })
 const ClientNameSchema = z.string().trim().min(1, "Client name is required").max(255, "Client name is too long")
 const TaskNameSchema = z.string().trim().min(1, "Task name is required").max(255, "Task name is too long")
+const DefaultDurationMinutesSchema = z.number()
+  .int("Default time must be a whole number")
+  .min(1, "Default time must be at least 1 minute")
+  .max(1440, "Default time cannot exceed 1440 minutes")
+  .nullable()
+const WorkTaskSettingsSchema = z.object({
+  name: TaskNameSchema,
+  isActive: z.boolean(),
+  defaultDurationMinutes: DefaultDurationMinutesSchema.optional(),
+})
 const RecurrenceInputSchema = z.object({
   lmsAllocationId: z.string().uuid("Select a valid LMS client"),
   taskTypeId: z.string().uuid("Select a valid task"),
@@ -277,10 +287,17 @@ export async function createLmsWorkClient(name: string) {
   }
 }
 
-export async function createLmsWorkTask(name: string) {
+export async function createLmsWorkTask(data: string | {
+  name: string
+  defaultDurationMinutes?: number | null
+}) {
   try {
     const session = await requireAuth()
-    const validatedName = canonicalizeLmsWorkTaskName(TaskNameSchema.parse(name))
+    const validated = z.object({
+      name: TaskNameSchema,
+      defaultDurationMinutes: DefaultDurationMinutesSchema.optional().default(null),
+    }).parse(typeof data === "string" ? { name: data } : data)
+    const validatedName = canonicalizeLmsWorkTaskName(validated.name)
     const task = await prisma.$transaction(async (tx) => {
       const aggregate = await tx.lmsWorkTask.aggregate({
         _max: { sortOrder: true },
@@ -290,13 +307,14 @@ export async function createLmsWorkTask(name: string) {
           name: validatedName,
           normalizedName: normalizeTaskName(validatedName),
           sortOrder: (aggregate._max.sortOrder ?? -1) + 1,
+          defaultDurationMinutes: validated.defaultDurationMinutes,
         },
         select: { id: true },
       })
     })
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_TASK_CREATED",
-      details: `taskId=${task.id}`,
+      details: `taskId=${task.id}; defaultDurationMinutes=${validated.defaultDurationMinutes ?? "none"}`,
     })
     revalidateWorkLog()
     return { success: true as const, id: task.id }
@@ -340,18 +358,21 @@ export async function reorderLmsWorkTasks(taskIds: string[]) {
 
 export async function updateLmsWorkTask(
   taskId: string,
-  data: { name: string; isActive: boolean }
+  data: { name: string; isActive: boolean; defaultDurationMinutes?: number | null }
 ) {
   try {
     const session = await requireAuth()
     const validatedId = TaskIdSchema.parse(taskId)
-    const validated = z.object({ name: TaskNameSchema, isActive: z.boolean() }).parse(data)
+    const validated = WorkTaskSettingsSchema.parse(data)
     const name = canonicalizeLmsWorkTaskName(validated.name)
     const existing = await prisma.lmsWorkTask.findFirst({
       where: { id: validatedId },
-      select: { id: true },
+      select: { id: true, defaultDurationMinutes: true },
     })
     if (!existing) throw new ActionError("TASK_NOT_FOUND", "Predefined task not found")
+    const defaultDurationMinutes = validated.defaultDurationMinutes === undefined
+      ? existing.defaultDurationMinutes
+      : validated.defaultDurationMinutes
 
     await prisma.lmsWorkTask.update({
       where: { id: existing.id },
@@ -359,11 +380,12 @@ export async function updateLmsWorkTask(
         name,
         normalizedName: normalizeTaskName(name),
         isActive: validated.isActive,
+        defaultDurationMinutes,
       },
     })
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_TASK_UPDATED",
-      details: `taskId=${existing.id}; active=${validated.isActive}`,
+      details: `taskId=${existing.id}; active=${validated.isActive}; defaultDurationMinutes=${defaultDurationMinutes ?? "none"}`,
     })
     revalidateWorkLog()
     return { success: true as const }

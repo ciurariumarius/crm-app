@@ -49,6 +49,12 @@ import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/l
 import { ProjectHistoryLogSections, type ProjectPaymentHistoryEntry, type ProjectStatusHistoryEntry } from "@/components/projects/project-history-log-sections"
 import { ProjectSheetInfoSection } from "@/components/projects/project-sheet-info-section"
 import { CloseProjectDialog } from "@/components/projects/close-project-dialog"
+import {
+    markProjectNoteDraftSaved,
+    recordProjectNoteDraft,
+    resolveProjectNoteDraftContent,
+} from "@/lib/notes/workspace-state"
+import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
 
 type UpdateProjectPayload = {
     name?: string
@@ -200,10 +206,11 @@ export function ProjectSheetContent({
     const [notesSaveState, setNotesSaveState] = React.useState<
         "idle" | "typing" | "saving" | "saved" | "error"
     >("idle")
-    const activeProjectIdRef = React.useRef(initialProject.id)
+    const activeProjectIdRef = React.useRef("")
     const isDescriptionSaveInFlightRef = React.useRef(false)
     const queuedDescriptionRef = React.useRef<string | null>(null)
     const lastSavedDescriptionRef = React.useRef(initialProject.description || "")
+    const descriptionRef = React.useRef(initialProject.description || "")
 
     // Payment History State
     const [paymentHistory, setPaymentHistory] = React.useState<ProjectPaymentHistoryEntry[]>([])
@@ -232,7 +239,14 @@ export function ProjectSheetContent({
         if (activeProjectIdRef.current === project.id) return
         activeProjectIdRef.current = project.id
         const serverDescription = project.description || ""
-        setDescription(serverDescription)
+        const recoveredDraft = resolveProjectNoteDraftContent(
+            window.sessionStorage,
+            project.id,
+            serverDescription
+        )
+        const nextDescription = recoveredDraft ?? serverDescription
+        setDescription(nextDescription)
+        descriptionRef.current = nextDescription
         lastSavedDescriptionRef.current = serverDescription
         queuedDescriptionRef.current = null
         isDescriptionSaveInFlightRef.current = false
@@ -241,11 +255,19 @@ export function ProjectSheetContent({
 
     const persistDescription = React.useCallback(
         async (projectId: string, nextDescription: string) => {
-            const result = await updateProject(projectId, { description: nextDescription })
+            const result = await updateProject(
+                projectId,
+                { description: nextDescription },
+                {
+                    expectedDescription: lastSavedDescriptionRef.current,
+                    notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION,
+                }
+            )
             if (!result.success) {
                 toast.error(result.error || "Failed to update notes")
                 return false
             }
+            markProjectNoteDraftSaved(window.sessionStorage, projectId, nextDescription)
 
             setProject((previousProject) => {
                 if (previousProject.id !== projectId) return previousProject
@@ -260,6 +282,17 @@ export function ProjectSheetContent({
         },
         []
     )
+
+    const handleDescriptionChange = React.useCallback((nextDescription: string) => {
+        descriptionRef.current = nextDescription
+        setDescription(nextDescription)
+        recordProjectNoteDraft(
+            window.sessionStorage,
+            activeProjectIdRef.current,
+            nextDescription,
+            lastSavedDescriptionRef.current
+        )
+    }, [])
 
     const fetchPaymentHistory = React.useCallback(async () => {
         setIsLoadingHistory(true)
@@ -402,7 +435,7 @@ export function ProjectSheetContent({
                 }
 
                 const queuedDescription = queuedDescriptionRef.current
-                if (queuedDescription && queuedDescription !== descriptionToSave) {
+                if (queuedDescription !== null && queuedDescription !== descriptionToSave) {
                     queuedDescriptionRef.current = null
                     descriptionToSave = queuedDescription
                 } else {
@@ -415,6 +448,25 @@ export function ProjectSheetContent({
         },
         [persistDescription]
     )
+
+    const flushDescriptionSave = React.useCallback(() => {
+        const currentDescription = descriptionRef.current
+        if (currentDescription === lastSavedDescriptionRef.current) return
+        void triggerDescriptionSave(currentDescription)
+    }, [triggerDescriptionSave])
+
+    React.useEffect(() => {
+        const flushWhenHidden = () => {
+            if (document.visibilityState === "hidden") flushDescriptionSave()
+        }
+        window.addEventListener("pagehide", flushDescriptionSave)
+        document.addEventListener("visibilitychange", flushWhenHidden)
+        return () => {
+            window.removeEventListener("pagehide", flushDescriptionSave)
+            document.removeEventListener("visibilitychange", flushWhenHidden)
+            flushDescriptionSave()
+        }
+    }, [flushDescriptionSave])
 
     React.useEffect(() => {
         if (isInitialMount.current) {
@@ -436,11 +488,13 @@ export function ProjectSheetContent({
     }, [description, triggerDescriptionSave])
 
     const appendRequirementsTemplate = React.useCallback(() => {
-        setDescription((current) => {
-            if (!current.trim()) return PROJECT_REQUIREMENTS_TEMPLATE
-            return `${current}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}`
-        })
-    }, [])
+        const current = descriptionRef.current
+        handleDescriptionChange(
+            !current.trim()
+                ? PROJECT_REQUIREMENTS_TEMPLATE
+                : `${current}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}`
+        )
+    }, [handleDescriptionChange])
 
     const toggleService = (serviceId: string) => {
         const currentServices = project.services || []
@@ -1054,7 +1108,8 @@ export function ProjectSheetContent({
                             }
                             statusState={notesSaveState === "idle" ? "ready" : notesSaveState}
                             value={description}
-                            onChange={setDescription}
+                            onChange={handleDescriptionChange}
+                            onBlur={flushDescriptionSave}
                             uploadProjectId={project.id}
                             onAddTemplate={appendRequirementsTemplate}
                             onExpand={() => setIsNotesModalOpen(true)}
@@ -1386,7 +1441,8 @@ export function ProjectSheetContent({
                         <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-background px-8 pb-8 pt-6">
                             <RichTextEditor
                                 value={description}
-                                onChange={setDescription}
+                                onChange={handleDescriptionChange}
+                                onBlur={flushDescriptionSave}
                                 placeholder=""
                                 variant="plain"
                                 mode="document"

@@ -25,6 +25,16 @@ export function parseCustomLmsWorkDuration(value: string) {
   return isValidLmsWorkDuration(parsed) ? parsed : null
 }
 
+export function getLmsWorkDefaultDurationSelection(value: number | null | undefined) {
+  if (!isValidLmsWorkDuration(value)) {
+    return { durationSelection: "", customMinutes: "" }
+  }
+  if (isLmsWorkDurationPreset(value)) {
+    return { durationSelection: String(value), customMinutes: "" }
+  }
+  return { durationSelection: "custom", customMinutes: String(value) }
+}
+
 export function getLmsWorkUtilizationPercent(workedMinutes: number, availableHours: number) {
   if (!Number.isFinite(workedMinutes) || workedMinutes < 0 || !Number.isFinite(availableHours) || availableHours <= 0) {
     return 0

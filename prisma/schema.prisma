@@ -392,6 +392,7 @@ model LmsWorkTask {
   normalizedName String   @map("normalized_name")
   isActive       Boolean  @default(true) @map("is_active")
   sortOrder      Int      @default(1000) @map("sort_order")
+  defaultDurationMinutes Int? @map("default_duration_minutes")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
 

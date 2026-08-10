@@ -2,9 +2,10 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ArrowDown, ArrowUp, Check, GripVertical, ListChecks, Loader2, Pencil, Plus, Search, X } from "lucide-react"
+import { ArrowDown, ArrowUp, Check, Clock3, GripVertical, ListChecks, Loader2, Pencil, Plus, Search, X } from "lucide-react"
 import { toast } from "sonner"
 import { createLmsWorkTask, reorderLmsWorkTasks, updateLmsWorkTask } from "@/lib/actions/lms-work-entries"
+import { parseCustomLmsWorkDuration } from "@/lib/lms-work-entries/duration-options"
 import type { LmsWorkTaskOption } from "@/lib/lms-work-entries/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,10 +19,12 @@ type CatalogFilter = "all" | "active" | "inactive"
 export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWorkTaskOption[]; embedded?: boolean }) {
   const router = useRouter()
   const [newTask, setNewTask] = React.useState("")
+  const [newDefaultMinutes, setNewDefaultMinutes] = React.useState("")
   const [search, setSearch] = React.useState("")
   const [filter, setFilter] = React.useState<CatalogFilter>("all")
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const [draftName, setDraftName] = React.useState("")
+  const [draftDefaultMinutes, setDraftDefaultMinutes] = React.useState("")
   const [busyId, setBusyId] = React.useState<string | null>(null)
   const [orderedTasks, setOrderedTasks] = React.useState(tasks)
   const [draggingId, setDraggingId] = React.useState<string | null>(null)
@@ -29,6 +32,12 @@ export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWork
 
   const activeCount = orderedTasks.filter((task) => task.isActive).length
   const inactiveCount = orderedTasks.length - activeCount
+  const newDefaultInvalid = Boolean(
+    newDefaultMinutes.trim() && parseCustomLmsWorkDuration(newDefaultMinutes) === null
+  )
+  const draftDefaultInvalid = Boolean(
+    draftDefaultMinutes.trim() && parseCustomLmsWorkDuration(draftDefaultMinutes) === null
+  )
   const canReorder = filter === "all" && !search.trim() && editingId === null && busyId === null
   const visibleTasks = React.useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ro-RO")
@@ -47,20 +56,29 @@ export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWork
     if (editingId && !orderedTasks.some((task) => task.id === editingId)) {
       setEditingId(null)
       setDraftName("")
+      setDraftDefaultMinutes("")
     }
   }, [editingId, orderedTasks])
 
   async function addTask(event: React.FormEvent) {
     event.preventDefault()
     if (!newTask.trim()) return
+    const defaultDurationMinutes = newDefaultMinutes.trim()
+      ? parseCustomLmsWorkDuration(newDefaultMinutes)
+      : null
+    if (newDefaultMinutes.trim() && defaultDurationMinutes === null) {
+      toast.error("Default time must be 1–1440 whole minutes")
+      return
+    }
     setBusyId("new")
-    const result = await createLmsWorkTask(newTask)
+    const result = await createLmsWorkTask({ name: newTask, defaultDurationMinutes })
     setBusyId(null)
     if (!result.success) {
       toast.error(result.error)
       return
     }
     setNewTask("")
+    setNewDefaultMinutes("")
     toast.success("Task added")
     router.refresh()
   }
@@ -68,35 +86,52 @@ export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWork
   function beginRename(task: LmsWorkTaskOption) {
     setEditingId(task.id)
     setDraftName(task.name)
+    setDraftDefaultMinutes(task.defaultDurationMinutes === null ? "" : String(task.defaultDurationMinutes))
   }
 
   function cancelRename() {
     setEditingId(null)
     setDraftName("")
+    setDraftDefaultMinutes("")
   }
 
-  async function saveRename(task: LmsWorkTaskOption) {
+  async function saveTask(task: LmsWorkTaskOption) {
     const name = draftName.trim()
     if (!name) return
-    if (name === task.name) {
+    const defaultDurationMinutes = draftDefaultMinutes.trim()
+      ? parseCustomLmsWorkDuration(draftDefaultMinutes)
+      : null
+    if (draftDefaultMinutes.trim() && defaultDurationMinutes === null) {
+      toast.error("Default time must be 1–1440 whole minutes")
+      return
+    }
+    if (name === task.name && defaultDurationMinutes === task.defaultDurationMinutes) {
       cancelRename()
       return
     }
     setBusyId(task.id)
-    const result = await updateLmsWorkTask(task.id, { name, isActive: task.isActive })
+    const result = await updateLmsWorkTask(task.id, {
+      name,
+      isActive: task.isActive,
+      defaultDurationMinutes,
+    })
     setBusyId(null)
     if (!result.success) {
       toast.error(result.error)
       return
     }
     cancelRename()
-    toast.success("Task renamed")
+    toast.success("Task updated")
     router.refresh()
   }
 
   async function setTaskActive(task: LmsWorkTaskOption, isActive: boolean) {
     setBusyId(task.id)
-    const result = await updateLmsWorkTask(task.id, { name: task.name, isActive })
+    const result = await updateLmsWorkTask(task.id, {
+      name: task.name,
+      isActive,
+      defaultDurationMinutes: task.defaultDurationMinutes,
+    })
     setBusyId(null)
     if (!result.success) {
       toast.error(result.error)
@@ -147,15 +182,34 @@ export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWork
 
   const content = (
       <div className="space-y-5">
-        <form onSubmit={addTask} className="flex flex-col gap-2 sm:flex-row">
-          <Input
-            value={newTask}
-            onChange={(event) => setNewTask(event.target.value)}
-            placeholder="Add a predefined work task"
-            maxLength={255}
-            required
-          />
-          <Button type="submit" className="shrink-0" disabled={busyId === "new" || !newTask.trim()}>
+        <form onSubmit={addTask} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_160px_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <label htmlFor="new-work-task-name" className="text-xs font-medium text-[var(--text-secondary)]">Task name</label>
+            <Input
+              id="new-work-task-name"
+              value={newTask}
+              onChange={(event) => setNewTask(event.target.value)}
+              placeholder="Add a predefined work task"
+              maxLength={255}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="new-work-task-default-time" className="text-xs font-medium text-[var(--text-secondary)]">Default time (min)</label>
+            <Input
+              id="new-work-task-default-time"
+              type="number"
+              min={1}
+              max={1440}
+              step={1}
+              inputMode="numeric"
+              value={newDefaultMinutes}
+              onChange={(event) => setNewDefaultMinutes(event.target.value)}
+              placeholder="Optional"
+              aria-invalid={newDefaultInvalid}
+            />
+          </div>
+          <Button type="submit" className="shrink-0" disabled={busyId === "new" || !newTask.trim() || newDefaultInvalid}>
             {busyId === "new" ? <Loader2 className="animate-spin" /> : <Plus />}
             Add task
           </Button>
@@ -272,23 +326,58 @@ export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWork
                 </div>
                 <div className="min-w-0 flex-1">
                   {editing ? (
-                    <Input
-                      value={draftName}
-                      onChange={(event) => setDraftName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") cancelRename()
-                        if (event.key === "Enter") {
-                          event.preventDefault()
-                          void saveRename(task)
-                        }
-                      }}
-                      maxLength={255}
-                      autoFocus
-                      disabled={busy}
-                      aria-label={`Rename ${task.name}`}
-                    />
+                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
+                      <div className="space-y-1">
+                        <label htmlFor={`work-task-name-${task.id}`} className="text-xs font-medium text-[var(--text-secondary)]">Task name</label>
+                        <Input
+                          id={`work-task-name-${task.id}`}
+                          value={draftName}
+                          onChange={(event) => setDraftName(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") cancelRename()
+                            if (event.key === "Enter") {
+                              event.preventDefault()
+                              void saveTask(task)
+                            }
+                          }}
+                          maxLength={255}
+                          autoFocus
+                          disabled={busy}
+                          aria-label={`Rename ${task.name}`}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label htmlFor={`work-task-default-time-${task.id}`} className="text-xs font-medium text-[var(--text-secondary)]">Default time (min)</label>
+                        <Input
+                          id={`work-task-default-time-${task.id}`}
+                          type="number"
+                          min={1}
+                          max={1440}
+                          step={1}
+                          inputMode="numeric"
+                          value={draftDefaultMinutes}
+                          onChange={(event) => setDraftDefaultMinutes(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") cancelRename()
+                            if (event.key === "Enter") {
+                              event.preventDefault()
+                              void saveTask(task)
+                            }
+                          }}
+                          placeholder="Optional"
+                          aria-invalid={draftDefaultInvalid}
+                          disabled={busy}
+                        />
+                      </div>
+                    </div>
                   ) : (
-                    <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{task.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-primary)]">{task.name}</p>
+                      <Badge variant="outline" className="shrink-0 font-medium text-[var(--text-secondary)]">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        {task.defaultDurationMinutes === null ? "No default" : `${task.defaultDurationMinutes} min default`}
+                      </Badge>
+                    </div>
                   )}
                 </div>
 
@@ -307,7 +396,7 @@ export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWork
 
                   {editing ? (
                     <div className="flex gap-1">
-                      <Button type="button" size="icon-sm" onClick={() => saveRename(task)} disabled={busy || !draftName.trim()} aria-label="Save task name">
+                      <Button type="button" size="icon-sm" onClick={() => saveTask(task)} disabled={busy || !draftName.trim() || draftDefaultInvalid} aria-label="Save task settings">
                         {busy ? <Loader2 className="animate-spin" /> : <Check />}
                       </Button>
                       <Button type="button" size="icon-sm" variant="ghost" onClick={cancelRename} disabled={busy} aria-label="Cancel rename">
@@ -344,7 +433,7 @@ export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWork
           Work-entry task catalog
         </CardTitle>
         <CardDescription>
-          These choices appear only in Tasks → Record work. They do not change imported LMS task analysis.
+          These choices and default times appear only in Tasks → Record work. They do not change imported LMS task analysis.
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>

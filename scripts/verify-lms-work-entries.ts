@@ -9,10 +9,22 @@ import {
   LMS_WORK_DURATION_FALLBACK_SHORTCUTS,
   LMS_WORK_DURATION_PRESETS,
   buildLmsWorkDurationShortcuts,
+  getLmsWorkDefaultDurationSelection,
   getLmsWorkUtilizationPercent,
   parseCustomLmsWorkDuration,
 } from "../lib/lms-work-entries/duration-options"
 import { rankLmsWorkOptionsByFrequency } from "../lib/lms-work-entries/frequent-options"
+import {
+  LMS_WORK_EXPORT_STATUSES,
+  buildLmsWorkEntryWhere,
+  normalizeLmsWorkDateFilter,
+  normalizeLmsWorkExportStatus,
+} from "../lib/lms-work-entries/filters"
+import {
+  DEFAULT_LMS_WORK_LOG_PAGE_SIZE,
+  LMS_WORK_LOG_PAGE_SIZES,
+  normalizeLmsWorkLogPageSize,
+} from "../lib/lms-work-entries/pagination"
 import {
   addDateOnlyDays,
   formatLmsWorkDateLabel,
@@ -90,6 +102,59 @@ async function run() {
   assert.deepEqual(getLmsWorkCapacity("2026-04-06", "2026-04-13"), { workdays: 4, hours: 32, holidays: 2 })
   assert.deepEqual(getLmsWorkCapacity("2026-01-01", "2026-12-31"), { workdays: 250, hours: 2000, holidays: 11 })
   assert.equal(getLmsWorkCapacity(null, null), null)
+  assert.deepEqual(Array.from(LMS_WORK_LOG_PAGE_SIZES), [50, 100, 250])
+  assert.equal(DEFAULT_LMS_WORK_LOG_PAGE_SIZE, 50)
+  assert.equal(normalizeLmsWorkLogPageSize("50"), 50)
+  assert.equal(normalizeLmsWorkLogPageSize("100"), 100)
+  assert.equal(normalizeLmsWorkLogPageSize(250), 250)
+  assert.equal(normalizeLmsWorkLogPageSize("25"), 50)
+  assert.equal(normalizeLmsWorkLogPageSize("invalid"), 50)
+  assert.deepEqual(Array.from(LMS_WORK_EXPORT_STATUSES), ["not-exported", "exported", "all"])
+  assert.equal(normalizeLmsWorkExportStatus(undefined), "not-exported")
+  assert.equal(normalizeLmsWorkExportStatus("exported"), "exported")
+  assert.equal(normalizeLmsWorkExportStatus("all"), "all")
+  assert.equal(normalizeLmsWorkExportStatus("invalid"), "not-exported")
+  assert.equal(normalizeLmsWorkDateFilter(" 2026-08-05 "), "2026-08-05")
+  assert.equal(normalizeLmsWorkDateFilter("2026-02-29"), null)
+  assert.equal(normalizeLmsWorkDateFilter("2026-07-31", "2026-08-01", "2026-08-10"), null)
+  assert.equal(normalizeLmsWorkDateFilter("2026-08-11", "2026-08-01", "2026-08-10"), null)
+  assert.equal(normalizeLmsWorkDateFilter("2026-08-05", "2026-08-01", "2026-08-10"), "2026-08-05")
+  assert.deepEqual(
+    buildLmsWorkEntryWhere({
+      from: "2026-08-01",
+      to: "2026-08-10",
+      clientId: " client-1 ",
+      taskId: " task-2 ",
+    }),
+    {
+      workDate: { gte: "2026-08-01", lte: "2026-08-10" },
+      lmsAllocationId: "client-1",
+      taskTypeId: "task-2",
+    }
+  )
+  assert.deepEqual(
+    buildLmsWorkEntryWhere({
+      from: "2026-08-01",
+      to: "2026-08-10",
+      workDate: "2026-08-05",
+      exportStatus: "not-exported",
+    }),
+    { workDate: "2026-08-05", exportedAt: null }
+  )
+  assert.deepEqual(
+    buildLmsWorkEntryWhere({ from: "2026-08-01", to: "2026-08-10", workDate: "2026-08-11" }),
+    { workDate: { gte: "2026-08-01", lte: "2026-08-10" } }
+  )
+  assert.deepEqual(buildLmsWorkEntryWhere({ from: null, to: null, clientId: "", taskId: null }), {})
+  assert.deepEqual(
+    buildLmsWorkEntryWhere({ from: null, to: null, exportStatus: "not-exported" }),
+    { exportedAt: null }
+  )
+  assert.deepEqual(
+    buildLmsWorkEntryWhere({ from: null, to: null, exportStatus: "exported" }),
+    { exportedAt: { not: null } }
+  )
+  assert.deepEqual(buildLmsWorkEntryWhere({ from: null, to: null, exportStatus: "all" }), {})
 
   const importedClients = Array.from({ length: 850 }, (_, index) => `client-${String(index + 1).padStart(3, "0")}.ro`)
   importedClients.push("Școala Exemplu.ro")
@@ -107,6 +172,22 @@ async function run() {
   assert.equal(parseCustomLmsWorkDuration("0"), null)
   assert.equal(parseCustomLmsWorkDuration("30.5"), null)
   assert.equal(parseCustomLmsWorkDuration("1441"), null)
+  assert.deepEqual(getLmsWorkDefaultDurationSelection(60), {
+    durationSelection: "60",
+    customMinutes: "",
+  })
+  assert.deepEqual(getLmsWorkDefaultDurationSelection(75), {
+    durationSelection: "custom",
+    customMinutes: "75",
+  })
+  assert.deepEqual(getLmsWorkDefaultDurationSelection(null), {
+    durationSelection: "",
+    customMinutes: "",
+  })
+  assert.deepEqual(getLmsWorkDefaultDurationSelection(0), {
+    durationSelection: "",
+    customMinutes: "",
+  })
   assert.equal(getLmsWorkUtilizationPercent(135, 120), 2)
   assert.equal(getLmsWorkUtilizationPercent(720, 120), 10)
   assert.equal(getLmsWorkUtilizationPercent(9000, 120), 125)
@@ -156,6 +237,7 @@ async function run() {
   assert.equal(formatRecurrenceSchedule([1, 2, 3, 4, 5]), "Monday–Friday")
 
   const workLogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-log-workspace.tsx"), "utf8")
+  const workLogPageSource = readFileSync(resolve(process.cwd(), "app/(dashboard)/lms-analysis/work-log/page.tsx"), "utf8")
   const workLogDbSource = readFileSync(resolve(process.cwd(), "lib/lms-work-entries/db.ts"), "utf8")
   const workTaskCatalogSource = readFileSync(resolve(process.cwd(), "components/lms-work-entries/lms-work-task-catalog.tsx"), "utf8")
   const workEntryActionsSource = readFileSync(resolve(process.cwd(), "lib/actions/lms-work-entries.ts"), "utf8")
@@ -193,6 +275,10 @@ async function run() {
     resolve(process.cwd(), "prisma/migrations/20260722110000_add_lms_work_recurrences/migration.sql"),
     "utf8"
   )
+  const defaultTaskDurationMigrationSource = readFileSync(
+    resolve(process.cwd(), "prisma/migrations/20260810110000_add_lms_work_task_default_duration/migration.sql"),
+    "utf8"
+  )
   const singleOwnerMigrationSource = readFileSync(
     resolve(process.cwd(), "prisma/migrations/20260722130000_simplify_to_single_owner/migration.sql"),
     "utf8"
@@ -206,6 +292,8 @@ async function run() {
   assert.doesNotMatch(workLogSource, /_120px_150px/)
   assert.match(workLogSource, /\/lms-analysis\/data#task-catalog/)
   assert.match(workLogSource, /LMS_WORK_DURATION_PRESETS\.map/)
+  assert.match(workLogSource, /getLmsWorkDefaultDurationSelection\(task\?\.defaultDurationMinutes\)/)
+  assert.match(workLogSource, /onValueChange=\{selectTask\}/)
   assert.doesNotMatch(workLogSource, /DEFAULT_LMS_WORK_DURATION_MINUTES/)
   assert.match(workLogSource, /const \[durationSelection, setDurationSelection\] = React\.useState\(""\)/)
   assert.match(workLogSource, /setDurationSelection\(""\)/)
@@ -215,16 +303,22 @@ async function run() {
   assert.match(workLogSource, /xl:col-start-2 xl:row-start-1/)
   assert.match(workLogSource, /xl:col-span-2 xl:row-start-2/)
   assert.match(workLogSource, /hasSelection/)
-  assert.equal(workLogSource.match(/<Command shouldFilter=\{false\}>/g)?.length, 2)
+  assert.equal(workLogSource.match(/<Command shouldFilter=\{false\}>/g)?.length, 3)
   assert.match(workLogSource, /CommandInput[\s\S]*placeholder="Search clients\.\.\."/)
   assert.match(workLogSource, /CommandInput[\s\S]*placeholder="Search tasks\.\.\."/)
-  assert.equal(workLogSource.match(/role="combobox"/g)?.length, 2)
+  assert.equal(workLogSource.match(/role="combobox"/g)?.length, 3)
   assert.match(workLogSource, /Saving…/)
-  assert.match(workLogSource, /workDatePickerOpen/)
+  assert.equal(workLogSource.match(/<WorkDatePicker/g)?.length, 2)
+  assert.match(workLogSource, /id="edit-work-date"/)
+  assert.match(workLogSource, /ariaLabel="Edit work date"/)
+  assert.doesNotMatch(workLogSource, /id="edit-work-date" type="date"/)
   assert.match(workLogSource, /w-\[min\(92vw,420px\)\]/)
   assert.match(workLogSource, /--cell-size:clamp\(40px,11vw,48px\)/)
   assert.match(workLogSource, /disabled=\{isWeekend\}/)
   assert.match(workLogSource, /if \(!date \|\| isWeekend\(date\)\) return/)
+  assert.match(workLogSource, /format\(selectedDate, "EEEE"\)/)
+  assert.match(workLogSource, /Monday–Friday/)
+  assert.match(workLogSource, />\s*Today\s*<\/Button>/)
   assert.match(workLogSource, /Choose a work day/)
   assert.match(workLogSource, /formatLmsWorkDateLabel/)
   assert.match(workLogSource, /workCapacity\.hours}h · \$\{workUtilizationPercent}%/)
@@ -243,11 +337,11 @@ async function run() {
   assert.match(workLogSource, /toLocaleLowerCase\("ro"\) === "\[intern\]"/)
   assert.match(workLogSource, /client\.id !== internalClient\?\.id/)
   assert.match(workLogSource, /grid grid-cols-3 gap-1\.5/)
-  assert.match(workLogSource, /<TaskCombobox tasks=\{data\.tasks\} value=\{taskTypeId\} onValueChange=\{setTaskTypeId\} large \/>/)
+  assert.match(workLogSource, /<TaskCombobox tasks=\{data\.tasks\} value=\{taskTypeId\} onValueChange=\{selectTask\} large \/>/)
   assert.match(workLogSource, /xl:h-full xl:grid-rows-2/)
   assert.match(workLogSource, /clients\.filter\(\(client\) => matchesLmsClientSearch\(client\.client, search\)\)/)
   assert.match(workLogSource, /options\.filter\(\(task\) => matchesLmsClientSearch\(task\.name, search\)\)/)
-  assert.equal(workLogSource.match(/setSearch\(""\)/g)?.length, 2)
+  assert.equal(workLogSource.match(/setSearch\(""\)/g)?.length, 3)
   assert.match(workLogSource, /Save work/)
   assert.match(workLogSource, /!hasSelectedClient/)
   assert.match(workLogSource, /!hasSelectedTask/)
@@ -259,20 +353,99 @@ async function run() {
   assert.match(workLogSource, /setLmsAllocationId\(client\.id\)/)
   assert.match(workLogSource, /Days logged/)
   assert.match(workLogSource, /data\.workedDays/)
+  assert.doesNotMatch(workLogSource, /First task date:|Last task date:/)
+  assert.match(workLogSource, /formatEntryDateSpan\(data\.firstWorkDate, data\.lastWorkDate\)/)
+  assert.match(workLogSource, /sm:flex-row sm:flex-wrap sm:items-center xl:flex-nowrap/)
+  assert.match(workLogSource, /const periodDisplayLabel = `\$\{selectedPeriodName\} \(\$\{matchingTaskDateSpan\}\)`/)
+  assert.match(workLogSource, /: "no tasks"/)
+  assert.match(workLogSource, /aria-label=\{`Date range: \$\{periodDisplayLabel\}`\}/)
+  assert.match(workLogSource, /<SelectValue>\{periodDisplayLabel\}<\/SelectValue>/)
+  assert.match(workLogSource, /className="w-full sm:w-\[360px\]"/)
+  assert.doesNotMatch(workLogSource, /First and last matching task dates/)
+  assert.doesNotMatch(workLogSource, />\s*Date range\s*</)
+  assert.match(workLogSource, /flex w-full min-w-0 flex-wrap items-center gap-2/)
+  assert.doesNotMatch(workLogSource, /type="date"/)
+  assert.doesNotMatch(workLogSource, /range-from|range-to/)
+  assert.match(workLogSource, /function WorkEntryCustomRangePicker/)
+  assert.match(workLogSource, /mode="range"/)
+  assert.match(workLogSource, /numberOfMonths=\{calendarMonths\}/)
+  assert.match(workLogSource, /window\.matchMedia\("\(min-width: 768px\)"\)/)
+  assert.match(workLogSource, /Choose a start date and an end date\./)
+  assert.match(workLogSource, /Last 7 days/)
+  assert.match(workLogSource, /This month/)
+  assert.match(workLogSource, /Apply range/)
+  assert.match(workLogSource, /disabled=\{!from \|\| !to\}/)
+  assert.match(workLogSource, /requestAnimationFrame\(\(\) => setCustomRangeOpen\(true\)\)/)
+  assert.match(workLogSource, /setPeriod\(activePeriod\)/)
+  assert.match(workLogSource, /next\.delete\("date"\)/)
+  assert.match(workLogSource, /Filter work entries by date/)
+  assert.match(workLogSource, /triggerLabel="Date"/)
+  assert.match(workLogSource, /options=\{data\.dateFilterOptions\.map/)
+  assert.match(workLogSource, /All dates/)
+  assert.match(workLogSource, /Filter work entries by client/)
+  assert.match(workLogSource, /Filter work entries by task/)
+  assert.match(workLogSource, /triggerLabel="Client"/)
+  assert.match(workLogSource, /triggerLabel="Task"/)
+  assert.match(workLogSource, /options=\{data\.clientFilterOptions\}/)
+  assert.match(workLogSource, /options=\{data\.taskFilterOptions\}/)
+  assert.doesNotMatch(workLogSource, /options=\{clientOptions\.map/)
+  assert.match(workLogSource, /All clients/)
+  assert.match(workLogSource, /All tasks/)
+  assert.match(workLogSource, /Rows per page/)
+  assert.match(workLogSource, /LMS_WORK_LOG_PAGE_SIZES\.map/)
+  assert.match(workLogSource, /query\.set\("client", data\.clientId\)/)
+  assert.match(workLogSource, /query\.set\("task", data\.taskId\)/)
+  assert.match(workLogSource, /query\.set\("date", data\.workDate\)/)
+  assert.match(workLogSource, /query\.set\("exportStatus", data\.exportStatus\)/)
+  assert.match(workLogSource, /Filter work entries by CRM export status/)
+  assert.match(workLogSource, /triggerLabel="CRM export"/)
+  assert.match(workLogSource, /allValue="all"/)
+  assert.match(workLogSource, /options=\{EXPORT_STATUS_FILTER_OPTIONS\}/)
+  assert.match(workLogSource, /value=\{data\.exportStatus\}/)
+  assert.match(workLogSource, /data\.allMatchingEntries/)
+  assert.match(workLogSource, /sm:grid-cols-2 md:hidden/)
+  assert.match(workLogPageSource, /normalizeLmsWorkLogPageSize\(params\.pageSize\)/)
+  assert.match(workLogPageSource, /resolveLmsDatePreset\(params\.period \|\| "all"\)/)
+  assert.match(workLogPageSource, /normalizeLmsWorkExportStatus\(params\.exportStatus\)/)
+  assert.match(workLogPageSource, /normalizeLmsWorkDateFilter\(params\.date, from, to\)/)
+  assert.match(workLogPageSource, /clientId: params\.client/)
+  assert.match(workLogPageSource, /taskId: params\.task/)
   assert.match(workLogDbSource, /prisma\.lmsWorkEntry\.groupBy/)
   assert.match(workLogDbSource, /by: \["workDate"\]/)
   assert.match(workLogDbSource, /workedDays: workedDates\.length/)
+  assert.match(workLogDbSource, /firstWorkDate: aggregate\._min\.workDate/)
+  assert.match(workLogDbSource, /lastWorkDate: aggregate\._max\.workDate/)
+  assert.match(workLogDbSource, /normalizeLmsWorkDateFilter\(args\?\.workDate, from, to\)/)
+  assert.match(workLogDbSource, /buildLmsWorkEntryWhere\(\{ from, to, workDate, clientId, taskId \}\)/)
+  assert.match(workLogDbSource, /normalizeLmsWorkExportStatus\(args\?\.exportStatus\)/)
+  assert.match(workLogDbSource, /buildLmsWorkEntryWhere\(\{ from, to, workDate, clientId, taskId, exportStatus \}\)/)
+  assert.match(workLogDbSource, /buildLmsWorkEntryWhere\(\{ from, to, clientId, taskId, exportStatus \}\)/)
+  assert.match(workLogDbSource, /buildLmsWorkEntryWhere\(\{ from, to, workDate, taskId, exportStatus \}\)/)
+  assert.match(workLogDbSource, /buildLmsWorkEntryWhere\(\{ from, to, workDate, clientId, exportStatus \}\)/)
+  assert.match(workLogDbSource, /dateFilterOptions: dateFilterRows\.map/)
+  assert.match(workLogDbSource, /allMatchingEntries/)
+  assert.match(workLogDbSource, /by: \["lmsAllocationId", "clientDomainSnapshot"\]/)
+  assert.match(workLogDbSource, /by: \["taskTypeId", "taskNameSnapshot"\]/)
+  assert.match(workLogDbSource, /clientFilterOptions/)
+  assert.match(workLogDbSource, /taskFilterOptions/)
   assert.match(workLogDbSource, /by: \["lmsAllocationId"\]/)
   assert.match(workLogDbSource, /by: \["taskTypeId"\]/)
   assert.doesNotMatch(workLogDbSource, /tenantId|userId|requireTenantContext/)
   assert.match(workLogDbSource, /orderBy: \[\{ sortOrder: "asc" \}, \{ name: "asc" \}\]/)
+  assert.match(workLogDbSource, /defaultDurationMinutes: true/)
   assert.match(workLogDbSource, /exportedAt: null/)
   assert.match(workLogDbSource, /exportedAt: true/)
   assert.match(workTaskCatalogSource, /draggable=\{canReorder\}/)
   assert.match(workTaskCatalogSource, /reorderLmsWorkTasks/)
+  assert.match(workTaskCatalogSource, /Default time \(min\)/)
+  assert.match(workTaskCatalogSource, /task\.defaultDurationMinutes/)
+  assert.match(workTaskCatalogSource, /No default/)
+  assert.match(workTaskCatalogSource, /createLmsWorkTask\(\{ name: newTask, defaultDurationMinutes \}\)/)
   assert.match(workTaskCatalogSource, /Alt\+ArrowUp Alt\+ArrowDown/)
   assert.match(workEntryActionsSource, /export async function reorderLmsWorkTasks/)
   assert.match(workEntryActionsSource, /export async function createLmsWorkClient/)
+  assert.match(workEntryActionsSource, /DefaultDurationMinutesSchema/)
+  assert.match(workEntryActionsSource, /defaultDurationMinutes: validated\.defaultDurationMinutes/)
   assert.match(workEntryActionsSource, /buildLmsAllocationSyncKey/)
   assert.match(workEntryActionsSource, /specialist: LMS_CRM_EMPLOYEE_NAME/)
   assert.match(workEntryActionsSource, /concurrentlyCreated/)
@@ -283,11 +456,21 @@ async function run() {
   assert.match(workEntryActionsSource, /exportedAt: null/)
   assert.match(workEntryExportRouteSource, /exportedAt: null/)
   assert.match(workEntryExportRouteSource, /includeExported.*=== "true"/)
-  assert.match(workEntryExportRouteSource, /includeExported \? \{\} : \{ exportedAt: null \}/)
+  assert.match(workEntryExportRouteSource, /buildLmsWorkEntryWhere\(\{ from, to, workDate, clientId, taskId \}\)/)
+  assert.match(workEntryExportRouteSource, /searchParams\.get\("date"\)/)
+  assert.match(workEntryExportRouteSource, /normalizeLmsWorkDateFilter/)
+  assert.match(workEntryExportRouteSource, /searchParams\.get\("client"\)/)
+  assert.match(workEntryExportRouteSource, /searchParams\.get\("task"\)/)
+  assert.match(workEntryExportRouteSource, /searchParams\.get\("exportStatus"\)/)
+  assert.match(workEntryExportRouteSource, /normalizeLmsWorkExportStatus/)
+  assert.match(workEntryExportRouteSource, /exportStatus === "exported" \? \{ exportedAt: \{ not: null \} \} : \{\}/)
+  assert.match(workEntryExportRouteSource, /: \{ exportedAt: null \}/)
   assert.match(workEntryExportRouteSource, /data: \{ exportedAt \}/)
   assert.match(workEntryExportRouteSource, /LMS_WORK_EXPORT_CONFLICT/)
   assert.match(workEntryExportRouteSource, /X-Exported-Entry-Count/)
   assert.match(prismaSchemaSource, /sortOrder\s+Int\s+@default\(1000\)\s+@map\("sort_order"\)/)
+  assert.match(prismaSchemaSource, /defaultDurationMinutes\s+Int\?\s+@map\("default_duration_minutes"\)/)
+  assert.match(defaultTaskDurationMigrationSource, /ADD COLUMN "default_duration_minutes" INTEGER/)
   assert.match(prismaSchemaSource, /exportedAt\s+DateTime\?\s+@map\("exported_at"\)/)
   assert.match(prismaSchemaSource, /sourceKey\s+String\?\s+@map\("source_key"\)/)
   assert.match(prismaSchemaSource, /model LmsWorkRecurrence/)

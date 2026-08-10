@@ -4,8 +4,14 @@ import { apiError, apiRouteError } from "@/lib/api-response"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { normalizeDateRange } from "@/lib/lms-work-entries/date"
 import { buildLmsCrmExportBuffer } from "@/lib/lms-work-entries/export"
+import {
+  buildLmsWorkEntryWhere,
+  normalizeLmsWorkDateFilter,
+  normalizeLmsWorkExportStatus,
+} from "@/lib/lms-work-entries/filters"
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
+import type { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -21,19 +27,20 @@ export async function GET(request: NextRequest) {
       request.nextUrl.searchParams.get("from"),
       request.nextUrl.searchParams.get("to")
     )
+    const clientId = request.nextUrl.searchParams.get("client")?.trim() || null
+    const taskId = request.nextUrl.searchParams.get("task")?.trim() || null
+    const workDate = normalizeLmsWorkDateFilter(request.nextUrl.searchParams.get("date"), from, to)
+    const exportStatus = normalizeLmsWorkExportStatus(request.nextUrl.searchParams.get("exportStatus"))
     const includeExported = request.nextUrl.searchParams.get("includeExported") === "true"
+    const entryFilter = buildLmsWorkEntryWhere({ from, to, workDate, clientId, taskId })
+    const where: Prisma.LmsWorkEntryWhereInput = {
+      ...entryFilter,
+      ...(includeExported
+        ? exportStatus === "exported" ? { exportedAt: { not: null } } : {}
+        : { exportedAt: null }),
+    }
     const entries = await prisma.lmsWorkEntry.findMany({
-      where: {
-        ...(includeExported ? {} : { exportedAt: null }),
-        ...(from || to
-          ? {
-              workDate: {
-                ...(from ? { gte: from } : {}),
-                ...(to ? { lte: to } : {}),
-              },
-            }
-          : {}),
-      },
+      where,
       orderBy: [{ workDate: "asc" }, { createdAt: "asc" }],
       select: {
         id: true,
@@ -47,8 +54,8 @@ export async function GET(request: NextRequest) {
 
     if (entries.length === 0) {
       return apiError(includeExported
-        ? "No work entries found for the selected date range"
-        : "No unexported work entries found for the selected date range", 404, {
+        ? "No work entries found for the selected filters"
+        : "No unexported work entries found for the selected filters", 404, {
         code: includeExported ? "NO_WORK_ENTRIES" : "NO_UNEXPORTED_WORK_ENTRIES",
         headers: { "Cache-Control": "no-store" },
       })
@@ -79,7 +86,7 @@ export async function GET(request: NextRequest) {
     const filename = `TASK_IMPORT_${filenamePart(from, "ALL")}_${filenamePart(to, "ALL")}_${timestamp}.xlsx`
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_ENTRIES_EXPORTED",
-      details: `from=${from || "all"}; to=${to || "all"}; count=${entries.length}; mode=${includeExported ? "all" : "new"}`,
+      details: `from=${from || "all"}; to=${to || "all"}; date=${workDate || "all"}; client=${clientId || "all"}; task=${taskId || "all"}; exportStatus=${exportStatus}; count=${entries.length}; mode=${includeExported ? "all" : "new"}`,
     })
 
     return new Response(new Uint8Array(buffer), {

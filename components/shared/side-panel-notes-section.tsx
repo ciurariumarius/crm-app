@@ -14,6 +14,7 @@ type SidePanelNotesSectionProps = {
     statusState?: "saving" | "ready" | "typing" | "saved" | "error"
     value: string
     onChange: (value: string) => void
+    onBlur?: () => void
     uploadProjectId?: string
     onAddTemplate?: () => void
     onExpand?: () => void
@@ -39,6 +40,7 @@ export function SidePanelNotesSection({
     statusState,
     value,
     onChange,
+    onBlur,
     uploadProjectId,
     onAddTemplate,
     onExpand,
@@ -62,6 +64,7 @@ export function SidePanelNotesSection({
             <RichTextEditor
                 value={value}
                 onChange={onChange}
+                onBlur={onBlur}
                 placeholder=""
                 variant="plain"
                 mode="document"

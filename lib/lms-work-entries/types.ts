@@ -1,3 +1,5 @@
+import type { LmsWorkExportStatus } from "@/lib/lms-work-entries/filters"
+
 export type LmsWorkClientOption = {
   id: string
   client: string
@@ -7,6 +9,12 @@ export type LmsWorkTaskOption = {
   id: string
   name: string
   isActive: boolean
+  defaultDurationMinutes: number | null
+}
+
+export type LmsWorkEntryFilterOption = {
+  id: string
+  label: string
 }
 
 export type LmsWorkEntryRow = {
@@ -40,16 +48,26 @@ export type LmsWorkLogPageData = {
   frequentClients: LmsWorkClientOption[]
   frequentTasks: LmsWorkTaskOption[]
   frequentDurations: number[]
+  dateFilterOptions: string[]
+  clientFilterOptions: LmsWorkEntryFilterOption[]
+  taskFilterOptions: LmsWorkEntryFilterOption[]
   entries: LmsWorkEntryRow[]
   totalEntries: number
+  allMatchingEntries: number
   unexportedEntries: number
   totalMinutes: number
   workedDays: number
+  firstWorkDate: string | null
+  lastWorkDate: string | null
   page: number
   pageSize: number
   totalPages: number
   from: string | null
   to: string | null
+  workDate: string | null
+  clientId: string | null
+  taskId: string | null
+  exportStatus: LmsWorkExportStatus
 }
 
 export type LmsWorkExportEntry = {

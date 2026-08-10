@@ -15,6 +15,26 @@ async function run() {
     "components/ui/rich-text-editor.tsx",
     "utf8"
   )
+  const projectNotesSource = await readFile(
+    "components/projects/project-sheet-content.tsx",
+    "utf8"
+  )
+  const projectActionsSource = await readFile(
+    "lib/actions/projects.ts",
+    "utf8"
+  )
+  const noteActionsSource = await readFile(
+    "lib/actions/notes.ts",
+    "utf8"
+  )
+  const taskActionsSource = await readFile(
+    "lib/actions/tasks.ts",
+    "utf8"
+  )
+  const taskDetailsSource = await readFile(
+    "components/tasks/task-details.tsx",
+    "utf8"
+  )
 
   assert.match(source, /data-note-drag-id=\{note\.id\}/)
   assert.match(source, /draggable=\{!isLinked && !note\.deletedAt && foldersEnabled && !storageUnavailable/)
@@ -51,6 +71,19 @@ async function run() {
   assert.match(scopeSwitchSource, /All Notes/)
   assert.match(source, /resolveNotesScope\(notes, railFilteredNotes, searchScope\)/)
   assert.match(source, /enqueueSerializedNoteSave/)
+  assert.match(source, /isNoteDraftDirty\(draftRevision, savedRevision\)/)
+  assert.match(source, /noteDraftRevisionRef/)
+  assert.match(source, /noteSavedRevisionRef/)
+  assert.match(source, /newlyCreatedNoteIdsRef/)
+  assert.match(source, /discardBlankNewNote/)
+  assert.match(source, /permanentlyDeleteNote\(noteId\)/)
+  assert.match(source, /resolveNoteEditorDraft/)
+  assert.match(source, /shouldAcceptNoteEditorChange/)
+  assert.match(source, /flushNote\(selectedNote\.id\)/)
+  assert.match(source, /handleContentDraftChange\(selectedNote\.id, value\)/)
+  assert.match(source, /expectedContent/)
+  assert.match(source, /resolveProjectNoteDraftContent/)
+  assert.match(source, /clearProjectNoteDraftIfContent/)
   assert.match(source, /queryNoteRecordPage/)
   assert.match(source, /nextCursor/)
   assert.match(source, /const beginNewNote =/)
@@ -65,6 +98,21 @@ async function run() {
   assert.match(source, /mobilePane === "editor"/)
   assert.match(scopeSwitchSource, /var\(--surface-lowest\)/)
   assert.match(scopeSwitchSource, /var\(--text-primary\)/)
+  assert.match(projectNotesSource, /onBlur=\{flushDescriptionSave\}/)
+  assert.match(projectNotesSource, /window\.addEventListener\("pagehide", flushDescriptionSave\)/)
+  assert.match(projectNotesSource, /recordProjectNoteDraft/)
+  assert.match(projectNotesSource, /queuedDescription !== null/)
+  assert.match(projectActionsSource, /PROJECT_NOTE_UPDATE_CONFLICT/)
+  assert.match(projectActionsSource, /expectedDescription/)
+  assert.match(noteActionsSource, /NOTE_CONTENT_UPDATE_CONFLICT/)
+  assert.match(noteActionsSource, /expectedContent/)
+  assert.match(noteActionsSource, /where: \{ id: noteId, content: expectedContent \}/)
+  assert.match(noteActionsSource, /NOTE_WRITE_PROTOCOL_REJECTED/)
+  assert.match(projectActionsSource, /NOTE_WRITE_PROTOCOL_REJECTED/)
+  assert.match(taskActionsSource, /NOTE_WRITE_PROTOCOL_REJECTED/)
+  assert.match(source, /notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION/)
+  assert.match(projectNotesSource, /notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION/)
+  assert.match(taskDetailsSource, /notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION/)
 
   process.stdout.write("verify-notes-drag-drop: ok\n")
 }

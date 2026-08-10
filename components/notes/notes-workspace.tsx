@@ -104,9 +104,16 @@ import {
   derivePreviewBodyFromContent,
 } from "@/lib/notes/derived-note-text"
 import {
+  clearProjectNoteDraftIfContent,
   enqueueSerializedNoteSave,
+  isNoteDraftDirty,
+  resolveNoteEditorDraft,
+  resolveProjectNoteDraftContent,
   resolveNotesScope,
+  shouldAcceptNoteEditorChange,
+  shouldDiscardNewNote,
 } from "@/lib/notes/workspace-state"
+import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
 
 type NotesWorkspaceProps = {
   initialNotes: NoteRecord[]
@@ -452,7 +459,11 @@ export function NotesWorkspace({
     }
     return DEFAULT_RAIL_KEY
   })
-  const [contentDraft, setContentDraft] = React.useState("")
+  const [contentDraft, setContentDraft] = React.useState(() =>
+    normalizeNoteContentForEditor(
+      initialNotes.find((note) => note.id === initialSelectedNoteId)?.content || ""
+    )
+  )
   const [emptyEditorDraft, setEmptyEditorDraft] = React.useState("")
   const [search, setSearch] = React.useState("")
   const [isMobileRailOpen, setIsMobileRailOpen] = React.useState(false)
@@ -512,20 +523,31 @@ export function NotesWorkspace({
   const searchRef = React.useRef<HTMLInputElement | null>(null)
   const notesRef = React.useRef(notes)
   const selectedNoteIdRef = React.useRef<string | null>(initialSelectedNoteId)
-  const contentDraftRef = React.useRef("")
+  const contentDraftRef = React.useRef(contentDraft)
   const noteDraftsRef = React.useRef<Map<string, string>>(new Map())
+  const noteDraftRevisionRef = React.useRef<Map<string, number>>(new Map())
+  const noteSavedRevisionRef = React.useRef<Map<string, number>>(new Map())
+  const newlyCreatedNoteIdsRef = React.useRef<Set<string>>(new Set())
   const syncedSnapshotsRef = React.useRef<Map<string, { title: string; content: string }>>(
     new Map()
+  )
+  const persistedNoteContentsRef = React.useRef<Map<string, string>>(
+    new Map(initialNotes.map((note) => [note.id, note.content || ""]))
   )
   const saveQueuesRef = React.useRef<Map<string, Promise<boolean>>>(new Map())
   const editorNoteIdRef = React.useRef<string | null>(null)
   const bootstrappedRef = React.useRef(false)
-  const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveTimeoutsRef = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const draftCreateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const draftCreateInFlightRef = React.useRef(false)
   const draggedNoteIdRef = React.useRef<string | null>(null)
   const dragPreviewRef = React.useRef<HTMLDivElement | null>(null)
   const personalListRequestRef = React.useRef(0)
+
+  const selectNoteId = React.useCallback((noteId: string | null) => {
+    selectedNoteIdRef.current = noteId
+    setSelectedNoteId(noteId)
+  }, [])
 
   React.useEffect(() => {
     notesRef.current = notes
@@ -581,6 +603,16 @@ export function NotesWorkspace({
 
   const selectedNoteSourceType = React.useMemo(() => getNoteSourceType(selectedNote), [selectedNote])
   const selectedNoteIsLinked = selectedNoteSourceType !== "note"
+  const selectedEditorDraft = React.useMemo(() => {
+    if (!selectedNote) return ""
+    return resolveNoteEditorDraft(
+      selectedNote.id,
+      editorNoteIdRef.current,
+      contentDraft,
+      noteDraftsRef.current.get(selectedNote.id),
+      normalizeNoteContentForEditor(selectedNote.content || "")
+    )
+  }, [contentDraft, selectedNote])
 
   const defaultFolder = React.useMemo(
     () => folders.find((folder) => folder.isDefault) ?? null,
@@ -644,7 +676,23 @@ export function NotesWorkspace({
     if (editorNoteIdRef.current === selectedNote.id) return
     editorNoteIdRef.current = selectedNote.id
     const normalizedContent = normalizeNoteContentForEditor(selectedNote.content || "")
-    const draftContent = noteDraftsRef.current.get(selectedNote.id) ?? normalizedContent
+    const recoveredProjectDraft =
+      selectedNoteSourceType === "project"
+        ? resolveProjectNoteDraftContent(
+            window.sessionStorage,
+            selectedNote.sourceId || selectedNote.id.replace(/^project:/, ""),
+            normalizedContent
+          )
+        : null
+    const draftContent =
+      noteDraftsRef.current.get(selectedNote.id)
+      ?? (recoveredProjectDraft === null
+        ? normalizedContent
+        : normalizeNoteContentForEditor(recoveredProjectDraft))
+    if (!noteDraftRevisionRef.current.has(selectedNote.id)) {
+      noteDraftRevisionRef.current.set(selectedNote.id, recoveredProjectDraft === null ? 0 : 1)
+      noteSavedRevisionRef.current.set(selectedNote.id, 0)
+    }
     noteDraftsRef.current.set(selectedNote.id, draftContent)
     contentDraftRef.current = draftContent
     setContentDraft(draftContent)
@@ -654,7 +702,10 @@ export function NotesWorkspace({
           selectedNoteSourceType === "note"
             ? deriveNoteTitleFromContent(normalizedContent, selectedNote.title || DEFAULT_NOTE_TITLE)
             : selectedNote.title,
-        content: normalizedContent,
+        content:
+          selectedNoteSourceType === "note"
+            ? normalizedContent
+            : selectedNote.content || "",
       })
     }
     setEmptyEditorDraft("")
@@ -886,9 +937,13 @@ export function NotesWorkspace({
   }, [selectedNote, selectedNoteSourceType])
 
   const persistNoteImmediately = React.useCallback(
-    async (noteId: string, contentValue: string) => {
+    async (noteId: string, contentValue: string, draftRevision: number) => {
       const existingNote = notesRef.current.find((item) => item.id === noteId) ?? null
       if (!existingNote) return false
+      const markDraftRevisionSaved = () => {
+        const savedRevision = noteSavedRevisionRef.current.get(noteId) ?? 0
+        noteSavedRevisionRef.current.set(noteId, Math.max(savedRevision, draftRevision))
+      }
       const sourceType = getNoteSourceType(existingNote)
       const normalizedTitle =
         sourceType === "note"
@@ -896,18 +951,30 @@ export function NotesWorkspace({
           : existingNote.title
       const snapshot = syncedSnapshotsRef.current.get(noteId)
       if (snapshot?.title === normalizedTitle && snapshot.content === contentValue) {
+        markDraftRevisionSaved()
         return true
       }
       if (selectedNoteIdRef.current === noteId) setSaveState("saving")
 
       if (sourceType === "project") {
         const projectId = existingNote.sourceId || existingNote.id.replace(/^project:/, "")
-        const result = await updateProject(projectId, { description: contentValue })
+        const result = await updateProject(
+          projectId,
+          { description: contentValue },
+          {
+            expectedDescription:
+              syncedSnapshotsRef.current.get(noteId)?.content
+              ?? existingNote.content
+              ?? null,
+            notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION,
+          }
+        )
         if (!result.success) {
           if (selectedNoteIdRef.current === noteId) setSaveState("error")
           toast.error(result.error || "Failed to save project note")
           return false
         }
+        clearProjectNoteDraftIfContent(window.sessionStorage, projectId, contentValue)
         const nowIso = new Date().toISOString()
         setNotes((current) =>
           sortNotes(
@@ -927,13 +994,18 @@ export function NotesWorkspace({
           title: existingNote.title,
           content: contentValue,
         })
+        markDraftRevisionSaved()
         if (selectedNoteIdRef.current === noteId) setSaveState("saved")
         return true
       }
 
       if (sourceType === "task") {
         const taskId = existingNote.sourceId || existingNote.id.replace(/^task:/, "")
-        const result = await updateTask(taskId, { description: contentValue })
+        const result = await updateTask(
+          taskId,
+          { description: contentValue },
+          { notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION }
+        )
         if (!result.success) {
           if (selectedNoteIdRef.current === noteId) setSaveState("error")
           toast.error(result.error || "Failed to save task note")
@@ -958,6 +1030,7 @@ export function NotesWorkspace({
           title: existingNote.title,
           content: contentValue,
         })
+        markDraftRevisionSaved()
         if (selectedNoteIdRef.current === noteId) setSaveState("saved")
         return true
       }
@@ -968,9 +1041,17 @@ export function NotesWorkspace({
         return false
       }
 
-      const result = await updateNote(noteId, {
-        content: contentValue,
-      })
+      const result = await updateNote(
+        noteId,
+        { content: contentValue },
+        {
+          expectedContent:
+            persistedNoteContentsRef.current.get(noteId)
+            ?? existingNote.content
+            ?? "",
+          notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION,
+        }
+      )
 
       if (!result.success || !result.data) {
         if (selectedNoteIdRef.current === noteId) setSaveState("error")
@@ -983,6 +1064,8 @@ export function NotesWorkspace({
         title: result.data.title,
         content: result.data.content,
       })
+      persistedNoteContentsRef.current.set(result.data.id, result.data.content)
+      markDraftRevisionSaved()
       if (selectedNoteIdRef.current === noteId) setSaveState("saved")
       return true
     },
@@ -991,31 +1074,93 @@ export function NotesWorkspace({
 
   const queuePersistNote = React.useCallback(
     (noteId: string, contentValue: string) => {
+      const draftRevision = noteDraftRevisionRef.current.get(noteId) ?? 0
+      const savedRevision = noteSavedRevisionRef.current.get(noteId) ?? 0
+      if (!isNoteDraftDirty(draftRevision, savedRevision)) return Promise.resolve(true)
       return enqueueSerializedNoteSave(
         saveQueuesRef.current,
         noteId,
-        () => persistNoteImmediately(noteId, contentValue)
+        () => persistNoteImmediately(noteId, contentValue, draftRevision)
       )
     },
     [persistNoteImmediately]
   )
 
-  const flushSelectedNote = React.useCallback(() => {
-    const noteId = selectedNoteIdRef.current
-    if (!noteId) return Promise.resolve(true)
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-      saveTimeoutRef.current = null
+  const discardBlankNewNote = React.useCallback(async (noteId: string, draft: string) => {
+    if (!shouldDiscardNewNote(newlyCreatedNoteIdsRef.current.has(noteId), draft)) {
+      return false
     }
-    const draft = contentDraftRef.current
-    noteDraftsRef.current.set(noteId, draft)
-    return queuePersistNote(noteId, draft)
-  }, [queuePersistNote])
 
-  const handleContentDraftChange = React.useCallback((value: string) => {
+    const pendingSave = saveQueuesRef.current.get(noteId)
+    if (pendingSave) await pendingSave.catch(() => false)
+    const result = await permanentlyDeleteNote(noteId)
+    if (!result.success) {
+      toast.error(result.error || "Failed to discard blank note")
+      return false
+    }
+
+    newlyCreatedNoteIdsRef.current.delete(noteId)
+    noteDraftsRef.current.delete(noteId)
+    noteDraftRevisionRef.current.delete(noteId)
+    noteSavedRevisionRef.current.delete(noteId)
+    syncedSnapshotsRef.current.delete(noteId)
+    persistedNoteContentsRef.current.delete(noteId)
+    setNotes((current) => current.filter((note) => note.id !== noteId))
+    setPersonalListPage((current) =>
+      current
+        ? {
+            ...current,
+            noteIds: current.noteIds.filter((id) => id !== noteId),
+          }
+        : current
+    )
+    return true
+  }, [])
+
+  const flushNote = React.useCallback(
+    (noteId: string, options?: { finalizeNewNote?: boolean }) => {
+      const saveTimeout = saveTimeoutsRef.current.get(noteId)
+      if (saveTimeout) {
+        clearTimeout(saveTimeout)
+        saveTimeoutsRef.current.delete(noteId)
+      }
+      const existingNote = notesRef.current.find((note) => note.id === noteId)
+      const draft =
+        noteDraftsRef.current.get(noteId)
+        ?? normalizeNoteContentForEditor(existingNote?.content || "")
+      noteDraftsRef.current.set(noteId, draft)
+      if (newlyCreatedNoteIdsRef.current.has(noteId)) {
+        if (shouldDiscardNewNote(true, draft)) {
+          return discardBlankNewNote(noteId, draft)
+        }
+        if (options?.finalizeNewNote) {
+          newlyCreatedNoteIdsRef.current.delete(noteId)
+        }
+      }
+      return queuePersistNote(noteId, draft)
+    },
+    [discardBlankNewNote, queuePersistNote]
+  )
+
+  const flushSelectedNote = React.useCallback(
+    (options?: { finalizeNewNote?: boolean }) => {
+      const noteId = selectedNoteIdRef.current
+      return noteId ? flushNote(noteId, options) : Promise.resolve(true)
+    },
+    [flushNote]
+  )
+
+  const handleContentDraftChange = React.useCallback((noteId: string, value: string) => {
+    if (!shouldAcceptNoteEditorChange(noteId, selectedNoteIdRef.current)) return
+    const previousDraft = noteDraftsRef.current.get(noteId) ?? contentDraftRef.current
+    noteDraftsRef.current.set(noteId, value)
+    if (previousDraft !== value) {
+      noteDraftRevisionRef.current.set(
+        noteId,
+        (noteDraftRevisionRef.current.get(noteId) ?? 0) + 1
+      )
+    }
     contentDraftRef.current = value
-    const noteId = selectedNoteIdRef.current
-    if (noteId) noteDraftsRef.current.set(noteId, value)
     setContentDraft(value)
   }, [])
 
@@ -1039,11 +1184,15 @@ export function NotesWorkspace({
 
         setNotes((current) => upsertNote(current, result.data as NoteRecord))
         const createdContent = normalizeNoteContentForEditor(result.data.content || "")
+        newlyCreatedNoteIdsRef.current.add(result.data.id)
         noteDraftsRef.current.set(result.data.id, createdContent)
+        noteDraftRevisionRef.current.set(result.data.id, 0)
+        noteSavedRevisionRef.current.set(result.data.id, 0)
         syncedSnapshotsRef.current.set(result.data.id, {
           title: result.data.title,
           content: createdContent,
         })
+        persistedNoteContentsRef.current.set(result.data.id, result.data.content || "")
         setPersonalListPage((current) =>
           current?.key === personalQueryKey
             ? {
@@ -1061,7 +1210,7 @@ export function NotesWorkspace({
         } else {
           setActiveRailKey("all")
         }
-        setSelectedNoteId(result.data.id)
+        selectNoteId(result.data.id)
         setEditorFocusToken((current) => current + 1)
         setIsMobileRailOpen(false)
         return result.data.id
@@ -1069,32 +1218,32 @@ export function NotesWorkspace({
         setIsCreating(false)
       }
     },
-    [activeRailKey, personalQueryKey, storageUnavailable]
+    [activeRailKey, personalQueryKey, selectNoteId, storageUnavailable]
   )
 
   const beginNewNote = React.useCallback(() => {
-    void flushSelectedNote()
+    void flushSelectedNote({ finalizeNewNote: true })
     setSearch("")
     setEmptyEditorDraft("")
-    setSelectedNoteId(null)
+    selectNoteId(null)
     setSearchScope("view")
     setSaveState("idle")
     setEditorFocusToken((current) => current + 1)
     setIsMobileRailOpen(false)
-  }, [flushSelectedNote])
+  }, [flushSelectedNote, selectNoteId])
 
   const handleSelectNote = React.useCallback(
     (noteId: string | null) => {
       if (noteId === selectedNoteIdRef.current) return
-      void flushSelectedNote()
-      setSelectedNoteId(noteId)
+      void flushSelectedNote({ finalizeNewNote: true })
+      selectNoteId(noteId)
     },
-    [flushSelectedNote]
+    [flushSelectedNote, selectNoteId]
   )
 
   const handleSelectRail = React.useCallback(
     (rail: RailKey) => {
-      void flushSelectedNote()
+      void flushSelectedNote({ finalizeNewNote: true })
       setSearchScope("view")
       setActiveRailKey(rail)
     },
@@ -1104,7 +1253,7 @@ export function NotesWorkspace({
   const handleSelectSearchScope = React.useCallback(
     (scope: SearchScope) => {
       if (scope === searchScope) return
-      void flushSelectedNote()
+      void flushSelectedNote({ finalizeNewNote: true })
       setSearchScope(scope)
     },
     [flushSelectedNote, searchScope]
@@ -1114,9 +1263,9 @@ export function NotesWorkspace({
     if (!selectedNoteId) return
     const existsInScope = filteredNotes.some((note) => note.id === selectedNoteId)
     if (existsInScope) return
-    void flushSelectedNote()
-    setSelectedNoteId(filteredNotes[0]?.id ?? null)
-  }, [filteredNotes, flushSelectedNote, selectedNoteId])
+    void flushSelectedNote({ finalizeNewNote: true })
+    selectNoteId(filteredNotes[0]?.id ?? null)
+  }, [filteredNotes, flushSelectedNote, selectNoteId, selectedNoteId])
 
   const handleCreateFolder = React.useCallback(async () => {
     const name = newFolderName.trim()
@@ -1413,13 +1562,16 @@ export function NotesWorkspace({
     bootstrappedRef.current = true
     if (!selectedNoteId) {
       const firstActive = notes.find((note) => !(getNoteSourceType(note) === "note" && note.archived)) ?? notes[0]
-      if (firstActive) setSelectedNoteId(firstActive.id)
+      if (firstActive) selectNoteId(firstActive.id)
     }
-  }, [notes, selectedNoteId])
+  }, [notes, selectNoteId, selectedNoteId])
 
   React.useEffect(() => {
     if (!selectedNoteId) return
     if (selectedNoteSourceType === "note" && storageUnavailable) return
+    const draftRevision = noteDraftRevisionRef.current.get(selectedNoteId) ?? 0
+    const savedRevision = noteSavedRevisionRef.current.get(selectedNoteId) ?? 0
+    if (!isNoteDraftDirty(draftRevision, savedRevision)) return
     const normalizedTitle =
       selectedNoteSourceType === "note"
         ? deriveNoteTitleFromContent(contentDraft, selectedNote?.title || DEFAULT_NOTE_TITLE)
@@ -1432,14 +1584,20 @@ export function NotesWorkspace({
       return
     }
 
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    saveTimeoutRef.current = setTimeout(() => {
-      saveTimeoutRef.current = null
+    const saveTimeouts = saveTimeoutsRef.current
+    const existingTimeout = saveTimeouts.get(selectedNoteId)
+    if (existingTimeout) clearTimeout(existingTimeout)
+    const timeout = setTimeout(() => {
+      saveTimeouts.delete(selectedNoteId)
       void queuePersistNote(selectedNoteId, contentDraft)
     }, 700)
+    saveTimeouts.set(selectedNoteId, timeout)
 
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      if (saveTimeouts.get(selectedNoteId) === timeout) {
+        clearTimeout(timeout)
+        saveTimeouts.delete(selectedNoteId)
+      }
     }
   }, [contentDraft, queuePersistNote, selectedNote?.title, selectedNoteId, selectedNoteSourceType, storageUnavailable])
 
@@ -1473,10 +1631,12 @@ export function NotesWorkspace({
 
   React.useEffect(() => {
     const flushBeforePageExit = () => {
-      void flushSelectedNote()
+      void flushSelectedNote({ finalizeNewNote: true })
     }
     const flushWhenHidden = () => {
-      if (document.visibilityState === "hidden") void flushSelectedNote()
+      if (document.visibilityState === "hidden") {
+        void flushSelectedNote({ finalizeNewNote: true })
+      }
     }
     window.addEventListener("pagehide", flushBeforePageExit)
     document.addEventListener("visibilitychange", flushWhenHidden)
@@ -1487,8 +1647,10 @@ export function NotesWorkspace({
   }, [flushSelectedNote])
 
   React.useEffect(() => {
+    const saveTimeouts = saveTimeoutsRef.current
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      for (const timeout of saveTimeouts.values()) clearTimeout(timeout)
+      saveTimeouts.clear()
       if (draftCreateTimeoutRef.current) clearTimeout(draftCreateTimeoutRef.current)
     }
   }, [])
@@ -1517,11 +1679,11 @@ export function NotesWorkspace({
   const handleArchiveToggle = React.useCallback(
     async (note: NoteRecord) => {
       if (getNoteSourceType(note) !== "note") return
+      const nextArchived = !note.archived
       if (note.id === selectedNoteIdRef.current) {
-        const saved = await flushSelectedNote()
+        const saved = await flushSelectedNote({ finalizeNewNote: nextArchived })
         if (!saved) return
       }
-      const nextArchived = !note.archived
       const result = await setNoteArchived(note.id, nextArchived)
       if (!result.success || !result.data) {
         toast.error(result.error || "Failed to update note")
@@ -1530,10 +1692,10 @@ export function NotesWorkspace({
 
       setNotes((current) => upsertNote(current, result.data as NoteRecord))
       if (selectedNoteId === note.id && nextArchived) {
-        setSelectedNoteId(filteredNotes.find((candidate) => candidate.id !== note.id)?.id ?? null)
+        selectNoteId(filteredNotes.find((candidate) => candidate.id !== note.id)?.id ?? null)
       }
     },
-    [filteredNotes, flushSelectedNote, selectedNoteId]
+    [filteredNotes, flushSelectedNote, selectNoteId, selectedNoteId]
   )
 
   const handlePinToggle = React.useCallback(
@@ -1645,7 +1807,7 @@ export function NotesWorkspace({
         )
       }
       if (selectedNoteId === pendingDeleteNote.id) {
-        setSelectedNoteId(filteredNotes.find((candidate) => candidate.id !== pendingDeleteNote.id)?.id ?? null)
+        selectNoteId(filteredNotes.find((candidate) => candidate.id !== pendingDeleteNote.id)?.id ?? null)
       }
       setPendingDeleteNote(null)
       setDeletePermanently(false)
@@ -1653,7 +1815,7 @@ export function NotesWorkspace({
     } finally {
       setIsDeletingNote(false)
     }
-  }, [deletePermanently, filteredNotes, pendingDeleteNote, selectedNoteId])
+  }, [deletePermanently, filteredNotes, pendingDeleteNote, selectNoteId, selectedNoteId])
 
   const handleCreateSmartFolder = React.useCallback(async () => {
     const name = smartFolderName.trim()
@@ -1718,18 +1880,27 @@ export function NotesWorkspace({
   ])
 
   const appendTemplate = React.useCallback(() => {
+    const noteId = selectedNoteIdRef.current
+    if (!noteId) return
+    const currentDraft = noteDraftsRef.current.get(noteId) ?? contentDraftRef.current
     if (selectedNoteSourceType === "project") {
-      setContentDraft((current) =>
-        current.trim() ? `${current}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}` : PROJECT_REQUIREMENTS_TEMPLATE
+      handleContentDraftChange(
+        noteId,
+        currentDraft.trim()
+          ? `${currentDraft}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}`
+          : PROJECT_REQUIREMENTS_TEMPLATE
       )
       return
     }
     if (selectedNoteSourceType === "task") {
-      setContentDraft((current) =>
-        current.trim() ? `${current}<p></p>${TASK_NOTES_TEMPLATE}` : TASK_NOTES_TEMPLATE
+      handleContentDraftChange(
+        noteId,
+        currentDraft.trim()
+          ? `${currentDraft}<p></p>${TASK_NOTES_TEMPLATE}`
+          : TASK_NOTES_TEMPLATE
       )
     }
-  }, [selectedNoteSourceType])
+  }, [handleContentDraftChange, selectedNoteSourceType])
 
   const searchQuery = search.trim()
 
@@ -2571,8 +2742,9 @@ export function NotesWorkspace({
         </div>
         <div className={cn("ui-scrollbar ui-scrollbar-inset flex-1 min-h-0 overflow-y-auto", isMobile ? "px-3 pb-16 pt-3" : "px-6 py-4 lg:px-9")}>
           <RichTextEditor
-            value={contentDraft}
-            onChange={handleContentDraftChange}
+            key={selectedNote.id}
+            value={selectedEditorDraft}
+            onChange={(value) => handleContentDraftChange(selectedNote.id, value)}
             placeholder="Start writing"
             variant="plain"
             mode="document"
@@ -2584,7 +2756,7 @@ export function NotesWorkspace({
             documentWidth="reading"
             imageUploadFallback="error"
             readOnly={isDeleted}
-            onBlur={() => void flushSelectedNote()}
+            onBlur={() => void flushNote(selectedNote.id)}
             toolbarActions={
               selectedNoteIsLinked ? (
                 <Button
@@ -2808,8 +2980,8 @@ export function NotesWorkspace({
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-4 lg:pr-3">
                     <RichTextEditor
-                      value={contentDraft}
-                      onChange={handleContentDraftChange}
+                      value={selectedEditorDraft}
+                      onChange={(value) => handleContentDraftChange(selectedNote!.id, value)}
                       placeholder="Start writing"
                       variant="plain"
                       mode="document"
@@ -2937,8 +3109,8 @@ export function NotesWorkspace({
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2">
                     <RichTextEditor
-                      value={contentDraft}
-                      onChange={handleContentDraftChange}
+                      value={selectedEditorDraft}
+                      onChange={(value) => handleContentDraftChange(selectedNote!.id, value)}
                       placeholder="Start writing"
                       variant="plain"
                       mode="document"

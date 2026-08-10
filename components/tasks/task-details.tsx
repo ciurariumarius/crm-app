@@ -32,6 +32,7 @@ import {
 import { format } from "date-fns"
 import { Calendar as CalendarIcon, Clock, Check, Loader2, X, Play, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, FileText, Info } from "lucide-react"
 import { updateTask, deleteTask, getTaskHistory } from "@/lib/actions/tasks"
+import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { cn, formatProjectName } from "@/lib/utils"
@@ -196,13 +197,17 @@ export function TaskDetails({
         if (!task) return
         setLoading(true)
         try {
-            const result = await updateTask(task.id, {
-                name,
-                description,
-                status,
-                urgency,
-                deadline,
-            })
+            const result = await updateTask(
+                task.id,
+                {
+                    name,
+                    description,
+                    status,
+                    urgency,
+                    deadline,
+                },
+                { notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION }
+            )
 
             if (result.success) {
                 toast.success("Task updated")

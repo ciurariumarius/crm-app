@@ -31,6 +31,9 @@ function run() {
   assert.match(workLog, /--cell-size:clamp\(40px,11vw,48px\)/)
   assert.match(workLog, /disabled=\{isWeekend\}/)
   assert.match(workLog, /h-12! w-full rounded-xl/)
+  assert.match(workLog, /w-\[min\(94vw,760px\)\]/)
+  assert.match(workLog, /setCalendarMonths\(media\.matches \? 2 : 1\)/)
+  assert.match(workLog, /w-full justify-between gap-2 rounded-lg[^\n]+sm:w-auto sm:min-w-56/)
 
   const projectsPage = read("app/(dashboard)/lms-analysis/projects/page.tsx")
   assert.match(projectsPage, /hidden md:block/)
@@ -41,7 +44,7 @@ function run() {
   assert.match(dataWorkspace, /md:hidden/)
 
   const workTaskCatalog = read("components/lms-work-entries/lms-work-task-catalog.tsx")
-  assert.match(workTaskCatalog, /flex flex-col gap-2 sm:flex-row/)
+  assert.match(workTaskCatalog, /grid gap-2 sm:grid-cols-\[minmax\(0,1fr\)_160px_auto\] sm:items-end/)
   assert.match(workTaskCatalog, /sm:flex-row sm:items-center/)
   assert.match(workTaskCatalog, /draggable=\{canReorder\}/)
   assert.match(workTaskCatalog, /flex sm:hidden/)

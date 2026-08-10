@@ -2,15 +2,20 @@ import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
 import { normalizeDateRange } from "@/lib/lms-work-entries/date"
 import { buildLmsWorkDurationShortcuts } from "@/lib/lms-work-entries/duration-options"
+import {
+  buildLmsWorkEntryWhere,
+  normalizeLmsWorkDateFilter,
+  normalizeLmsWorkExportStatus,
+} from "@/lib/lms-work-entries/filters"
+import type { LmsWorkExportStatus } from "@/lib/lms-work-entries/filters"
 import { rankLmsWorkOptionsByFrequency } from "@/lib/lms-work-entries/frequent-options"
+import { normalizeLmsWorkLogPageSize } from "@/lib/lms-work-entries/pagination"
 import { maskToWeekdays } from "@/lib/lms-work-entries/recurrence"
 import type { LmsWorkLogPageData, LmsWorkRecurrencePageData } from "@/lib/lms-work-entries/types"
 
-const DEFAULT_PAGE_SIZE = 50
-
 async function findLmsWorkTasks() {
   return prisma.lmsWorkTask.findMany({
-    select: { id: true, name: true, isActive: true },
+    select: { id: true, name: true, isActive: true, defaultDurationMinutes: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   })
 }
@@ -73,31 +78,41 @@ export async function getLmsWorkRecurrencePageData(): Promise<LmsWorkRecurrenceP
 export async function getLmsWorkLogPageData(args?: {
   from?: string | null
   to?: string | null
+  clientId?: string | null
+  taskId?: string | null
+  workDate?: string | null
+  exportStatus?: LmsWorkExportStatus | null
   page?: number
   pageSize?: number
 }): Promise<LmsWorkLogPageData> {
   await requireAuth()
   const { from, to } = normalizeDateRange(args?.from, args?.to)
-  const pageSize = Math.min(100, Math.max(1, Math.trunc(args?.pageSize ?? DEFAULT_PAGE_SIZE)))
+  const clientId = args?.clientId?.trim() || null
+  const taskId = args?.taskId?.trim() || null
+  const workDate = normalizeLmsWorkDateFilter(args?.workDate, from, to)
+  const exportStatus = normalizeLmsWorkExportStatus(args?.exportStatus)
+  const pageSize = normalizeLmsWorkLogPageSize(args?.pageSize)
   const requestedPage = Math.max(1, Math.trunc(args?.page ?? 1))
-  const dateFilter = {
-    ...(from ? { gte: from } : {}),
-    ...(to ? { lte: to } : {}),
-  }
-  const where = {
-    ...(from || to ? { workDate: dateFilter } : {}),
-  }
+  const allMatchingWhere = buildLmsWorkEntryWhere({ from, to, workDate, clientId, taskId })
+  const where = buildLmsWorkEntryWhere({ from, to, workDate, clientId, taskId, exportStatus })
+  const dateFilterWhere = buildLmsWorkEntryWhere({ from, to, clientId, taskId, exportStatus })
+  const clientFilterWhere = buildLmsWorkEntryWhere({ from, to, workDate, taskId, exportStatus })
+  const taskFilterWhere = buildLmsWorkEntryWhere({ from, to, workDate, clientId, exportStatus })
 
   const [
     clients,
     tasks,
     totalEntries,
+    allMatchingEntries,
     unexportedEntries,
     aggregate,
     workedDates,
     durationFrequencies,
     clientFrequencies,
     taskFrequencies,
+    dateFilterRows,
+    clientFilterRows,
+    taskFilterRows,
   ] = await Promise.all([
     prisma.lmsAllocation.findMany({
       select: { id: true, client: true },
@@ -105,8 +120,14 @@ export async function getLmsWorkLogPageData(args?: {
     }),
     findLmsWorkTasks(),
     prisma.lmsWorkEntry.count({ where }),
+    prisma.lmsWorkEntry.count({ where: allMatchingWhere }),
     prisma.lmsWorkEntry.count({ where: { ...where, exportedAt: null } }),
-    prisma.lmsWorkEntry.aggregate({ where, _sum: { durationMinutes: true } }),
+    prisma.lmsWorkEntry.aggregate({
+      where,
+      _sum: { durationMinutes: true },
+      _min: { workDate: true },
+      _max: { workDate: true },
+    }),
     prisma.lmsWorkEntry.groupBy({
       by: ["workDate"],
       where,
@@ -126,6 +147,22 @@ export async function getLmsWorkLogPageData(args?: {
       by: ["taskTypeId"],
       _count: { _all: true },
     }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["workDate"],
+      where: dateFilterWhere,
+      orderBy: { workDate: "desc" },
+    }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["lmsAllocationId", "clientDomainSnapshot"],
+      where: {
+        ...clientFilterWhere,
+        lmsAllocationId: { not: null },
+      },
+    }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["taskTypeId", "taskNameSnapshot"],
+      where: taskFilterWhere,
+    }),
   ])
 
   const frequentClients = rankLmsWorkOptionsByFrequency(
@@ -144,6 +181,22 @@ export async function getLmsWorkLogPageData(args?: {
     })),
     (task) => task.name
   )
+  const clientFilterOptions = Array.from(
+    new Map(
+      clientFilterRows.map((row) => [
+        row.lmsAllocationId as string,
+        { id: row.lmsAllocationId as string, label: row.clientDomainSnapshot },
+      ])
+    ).values()
+  ).sort((a, b) => a.label.localeCompare(b.label, "ro"))
+  const taskFilterOptions = Array.from(
+    new Map(
+      taskFilterRows.map((row) => [
+        row.taskTypeId,
+        { id: row.taskTypeId, label: row.taskNameSnapshot },
+      ])
+    ).values()
+  ).sort((a, b) => a.label.localeCompare(b.label, "ro"))
 
   const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize))
   const page = Math.min(requestedPage, totalPages)
@@ -178,6 +231,9 @@ export async function getLmsWorkLogPageData(args?: {
         count: frequency._count._all,
       }))
     ),
+    dateFilterOptions: dateFilterRows.map((row) => row.workDate),
+    clientFilterOptions,
+    taskFilterOptions,
     entries: entries.map((entry) => ({
       id: entry.id,
       lmsAllocationId: entry.lmsAllocationId,
@@ -192,13 +248,20 @@ export async function getLmsWorkLogPageData(args?: {
       updatedAt: entry.updatedAt.toISOString(),
     })),
     totalEntries,
+    allMatchingEntries,
     unexportedEntries,
     totalMinutes: aggregate._sum.durationMinutes ?? 0,
     workedDays: workedDates.length,
+    firstWorkDate: aggregate._min.workDate,
+    lastWorkDate: aggregate._max.workDate,
     page,
     pageSize,
     totalPages,
     from,
     to,
+    workDate,
+    clientId,
+    taskId,
+    exportStatus,
   }
 }

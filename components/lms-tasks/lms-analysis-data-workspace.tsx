@@ -451,7 +451,7 @@ export function LmsAnalysisDataWorkspace({
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <CardTitle className="text-lg">Work-entry tasks</CardTitle>
-                <CardDescription>Manage the predefined tasks available in Tasks → Record work.</CardDescription>
+                <CardDescription>Manage the predefined tasks and their default recording time.</CardDescription>
               </div>
               <Button
                 type="button"

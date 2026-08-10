@@ -313,7 +313,7 @@ export default async function NotesPage({
   const projectNotes: NoteRecord[] = projectNotesRaw
     .filter((item) => Boolean(item.description?.trim()))
     .map((project) => {
-      const content = project.description?.trim() || ""
+      const content = project.description || ""
       const domainName = project.site?.domainName?.trim() || "Unknown domain"
       const projectName = project.name?.trim() || domainName
       return {
