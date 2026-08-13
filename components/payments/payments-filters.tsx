@@ -153,7 +153,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                         <div className="xl:ml-auto">
                             <Link
                                 href={clearAllHref}
-                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "text-[12px]" })}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "text-xs" })}
                             >
                                 Clear all
                             </Link>
@@ -170,7 +170,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                     <Link
                         key={filter.key}
                         href={filter.href}
-                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "h-8 gap-1 text-[12px]" })}
+                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "h-8 gap-1 text-xs" })}
                     >
                         <span>{filter.label}</span>
                         <X className="h-3 w-3 text-[var(--text-muted)]" />
@@ -201,13 +201,13 @@ function PartnerCombobox({
                     type="button"
                     variant="outline"
                     className={cn(
-                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium tracking-[0.02em] transition-all shadow-none",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            ? "border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--primary)]"
                             : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                     )}
                 >
-                    <User className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-[var(--text-muted)]")} />
+                    <User className={cn("h-4 w-4", isActive ? "text-[var(--primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[150px] truncate">{selectedPartner?.name || "Partner"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </Button>
@@ -224,7 +224,7 @@ function PartnerCombobox({
                                     onSelect("all")
                                     setOpen(false)
                                 }}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
+                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-medium tracking-[0.02em]"
                             >
                                 <Check className={cn("mr-2 h-4 w-4", !isActive ? "opacity-100" : "opacity-0")} />
                                 All partners
@@ -237,7 +237,7 @@ function PartnerCombobox({
                                         onSelect(partner.id)
                                         setOpen(false)
                                     }}
-                                    className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-xs font-medium tracking-[0.02em]"
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", currentPartner === partner.id ? "opacity-100" : "opacity-0")} />
                                     {partner.name}
@@ -271,13 +271,13 @@ function ProjectCombobox({
                     type="button"
                     variant="outline"
                     className={cn(
-                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium tracking-[0.02em] transition-all shadow-none",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            ? "border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--primary)]"
                             : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                     )}
                 >
-                    <Briefcase className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-[var(--text-muted)]")} />
+                    <Briefcase className={cn("h-4 w-4", isActive ? "text-[var(--primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[200px] truncate">{selectedProject ? formatProjectName(selectedProject) : "Project"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </Button>
@@ -294,7 +294,7 @@ function ProjectCombobox({
                                     onSelect("all")
                                     setOpen(false)
                                 }}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
+                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-medium tracking-[0.02em]"
                             >
                                 <Check className={cn("mr-2 h-4 w-4", !isActive ? "opacity-100" : "opacity-0")} />
                                 All projects
@@ -307,7 +307,7 @@ function ProjectCombobox({
                                         onSelect(project.id)
                                         setOpen(false)
                                     }}
-                                    className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-xs font-medium tracking-[0.02em]"
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", currentProject === project.id ? "opacity-100" : "opacity-0")} />
                                     {formatProjectName(project)}
@@ -354,13 +354,13 @@ export function TimeRangeCombobox({
                     type="button"
                     variant="outline"
                     className={cn(
-                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium tracking-[0.02em] transition-all shadow-none",
                         isActive
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            ? "border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--primary)]"
                             : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                     )}
                 >
-                    <Clock className={cn("h-4 w-4", isActive ? "text-blue-600" : "text-[var(--text-muted)]")} />
+                    <Clock className={cn("h-4 w-4", isActive ? "text-[var(--primary)]" : "text-[var(--text-muted)]")} />
                     <span className="max-w-[150px] truncate">{timeRangeLabels[currentTimeRange] || "All Time"}</span>
                     <ChevronDown className="h-4 w-4 opacity-70" />
                 </Button>
@@ -378,7 +378,7 @@ export function TimeRangeCombobox({
                                         onSelect(option.id)
                                         setOpen(false)
                                     }}
-                                    className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-xs font-medium tracking-[0.02em]"
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", currentTimeRange === option.id ? "opacity-100" : "opacity-0")} />
                                     {option.name}

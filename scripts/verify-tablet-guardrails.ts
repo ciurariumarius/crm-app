@@ -23,9 +23,9 @@ function run() {
   assert.match(filterPrimitive, /inline-flex min-w-max items-center gap-4 xl:flex xl:w-full xl:min-w-0/)
   assert.match(filterPrimitive, /flex w-full min-w-0 flex-wrap items-center gap-3 xl:gap-6/)
 
-  const dashboardHeader = read("components/layout/dashboard-page-header.tsx")
-  assert.match(dashboardHeader, /md:grid md:grid-cols-\[minmax\(180px,1fr\)_minmax\(320px,640px\)_minmax\(180px,1fr\)\] xl:hidden/)
-  assert.match(dashboardHeader, /xl:grid xl:grid-cols-\[minmax\(240px,1fr\)_minmax\(360px,640px\)_minmax\(240px,1fr\)\] xl:items-center/)
+  const appPageHeader = read("components/layout/app-page-header.tsx")
+  assert.match(appPageHeader, /md:grid md:grid-cols-\[minmax\(180px,1fr\)_minmax\(280px,640px\)_minmax\(160px,1fr\)\]/)
+  assert.match(appPageHeader, /xl:grid-cols-\[minmax\(240px,1fr\)_minmax\(360px,640px\)_minmax\(240px,1fr\)\]/)
 
   const projectsToolbar = read("components/projects/projects-filters-toolbar.tsx")
   assert.match(projectsToolbar, /overscroll-x-contain xl:overflow-visible xl:px-0/)
@@ -47,8 +47,9 @@ function run() {
   assert.match(domainsTable, /md:min-w-\[940px\] xl:min-w-\[1240px\]/)
 
   const notesWorkspace = read("components/notes/notes-workspace.tsx")
-  assert.match(notesWorkspace, /md:grid-cols-\[312px_minmax\(0,1fr\)\] xl:grid-cols-\[336px_minmax\(0,1fr\)\]/)
-  assert.match(notesWorkspace, /md:hidden h-full min-h-0/)
+  assert.match(notesWorkspace, /md:grid md:grid-cols-\[minmax\(280px,360px\)_minmax\(0,1fr\)\] xl:hidden/)
+  assert.match(notesWorkspace, /gridTemplateColumns: `\$\{sidebarWidth\}px 5px \$\{listWidth\}px 5px minmax\(520px, 1fr\)`/)
+  assert.match(notesWorkspace, /h-full min-h-0 md:hidden/)
 
   process.stdout.write("verify-tablet-guardrails: ok\n")
 }

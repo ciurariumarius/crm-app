@@ -22,6 +22,7 @@ describe("desktop sidebar navigation", () => {
     expect(sidebar).toContain("if (isDesktopCollapsed)")
     expect(sidebar).toContain('aria-label={`Open ${label} menu`}')
     expect(sidebar).toContain('<DropdownMenuContent side="right" align="start"')
+    expect(sidebar).toContain('role="tooltip"')
     expect(sidebar).toContain('renderDesktopGroup("LMS Analysis"')
     expect(sidebar).not.toContain("onFocusCapture=")
     expect(shell).toContain("const isDesktopCollapsed = isSidebarCollapsed")

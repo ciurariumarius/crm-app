@@ -111,7 +111,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                 <div className="py-4 px-1 flex flex-col gap-5">
                     <div className="flex flex-row items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                            <div className="h-10 w-10 rounded-xl bg-[var(--state-success-surface)] flex items-center justify-center text-[var(--state-success)]">
                                 <Target className="h-6 w-6" />
                             </div>
                             <div>
@@ -127,7 +127,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                         {overdueTasks.length} due
                                     </span>
                                     <span>•</span>
-                                    <span className={cn(dueTodayTasks.length > 0 && "text-emerald-500 font-bold")}>
+                                    <span className={cn(dueTodayTasks.length > 0 && "text-[var(--state-success)] font-bold")}>
                                         {dueTodayTasks.length} for today
                                     </span>
                                 </div>
@@ -161,7 +161,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                             </Link>
                             <Button
                                 size="icon"
-                                className="h-10 w-10 bg-emerald-500 text-emerald-50 shadow-lg shadow-emerald-500/20 rounded-full hover:bg-emerald-600 hover:scale-105 transition-all"
+                                className="h-10 w-10 bg-[var(--state-success)] text-[var(--state-success)] shadow-lg shadow-emerald-500/20 rounded-full hover:bg-[var(--state-success)] hover:scale-105 transition-all"
                                 onClick={() => setCreateTaskOpen(true)}
                             >
                                 <Plus className="h-5 w-5" strokeWidth={3} />
@@ -174,7 +174,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                         <button
                             onClick={() => setFilter("all")}
                             className={cn(
-                                "flex items-center gap-2 px-1 py-2 text-[12px] font-semibold tracking-[0.02em] transition-all relative",
+                                "flex items-center gap-2 px-1 py-2 text-xs font-semibold tracking-[0.02em] transition-all relative",
                                 filter === "all" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
@@ -185,7 +185,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                         <button
                             onClick={() => setFilter("overdue")}
                             className={cn(
-                                "flex items-center gap-2 px-1 py-2 text-[12px] font-semibold tracking-[0.02em] transition-all relative",
+                                "flex items-center gap-2 px-1 py-2 text-xs font-semibold tracking-[0.02em] transition-all relative",
                                 filter === "overdue" ? "text-[var(--state-overdue)]" : "text-muted-foreground hover:text-[var(--state-overdue)]"
                             )}
                         >
@@ -196,7 +196,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                         <button
                             onClick={() => setFilter("urgent")}
                             className={cn(
-                                "flex items-center gap-2 px-1 py-2 text-[12px] font-semibold tracking-[0.02em] transition-all relative",
+                                "flex items-center gap-2 px-1 py-2 text-xs font-semibold tracking-[0.02em] transition-all relative",
                                 filter === "urgent" ? "text-[var(--state-urgent)]" : "text-muted-foreground hover:text-[var(--state-urgent)]"
                             )}
                         >
@@ -207,8 +207,8 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                     </div>
 
                     {/* Progress Bar (Decoration) */}
-                    <div className="h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden -mt-2">
-                        <div className="h-full bg-emerald-500 w-1/4 rounded-full" />
+                    <div className="h-1 w-full bg-[var(--state-success-surface)] rounded-full overflow-hidden -mt-2">
+                        <div className="h-full bg-[var(--state-success)] w-1/4 rounded-full" />
                     </div>
                 </div>
 
@@ -244,7 +244,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
-                                                    className="gap-2 text-sm font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
+                                                    className="gap-2 text-sm font-medium text-[var(--state-urgent)] focus:text-[var(--state-urgent)] focus:bg-[var(--state-danger-surface)] cursor-pointer"
                                                     onClick={(e) => {
                                                         e.stopPropagation()
                                                         if (confirm("Delete this task?")) {
@@ -272,12 +272,12 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                 {/* Shadow Task (Create New) */}
                                 <div
                                     onClick={() => setCreateTaskOpen(true)}
-                                    className="group flex flex-col items-center justify-center h-[160px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 cursor-pointer"
+                                    className="group flex flex-col items-center justify-center h-[160px] rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] hover:bg-[var(--state-success-surface)] transition-all duration-300 cursor-pointer"
                                 >
-                                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center group-hover:scale-110 group-hover:bg-[var(--state-success)] group-hover:text-white transition-all duration-300">
                                         <Plus className="h-6 w-6 text-muted-foreground group-hover:text-current" strokeWidth={1.5} />
                                     </div>
-                                    <span className="text-sm font-semibold text-muted-foreground group-hover:text-emerald-500 transition-colors mt-2">Add New Task</span>
+                                    <span className="text-sm font-semibold text-muted-foreground group-hover:text-[var(--state-success)] transition-colors mt-2">Add New Task</span>
                                 </div>
                             </div>
                         )

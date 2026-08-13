@@ -240,7 +240,7 @@ export function LmsWorkTaskCatalog({ tasks, embedded = false }: { tasks: LmsWork
                 )}
               >
                 {option.label}
-                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">{option.count}</Badge>
+                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">{option.count}</Badge>
               </Button>
             ))}
           </div>

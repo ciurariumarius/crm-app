@@ -138,7 +138,7 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
                         <div className="xl:ml-auto">
                             <Link
                                 href={clearAllHref}
-                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "text-[12px]" })}
+                                className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "text-xs" })}
                             >
                                 Clear all
                             </Link>
@@ -155,7 +155,7 @@ export function DomainsFilters({ partners, totalLogs }: DomainsFiltersProps) {
                     <Link
                         key={filter.key}
                         href={filter.href}
-                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "h-8 gap-1 text-[12px]" })}
+                        className={buttonLinkClassName({ size: "sm", variant: "subtle", className: "h-8 gap-1 text-xs" })}
                     >
                         <span>{filter.label}</span>
                         <X className="h-3 w-3 text-[var(--text-muted)]" />
@@ -186,7 +186,7 @@ function PartnerCombobox({
                     type="button"
                     variant="outline"
                     className={cn(
-                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium tracking-[0.02em] transition-all shadow-none",
+                        "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-medium tracking-[0.02em] transition-all shadow-none",
                         isActive
                             ? "border-blue-200 bg-blue-50 text-blue-700"
                             : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
@@ -209,7 +209,7 @@ function PartnerCombobox({
                                     onSelect("all")
                                     setOpen(false)
                                 }}
-                                className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
+                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-medium tracking-[0.02em]"
                             >
                                 <Check className={cn("mr-2 h-4 w-4", !isActive ? "opacity-100" : "opacity-0")} />
                                 All partners
@@ -222,7 +222,7 @@ function PartnerCombobox({
                                         onSelect(partner.id)
                                         setOpen(false)
                                     }}
-                                    className="cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium tracking-[0.02em]"
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-xs font-medium tracking-[0.02em]"
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", currentPartner === partner.id ? "opacity-100" : "opacity-0")} />
                                     {partner.name}

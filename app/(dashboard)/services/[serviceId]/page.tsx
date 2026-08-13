@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { ServiceSheetContent } from "@/components/services/service-sheet-content"
 import { requireAuth } from "@/lib/auth"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 
 export const dynamic = "force-dynamic"
 
@@ -21,8 +22,9 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
 
     return (
         <div className="space-y-6">
+            <AppPageHeader title={service.serviceName || "Service"} subtitle="Service configuration and standard delivery tasks." />
 
-            <div className="max-w-3xl mx-auto border rounded-xl overflow-hidden bg-background shadow-sm">
+            <div className="mx-auto max-w-3xl overflow-hidden rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
                 <ServiceSheetContent service={service} />
             </div>
         </div>

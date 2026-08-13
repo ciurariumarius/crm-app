@@ -12,7 +12,7 @@ export function NotesScopeSwitch({
 }) {
   return (
     <div
-      className="mt-2 grid grid-cols-2 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] p-0.5 text-[11px] font-medium"
+      className="mt-2 grid grid-cols-2 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] p-0.5 text-xs font-medium"
       role="group"
       aria-label="Notes list scope"
     >

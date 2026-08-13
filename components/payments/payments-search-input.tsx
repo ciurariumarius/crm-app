@@ -45,7 +45,7 @@ export function PaymentsSearchInput() {
                 placeholder="Search"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="h-11 w-full rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-11 pr-4 text-[14px] font-medium text-[var(--text-primary)] shadow-[var(--shadow-apple)] outline-none transition placeholder:font-medium placeholder:text-[var(--text-muted)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_16%,transparent)] focus-visible:ring-offset-0"
+                className="h-11 w-full rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-11 pr-4 text-sm font-medium text-[var(--text-primary)] shadow-[var(--shadow-apple)] outline-none transition placeholder:font-medium placeholder:text-[var(--text-muted)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_16%,transparent)] focus-visible:ring-offset-0"
             />
         </div>
     )

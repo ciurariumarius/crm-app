@@ -2,9 +2,10 @@ import prisma from "@/lib/prisma"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart3, TrendingUp, DollarSign, Clock, Briefcase, Users } from "lucide-react"
 import { PartnerRevenueChart } from "@/components/vault/partner-revenue-chart"
-import { PageHeader } from "@/components/layout/page-header"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { requireAuth } from "@/lib/auth"
 import type { Prisma } from "@prisma/client"
+import { SectionCard } from "@/components/ui/app-surface"
 
 export const dynamic = "force-dynamic"
 
@@ -169,7 +170,7 @@ export default async function AnalyticsPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            <PageHeader title="Analytics" />
+            <AppPageHeader title="Analytics" subtitle="Revenue, delivery time and portfolio performance in one view." />
 
             {/* Key Metrics */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -181,8 +182,8 @@ export default async function AnalyticsPage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
                         <p className="text-xs text-muted-foreground">
-                            <span className="text-emerald-600 font-bold">{formatCurrency(paidRevenue)}</span> paid •
-                            <span className="text-rose-600 font-bold ml-1">{formatCurrency(unpaidRevenue)}</span> unpaid
+                            <span className="font-semibold text-[var(--state-success)]">{formatCurrency(paidRevenue)}</span> paid •
+                            <span className="ml-1 font-semibold text-[var(--state-urgent)]">{formatCurrency(unpaidRevenue)}</span> unpaid
                         </p>
                     </CardContent>
                 </Card>
@@ -298,20 +299,20 @@ export default async function AnalyticsPage() {
             </div>
 
             {/* PORTFOLIO COMPOSITION ANALYSIS */}
-            <section className="pt-8 border-t space-y-6">
+            <section className="space-y-5 border-t border-[var(--line-subtle)] pt-6">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[color:color-mix(in_srgb,var(--primary)_24%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-primary">
                         <TrendingUp className="h-5 w-5" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold tracking-[-0.03em] text-foreground">Portfolio Composition</h2>
-                        <p className="ui-overline mt-1 text-muted-foreground/40">Global revenue distribution by partner entity</p>
+                        <h2 className="ui-text-section">Portfolio Composition</h2>
+                        <p className="ui-text-caption mt-1">Global revenue distribution by partner entity</p>
                     </div>
                 </div>
 
-                <div className="bg-muted/10 rounded-[2.5rem] border border-muted/50 p-8 lg:p-12 overflow-hidden shadow-sm">
+                <SectionCard className="overflow-hidden p-5 lg:p-8">
                     <PartnerRevenueChart data={Object.values(partnerStats).map((partner) => ({ name: partner.name, revenue: partner.revenue }))} />
-                </div>
+                </SectionCard>
             </section>
         </div>
     )

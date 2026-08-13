@@ -81,7 +81,7 @@ function parseMaybeDate(value: string | null | undefined) {
 
 function triggerClassName(isActive: boolean, extraClassName?: string) {
   return cn(
-    "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[var(--shadow-apple)]",
+    "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all shadow-[var(--shadow-apple)]",
     isActive
       ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,var(--surface-lowest))] text-[var(--brand-primary)]"
       : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]",
@@ -220,7 +220,7 @@ export function ProjectsFiltersToolbar({
                   key={option.value}
                   href={buildHref({ status: option.value })}
                   className={cn(
-                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentStatus === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -236,7 +236,7 @@ export function ProjectsFiltersToolbar({
                   key={option.value}
                   href={buildHref({ payment: option.value })}
                   className={cn(
-                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentPayment === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -315,13 +315,13 @@ export function ProjectsFiltersToolbar({
 
       <FilterResultsRow className="justify-between gap-2 px-0 py-0.5 shadow-none">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-primary)] sm:text-xs">{resultsLabel}</p>
+          <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-primary)] sm:text-xs">{resultsLabel}</p>
           <div className="-mx-0.5 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-0.5 hidescrollbar">
             {activeFilters.map((filter) => (
               <Link
                 key={filter.key}
                 href={filter.href}
-                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
+                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2 text-xs font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-xs"
               >
                 <span>{filter.label}</span>
                 <span className="text-[var(--brand-primary)]/70">×</span>
@@ -333,7 +333,7 @@ export function ProjectsFiltersToolbar({
           {activeFilters.length > 0 ? (
             <Link
               href={clearAllHref}
-              className="inline-flex h-6 items-center rounded-full px-2 text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:text-[10px]"
+              className="inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:text-xs"
             >
               Clear all
             </Link>
@@ -449,7 +449,7 @@ function PeriodCombobox({
                 setOpen(false)
               }}
               className={cn(
-                "inline-flex h-7 items-center justify-center rounded-md border px-2 text-[10px] font-medium transition-colors",
+                "inline-flex h-7 items-center justify-center rounded-md border px-2 text-xs font-medium transition-colors",
                 currentPeriod === option.value && !currentFrom && !currentTo
                   ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                   : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
@@ -483,11 +483,11 @@ function PeriodCombobox({
               onSelectPreset("all_time")
               setOpen(false)
             }}
-            className="text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             Clear range
           </button>
-          <span className="text-[10px] font-medium text-[var(--text-secondary)]">Pick start and end date</span>
+          <span className="text-xs font-medium text-[var(--text-secondary)]">Pick start and end date</span>
         </div>
       </PopoverContent>
     </Popover>

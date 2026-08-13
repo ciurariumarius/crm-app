@@ -73,6 +73,10 @@
   --state-paused: #87928c;
   --state-success: #169b64;
   --state-warning: #d58a2d;
+  --state-danger-surface: #fff0f0;
+  --state-warning-surface: #fbf3e7;
+  --state-success-surface: #e8f6ef;
+  --state-info-surface: #edf4fc;
 
   --surface-lowest: var(--bg-surface);
   --surface-low: var(--bg-surface-soft);
@@ -155,6 +159,10 @@
   --state-paused: #94a3b8;
   --state-success: #34d399;
   --state-warning: #fbbf24;
+  --state-danger-surface: rgba(248, 113, 113, 0.12);
+  --state-warning-surface: rgba(251, 191, 36, 0.12);
+  --state-success-surface: rgba(52, 211, 153, 0.12);
+  --state-info-surface: rgba(116, 164, 227, 0.12);
 
   --surface-lowest: var(--bg-surface);
   --surface-low: var(--bg-surface-soft);
@@ -396,7 +404,7 @@
   }
 
   .ui-text-section {
-    @apply text-[14px] font-semibold tracking-[0.02em] text-[var(--text-secondary)];
+    @apply text-[15px] font-semibold tracking-[-0.01em] text-[var(--text-primary)];
   }
 
   .ui-text-label {
@@ -412,8 +420,36 @@
   }
 
   .ui-overline {
-    @apply text-[11px] font-semibold uppercase text-[var(--text-muted)];
-    letter-spacing: 0.08em;
+    @apply text-[12px] font-semibold text-[var(--text-muted)];
+    letter-spacing: 0.02em;
+  }
+
+  .ui-page-stack {
+    @apply flex flex-col gap-5 pb-8 sm:gap-6 sm:pb-10;
+  }
+
+  .ui-state-danger {
+    color: var(--state-urgent);
+    background: var(--state-danger-surface);
+    border-color: color-mix(in srgb, var(--state-urgent) 28%, var(--line-subtle));
+  }
+
+  .ui-state-warning {
+    color: var(--state-warning);
+    background: var(--state-warning-surface);
+    border-color: color-mix(in srgb, var(--state-warning) 28%, var(--line-subtle));
+  }
+
+  .ui-state-success {
+    color: var(--state-success);
+    background: var(--state-success-surface);
+    border-color: color-mix(in srgb, var(--state-success) 28%, var(--line-subtle));
+  }
+
+  .ui-state-info {
+    color: var(--info);
+    background: var(--state-info-surface);
+    border-color: color-mix(in srgb, var(--info) 28%, var(--line-subtle));
   }
 
   .editorial-display {
@@ -551,7 +587,7 @@
   }
 
   .status-pill {
-    @apply inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase transition-colors;
+    @apply inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors;
     letter-spacing: 0.08em;
   }
 
@@ -591,7 +627,7 @@
   }
 
   .segmented-pill {
-    @apply rounded-lg px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition-all;
+    @apply rounded-[12px] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-all;
   }
 
   .segmented-pill-active {

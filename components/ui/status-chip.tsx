@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const statusChipVariants = cva(
-    "inline-flex items-center justify-center gap-1.5 rounded-[10px] transition-colors font-bold uppercase tracking-[0.05em]",
+    "inline-flex items-center justify-center gap-1.5 rounded-full transition-colors font-semibold tracking-[0.01em]",
     {
         variants: {
             tone: {
@@ -23,8 +23,8 @@ const statusChipVariants = cva(
                 settled: "border border-[color:color-mix(in_srgb,var(--state-success)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-success)_84%,var(--text-primary))]",
             },
             size: {
-                xs: "h-5 px-2 text-[10px]",
-                sm: "h-[34px] px-3 text-[11px]",
+                xs: "h-6 px-2 text-xs",
+                sm: "h-8 px-3 text-xs",
                 md: "h-9 px-4 text-xs",
                 icon: "h-9 w-9 p-0",
             },
@@ -62,8 +62,8 @@ export function StatusChip({
 
 export function statusToneFromLabel(value: string | null | undefined): StatusChipTone {
     const key = (value || "").toLowerCase()
-    if (key.includes("paid")) return "paid"
     if (key.includes("unpaid")) return "unpaid"
+    if (key.includes("paid")) return "paid"
     if (key.includes("active")) return "active"
     if (key.includes("paused")) return "paused"
     if (key.includes("complete")) return "completed"

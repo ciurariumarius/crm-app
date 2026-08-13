@@ -388,7 +388,7 @@ export function GlobalCreateProjectDialog({
                                                                     {s.domainName}
                                                                 </span>
                                                                 {!partnerId && !defaultPartnerId && (
-                                                                    <span className="truncate text-[11px] font-medium text-[var(--text-secondary)]">
+                                                                    <span className="truncate text-xs font-medium text-[var(--text-secondary)]">
                                                                         {s.partnerName}
                                                                     </span>
                                                                 )}
@@ -551,7 +551,7 @@ export function GlobalCreateProjectDialog({
                                                         type="button"
                                                         onClick={() => setProjectStatus(statusOption)}
                                                         className={cn(
-                                                            "h-8 rounded-lg px-2 text-[11px] font-bold transition-all border border-transparent",
+                                                            "h-8 rounded-lg px-2 text-xs font-bold transition-all border border-transparent",
                                                             projectStatus === statusOption && statusOption === "Active" && "status-pill-action shadow-sm",
                                                             projectStatus === statusOption && statusOption === "Paused" && "status-pill-warning shadow-sm",
                                                             projectStatus === statusOption && statusOption === "Completed" && "status-pill-success shadow-sm",

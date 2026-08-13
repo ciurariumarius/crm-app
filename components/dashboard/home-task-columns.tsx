@@ -322,7 +322,7 @@ export function HomeTaskColumns({
                             >
                                 <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--state-urgent)]" />
                                 <p className="text-[22px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px]">{urgentState.length}</p>
-                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-[var(--state-urgent)] sm:text-[11px]">Urgent</p>
+                                <p className="truncate text-xs font-black uppercase tracking-[0.07em] text-[var(--state-urgent)] sm:text-xs">Urgent</p>
                             </Link>
 
                             <Link
@@ -331,7 +331,7 @@ export function HomeTaskColumns({
                             >
                                 <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--state-overdue)]" />
                                 <p className="text-[22px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px]">{overdueState.length}</p>
-                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-[var(--state-overdue)] sm:text-[11px]">Overdue</p>
+                                <p className="truncate text-xs font-black uppercase tracking-[0.07em] text-[var(--state-overdue)] sm:text-xs">Overdue</p>
                             </Link>
 
                             <Link
@@ -340,13 +340,13 @@ export function HomeTaskColumns({
                             >
                                 <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--text-muted)]" />
                                 <p className="text-[22px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px]">{normalOnlyOrdered.length}</p>
-                                <p className="truncate text-[9px] font-black uppercase tracking-[0.07em] text-[var(--text-secondary)] sm:text-[11px]">Normal</p>
+                                <p className="truncate text-xs font-black uppercase tracking-[0.07em] text-[var(--text-secondary)] sm:text-xs">Normal</p>
                             </Link>
                         </div>
 
                         <Link
                             href="/tasks?status=Active&urgency=Urgent&overdue=1"
-                            className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-blue-100/80 bg-blue-50 px-4 text-[11px] font-bold uppercase tracking-[0.08em] text-blue-600 transition-colors hover:bg-blue-100 sm:w-auto"
+                            className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-blue-100/80 bg-blue-50 px-4 text-xs font-bold uppercase tracking-[0.08em] text-blue-600 transition-colors hover:bg-blue-100 sm:w-auto"
                         >
                             View all <ArrowRight className="h-3.5 w-3.5" />
                         </Link>

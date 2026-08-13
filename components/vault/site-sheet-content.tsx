@@ -83,7 +83,7 @@ function SiteFaviconTile({
                     }}
                 />
             ) : (
-                <span className="text-[11px] font-extrabold tracking-wide text-[var(--text-primary)]">{fallback}</span>
+                <span className="text-xs font-extrabold tracking-wide text-[var(--text-primary)]">{fallback}</span>
             )}
         </span>
     )

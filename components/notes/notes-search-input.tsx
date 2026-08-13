@@ -39,7 +39,7 @@ export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchIn
             }
           }}
           className={cn(
-            "w-full pl-11 pr-16 text-[14px] font-medium outline-none transition placeholder:font-medium placeholder:text-[var(--text-muted)] focus-visible:ring-offset-0",
+            "w-full pl-11 pr-16 text-sm font-medium outline-none transition placeholder:font-medium placeholder:text-[var(--text-muted)] focus-visible:ring-offset-0",
             inputHeight,
             isApple
               ? "rounded-[14px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,var(--surface-lowest))] text-[var(--text-primary)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_75%,transparent)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_18%,transparent)]"
@@ -48,7 +48,7 @@ export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchIn
         />
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
           {showShortcutHint && !hasValue ? (
-            <kbd className="hidden h-6 items-center rounded-md border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-1.5 text-[10px] font-semibold text-[var(--text-muted)] md:inline-flex">
+            <kbd className="hidden h-6 items-center rounded-md border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-1.5 text-xs font-semibold text-[var(--text-muted)] md:inline-flex">
               /
             </kbd>
           ) : null}

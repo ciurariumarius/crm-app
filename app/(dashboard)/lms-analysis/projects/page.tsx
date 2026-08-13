@@ -780,7 +780,7 @@ export default function LmsAnalysisProjectsPage() {
             {activeFilters.map((filter) => (
               <span
                 key={filter.id}
-                className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
+                className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2.5 text-xs font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
               >
                 <span>{filter.label}</span>
                 <button
@@ -797,7 +797,7 @@ export default function LmsAnalysisProjectsPage() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                className="inline-flex h-7 items-center rounded-full px-2 text-xs font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
               >
                 Clear all
               </button>
@@ -852,7 +852,7 @@ export default function LmsAnalysisProjectsPage() {
                     <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">{row.client}</p>
                     <Badge
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
+                        "rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em]",
                         row.workVolumeStatus === "No Work" && "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]",
                         row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
                         row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
@@ -865,10 +865,10 @@ export default function LmsAnalysisProjectsPage() {
                   </div>
 
                   <div className="mt-2 flex items-center gap-1">
-                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black", getServiceBadgeClass(row.services.seo))}>SE</span>
-                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black", getServiceBadgeClass(row.services.gads))}>GA</span>
-                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black", getServiceBadgeClass(row.services.fads))}>FB</span>
-                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black", getServiceBadgeClass(row.services.tads))}>TT</span>
+                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs font-black", getServiceBadgeClass(row.services.seo))}>SE</span>
+                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs font-black", getServiceBadgeClass(row.services.gads))}>GA</span>
+                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs font-black", getServiceBadgeClass(row.services.fads))}>FB</span>
+                    <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs font-black", getServiceBadgeClass(row.services.tads))}>TT</span>
                   </div>
 
                   <div className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
@@ -912,12 +912,12 @@ export default function LmsAnalysisProjectsPage() {
                       <p className="text-[var(--text-muted)]">Avg Vol</p>
                       <p className="mt-0.5 font-semibold text-[var(--text-primary)]">
                         <DurationValue minutes={row.avgMonthlyMinutes} className="text-sm" />
-                        <span className="ml-1 text-[10px] font-medium text-[var(--text-secondary)]">/mo</span>
+                        <span className="ml-1 text-xs font-medium text-[var(--text-secondary)]">/mo</span>
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
+                  <div className="mt-2 flex items-center justify-between text-xs text-[var(--text-secondary)]">
                     <span>1st: {formatDateLabel(row.firstTaskDate)}</span>
                     <span>Last: {formatDateLabel(row.lastTaskDate)}</span>
                   </div>
@@ -1000,25 +1000,25 @@ export default function LmsAnalysisProjectsPage() {
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <span
-                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black tracking-[0.03em]", getServiceBadgeClass(row.services.seo))}
+                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs font-black tracking-[0.03em]", getServiceBadgeClass(row.services.seo))}
                         title={`SEO: ${row.services.seo}`}
                       >
                         SE
                       </span>
                       <span
-                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black tracking-[0.03em]", getServiceBadgeClass(row.services.gads))}
+                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs font-black tracking-[0.03em]", getServiceBadgeClass(row.services.gads))}
                         title={`GAds: ${row.services.gads}`}
                       >
                         GA
                       </span>
                       <span
-                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black tracking-[0.03em]", getServiceBadgeClass(row.services.fads))}
+                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs font-black tracking-[0.03em]", getServiceBadgeClass(row.services.fads))}
                         title={`FAds: ${row.services.fads}`}
                       >
                         FB
                       </span>
                       <span
-                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-black tracking-[0.03em]", getServiceBadgeClass(row.services.tads))}
+                        className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs font-black tracking-[0.03em]", getServiceBadgeClass(row.services.tads))}
                         title={`TAds: ${row.services.tads}`}
                       >
                         TT
@@ -1089,7 +1089,7 @@ export default function LmsAnalysisProjectsPage() {
                   <TableCell>
                     <Badge
                       className={cn(
-                        "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em]",
+                        "rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-[0.08em]",
                         row.workVolumeStatus === "No Work" && "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]",
                         row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
                         row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
@@ -1119,7 +1119,7 @@ export default function LmsAnalysisProjectsPage() {
                   <select
                     value={projectsPageSize}
                     onChange={(event) => setProjectsPageSize(Number(event.target.value))}
-                    className="h-8 min-w-[58px] appearance-none rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-6 text-[11px] font-semibold text-[var(--text-primary)] outline-none"
+                    className="h-8 min-w-[58px] appearance-none rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-6 text-xs font-semibold text-[var(--text-primary)] outline-none"
                     aria-label="Rows per page"
                   >
                     {PROJECTS_PAGE_SIZE_OPTIONS.map((size) => (
@@ -1130,7 +1130,7 @@ export default function LmsAnalysisProjectsPage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
                 </div>
-                <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-2.5 text-[11px] font-semibold text-[var(--text-primary)]">
+                <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-2.5 text-xs font-semibold text-[var(--text-primary)]">
                   {projectsPage}/{projectsTotalPages}
                 </span>
               </div>

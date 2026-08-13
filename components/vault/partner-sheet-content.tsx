@@ -243,7 +243,7 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                 />
                             ) : (
                                 <div className="group flex items-center gap-2 cursor-pointer" onClick={() => setIsEditingName(true)}>
-                                    <h2 className="ui-text-title text-[var(--text-primary)] group-hover:text-primary transition-colors md:text-[30px]">{partner.name}</h2>
+                                    <h2 className="ui-text-title text-[var(--text-primary)] group-hover:text-primary transition-colors md:text-3xl">{partner.name}</h2>
                                     <Pencil className="h-4 w-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                             )}

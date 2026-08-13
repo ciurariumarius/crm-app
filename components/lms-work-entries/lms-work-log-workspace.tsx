@@ -369,11 +369,11 @@ function WorkWeekNavigator({
                   : "border-transparent bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--line-strong)] hover:bg-[var(--surface-low)]"
               )}
             >
-              <span className={cn("block text-[10px] font-bold tracking-[0.08em]", isSelected ? "text-white" : "text-[var(--text-muted)]")}>
+              <span className={cn("block text-xs font-bold tracking-[0.08em]", isSelected ? "text-white" : "text-[var(--text-muted)]")}>
                 {format(parsed, "EEE").toUpperCase()}
               </span>
               <span className="mt-0.5 block text-sm font-bold">{format(parsed, "d")}</span>
-              <span className={cn("mt-0.5 block text-[11px] font-semibold", isSelected ? "text-white/90" : "text-[var(--text-muted)]")}>
+              <span className={cn("mt-0.5 block text-xs font-semibold", isSelected ? "text-white/90" : "text-[var(--text-muted)]")}>
                 {showLoading ? "…" : formatCompactLmsWorkDuration(totalsByDate.get(date) ?? 0)}
               </span>
             </button>

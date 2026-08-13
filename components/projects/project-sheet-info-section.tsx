@@ -86,11 +86,11 @@ export function ProjectSheetInfoSection({
                                             <ArrowUpRight className="h-3.5 w-3.5" />
                                         </>
                                     }
-                                    className="rounded-lg px-2.5 py-1.5 text-[10px]"
+                                    className="rounded-lg px-2.5 py-1.5 text-xs"
                                 />
                             </a>
                         ) : (
-                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-[10px] opacity-70" />
+                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-xs opacity-70" />
                         )}
                     </div>
                 </SidePanelInfoCard>
@@ -114,7 +114,7 @@ export function ProjectSheetInfoSection({
                             key={service.id}
                             type="button"
                             onClick={() => onToggleService(service.id)}
-                            className="inline-flex items-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-700 transition hover:bg-blue-100/70"
+                            className="inline-flex items-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100/70"
                         >
                             {service.serviceName}
                             <X className="h-3.5 w-3.5" />

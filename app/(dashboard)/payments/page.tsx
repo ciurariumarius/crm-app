@@ -1,7 +1,7 @@
 import { getPaymentLogs } from "@/lib/actions/payment-actions"
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
-import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { PaymentsTable } from "@/components/payments/payments-table"
 import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
 import { PaymentsFiltersClient } from "@/components/payments/payments-filters-client"
@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Banknote, Users, History } from "lucide-reac
 import Link from "next/link"
 import { buttonLinkClassName } from "@/components/ui/button-link"
 import { formatCurrency, formatProjectName, serialize, cn } from "@/lib/utils"
+import { StatCard } from "@/components/ui/app-surface"
 
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 50
@@ -120,6 +121,7 @@ export default async function PaymentsPage({
     }
 
     const partnersWithDebt = unpaidByPartner.length
+    const totalOutstanding = currentMonthUnpaid.total + previousMonthsUnpaid.total
 
     const serializedProjects = serialize(projects)
     const serializedLogs = serialize(logs)
@@ -140,100 +142,77 @@ export default async function PaymentsPage({
 
     return (
         <div className="flex flex-col gap-8 pb-10 sm:gap-10">
-            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
-                <DashboardPageHeader
+                <AppPageHeader
                     title="Payments"
                     search={<PaymentsSearchInput />}
                     mobileSearch={<PaymentsSearchInput />}
-                    actions={<PaymentsAddPaymentAction partners={partners} services={paymentServiceOptions} />}
-                    mobileActions={
+                    primaryAction={<PaymentsAddPaymentAction partners={partners} services={paymentServiceOptions} />}
+                    mobilePrimaryAction={
                         <PaymentsAddPaymentAction
                             partners={partners}
                             services={paymentServiceOptions}
                             mobile
                         />
                     }
-                    showMobile
                 />
-            </div>
 
-            {/* KPI Section */}
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <article className="relative rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-12">
+                <StatCard className="md:col-span-2 xl:col-span-6">
                     <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-[var(--text-muted)]">Current Month</p>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50/80 text-rose-400 shadow-[0_4px_10px_rgba(244,63,94,0.06)]">
+                        <div>
+                            <p className="ui-overline">Total outstanding</p>
+                            <p className="mt-2 text-[32px] font-semibold leading-none tracking-tight text-[var(--state-urgent)] sm:text-[38px]">
+                                {formatCurrency(totalOutstanding)}
+                            </p>
+                        </div>
+                        <div className="ui-state-danger flex h-11 w-11 items-center justify-center rounded-[12px] border">
                             <Banknote className="h-4.5 w-4.5" />
                         </div>
                     </div>
-                    <div className="mt-5">
-                        <p className="text-[30px] font-bold leading-none tracking-tight text-rose-600 sm:text-[34px]">
-                            {formatCurrency(currentMonthUnpaid.total)}
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Outstanding from projects created this month.</p>
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                            <div className="rounded-xl border border-emerald-100/80 bg-emerald-50/60 px-2.5 py-2">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-700/80">Recurring</p>
-                                <p className="mt-1 text-[13px] font-bold text-emerald-700">{formatCurrency(currentMonthUnpaid.recurring)}</p>
+                    <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Open balances across current and previous months.</p>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <p className="text-xs font-semibold text-[var(--text-secondary)]">Current month</p>
+                                <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">{formatCurrency(currentMonthUnpaid.total)}</p>
                             </div>
-                            <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--state-review)_20%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_9%,var(--surface-lowest))] px-2.5 py-2">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--state-review)]">One-time</p>
-                                <p className="mt-1 text-[13px] font-semibold text-[var(--state-review)]">{formatCurrency(currentMonthUnpaid.oneTime)}</p>
+                            <p className="mt-2 text-xs text-[var(--text-muted)]">Recurring {formatCurrency(currentMonthUnpaid.recurring)} · One-time {formatCurrency(currentMonthUnpaid.oneTime)}</p>
+                        </div>
+                        <div className="rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <p className="text-xs font-semibold text-[var(--text-secondary)]">Previous months</p>
+                                <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">{formatCurrency(previousMonthsUnpaid.total)}</p>
                             </div>
+                            <p className="mt-2 text-xs text-[var(--text-muted)]">Recurring {formatCurrency(previousMonthsUnpaid.recurring)} · One-time {formatCurrency(previousMonthsUnpaid.oneTime)}</p>
                         </div>
                     </div>
-                </article>
+                </StatCard>
 
-                <article className="relative rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
+                <StatCard className="xl:col-span-3">
                     <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-[var(--text-muted)]">Previous Months</p>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50/80 text-amber-500 shadow-[0_4px_10px_rgba(245,158,11,0.08)]">
-                            <Banknote className="h-4.5 w-4.5" />
-                        </div>
-                    </div>
-                    <div className="mt-5">
-                        <p className="text-[30px] font-bold leading-none tracking-tight text-amber-600 sm:text-[34px]">
-                            {formatCurrency(previousMonthsUnpaid.total)}
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Outstanding carried from previous months.</p>
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                            <div className="rounded-xl border border-emerald-100/80 bg-emerald-50/60 px-2.5 py-2">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-700/80">Recurring</p>
-                                <p className="mt-1 text-[13px] font-bold text-emerald-700">{formatCurrency(previousMonthsUnpaid.recurring)}</p>
-                            </div>
-                            <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--state-review)_20%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_9%,var(--surface-lowest))] px-2.5 py-2">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--state-review)]">One-time</p>
-                                <p className="mt-1 text-[13px] font-semibold text-[var(--state-review)]">{formatCurrency(previousMonthsUnpaid.oneTime)}</p>
-                            </div>
-                        </div>
-                    </div>
-                </article>
-
-                <article className="relative rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
-                    <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-[var(--text-muted)]">Partners</p>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[var(--shadow-apple)]">
+                        <p className="ui-overline">Partners</p>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]">
                             <Users className="h-4.5 w-4.5" />
                         </div>
                     </div>
                     <div className="mt-5">
-                        <p className="text-[30px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[34px]">{partnersWithDebt}</p>
-                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Partners currently carrying unpaid project balances.</p>
+                        <p className="text-[32px] font-semibold leading-none tracking-tight text-[var(--text-primary)]">{partnersWithDebt}</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Partners carrying unpaid project balances.</p>
                     </div>
-                </article>
+                </StatCard>
 
-                <article className="relative rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
+                <StatCard className="xl:col-span-3">
                     <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline text-[var(--text-muted)]">Events</p>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[var(--shadow-apple)]">
+                        <p className="ui-overline">Events</p>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]">
                             <History className="h-4.5 w-4.5" />
                         </div>
                     </div>
                     <div className="mt-5">
-                        <p className="text-[30px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[34px]">{totalLogs}</p>
-                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Recorded payment updates, manual entries, and settlements.</p>
+                        <p className="text-[32px] font-semibold leading-none tracking-tight text-[var(--text-primary)]">{totalLogs}</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Payment updates, manual entries and settlements.</p>
                     </div>
-                </article>
+                </StatCard>
             </section>
 
             <div className="flex flex-col gap-8 sm:gap-10">
@@ -243,7 +222,7 @@ export default async function PaymentsPage({
                     <div className="flex items-center justify-between px-2">
                         <div className="flex flex-col">
                             <h2 className="ui-text-title-sm text-[var(--text-primary)]">Transaction History</h2>
-                            <p className="text-[11px] font-medium text-[var(--text-muted)]">
+                            <p className="ui-text-caption">
                                 Review payment changes, manual entries, and settlement events.
                             </p>
                         </div>
@@ -263,7 +242,7 @@ export default async function PaymentsPage({
 
                     {/* Pagination Footer */}
                     <div className="flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2 shadow-[var(--shadow-apple)] sm:px-4">
-                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-primary)]">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-primary)]">
                             {page}/{totalPages}
                         </span>
                         <div className="flex items-center gap-1.5">

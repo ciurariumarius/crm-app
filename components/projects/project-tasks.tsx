@@ -104,6 +104,8 @@ export function ProjectTasks({
                 <Button
                     type="button"
                     size="icon"
+                    aria-label="Add task"
+                    title="Add task"
                     onClick={handleAddTask}
                     disabled={loading === "add" || !newTaskName.trim()}
                     className="absolute right-2 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-sm hover:bg-[var(--surface-low)] hover:text-[var(--text-secondary)]"
@@ -157,7 +159,7 @@ export function ProjectTasks({
                             </button>
 
                             <div className="hidden items-center gap-2 sm:flex">
-                                <span className="rounded-lg bg-[var(--surface-low)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                                <span className="rounded-lg bg-[var(--surface-low)] px-2.5 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                     {urgencyLabel}
                                 </span>
                                 {dueDate && (

@@ -458,7 +458,7 @@ export function TaskDetails({
                                                 }
                                             }}
                                             onBlur={commitTitle}
-                                            className="min-h-[44px] resize-none !rounded-none !border-0 !border-b !border-[var(--line-subtle)] !bg-transparent !px-0 !pb-1 !pt-0 text-2xl font-semibold leading-tight tracking-[-0.02em] text-[var(--text-primary)] !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0 md:text-2xl"
+                                            className="min-h-[44px] resize-none !rounded-none !border-0 !border-b !border-[var(--line-subtle)] !bg-transparent !px-0 !pb-1 !pt-0 text-2xl font-semibold leading-tight tracking-[-0.02em] text-[var(--text-primary)] !shadow-none focus-visible:!border-b-2 focus-visible:!border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] focus-visible:!ring-0 md:text-2xl"
                                             placeholder="Task Name"
                                             rows={1}
                                             autoFocus
@@ -525,7 +525,7 @@ export function TaskDetails({
                                                 onSelect={() => setStatus(statusOption)}
                                                 className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                             >
-                                                <span className={cn("mr-2 h-2 w-2 rounded-full", statusOption === "Active" ? "bg-blue-500" : "bg-emerald-500")} />
+                                                <span className={cn("mr-2 h-2 w-2 rounded-full", statusOption === "Active" ? "bg-[var(--brand-primary)]" : "bg-[var(--state-success)]")} />
                                                 {statusOption}
                                                 {status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                             </DropdownMenuItem>
@@ -549,9 +549,9 @@ export function TaskDetails({
                                             <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_22%,transparent)] transition-transform duration-300 group-hover/priority:translate-y-0" />
                                             <span className={cn(
                                                 "relative z-10 h-2.5 w-2.5 rounded-full shadow-sm",
-                                                urgency === "Urgent" && "bg-rose-500",
-                                                urgency === "Normal" && "bg-amber-500",
-                                                urgency === "Idea" && "bg-blue-500"
+                                                urgency === "Urgent" && "bg-[var(--state-urgent)]",
+                                                urgency === "Normal" && "bg-[var(--state-warning)]",
+                                                urgency === "Idea" && "bg-[var(--brand-primary)]"
                                             )} />
                                             <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{urgency}</span>
                                         </button>
@@ -565,9 +565,9 @@ export function TaskDetails({
                                             >
                                                 <span className={cn(
                                                     "mr-2 h-2 w-2 rounded-full",
-                                                    urgencyOption === "Urgent" && "bg-rose-500",
-                                                    urgencyOption === "Normal" && "bg-amber-500",
-                                                    urgencyOption === "Idea" && "bg-blue-500"
+                                                    urgencyOption === "Urgent" && "bg-[var(--state-urgent)]",
+                                                    urgencyOption === "Normal" && "bg-[var(--state-warning)]",
+                                                    urgencyOption === "Idea" && "bg-[var(--brand-primary)]"
                                                 )} />
                                                 {urgencyOption}
                                                 {urgency === urgencyOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
@@ -585,7 +585,7 @@ export function TaskDetails({
                                             className={cn(
                                                 "group/deadline relative flex h-10 w-full items-center justify-between overflow-hidden rounded-full border px-3 shadow-[var(--shadow-apple)] transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
                                                 deadline
-                                                    ? "border-blue-200/70 bg-blue-50/40 text-blue-700 hover:border-blue-300/70"
+                                                    ? "border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--primary)] hover:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))]"
                                                     : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                                             )}
                                         >
@@ -595,7 +595,7 @@ export function TaskDetails({
                                                     {deadline ? format(deadline, "dd MMM yyyy") : "Set deadline"}
                                                 </span>
                                             </span>
-                                            <span className="ml-2 inline-flex shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_80%,transparent)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                                            <span className="ml-2 inline-flex shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_80%,transparent)] px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                                 {deadline ? format(deadline, "EEE") : "None"}
                                             </span>
                                         </button>
@@ -668,7 +668,7 @@ export function TaskDetails({
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <SidePanelSectionTitle title="Time history" icon={<Clock className="h-3.5 w-3.5" />} />
-                                <div className="text-[11px] font-semibold text-[var(--text-muted)]">
+                                <div className="text-xs font-semibold text-[var(--text-muted)]">
                                     {sortedTimeLogs.length} Sessions
                                 </div>
                             </div>
@@ -703,7 +703,7 @@ export function TaskDetails({
                                         )}
                                         action={<FolderOpen className="h-4 w-4 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]" />}
                                     >
-                                        <p className="truncate text-[11px] font-medium text-[var(--text-secondary)]">{projectPartnerLabel}</p>
+                                        <p className="truncate text-xs font-medium text-[var(--text-secondary)]">{projectPartnerLabel}</p>
                                     </SidePanelInfoCard>
                                 </button>
 
@@ -717,7 +717,7 @@ export function TaskDetails({
                                             className={cn(
                                                 "truncate text-left text-base font-black leading-tight tracking-tight transition sm:text-lg",
                                                 projectSitePanelHref || onOpenSite
-                                                    ? "text-[var(--text-primary)] hover:text-blue-600"
+                                                    ? "text-[var(--text-primary)] hover:text-[var(--primary)]"
                                                     : "cursor-not-allowed text-[var(--text-muted)]"
                                             )}
                                             title="Open site panel"
@@ -743,11 +743,11 @@ export function TaskDetails({
                                                             <ArrowUpRight className="h-3.5 w-3.5" />
                                                         </>
                                                     )}
-                                                    className="rounded-lg px-2.5 py-1.5 text-[10px]"
+                                                    className="rounded-lg px-2.5 py-1.5 text-xs"
                                                 />
                                             </a>
                                         ) : (
-                                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-[10px] opacity-70" />
+                                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-xs opacity-70" />
                                         )}
                                     </div>
                                 </SidePanelInfoCard>

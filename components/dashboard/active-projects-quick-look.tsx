@@ -53,11 +53,11 @@ export function ActiveProjectsQuickLook({ projects }: ActiveProjectsQuickLookPro
                                         </div>
                                         <div className="flex items-center gap-2 flex-shrink-0">
                                             {project.paymentStatus === "Paid" ? (
-                                                <Badge variant="outline" className="text-[9px] h-5 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                                <Badge variant="outline" className="text-xs h-5 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
                                                     PAID
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline" className="text-[9px] h-5 bg-rose-500/10 text-rose-600 border-rose-500/20">
+                                                <Badge variant="outline" className="text-xs h-5 bg-rose-500/10 text-rose-600 border-rose-500/20">
                                                     UNPAID
                                                 </Badge>
                                             )}

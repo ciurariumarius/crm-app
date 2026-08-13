@@ -38,7 +38,7 @@ export function SidePanelMetaBar({ entityLabel, entityId, createdAt, updatedAt, 
                         <button
                             type="button"
                             onClick={onDelete}
-                            className="text-[var(--text-muted)] transition hover:text-rose-500"
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-[12px] text-[var(--text-muted)] transition hover:bg-[var(--state-danger-surface)] hover:text-[var(--state-urgent)]"
                             aria-label={`Delete ${entityLabel}`}
                             title={`Delete ${entityLabel}`}
                         >
@@ -80,7 +80,7 @@ export function SidePanelDangerZone({
         <div className={cn("pt-8 border-t border-dashed border-[color:color-mix(in_srgb,var(--state-overdue)_35%,transparent)]", className)}>
             <div className="flex items-center justify-between gap-3">
                 <div className="space-y-1">
-                    <h4 className="inline-flex items-center gap-2 text-sm font-semibold text-rose-600">
+                    <h4 className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--state-urgent)]">
                         <AlertTriangle className="h-4 w-4" />
                         {title}
                     </h4>
@@ -165,7 +165,7 @@ export function SidePanelEmptyState({ message, className }: SidePanelEmptyStateP
     return (
         <div
             className={cn(
-                "px-2 py-4 text-center text-[11px] font-medium text-[var(--text-muted)] opacity-80",
+                "px-2 py-4 text-center text-xs font-medium text-[var(--text-muted)] opacity-80",
                 className
             )}
         >
@@ -183,7 +183,7 @@ export function SidePanelLoadingState({ message = "Loading...", className }: Sid
     return (
         <div
             className={cn(
-                "flex items-center justify-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-4 py-5 text-[12px] font-medium text-[var(--text-secondary)]",
+                "flex items-center justify-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-4 py-5 text-xs font-medium text-[var(--text-secondary)]",
                 className
             )}
         >

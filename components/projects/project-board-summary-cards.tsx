@@ -36,7 +36,7 @@ function SummaryItem({
             </div>
             <div className="min-w-0">
                 <p className="text-[13px] font-semibold leading-none text-[var(--text-secondary)]">{label}</p>
-                <p className="mt-1 text-[12px] font-medium leading-none text-[var(--text-secondary)]">{value}</p>
+                <p className="mt-1 text-xs font-medium leading-none text-[var(--text-secondary)]">{value}</p>
             </div>
         </div>
     )

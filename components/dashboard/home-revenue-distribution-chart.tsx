@@ -283,7 +283,7 @@ function RevenueDateFilter({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all sm:h-10 sm:text-xs sm:min-w-[148px] sm:w-auto",
+                        "inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-xs font-semibold transition-all sm:h-10 sm:text-xs sm:min-w-[148px] sm:w-auto",
                         activePresetId !== "all"
                             ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
                             : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_94%,transparent)]"
@@ -308,7 +308,7 @@ function RevenueDateFilter({
                                 setOpen(false)
                             }}
                             className={cn(
-                                "inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-[11px] font-semibold transition-colors",
+                                "inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-xs font-semibold transition-colors",
                                 index === 0 ? "w-full" : "w-[calc(50%-4px)]",
                                 activePresetId === preset.id
                                     ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
@@ -340,12 +340,12 @@ function RevenueDateFilter({
                         month: "w-full",
                         month_grid: "w-full table-fixed border-collapse",
                         weekdays: "grid w-full grid-cols-7",
-                        weekday: "text-center text-[9px] font-medium text-[var(--text-secondary)]",
+                        weekday: "text-center text-xs font-medium text-[var(--text-secondary)]",
                         weeks: "w-full",
                         week: "mt-0 grid w-full grid-cols-7",
                         day: "w-full",
                         nav: "absolute inset-x-0 top-1 flex w-full items-center justify-between px-1",
-                        month_caption: "flex h-5 w-full items-center justify-center px-6 text-[12px]",
+                        month_caption: "flex h-5 w-full items-center justify-center px-6 text-xs",
                         button_previous: "h-4.5 w-4.5",
                         button_next: "h-4.5 w-4.5",
                     }}
@@ -358,11 +358,11 @@ function RevenueDateFilter({
                             onSelectPreset("all")
                             setOpen(false)
                         }}
-                        className="text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     >
                         Clear range
                     </button>
-                    <span className="text-[9px] font-medium text-[var(--text-secondary)]">
+                    <span className="text-xs font-medium text-[var(--text-secondary)]">
                         Pick start and end date
                     </span>
                 </div>
@@ -499,7 +499,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
                         <h3 className="text-[17px] font-bold text-[var(--text-primary)] tracking-tight">Revenue Analysis</h3>
                     </div>
-                    <div className="hidden flex-wrap items-center gap-2 text-[11px] font-semibold text-[var(--text-secondary)] sm:flex">
+                    <div className="hidden flex-wrap items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] sm:flex">
                         <span className="rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5">
                             {totalCount} visible {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`}
                         </span>
@@ -508,7 +508,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                         </span>
                     </div>
                     <div className="sm:hidden">
-                        <span className="inline-flex rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                        <span className="inline-flex rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
                             {totalCount} {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`} in view
                         </span>
                     </div>
@@ -537,7 +537,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                 type="button"
                                 onClick={() => setMode(option.value)}
                                 className={cn(
-                                    "rounded-full px-3 py-1.5 text-[10px] font-bold tracking-tight transition-all sm:px-5 sm:py-1.5 sm:text-[11px]",
+                                    "rounded-full px-3 py-1.5 text-xs font-bold tracking-tight transition-all sm:px-5 sm:py-1.5 sm:text-xs",
                                     mode === option.value
                                         ? "bg-[var(--surface-lowest)] text-blue-600 shadow-sm"
                                         : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -595,9 +595,9 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     </div>
                     {/* Central Label */}
                     <div className="relative z-10 flex flex-col items-center justify-center">
-                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--text-secondary)] sm:text-[10px]">Total Revenue</p>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-secondary)] sm:text-xs">Total Revenue</p>
                         <p className="mt-1 text-[28px] font-bold leading-none tracking-tight text-[var(--text-primary)] sm:text-[32px] lg:text-[36px]">
-                            {formatCurrency(totalRevenue).replace(/[\s\u00A0]*RON/i, "")} <span className="ml-1 text-[11px] font-bold text-[var(--text-muted)] sm:text-[12px] lg:text-[14px]">RON</span>
+                            {formatCurrency(totalRevenue).replace(/[\s\u00A0]*RON/i, "")} <span className="ml-1 text-xs font-bold text-[var(--text-muted)] sm:text-xs lg:text-sm">RON</span>
                         </p>
                     </div>
                 </div>
@@ -643,28 +643,28 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                             style={{ backgroundColor: dotColor }}
                                         />
                                         <div className="col-start-2 min-w-0">
-                                            <p className="truncate text-[12px] font-bold text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-[13px]">
+                                            <p className="truncate text-xs font-bold text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-[13px]">
                                                     {entry.label}
                                             </p>
-                                            <p className="mt-1 truncate text-[9px] font-bold text-[var(--text-muted)] sm:mt-0 sm:text-[10px]">
+                                            <p className="mt-1 truncate text-xs font-bold text-[var(--text-muted)] sm:mt-0 sm:text-xs">
                                                 {metaText}
                                             </p>
                                         </div>
                                         <div className="col-start-3 row-span-2 shrink-0 text-right sm:hidden">
-                                            <p className="text-[12px] font-bold text-[var(--text-primary)]">
+                                            <p className="text-xs font-bold text-[var(--text-primary)]">
                                                 {formatCurrency(entry.revenue)}
                                             </p>
-                                            <p className="mt-0.5 text-[10px] font-semibold text-[var(--text-muted)]">
+                                            <p className="mt-0.5 text-xs font-semibold text-[var(--text-muted)]">
                                                 {share.toFixed(1)}%
                                             </p>
                                         </div>
                                     </div>
 
                                     <div className="hidden w-full min-w-0 items-center justify-between gap-3 sm:flex sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
-                                        <p className="text-[13px] font-bold text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-[14px]">
+                                        <p className="text-[13px] font-bold text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-sm">
                                             {formatCurrency(entry.revenue)}
                                         </p>
-                                        <div className="mt-0.5 text-[10px] font-semibold text-[var(--text-muted)] sm:text-[11px]">
+                                        <div className="mt-0.5 text-xs font-semibold text-[var(--text-muted)] sm:text-xs">
                                             {share.toFixed(1)}%
                                         </div>
                                     </div>
@@ -675,7 +675,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     {chartData.length > 4 && (
                         <button
                             onClick={() => setIsListExpanded(!isListExpanded)}
-                            className="w-full rounded-xl border border-transparent py-2 text-center text-[11px] font-bold text-[var(--text-secondary)] transition-colors hover:border-[var(--line-subtle)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_88%,transparent)] hover:text-[var(--text-primary)] sm:py-2.5 sm:text-[12px]"
+                            className="w-full rounded-xl border border-transparent py-2 text-center text-xs font-bold text-[var(--text-secondary)] transition-colors hover:border-[var(--line-subtle)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_88%,transparent)] hover:text-[var(--text-primary)] sm:py-2.5 sm:text-xs"
                         >
                             {isListExpanded ? "Show less" : `View all ${totalCount} ${mode === "type" ? "types" : `${mode}s`}`}
                         </button>

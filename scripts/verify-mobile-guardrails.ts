@@ -23,6 +23,7 @@ function run() {
 
   const mobileBottomNav = read("components/layout/mobile-bottom-nav.tsx")
   assert.match(mobileBottomNav, /window\.addEventListener\("scroll", onWindowScroll/)
+  assert.match(mobileBottomNav, /inline-flex h-11 w-11[\s\S]*?aria-label="Quick actions"/)
   assert.doesNotMatch(mobileBottomNav, /appScrollContainer/)
 
   const tablePrimitive = read("components/ui/table.tsx")

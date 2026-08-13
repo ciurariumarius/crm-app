@@ -61,7 +61,7 @@ export function TimeTrackerWidget({
                             {formatClock(currentSessionSeconds)}
                         </span>
                         <span className={cn(
-                            "text-[10px] font-black uppercase tracking-wider rounded-md px-1.5 py-0.5 shrink-0",
+                            "text-xs font-black uppercase tracking-wider rounded-md px-1.5 py-0.5 shrink-0",
                             isRunning ? "bg-emerald-100/50 text-emerald-600" : isPaused ? "bg-amber-100/50 text-amber-600" : "hidden"
                         )}>
                             {timerStatusLabel}

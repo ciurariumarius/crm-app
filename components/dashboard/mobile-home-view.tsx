@@ -215,17 +215,17 @@ export function MobileHomeView({
                 <h2 className="text-[13px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Financial overview</h2>
                 <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4 shadow-[var(--shadow-apple)]">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">{monthName} revenue</p>
+                        <p className="text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)]">{monthName} revenue</p>
                         <p className="mt-2 flex items-baseline gap-1.5">
                             <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[var(--primary)] leading-none">{revenueLabel.amount}</span>
-                            <span className="font-mono text-[12px] font-semibold text-[var(--primary)]">{revenueLabel.code}</span>
+                            <span className="font-mono text-xs font-semibold text-[var(--primary)]">{revenueLabel.code}</span>
                         </p>
                     </div>
                     <div className="rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4 shadow-[var(--shadow-apple)]">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Unpaid projects</p>
+                        <p className="text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Unpaid projects</p>
                         <p className="mt-2 flex items-baseline gap-1.5">
                             <span className="font-mono text-[36px] font-bold tracking-[-0.02em] text-[var(--debt)] leading-none">{unpaidLabel.amount}</span>
-                            <span className="font-mono text-[12px] font-semibold text-[var(--debt)]">{unpaidLabel.code}</span>
+                            <span className="font-mono text-xs font-semibold text-[var(--debt)]">{unpaidLabel.code}</span>
                         </p>
                     </div>
                 </div>
@@ -237,13 +237,13 @@ export function MobileHomeView({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="border-r border-[var(--line-subtle)] pr-3">
                             <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-[var(--primary)] leading-none">{liveProjects}</p>
-                            <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Live projects</p>
+                            <p className="mt-1 text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Live projects</p>
                             <div className="mt-3 flex flex-wrap gap-1.5">
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-2 py-1 text-xs font-semibold text-[var(--primary)]">
                                     <RotateCw className="h-2.5 w-2.5" />
                                     {activeMonthlyProjects}
                                 </span>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary)_10%,var(--surface-lowest))] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,var(--primary)_10%,var(--surface-lowest))] px-2 py-1 text-xs font-semibold text-[var(--primary)]">
                                     <Zap className="h-2.5 w-2.5" />
                                     {activeOneTimeProjects}
                                 </span>
@@ -251,9 +251,9 @@ export function MobileHomeView({
                         </div>
                         <div className="pl-1">
                             <p className="font-mono text-[34px] font-bold tracking-[-0.02em] text-[var(--text-primary)] leading-none">{activeTasks}</p>
-                            <p className="mt-1 text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Active tasks</p>
-                            <p className="mt-3 font-mono text-[30px] font-bold leading-none text-[var(--text-primary)]">{formatHours(totalHoursMonth)}h</p>
-                            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">worked in {monthName}</p>
+                            <p className="mt-1 text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Active tasks</p>
+                            <p className="mt-3 font-mono text-3xl font-bold leading-none text-[var(--text-primary)]">{formatHours(totalHoursMonth)}h</p>
+                            <p className="mt-1 text-xs text-[var(--text-secondary)]">worked in {monthName}</p>
                         </div>
                     </div>
                 </div>
@@ -289,16 +289,16 @@ export function MobileHomeView({
                                     className="w-full rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4 text-left shadow-[var(--shadow-apple)] transition-colors hover:bg-[var(--surface-low)]/70"
                                 >
                                     <h3 className="text-[15px] font-semibold text-[var(--text-primary)] leading-snug">{task.name}</h3>
-                                    <p className="mt-1 truncate text-[12px] text-[var(--text-secondary)]">
+                                    <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
                                         {projectLabel}
                                     </p>
                                     <div className="mt-3 flex items-center gap-2">
                                         {isOverdue ? (
-                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--state-overdue)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_16%,transparent)] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[var(--state-overdue)]">
+                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--state-overdue)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_16%,transparent)] px-2.5 py-1 text-xs font-semibold tracking-[0.03em] text-[var(--state-overdue)]">
                                                 Overdue
                                             </Badge>
                                         ) : (
-                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--primary-container)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-[var(--primary)]">
+                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--primary-container)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-2.5 py-1 text-xs font-semibold tracking-[0.03em] text-[var(--primary)]">
                                                 {task?.status || "Active"}
                                             </Badge>
                                         )}
@@ -310,7 +310,7 @@ export function MobileHomeView({
                         {upcomingTasks.length > 6 ? (
                             <Link
                                 href="/tasks"
-                                className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-[var(--line-subtle)] px-4 py-2 text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-lowest)]"
+                                className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-[var(--line-subtle)] px-4 py-2 text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-lowest)]"
                             >
                                 View All Tasks
                             </Link>
@@ -327,7 +327,7 @@ export function MobileHomeView({
 
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--primary)]">Monthly subscriptions</p>
+                        <p className="text-xs font-semibold tracking-[0.03em] text-[var(--primary)]">Monthly subscriptions</p>
                         <div className="space-y-2">
                             {visibleMonthlyProjects.map((project) => {
                                 return (
@@ -339,7 +339,7 @@ export function MobileHomeView({
                                     >
                                         <p className="text-[15px] font-bold leading-tight text-[var(--text-primary)]">{project.siteName || "Untitled project"}</p>
                                         <div className="mt-2 flex items-center justify-between gap-3">
-                                            <div className="inline-flex items-center gap-3 text-[11px] font-semibold text-[var(--text-secondary)]">
+                                            <div className="inline-flex items-center gap-3 text-xs font-semibold text-[var(--text-secondary)]">
                                                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-low)] px-2 py-0.5 text-[var(--primary)]">
                                                     {format(new Date(project.createdAt || new Date()), "MMMM")}
                                                 </span>
@@ -348,7 +348,7 @@ export function MobileHomeView({
                                                 </p>
                                             </div>
                                             <Badge className={cn(
-                                                "rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em]",
+                                                "rounded-full px-2.5 py-1 text-xs font-semibold tracking-[0.03em]",
                                                 project.paymentStatus === "Paid"
                                                     ? "border border-emerald-200 bg-emerald-50 text-emerald-600"
                                                     : "border border-rose-200 bg-rose-50 text-rose-600"
@@ -368,7 +368,7 @@ export function MobileHomeView({
                     </div>
 
                     <div className="space-y-2">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--primary)]">Fixed-fee projects</p>
+                        <p className="text-xs font-semibold tracking-[0.03em] text-[var(--primary)]">Fixed-fee projects</p>
                         <div className="space-y-2">
                             {visibleOneTimeProjects.map((project) => {
                                 const parsed = splitProjectLabel(project.siteName || "Untitled project")
@@ -381,9 +381,9 @@ export function MobileHomeView({
                                         className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[var(--shadow-apple)]"
                                     >
                                         <p className="text-[15px] font-semibold leading-tight text-[var(--text-primary)]">{parsed.title}</p>
-                                        <p className="mt-1 truncate text-[12px] text-[var(--text-secondary)]">{parsed.subtitle || "No service"}</p>
+                                        <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">{parsed.subtitle || "No service"}</p>
                                         <div className="mt-2 flex items-center justify-between gap-3">
-                                            <div className="inline-flex items-center gap-3 text-[11px] font-medium text-[var(--text-secondary)]">
+                                            <div className="inline-flex items-center gap-3 text-xs font-medium text-[var(--text-secondary)]">
                                                 <span className="inline-flex items-center gap-1">
                                                     <Clock3 className="h-3 w-3" />
                                                     {Math.floor(Number(project.hoursLogged || 0))}h {minutes}m
@@ -391,7 +391,7 @@ export function MobileHomeView({
                                                 <span>{project.completedTasks}/{project.totalTasks}</span>
                                             </div>
                                             <Badge className={cn(
-                                                "rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em]",
+                                                "rounded-full px-2.5 py-1 text-xs font-semibold tracking-[0.03em]",
                                                 project.paymentStatus === "Paid"
                                                     ? "border border-emerald-200 bg-emerald-50 text-emerald-600"
                                                     : "border border-rose-200 bg-rose-50 text-rose-600"
@@ -412,7 +412,7 @@ export function MobileHomeView({
 
                     <Link
                         href="/projects"
-                        className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-[var(--line-subtle)] px-4 py-2 text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-lowest)]"
+                        className="inline-flex w-full items-center justify-center rounded-full border border-dashed border-[var(--line-subtle)] px-4 py-2 text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-lowest)]"
                     >
                         View All Active Projects
                     </Link>
@@ -427,7 +427,7 @@ export function MobileHomeView({
 
                 <div className="rounded-3xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
                     <div className="border-b border-[var(--line-subtle)] px-4 py-3">
-                        <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Due payment</p>
+                        <p className="text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Due payment</p>
                     </div>
                     {visibleUnpaidPartners.length === 0 ? (
                         <div className="px-4 py-5 text-sm text-[var(--text-secondary)]">No unpaid balances.</div>
@@ -453,7 +453,7 @@ export function MobileHomeView({
                                                 )}
                                                 <div>
                                                     <p className="text-[13px] font-semibold text-[var(--text-primary)]">{partner.name}</p>
-                                                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                                                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
                                                         Owed sum:
                                                         <span className="ml-1 font-mono font-bold text-[var(--debt)]">
                                                             {formatCurrency(partner.totalUnpaid)}
@@ -470,7 +470,7 @@ export function MobileHomeView({
                                                     e.stopPropagation()
                                                     handleSettlePartner(partner.id)
                                                 }}
-                                                className="h-8 rounded-full px-3 text-[11px] font-semibold tracking-[0.03em] text-[var(--text-secondary)] hover:bg-emerald-50 hover:text-emerald-700"
+                                                className="h-8 rounded-full px-3 text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)] hover:bg-emerald-50 hover:text-emerald-700"
                                             >
                                                 {currentSettling ? "Saving..." : "Mark Paid"}
                                             </Button>
@@ -483,9 +483,9 @@ export function MobileHomeView({
                                                     <div key={project.id} className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)] last:border-0 border-dashed">
                                                         <div className="flex items-center gap-2 flex-1 min-w-0">
                                                             <div className="h-1 w-1 rounded-full bg-rose-400 shrink-0" />
-                                                            <span className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{project.name}</span>
+                                                            <span className="text-xs font-medium text-[var(--text-secondary)] truncate">{project.name}</span>
                                                         </div>
-                                                        <span className="text-[11px] font-bold text-[var(--text-primary)] tabular-nums ml-2">{formatCurrency(project.amount)}</span>
+                                                        <span className="text-xs font-bold text-[var(--text-primary)] tabular-nums ml-2">{formatCurrency(project.amount)}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -501,9 +501,9 @@ export function MobileHomeView({
                     <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-4 py-3">
                         <div className="inline-flex items-center gap-2">
                             <History className="h-4 w-4 text-[var(--text-secondary)]" />
-                            <p className="text-[12px] font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Payment history</p>
+                            <p className="text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)]">Payment history</p>
                         </div>
-                        <Link href="/payments" className="text-[12px] font-semibold tracking-[0.03em] text-[var(--primary)]">
+                        <Link href="/payments" className="text-xs font-semibold tracking-[0.03em] text-[var(--primary)]">
                             View all
                         </Link>
                     </div>
@@ -524,12 +524,12 @@ export function MobileHomeView({
                                         </span>
                                         <div className="min-w-0">
                                             <p className="text-[13px] font-semibold text-[var(--text-primary)]">{item.projectName}</p>
-                                            <p className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">
+                                            <p className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">
                                                 {item.partnerName} · {formatRelativeDate(item.date)}
                                             </p>
                                         </div>
                                     </div>
-                                    <p className="font-mono text-[20px] font-bold text-emerald-600 leading-none">{splitCurrencyLabel(formatCurrency(item.amount)).amount}</p>
+                                    <p className="font-mono text-xl font-bold text-emerald-600 leading-none">{splitCurrencyLabel(formatCurrency(item.amount)).amount}</p>
                                 </button>
                             ))}
                         </div>

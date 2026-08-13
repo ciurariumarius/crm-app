@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
-import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { formatProjectName } from "@/lib/utils"
 import { requireAuth } from "@/lib/auth"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
@@ -169,34 +169,31 @@ export default async function ProjectsPage({
             <ProjectsSearchProvider initialSearch={q || ""}>
                 <div className="space-y-5 sm:space-y-6">
                     <div className="flex flex-col gap-3.5 sm:gap-4">
-                        <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-4 lg:p-5">
-                            <DashboardPageHeader
+                            <AppPageHeader
                                 title="Projects"
-                                showMobile
                                 search={<ProjectsSearchInput />}
                                 mobileSearch={<ProjectsSearchInput />}
-                                mobileActions={(
+                                mobilePrimaryAction={(
                                     <CreateProjectButton
                                         variant="full"
                                         label="Add"
                                         showLabelOnMobile
-                                        className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
+                                        className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
                                         partners={partnersForClient}
                                         services={servicesForClient}
                                     />
                                 )}
-                                actions={(
+                                primaryAction={(
                                     <CreateProjectButton
                                         variant="full"
                                         label="Add"
                                         showLabelOnMobile
-                                        className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
+                                        className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
                                         partners={partnersForClient}
                                         services={servicesForClient}
                                     />
                                 )}
                             />
-                        </div>
                         <ProjectsFiltersToolbar
                             partners={partnersList}
                             currentStatus={queryStatus}

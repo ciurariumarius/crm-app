@@ -302,7 +302,9 @@ export function TimeLogSheet({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-[var(--text-secondary)] hover:bg-rose-50 hover:text-rose-600"
+                        aria-label="Delete time log"
+                        title="Delete time log"
+                        className="text-[var(--text-secondary)] hover:bg-[var(--state-danger-surface)] hover:text-[var(--state-urgent)]"
                         onClick={handleDelete}
                         disabled={isSaving}
                     >

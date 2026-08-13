@@ -56,7 +56,7 @@ export function TasksPaginationBar({
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
-                                className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]"
+                                className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)]"
                                 aria-label="Tasks per page"
                                 title="Tasks per page"
                             >
@@ -75,7 +75,7 @@ export function TasksPaginationBar({
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
+                    <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]">
                         {isSearching ? "..." : `${display.page}/${display.totalPages}`}
                     </span>
                 </div>

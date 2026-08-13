@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { CreateSiteDialog } from "@/components/vault/create-site-dialog"
 import { SitesTable } from "@/components/vault/sites-table"
 import Link from "next/link"
-import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { requireAuth } from "@/lib/auth"
 import { DomainsFilters } from "@/components/vault/domains-filters"
 import type { Prisma } from "@prisma/client"
@@ -78,21 +78,18 @@ export default async function SitesPage({
 
     return (
         <div className="flex flex-col gap-8 pb-8 sm:gap-10">
-            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
-                <DashboardPageHeader
+                <AppPageHeader
                     title="Domains"
-                    actions={<CreateSiteDialog partners={partners} label="Add" showLabelOnMobile className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9" />}
-                    mobileActions={
+                    primaryAction={<CreateSiteDialog partners={partners} label="Add" showLabelOnMobile className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7" />}
+                    mobilePrimaryAction={
                         <CreateSiteDialog
                             partners={partners}
                             label="Add"
                             showLabelOnMobile
-                            className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
+                            className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
                         />
                     }
-                    showMobile
                 />
-            </div>
 
             <DomainsFilters 
                 partners={partners} 
@@ -108,7 +105,7 @@ export default async function SitesPage({
                 
                 {/* Pagination Footer */}
                 <div className="flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-low)] px-3 py-2 shadow-[var(--shadow-apple)] sm:px-4">
-                    <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
+                    <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]">
                         {page}/{totalPages || 1}
                     </span>
 

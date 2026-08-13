@@ -138,12 +138,12 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex flex-col flex-1 min-w-0">
                                             <span className="truncate text-[15px] font-bold text-[var(--text-primary)]">{partner.name}</span>
-                                            <span className="text-[12px] font-medium text-[var(--text-secondary)] mt-0.5">
+                                            <span className="text-xs font-medium text-[var(--text-secondary)] mt-0.5">
                                                 {partner.unpaidProjects.length} unpaid project{partner.unpaidProjects.length === 1 ? "" : "s"}
                                             </span>
                                         </div>
                                         <div className="flex shrink-0 pt-0.5">
-                                            <span className="font-mono text-[16px] font-black text-rose-600 tracking-tight">
+                                            <span className="font-mono text-base font-black text-rose-600 tracking-tight">
                                                 {formatCurrency(partner.totalUnpaid)}
                                             </span>
                                         </div>
@@ -161,7 +161,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                             )}>
                                                 <ChevronDown className="h-3 w-3" />
                                             </div>
-                                            <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--text-secondary)] group-hover:text-[var(--text-secondary)]">
+                                            <span className="text-xs font-bold uppercase tracking-[0.05em] text-[var(--text-secondary)] group-hover:text-[var(--text-secondary)]">
                                                 {isExpanded ? "Hide Details" : "View Details"}
                                             </span>
                                         </button>
@@ -170,7 +170,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                             type="button"
                                             size="sm"
                                             variant="secondary"
-                                            className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
+                                            className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-xs font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
                                             onClick={() => handleMarkAllPaid(partner.id)}
                                             disabled={isSettling}
                                         >
@@ -190,7 +190,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                             <span className="ui-overline text-[var(--text-muted)]">Breakdown</span>
                                             <Link
                                                 href={`/projects?partnerId=${partner.id}&payment=Unpaid`}
-                                                className="text-[11px] font-black uppercase tracking-wider text-blue-600 hover:text-blue-500"
+                                                className="text-xs font-black uppercase tracking-wider text-blue-600 hover:text-blue-500"
                                             >
                                                 View List
                                             </Link>
@@ -212,7 +212,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                                                 type="button"
                                                                 size="sm"
                                                                 variant="secondary"
-                                                                className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
+                                                                className="h-8 rounded-xl border-emerald-100 bg-emerald-50/90 px-3 text-xs font-black uppercase tracking-[0.08em] text-emerald-600 hover:bg-emerald-100"
                                                                 onClick={() => handleMarkProjectPaid(partner.id, project.id, project.amount)}
                                                                 disabled={isSettlingProj}
                                                             >

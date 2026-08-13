@@ -115,7 +115,7 @@ export function TaskGridCard({
     const servicesLine = serviceLabels.length > 0 ? serviceLabels.join(" · ") : (task.project?.name || "Task")
     const secondaryLine = [servicesLine, recurringMonthLabel].filter(Boolean).join(" · ")
     const flag = getTaskFlag({ urgency: task.urgency || "Normal", status: task.status || "Active", isOverdue })
-    const topPillSizeClass = compact ? "h-[18px] px-2 text-[10px] leading-4" : "h-[22px] px-2 text-[11px] leading-4"
+    const topPillSizeClass = compact ? "h-[18px] px-2 text-xs leading-4" : "h-[22px] px-2 text-xs leading-4"
 
     return (
         <div
@@ -147,6 +147,8 @@ export function TaskGridCard({
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label="Open task actions"
+                            title="Task actions"
                             className={cn(
                                 "rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
                                 compact ? "h-[22px] w-[22px]" : "h-7 w-7"
@@ -222,7 +224,7 @@ export function TaskGridCard({
                 <h4
                     className={cn(
                         "pr-8 font-bold tracking-[-0.015em] text-[var(--text-primary)] whitespace-normal break-words",
-                        compact ? "py-2 text-[16px] leading-[1.14]" : "min-h-[2.25rem] text-[19px] leading-[1.12]",
+                        compact ? "py-2 text-base leading-[1.14]" : "min-h-[2.25rem] text-[19px] leading-[1.12]",
                         task.status === "Completed" && "line-through opacity-50"
                     )}
                 >
@@ -234,7 +236,7 @@ export function TaskGridCard({
                 <p
                     className={cn(
                         "line-clamp-1 min-h-[1rem] font-medium tracking-[0.01em] text-[var(--text-secondary)]",
-                        compact ? "text-[10px] leading-4" : "text-[11px] leading-[1.1rem]"
+                        compact ? "text-xs leading-4" : "text-xs leading-[1.1rem]"
                     )}
                     title={secondaryLine}
                 >
@@ -244,7 +246,7 @@ export function TaskGridCard({
                 <div className="mt-auto sm:hidden">
                     <span
                         className={cn(
-                            "inline-flex items-center justify-center rounded-full px-2 text-[8px] font-black uppercase tracking-[0.07em]",
+                            "inline-flex items-center justify-center rounded-full px-2 text-xs font-black uppercase tracking-[0.07em]",
                             compact ? "h-[18px]" : "h-[22px]",
                             flag.className
                         )}

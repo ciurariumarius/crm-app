@@ -123,21 +123,21 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                 <Globe className="h-3.5 w-3.5 text-blue-500/70 shrink-0" />
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-[var(--text-primary)] tabular-nums leading-none">{partner._count.sites}</span>
-                                    <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-none">Domains</span>
+                                    <span className="text-xs font-medium text-[var(--text-secondary)] leading-none">Domains</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-center gap-2.5">
                                 <Briefcase className="h-3.5 w-3.5 shrink-0 text-[var(--state-review)]" />
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-[var(--text-primary)] tabular-nums leading-none">{totalProjects}</span>
-                                    <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-none">Projects</span>
+                                    <span className="text-xs font-medium text-[var(--text-secondary)] leading-none">Projects</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-center gap-2.5">
                                 <CheckSquare className="h-3.5 w-3.5 text-emerald-500/70 shrink-0" />
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-[var(--text-primary)] tabular-nums leading-none">{partner.totalTasks || 0}</span>
-                                    <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-none">Tasks</span>
+                                    <span className="text-xs font-medium text-[var(--text-secondary)] leading-none">Tasks</span>
                                 </div>
                             </div>
                         </div>
@@ -146,10 +146,10 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                     {/* Mid Section: Highlights */}
                     <div className="flex items-center justify-between border-y border-[var(--line-subtle)] px-6 py-4 bg-[var(--surface-low)]/30">
                         <div className="space-y-1">
-                            <span className="block text-[11px] font-medium text-[var(--text-secondary)]">Lifetime revenue</span>
+                            <span className="block text-xs font-medium text-[var(--text-secondary)]">Lifetime revenue</span>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-base font-black text-[var(--text-primary)] tabular-nums">{formatNumber(totalRevenue)}</span>
-                                <span className="text-[11px] font-medium text-[var(--text-muted)]">RON</span>
+                                <span className="text-xs font-medium text-[var(--text-muted)]">RON</span>
                             </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
@@ -163,7 +163,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                             {unpaidRevenue > 0 && (
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-base font-black text-rose-600 tabular-nums">{formatNumber(unpaidRevenue)}</span>
-                                    <span className="text-[11px] font-medium text-rose-400">RON</span>
+                                    <span className="text-xs font-medium text-rose-400">RON</span>
                                 </div>
                             )}
                         </div>
@@ -172,7 +172,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                     {/* Bottom Section: Mini Ledger */}
                     <div className="p-6 pt-5 bg-[var(--surface-lowest)] space-y-4">
                         <div className="flex items-center justify-between">
-                            <h4 className="text-[11px] font-semibold tracking-[0.04em] text-[var(--text-secondary)]">Unpaid projects</h4>
+                            <h4 className="text-xs font-semibold tracking-[0.04em] text-[var(--text-secondary)]">Unpaid projects</h4>
                             {optimisticUnpaidProjects.length > 0 && (
                                 <Button
                                     type="button"
@@ -180,7 +180,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                     disabled={isSettling}
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 px-2 text-[11px] font-semibold text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                                    className="h-7 px-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
                                 >
                                     {isSettling ? (
                                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -208,13 +208,13 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                             <span className="text-xs font-black tabular-nums text-rose-600">
                                                 {formatNumber(project.amount)}
                                             </span>
-                                            <span className="text-[11px] font-medium text-[var(--text-muted)]">RON</span>
+                                            <span className="text-xs font-medium text-[var(--text-muted)]">RON</span>
                                         </div>
                                     </Link>
                                 ))}
                                 {optimisticUnpaidProjects.length > 3 && (
                                     <div className="text-center pt-2">
-                                        <span className="text-[11px] font-medium text-[var(--text-muted)] italic">
+                                        <span className="text-xs font-medium text-[var(--text-muted)] italic">
                                             + {optimisticUnpaidProjects.length - 3} more outstanding
                                         </span>
                                     </div>
@@ -223,7 +223,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                         ) : (
                             <div className="flex items-center gap-3 rounded-2xl border border-dashed border-emerald-100 bg-emerald-50/30 p-4 justify-center">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                <span className="text-[11px] font-semibold tracking-[0.03em] text-emerald-700">Account crystal clear</span>
+                                <span className="text-xs font-semibold tracking-[0.03em] text-emerald-700">Account crystal clear</span>
                             </div>
                         )}
                     </div>

@@ -36,7 +36,7 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
                 </div>
                 <Link
                     href="/payments"
-                    className="text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 group"
+                    className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 group"
                 >
                     View All
                     <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
@@ -59,8 +59,8 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
                             <div className="min-w-0 flex flex-col">
                                 <h4 className="font-semibold text-sm truncate shrink-0">{item.projectName}</h4>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[11px] text-muted-foreground font-medium">{item.partnerName}</span>
-                                    <span className="text-[11px] text-muted-foreground font-medium opacity-60 shrink-0">
+                                    <span className="text-xs text-muted-foreground font-medium">{item.partnerName}</span>
+                                    <span className="text-xs text-muted-foreground font-medium opacity-60 shrink-0">
                                         • {formatRelativeDate(item.date)}
                                     </span>
                                 </div>
@@ -78,7 +78,7 @@ export function SettlementHistory({ history }: SettlementHistoryProps) {
 
             {history.length > 5 && (
                 <div className="mt-auto pt-2 border-t border-border/50">
-                    <p className="text-center text-[10px] text-muted-foreground font-medium opacity-60">
+                    <p className="text-center text-xs text-muted-foreground font-medium opacity-60">
                         Showing latest 5 of {history.length} entries
                     </p>
                 </div>

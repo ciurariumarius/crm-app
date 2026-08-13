@@ -19,6 +19,7 @@
     "test:notes-drag-drop": "tsx scripts/verify-notes-drag-drop.ts",
     "verify:mobile": "tsx scripts/verify-mobile-guardrails.ts",
     "verify:tablet": "node --import tsx scripts/verify-tablet-guardrails.ts",
+    "verify:design": "tsx scripts/verify-design-system.ts",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "security:check-public-assets": "tsx scripts/check-public-assets.ts",

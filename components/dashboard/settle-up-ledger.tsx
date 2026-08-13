@@ -79,7 +79,7 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 flex-1">
                                     <span className="font-semibold text-sm truncate sm:w-48">{partner.name}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[11px] font-medium text-muted-foreground">Owed:</span>
+                                        <span className="text-xs font-medium text-muted-foreground">Owed:</span>
                                         <span className="text-sm font-black text-red-600 tabular-nums">{partner.totalUnpaid} RON</span>
                                     </div>
                                 </div>
@@ -88,7 +88,7 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-[11px] font-semibold h-8 border-red-50/50 hover:bg-emerald-50/50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-none px-4"
+                                className="text-xs font-semibold h-8 border-red-50/50 hover:bg-emerald-50/50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-none px-4"
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     handleSettle(partner.id)
@@ -111,9 +111,9 @@ export function SettleUpLedger({ partners, id }: SettleUpLedgerProps) {
                                     <div key={project.id} className="flex items-center justify-between py-1.5 border-b border-border/10 last:border-0 group/project">
                                         <div className="flex items-center gap-2 flex-1">
                                             <div className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                                            <span className="text-[11px] font-medium text-muted-foreground leading-tight">{project.name}</span>
+                                            <span className="text-xs font-medium text-muted-foreground leading-tight">{project.name}</span>
                                         </div>
-                                        <span className="text-[11px] font-bold text-foreground tabular-nums">{project.amount} RON</span>
+                                        <span className="text-xs font-bold text-foreground tabular-nums">{project.amount} RON</span>
                                     </div>
                                 ))}
                             </div>

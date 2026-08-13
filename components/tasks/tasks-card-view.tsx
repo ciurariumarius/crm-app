@@ -220,7 +220,7 @@ export function TasksCardView({
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task); }} className="gap-2 text-sm font-medium cursor-pointer">
                 <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 text-sm font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={(e) => {
+            <DropdownMenuItem className="gap-2 text-sm font-medium text-[var(--state-urgent)] focus:text-[var(--state-urgent)] focus:bg-[var(--state-danger-surface)] cursor-pointer" onClick={(e) => {
                 e.stopPropagation()
                 if (confirm("Delete this task?")) {
                     deleteTasks([task.id]).then(() => toast.success("Task deleted"))
@@ -232,8 +232,8 @@ export function TasksCardView({
     )
 
     const getStatusStyle = (status: string) => {
-        if (status === "Active" || status === "Paused") return "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20"
-        if (status === "Completed") return "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+        if (status === "Active" || status === "Paused") return "bg-[var(--sidebar-accent)] text-[var(--primary)] border border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] dark:bg-[var(--sidebar-accent)] dark:text-[var(--primary)] dark:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))]"
+        if (status === "Completed") return "bg-[var(--state-success-surface)] text-[var(--state-success)] border border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] dark:bg-[var(--state-success-surface)] dark:text-[var(--state-success)] dark:border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))]"
         return "bg-muted text-muted-foreground border border-border"
     }
 
@@ -590,7 +590,7 @@ export function TasksCardView({
                     const timeString = formatTimer(totalSeconds)
                     const isOverdue = task.deadline && isPast(new Date(task.deadline))
                     const isDueToday = task.deadline && isToday(new Date(task.deadline))
-                    const activeHighlight = isRunning ? "text-blue-600" : "text-foreground"
+                    const activeHighlight = isRunning ? "text-[var(--primary)]" : "text-foreground"
 
                     return (
                         <div
@@ -650,16 +650,19 @@ export function TasksCardView({
                                         <div className="text-sm font-bold tracking-tighter flex items-baseline gap-1">
                                             <span className={activeHighlight}>{timeString}</span>
                                             {task.estimatedMinutes && (
-                                                <span className="text-muted-foreground/40 text-[11px] font-medium">/ {Math.floor(task.estimatedMinutes / 60)}h {task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}</span>
+                                                <span className="text-muted-foreground/40 text-xs font-medium">/ {Math.floor(task.estimatedMinutes / 60)}h {task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}</span>
                                             )}
                                         </div>
                                         <div className="text-xs font-medium text-muted-foreground mt-0.5">Spent / Est</div>
                                     </div>
                                     <div className="flex items-center gap-1.5 rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] p-1">
                                         <button
+                                            type="button"
+                                            aria-label={isRunning ? "Pause timer" : isPaused ? "Resume timer" : `Start timer for ${task.name}`}
+                                            title={isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
                                             className={cn(
-                                                "h-7 w-7 rounded-lg flex items-center justify-center transition-all",
-                                                isRunning ? "bg-amber-500/20 text-amber-600" : "bg-transparent text-muted-foreground hover:bg-background hover:shadow-sm"
+                                                "flex h-11 w-11 items-center justify-center rounded-[12px] transition-all sm:h-8 sm:w-8",
+                                                isRunning ? "bg-[var(--state-warning-surface)] text-[var(--state-warning)]" : "bg-transparent text-muted-foreground hover:bg-background hover:shadow-sm"
                                             )}
                                             onClick={(e) => {
                                                 e.preventDefault()
@@ -678,7 +681,10 @@ export function TasksCardView({
 
                                         {isActiveTimerThisTask && (
                                             <button
-                                                className="h-7 w-7 rounded-lg flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 transition-all"
+                                                type="button"
+                                                aria-label="Stop timer"
+                                                title="Stop timer"
+                                                className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-[var(--state-danger-surface)] text-[var(--state-urgent)] transition-all hover:brightness-[0.98] sm:h-8 sm:w-8"
                                                 onClick={(e) => {
                                                     e.preventDefault()
                                                     e.stopPropagation()
@@ -759,7 +765,7 @@ export function TasksCardView({
                         <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
+                            className="h-8 text-xs font-semibold text-[var(--state-urgent)] hover:bg-[var(--state-danger-surface)]"
                             onClick={handleBulkDelete}
                             disabled={isBulkOperating}
                         >

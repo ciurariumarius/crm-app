@@ -31,7 +31,7 @@ import {
     Palette,
 } from "lucide-react"
 import QRCode from "qrcode"
-import { PageHeader } from "@/components/layout/page-header"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ThemeModeToggle } from "@/components/theme/theme-mode-toggle"
@@ -214,12 +214,10 @@ export function SettingsContent({
 
     return (
         <div className="max-w-4xl mx-auto flex flex-col gap-6">
-            <PageHeader
-                title="Settings"
-            />
+            <AppPageHeader title="Settings" subtitle="Manage appearance, profile, security and timer preferences." />
 
             <div className="grid grid-cols-1 gap-8">
-                <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+                <div className="rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-6 shadow-[var(--shadow-apple)]">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--sidebar-accent)] text-[var(--brand-primary)]">
@@ -235,9 +233,9 @@ export function SettingsContent({
                 </div>
 
                 {/* Profile Card */}
-                <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+                <div className="rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-6 shadow-[var(--shadow-apple)]">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="h-10 w-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[var(--sidebar-accent)] text-[var(--brand-primary)]">
                             <UserIcon className="h-5 w-5" />
                         </div>
                         <h2 className="text-xl font-bold">Profile</h2>
@@ -251,7 +249,7 @@ export function SettingsContent({
                         <div className="space-y-2">
                             <Label>Target Hourly Rate (RON)</Label>
                             <Input name="hourlyRate" type="number" defaultValue={user.hourlyRate?.toString() || "0"} placeholder="0" />
-                            <p className="text-[10px] text-muted-foreground">Used for profitability and time sink alerts.</p>
+                            <p className="text-xs text-muted-foreground">Used for profitability and time sink alerts.</p>
                         </div>
                         <div className="space-y-2">
                             <Label>Profile Picture URL</Label>
@@ -259,7 +257,7 @@ export function SettingsContent({
                                 <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                                 <Input name="profilePic" defaultValue={user.profilePic || ""} placeholder="https://..." className="pl-10" />
                             </div>
-                            <p className="text-[10px] text-muted-foreground">Provide an absolute URL to an image. Leave blank to use defaults.</p>
+                            <p className="text-xs text-muted-foreground">Provide an absolute URL to an image. Leave blank to use defaults.</p>
                         </div>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                             <div className="space-y-2">
@@ -271,7 +269,7 @@ export function SettingsContent({
                                     defaultValue={user.timerIdlePauseMinutes ?? 60}
                                     placeholder="60"
                                 />
-                                <p className="text-[10px] text-muted-foreground">Set `0` to disable idle auto-pause.</p>
+                                <p className="text-xs text-muted-foreground">Set `0` to disable idle auto-pause.</p>
                             </div>
                             <div className="space-y-2">
                                 <Label>Hard stop (hours)</Label>
@@ -282,7 +280,7 @@ export function SettingsContent({
                                     defaultValue={user.timerHardCapHours ?? 3}
                                     placeholder="3"
                                 />
-                                <p className="text-[10px] text-muted-foreground">Set `0` to disable hard stop.</p>
+                                <p className="text-xs text-muted-foreground">Set `0` to disable hard stop.</p>
                             </div>
                             <div className="space-y-2">
                                 <Label>Reminder every (min)</Label>
@@ -293,10 +291,10 @@ export function SettingsContent({
                                     defaultValue={user.timerReminderIntervalMinutes ?? 60}
                                     placeholder="60"
                                 />
-                                <p className="text-[10px] text-muted-foreground">Set `0` to disable timer reminders.</p>
+                                <p className="text-xs text-muted-foreground">Set `0` to disable timer reminders.</p>
                             </div>
                         </div>
-                        <Button type="submit" disabled={loading} className="gap-2 bg-blue-600 hover:bg-blue-700">
+                        <Button type="submit" disabled={loading} className="gap-2">
                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Save Profile
                         </Button>
@@ -305,7 +303,7 @@ export function SettingsContent({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Change Password Card */}
-                    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+                    <div className="rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-6 shadow-[var(--shadow-apple)]">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
                                 <Key className="h-5 w-5" />
@@ -388,7 +386,7 @@ export function SettingsContent({
                     </div>
 
                     {/* 2FA Setup Card */}
-                    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+                    <div className="rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-6 shadow-[var(--shadow-apple)]">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--sidebar-accent)] text-[var(--brand-primary)]">
@@ -400,10 +398,10 @@ export function SettingsContent({
 
                         {is2FAEnabled ? (
                             <div className="text-center space-y-4">
-                                <div className="inline-flex h-16 w-16 bg-emerald-500/10 text-emerald-500 rounded-full items-center justify-center mb-2">
+                                <div className="ui-state-success mb-2 inline-flex h-16 w-16 items-center justify-center rounded-full border">
                                     <Shield className="h-8 w-8" />
                                 </div>
-                                <h3 className="text-lg font-bold text-emerald-500">2FA is Enabled</h3>
+                                <h3 className="text-lg font-semibold text-[var(--state-success)]">2FA is Enabled</h3>
                                 <p className="text-sm text-muted-foreground">Your account is secured with a secondary authenticator app.</p>
                                 <div className="relative mt-2">
                                     <Input
@@ -447,7 +445,7 @@ export function SettingsContent({
                                         <div className="bg-[var(--surface-lowest)] p-4 rounded-xl inline-block shadow-md">
                                             <Image src={qrCodeUrl} alt="2FA QR Code" width={192} height={192} className="w-48 h-48 mx-auto" unoptimized />
                                         </div>
-                                        <p className="text-[10px] font-mono select-all bg-muted p-2 rounded">{twoFactorSecret}</p>
+                                        <p className="select-all rounded bg-muted p-2 font-mono text-xs">{twoFactorSecret}</p>
 
                                         <div className="space-y-4 border-t pt-6 text-left">
                                             <h3 className="font-bold">2. Verify Token</h3>
@@ -473,7 +471,7 @@ export function SettingsContent({
                 </div>
 
                 {sessionRegistryEnabled && (
-                    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+                    <div className="rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-6 shadow-[var(--shadow-apple)]">
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                             <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 bg-orange-500/10 rounded-xl flex items-center justify-center text-orange-500">
@@ -525,7 +523,7 @@ export function SettingsContent({
                                                 <p className="text-xs text-muted-foreground truncate">
                                                     {device.ipAddress || "Unknown IP"} • Last seen {formatSessionDate(device.lastSeenAt)}
                                                 </p>
-                                                <p className="text-[11px] text-muted-foreground">
+                                                <p className="text-xs text-muted-foreground">
                                                     Expires {formatSessionDate(device.expiresAt)}
                                                     {device.rememberDevice ? " • Remembered" : ""}
                                                 </p>
@@ -534,7 +532,7 @@ export function SettingsContent({
 
                                         <div className="flex items-center gap-2 shrink-0">
                                             {device.isCurrent ? (
-                                                <span className="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                                <span className="rounded-full border border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] bg-[var(--state-success-surface)] px-2 py-1 text-xs font-semibold text-[var(--state-success)]">
                                                     Current device
                                                 </span>
                                             ) : (

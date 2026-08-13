@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma"
 import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
-import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
@@ -304,7 +304,7 @@ export default async function TasksPage({
                         </div>
                         <div className="min-w-0">
                             <p className="text-[13px] font-semibold leading-none text-[var(--text-primary)]">{item.label}</p>
-                            <p className="mt-1 text-[12px] font-medium leading-none text-[var(--text-secondary)]">{item.value}</p>
+                            <p className="mt-1 text-xs font-medium leading-none text-[var(--text-secondary)]">{item.value}</p>
                         </div>
                     </Link>
                 ))}
@@ -333,30 +333,27 @@ export default async function TasksPage({
     return (
         <TasksSearchProvider initialSearch={q || ""}>
             <div className="flex flex-col gap-3.5 sm:gap-4">
-                <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-4 lg:p-5">
-                    <DashboardPageHeader
+                    <AppPageHeader
                         title="Tasks"
-                        showMobile
                         search={<TasksSearchInput />}
                         mobileSearch={<TasksSearchInput />}
-                        mobileActions={
+                        mobilePrimaryAction={
                             <CreateTaskButton
                                 projects={activeProjects}
                                 label="Add"
                                 showLabelOnMobile
-                                className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
+                                className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
                             />
                         }
-                        actions={
+                        primaryAction={
                             <CreateTaskButton
                                 projects={activeProjects}
                                 label="Add"
                                 showLabelOnMobile
-                                className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
+                                className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
                             />
                         }
                     />
-                </div>
 
                 <TasksToolbar
                     projects={projectsList}

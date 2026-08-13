@@ -4,7 +4,7 @@ import { TimeLogsTable } from "@/components/time/time-logs-table"
 import { getActiveTimer, getTimeLogs } from "@/lib/actions/time"
 import prisma from "@/lib/prisma"
 import { CreateTimeLogDialog } from "@/components/time/create-time-log-dialog"
-import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { requireAuth } from "@/lib/auth"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -89,30 +89,27 @@ export default async function TimePage({
 
     return (
         <div className="flex flex-col gap-6 pb-8 sm:gap-8">
-            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
-                <DashboardPageHeader
+                <AppPageHeader
                     title="Time Logs"
-                    showMobile
-                    actions={(
+                    primaryAction={(
                         <CreateTimeLogDialog
                             projects={formattedProjects}
                             tasks={tasksForTime}
                             label="Add"
                             showLabelOnMobile
-                            className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
+                            className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
                         />
                     )}
-                    mobileActions={(
+                    mobilePrimaryAction={(
                         <CreateTimeLogDialog
                             projects={formattedProjects}
                             tasks={tasksForTime}
                             label="Add"
                             showLabelOnMobile
-                            className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
+                            className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
                         />
                     )}
                 />
-            </div>
 
             <div className="space-y-6">
                 {activeTimer && (
@@ -127,13 +124,13 @@ export default async function TimePage({
                                     {activeTimer.task?.name || activeTimer.description || "Active session"}
                                 </p>
                                 {activeTimerProjectName && (
-                                    <p className="truncate text-[12px] font-medium text-emerald-800/90">
+                                    <p className="truncate text-xs font-medium text-emerald-800/90">
                                         {activeTimerProjectName}
                                     </p>
                                 )}
                             </div>
                             <div className="flex items-center gap-2 md:justify-end">
-                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-[var(--surface-lowest)]/70 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-[var(--surface-lowest)]/70 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                                     <Clock3 className="h-3.5 w-3.5" />
                                     Started {activeTimerStartedAt || "now"}
                                 </span>
@@ -142,7 +139,7 @@ export default async function TimePage({
                                     className={buttonLinkClassName({
                                         size: "sm",
                                         variant: "activeBlue",
-                                        className: "h-8 rounded-lg px-3 text-[12px]"
+                                        className: "h-8 rounded-lg px-3 text-xs"
                                     })}
                                 >
                                     Show active
@@ -166,10 +163,10 @@ export default async function TimePage({
 
                 <div className="mt-4 flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-low)] px-3 py-2 shadow-[var(--shadow-apple)] sm:px-4">
                     <div className="flex items-center gap-1.5">
-                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]">
                             {page}/{totalPages}
                         </span>
-                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
+                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]">
                             {totalHours}h
                         </span>
                     </div>

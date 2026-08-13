@@ -46,6 +46,7 @@ if [[ "${SKIP_LOCAL_CHECKS:-0}" != "1" ]]; then
   npm run security:test-guardrails
   npm run verify:mobile
   npm run verify:tablet
+  npm run verify:design
   npm run security:audit
   npx prisma validate
   npm run data:preflight-single-owner

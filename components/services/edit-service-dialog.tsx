@@ -70,7 +70,7 @@ export function EditServiceDialog({ service }: { service: Service }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Edit service" title="Edit service">
                     <Edit2 className="h-4 w-4" />
                 </Button>
             </DialogTrigger>

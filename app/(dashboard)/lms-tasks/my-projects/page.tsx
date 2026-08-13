@@ -51,7 +51,7 @@ export default function LmsMyProjectsPage() {
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="space-y-1">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Executant</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Executant</span>
             <select
               value={selectedExecutant}
               onChange={(event) => handleExecutantChange(event.target.value)}
@@ -89,13 +89,13 @@ export default function LmsMyProjectsPage() {
                 <TableCell className="font-semibold">{row.client}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-[var(--text-muted)]">SEO</span>
+                    <span className="text-xs font-semibold text-[var(--text-muted)]">SEO</span>
                     <ServiceStatusBadge status={row.services.seo} />
-                    <span className="text-[11px] font-semibold text-[var(--text-muted)]">GAds</span>
+                    <span className="text-xs font-semibold text-[var(--text-muted)]">GAds</span>
                     <ServiceStatusBadge status={row.services.gads} />
-                    <span className="text-[11px] font-semibold text-[var(--text-muted)]">FAds</span>
+                    <span className="text-xs font-semibold text-[var(--text-muted)]">FAds</span>
                     <ServiceStatusBadge status={row.services.fads} />
-                    <span className="text-[11px] font-semibold text-[var(--text-muted)]">TAds</span>
+                    <span className="text-xs font-semibold text-[var(--text-muted)]">TAds</span>
                     <ServiceStatusBadge status={row.services.tads} />
                   </div>
                 </TableCell>

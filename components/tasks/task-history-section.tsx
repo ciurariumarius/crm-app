@@ -40,7 +40,7 @@ export function TaskHistorySection({ entries, isLoading }: TaskHistorySectionPro
             ) : (
                 <div className="mt-2">
                     {/* Table Header */}
-                    <div className="flex items-center gap-2 border-b border-[var(--line-subtle)] px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
+                    <div className="flex items-center gap-2 border-b border-[var(--line-subtle)] px-2.5 py-2 text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
                         <div className="w-24 shrink-0">Date</div>
                         <div className="flex-1">Event</div>
                         <div className="w-16 shrink-0 text-right">Type</div>
@@ -80,22 +80,22 @@ export function TaskHistorySection({ entries, isLoading }: TaskHistorySectionPro
                             return (
                                 <div key={entry.id} className="group flex items-center gap-2 border-b border-[color:color-mix(in_srgb,var(--line-subtle)_75%,transparent)] px-2.5 py-2 transition hover:bg-[var(--surface-low)] last:border-0">
                                     <div className="w-24 shrink-0">
-                                        <span className="block truncate text-[11px] font-medium text-[var(--text-secondary)]">
+                                        <span className="block truncate text-xs font-medium text-[var(--text-secondary)]">
                                             {formatRelativeDate(entry.date)}
                                         </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <span className="block truncate text-[11px] font-bold text-[var(--text-primary)]">
+                                        <span className="block truncate text-xs font-bold text-[var(--text-primary)]">
                                             {entryTitle}
                                         </span>
                                         {sourceLabel && (
-                                            <span className="block truncate text-[10px] text-[var(--text-muted)] transition-colors group-hover:text-[var(--text-secondary)]">
+                                            <span className="block truncate text-xs text-[var(--text-muted)] transition-colors group-hover:text-[var(--text-secondary)]">
                                                 {sourceLabel}
                                             </span>
                                         )}
                                     </div>
                                     <div className="w-16 shrink-0 flex justify-end">
-                                        <SidePanelChip tone={sidePanelChipToneByLabel(entryBadge)} label={entryBadge} className="text-[9px] font-bold px-1.5 py-0.5" />
+                                        <SidePanelChip tone={sidePanelChipToneByLabel(entryBadge)} label={entryBadge} className="text-xs font-bold px-1.5 py-0.5" />
                                     </div>
                                 </div>
                             )

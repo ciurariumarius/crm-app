@@ -4,8 +4,8 @@ import { togglePaymentStatus } from "@/lib/actions/projects"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { PageHeader } from "@/components/layout/page-header"
+import { StatusChip, statusToneFromLabel } from "@/components/ui/status-chip"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { requireAuth } from "@/lib/auth"
 import Link from "next/link"
 import { formatProjectName } from "@/lib/utils"
@@ -78,7 +78,7 @@ export default async function LedgerPage({
 
     return (
         <div className="space-y-6">
-            <PageHeader title="The Ledger" />
+            <AppPageHeader title="The Ledger" subtitle="Track project payments and time reported this month." />
 
             <Tabs defaultValue="payments" className="w-full">
                 <TabsList>
@@ -89,22 +89,22 @@ export default async function LedgerPage({
                 <TabsContent value="payments" className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {unpaidProjects.map((project: LedgerProject) => (
-                            <Card key={project.id} className={project.paymentStatus === "Unpaid" ? "border-red-500/50" : ""}>
+                            <Card key={project.id} className={project.paymentStatus === "Unpaid" ? "border-[color:color-mix(in_srgb,var(--state-urgent)_35%,var(--line-subtle))]" : ""}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <div className="space-y-1">
                                         <CardTitle className="text-base flex items-center gap-2 flex-wrap">
                                             {formatProjectName(project)}
                                             {project.currentFee != null && (
-                                                <span className="text-sm font-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
+                                                <span className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--state-success)_26%,var(--line-subtle))] bg-[var(--state-success-surface)] px-2 py-1 text-sm font-medium text-[var(--state-success)]">
                                                     {Number(project.currentFee)} RON
                                                 </span>
                                             )}
                                         </CardTitle>
                                         <CardDescription>{project.site.partner.name}</CardDescription>
                                     </div>
-                                    <Badge variant={project.paymentStatus === "Paid" ? "secondary" : "destructive"}>
+                                    <StatusChip tone={statusToneFromLabel(project.paymentStatus)} size="xs">
                                         {project.paymentStatus}
-                                    </Badge>
+                                    </StatusChip>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex justify-between items-center mt-4">
@@ -128,33 +128,33 @@ export default async function LedgerPage({
                         )}
                     </div>
                     <div className="flex items-center justify-between rounded-[14px] border border-border/60 bg-card/50 px-3 py-2">
-                        <span className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-2.5 text-[11px] font-semibold text-foreground">
+                        <span className="inline-flex h-9 items-center rounded-[10px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-xs font-semibold text-[var(--text-primary)]">
                             {page}/{totalPages}
                         </span>
                         <div className="flex items-center gap-1.5">
                             {prevPage ? (
                                 <Link
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-foreground transition-colors hover:bg-muted"
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-low)]"
                                     href={`/ledger?page=${prevPage}`}
                                     aria-label="Previous page"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground/50" aria-hidden="true">
+                                <span className="inline-flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] opacity-50" aria-hidden="true">
                                     <ChevronLeft className="h-4 w-4" />
                                 </span>
                             )}
                             {nextPage ? (
                                 <Link
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-foreground transition-colors hover:bg-muted"
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-low)]"
                                     href={`/ledger?page=${nextPage}`}
                                     aria-label="Next page"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </Link>
                             ) : (
-                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground/50" aria-hidden="true">
+                                <span className="inline-flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] opacity-50" aria-hidden="true">
                                     <ChevronRight className="h-4 w-4" />
                                 </span>
                             )}

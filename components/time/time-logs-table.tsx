@@ -162,7 +162,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
 
                                                 {/* 3. Time Range */}
                                                 <div className="flex flex-col justify-center">
-                                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-low)] border border-[var(--line-subtle)] text-[12px] font-mono font-bold tracking-tight text-[var(--text-secondary)] w-fit shadow-sm">
+                                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-low)] border border-[var(--line-subtle)] text-xs font-mono font-bold tracking-tight text-[var(--text-secondary)] w-fit shadow-sm">
                                                         <span>{format(new Date(log.startTime), "HH:mm")}</span>
                                                         <span className="opacity-30">—</span>
                                                         <span>{log.endTime ? format(new Date(log.endTime), "HH:mm") : "..."}</span>

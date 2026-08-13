@@ -47,7 +47,7 @@ const PRIORITY_OPTIONS = [
 
 function triggerClassName(isActive: boolean, extraClassName?: string) {
   return cn(
-    "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[var(--shadow-apple)]",
+    "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all shadow-[var(--shadow-apple)]",
     isActive
       ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,var(--surface-lowest))] text-[var(--brand-primary)]"
       : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]",
@@ -166,7 +166,7 @@ export function TasksToolbar({
                   key={option.value}
                   href={buildHref({ status: option.value })}
                   className={cn(
-                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentStatus === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -182,7 +182,7 @@ export function TasksToolbar({
                   key={option.value}
                   href={buildHref({ urgency: option.value })}
                   className={cn(
-                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold uppercase tracking-[0.04em] transition-colors",
                     currentUrgency === option.value ? option.activeClass : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -195,7 +195,7 @@ export function TasksToolbar({
             <Link
               href={buildHref({ overdue: currentOverdue ? null : "1" })}
               className={cn(
-                "inline-flex h-9 shrink-0 snap-start items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-colors shadow-[var(--shadow-apple)]",
+                "inline-flex h-9 shrink-0 snap-start items-center justify-between gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors shadow-[var(--shadow-apple)]",
                 currentOverdue
                   ? "border-[color:color-mix(in_srgb,var(--state-overdue)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_14%,var(--surface-lowest))] text-[var(--state-overdue)] ring-1 ring-[color:color-mix(in_srgb,var(--state-overdue)_22%,transparent)]"
                   : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
@@ -249,13 +249,13 @@ export function TasksToolbar({
 
       <FilterResultsRow className="justify-between gap-2 px-0 py-0.5 shadow-none">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-primary)] sm:text-xs">{resultsLabel}</p>
+          <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-primary)] sm:text-xs">{resultsLabel}</p>
           <div className="-mx-0.5 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-0.5 hidescrollbar">
             {activeFilters.map((filter) => (
               <Link
                 key={filter.key}
                 href={filter.href}
-                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2 text-[9px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-[10px]"
+                className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2 text-xs font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)] sm:h-6 sm:text-xs"
               >
                 <span>{filter.label}</span>
                 <span className="text-[var(--brand-primary)]/70">×</span>
@@ -267,7 +267,7 @@ export function TasksToolbar({
           {activeFilters.length > 0 ? (
             <Link
               href={clearAllHref}
-              className="inline-flex h-6 items-center rounded-full px-2 text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:text-[10px]"
+              className="inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:text-xs"
             >
               Clear all
             </Link>
@@ -294,7 +294,7 @@ function ColumnsToggle({
           title={`${col} columns`}
           onClick={() => onSelect(col as 3 | 4)}
           className={cn(
-            "inline-flex h-7 min-w-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold transition-colors",
+            "inline-flex h-7 min-w-8 items-center justify-center rounded-md px-2 text-xs font-semibold transition-colors",
             currentCols === col ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
           )}
         >

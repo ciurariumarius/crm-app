@@ -516,7 +516,7 @@ export function ProjectSheetContent({
                 const isCurrentRecurring = currentServices[0]?.isRecurring
                 if (selectedService.isRecurring !== isCurrentRecurring) {
                     toast.error("Recurring and one-time services cannot be mixed", {
-                        icon: <AlertCircle className="h-4 w-4 text-rose-500" />,
+                        icon: <AlertCircle className="h-4 w-4 text-[var(--state-urgent)]" />,
                     })
                     return
                 }
@@ -915,7 +915,7 @@ export function ProjectSheetContent({
                                 <Textarea
                                     value={localName}
                                     onChange={(event) => setLocalName(event.target.value)}
-                                    className="min-h-[48px] resize-none !rounded-none !border-0 !border-b !border-[var(--line-subtle)] !bg-transparent !px-0 !pb-2 !pt-0 text-2xl font-bold leading-tight tracking-[-0.03em] text-[var(--text-primary)] !shadow-none focus-visible:!border-b-2 focus-visible:!border-blue-300 focus-visible:!ring-0 md:text-3xl"
+                                    className="min-h-[48px] resize-none !rounded-none !border-0 !border-b !border-[var(--line-subtle)] !bg-transparent !px-0 !pb-2 !pt-0 text-2xl font-bold leading-tight tracking-[-0.03em] text-[var(--text-primary)] !shadow-none focus-visible:!border-b-2 focus-visible:!border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] focus-visible:!ring-0 md:text-3xl"
                                     rows={1}
                                     autoFocus
                                     onBlur={commitTitle}
@@ -995,9 +995,9 @@ export function ProjectSheetContent({
                                             >
                                                 <span className={cn(
                                                     "mr-2 h-2 w-2 rounded-full",
-                                                    statusOption === "Active" && "bg-blue-500",
-                                                    statusOption === "Paused" && "bg-amber-500",
-                                                    statusOption === "Completed" && "bg-emerald-500",
+                                                    statusOption === "Active" && "bg-[var(--brand-primary)]",
+                                                    statusOption === "Paused" && "bg-[var(--state-warning)]",
+                                                    statusOption === "Completed" && "bg-[var(--state-success)]",
                                                     statusOption === "Closed" && "bg-[var(--text-muted)]"
                                                 )} />
                                                 {statusOption}
@@ -1023,7 +1023,7 @@ export function ProjectSheetContent({
                                             <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_20%,transparent)] transition-transform duration-300 group-hover/payment:translate-y-0" />
                                             <span className={cn(
                                                 "relative z-10 h-2.5 w-2.5 rounded-full", 
-                                                project.paymentStatus === "Paid" ? "bg-emerald-500" : "bg-rose-500"
+                                                project.paymentStatus === "Paid" ? "bg-[var(--state-success)]" : "bg-[var(--state-urgent)]"
                                             )} />
                                             <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.paymentStatus}</span>
                                         </button>
@@ -1035,7 +1035,7 @@ export function ProjectSheetContent({
                                                 onSelect={() => updateProjectPaymentStatus(paymentOption)}
                                                 className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                             >
-                                                <span className={cn("mr-2 h-2 w-2 rounded-full", paymentOption === "Paid" ? "bg-emerald-500" : "bg-rose-500")} />
+                                                <span className={cn("mr-2 h-2 w-2 rounded-full", paymentOption === "Paid" ? "bg-[var(--state-success)]" : "bg-[var(--state-urgent)]")} />
                                                 {paymentOption}
                                                 {project.paymentStatus === paymentOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
                                             </DropdownMenuItem>
@@ -1052,24 +1052,24 @@ export function ProjectSheetContent({
                                         value={amountInput}
                                         onChange={(event) => setAmountInput(event.target.value)}
                                         onBlur={handleAmountBlur}
-                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-lg font-black tracking-[-0.02em] text-[var(--text-primary)] shadow-none focus-visible:ring-0 sm:text-xl md:text-[24px]"
+                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-lg font-black tracking-[-0.02em] text-[var(--text-primary)] shadow-none focus-visible:ring-0 sm:text-xl md:text-2xl"
                                         placeholder="0"
                                     />
-                                    <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors group-hover/amount:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] group-hover/amount:text-[var(--brand-primary)] sm:ml-3 sm:px-2.5 sm:py-1 sm:text-[10px]">RON</span>
+                                    <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-2 py-0.5 text-xs font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors group-hover/amount:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] group-hover/amount:text-[var(--brand-primary)] sm:ml-3 sm:px-2.5 sm:py-1 sm:text-xs">RON</span>
                                 </div>
                             </div>
                         </div>
 
                         {project.status === "Closed" && (
                             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2">
-                                <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                                <span className="text-xs font-semibold text-[var(--text-secondary)]">
                                     Closed on {project.closedAt ? format(new Date(project.closedAt), "dd MMM yyyy") : "—"}
                                 </span>
                                 <span
                                     className={cn(
-                                        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                                        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold",
                                         project.isHeavyRevenueMonth
-                                            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                                            ? "border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] bg-[var(--state-success-surface)] text-[var(--state-success)]"
                                             : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
                                     )}
                                 >
@@ -1140,10 +1140,10 @@ export function ProjectSheetContent({
                                 {budgetInsights.hasHourlyRate && budgetInsights.hasFee && (
                                     <span
                                         className={cn(
-                                            "inline-flex h-7 items-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.08em]",
+                                            "inline-flex h-7 items-center rounded-full border px-3 text-xs font-bold uppercase tracking-[0.08em]",
                                             budgetInsights.isOverBudget
-                                                ? "border-rose-200 bg-rose-50 text-rose-600"
-                                                : "border-emerald-200 bg-emerald-50 text-emerald-600"
+                                                ? "border-[color:color-mix(in_srgb,var(--state-urgent)_28%,var(--line-subtle))] bg-[var(--state-danger-surface)] text-[var(--state-urgent)]"
+                                                : "border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] bg-[var(--state-success-surface)] text-[var(--state-success)]"
                                         )}
                                     >
                                         {budgetInsights.isOverBudget ? "Over Budget" : "On Track"}
@@ -1153,17 +1153,17 @@ export function ProjectSheetContent({
 
                             {!budgetInsights.hasHourlyRate ? (
                                 <div className="rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-2.5">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Hourly Budget</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Hourly Budget</p>
                                     <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
                                         Set your hourly rate to enable fee based hour recommendations.
                                     </p>
-                                    <Link href="/settings" className="mt-2 inline-flex text-xs font-semibold text-blue-600 hover:text-blue-500">
+                                    <Link href="/settings" className="mt-2 inline-flex text-xs font-semibold text-[var(--primary)] hover:text-[var(--primary)]">
                                         Open Settings
                                     </Link>
                                 </div>
                             ) : !budgetInsights.hasFee ? (
                                 <div className="rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-2.5">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Hourly Budget</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Hourly Budget</p>
                                     <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
                                         Set project amount to compute recommended hours.
                                     </p>
@@ -1172,15 +1172,15 @@ export function ProjectSheetContent({
                                 <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)]">
                                     <div className="grid w-full grid-cols-1 gap-2 lg:grid-cols-4">
                                         <div className="grid grid-cols-3 gap-1.5 lg:col-span-3 lg:gap-2">
-                                            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 px-2.5 py-2 sm:px-3 sm:py-2.5">
-                                                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-blue-500 sm:text-[10px]">Recommended</p>
-                                                <p className="mt-1 font-mono text-lg font-black tabular-nums text-blue-700 sm:text-xl">
+                                            <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] bg-[var(--brand-primary)] px-2.5 py-2 sm:px-3 sm:py-2.5">
+                                                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--primary)] sm:text-xs">Recommended</p>
+                                                <p className="mt-1 font-mono text-lg font-black tabular-nums text-[var(--primary)] sm:text-xl">
                                                     {formatHoursWithMinutes(budgetInsights.recommendedHours)}
                                                 </p>
                                             </div>
 
                                             <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2.5 py-2 sm:px-3 sm:py-2.5">
-                                                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] sm:text-[10px]">Tracked</p>
+                                                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] sm:text-xs">Tracked</p>
                                                 <p className="mt-1 font-mono text-lg font-black tabular-nums text-[var(--text-primary)] sm:text-xl">
                                                     {formatHoursWithMinutes(budgetInsights.trackedHoursNow)}
                                                 </p>
@@ -1189,18 +1189,18 @@ export function ProjectSheetContent({
                                             <div className={cn(
                                                 "rounded-2xl border px-2.5 py-2 sm:px-3 sm:py-2.5",
                                                 budgetInsights.isOverBudget
-                                                    ? "border-rose-100 bg-rose-50/50"
-                                                    : "border-emerald-100 bg-emerald-50/50"
+                                                    ? "border-[color:color-mix(in_srgb,var(--state-urgent)_28%,var(--line-subtle))] bg-[var(--state-urgent)]"
+                                                    : "border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] bg-[var(--state-success)]"
                                             )}>
                                                 <p className={cn(
-                                                    "text-[9px] font-bold uppercase tracking-[0.08em] sm:text-[10px]",
-                                                    budgetInsights.isOverBudget ? "text-rose-500" : "text-emerald-500"
+                                                    "text-xs font-bold uppercase tracking-[0.08em] sm:text-xs",
+                                                    budgetInsights.isOverBudget ? "text-[var(--state-urgent)]" : "text-[var(--state-success)]"
                                                 )}>
                                                     {budgetInsights.isOverBudget ? "Overrun" : "Remaining"}
                                                 </p>
                                                 <p className={cn(
                                                     "mt-1 font-mono text-lg font-black tabular-nums sm:text-xl",
-                                                    budgetInsights.isOverBudget ? "text-rose-700" : "text-emerald-700"
+                                                    budgetInsights.isOverBudget ? "text-[var(--state-urgent)]" : "text-[var(--state-success)]"
                                                 )}>
                                                     {formatHoursWithMinutes(Math.abs(budgetInsights.remainingHours))}
                                                 </p>
@@ -1208,7 +1208,7 @@ export function ProjectSheetContent({
                                         </div>
 
                                         <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2.5 lg:col-span-1">
-                                            <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                                            <div className="mb-1 flex items-center justify-between text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                                 <span>Progress</span>
                                                 <span>{budgetInsights.progressPercent.toFixed(0)}%</span>
                                             </div>
@@ -1217,15 +1217,15 @@ export function ProjectSheetContent({
                                                     className={cn(
                                                         "h-full transition-all duration-500",
                                                         budgetInsights.isOverBudget
-                                                            ? "bg-rose-500"
+                                                            ? "bg-[var(--state-urgent)]"
                                                             : budgetInsights.progressPercent > 80
-                                                                ? "bg-amber-500"
-                                                                : "bg-emerald-500"
+                                                                ? "bg-[var(--state-warning)]"
+                                                                : "bg-[var(--state-success)]"
                                                     )}
                                                     style={{ width: `${budgetInsights.progressBarPercent}%` }}
                                                 />
                                             </div>
-                                            <p className="mt-1 text-right text-[11px] font-medium text-[var(--text-secondary)]">
+                                            <p className="mt-1 text-right text-xs font-medium text-[var(--text-secondary)]">
                                                 {new Intl.NumberFormat("ro-RO", {
                                                     style: "currency",
                                                     currency: "RON",
@@ -1344,12 +1344,12 @@ export function ProjectSheetContent({
                                             type="datetime-local"
                                             value={createdAtInput}
                                             onChange={(e) => setCreatedAtInput(e.target.value)}
-                                            className="h-7 w-[210px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 py-1 text-[11px]"
+                                            className="h-7 w-[210px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 py-1 text-xs"
                                         />
                                         <button
                                             type="button"
                                             onClick={handleCreatedAtSave}
-                                            className="text-blue-600 hover:text-blue-500"
+                                            className="text-[var(--primary)] hover:text-[var(--primary)]"
                                         >
                                             Save
                                         </button>
@@ -1411,10 +1411,10 @@ export function ProjectSheetContent({
                                     <DialogTitle className="truncate text-lg font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
                                         Project Notes - {formatProjectName(project)}
                                     </DialogTitle>
-                                    <span className="mt-2 inline-flex min-w-[140px] items-center gap-1.5 text-[11px] font-semibold text-[var(--text-secondary)]">
-                                        {notesSaveState === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />}
-                                        {notesSaveState === "saved" && <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />}
-                                        {notesSaveState === "error" && <AlertCircle className="h-3.5 w-3.5 text-rose-500" />}
+                                    <span className="mt-2 inline-flex min-w-[140px] items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                                        {notesSaveState === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--primary)]" />}
+                                        {notesSaveState === "saved" && <CheckCircle className="h-3.5 w-3.5 text-[var(--state-success)]" />}
+                                        {notesSaveState === "error" && <AlertCircle className="h-3.5 w-3.5 text-[var(--state-urgent)]" />}
                                         {notesSaveState === "saving"
                                             ? "Saving..."
                                             : notesSaveState === "saved"

@@ -70,7 +70,7 @@ export default function LoginPage() {
                     <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--brand-primary)] text-white shadow-[var(--shadow-apple)]">
                         <Zap className="h-6 w-6 fill-current" />
                     </div>
-                    <h1 className="text-[30px] font-semibold tracking-[-0.03em] text-foreground">Pixelist</h1>
+                    <h1 className="text-3xl font-semibold tracking-[-0.03em] text-foreground">Pixelist</h1>
                     <p className="mt-2 text-sm font-medium text-muted-foreground">Authorized access only</p>
                 </div>
 

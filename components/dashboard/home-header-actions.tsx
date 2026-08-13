@@ -50,7 +50,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     <button
                         type="button"
                         onClick={() => setCreateTaskOpen(true)}
-                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[16px] bg-primary px-3 text-[11px] font-bold text-primary-foreground shadow-sm transition-colors hover:brightness-95"
+                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[16px] bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm transition-colors hover:brightness-95"
                     >
                         <CirclePlus className="h-4 w-4" />
                         Task
@@ -59,7 +59,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     <button
                         type="button"
                         onClick={() => setCreateProjectOpen(true)}
-                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[11px] font-bold text-[var(--primary)] shadow-sm transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
+                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-xs font-bold text-[var(--primary)] shadow-sm transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
                     >
                         <FolderPlus className="h-4 w-4 stroke-[2.5px]" />
                         Project
@@ -68,7 +68,7 @@ export function HomeHeaderActions({ partners, services, projects, mobile = false
                     <button
                         type="button"
                         onClick={() => setCreatePaymentOpen(true)}
-                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[11px] font-bold text-[var(--primary)] shadow-sm transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
+                        className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-xs font-bold text-[var(--primary)] shadow-sm transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]"
                     >
                         <WalletCards className="h-4 w-4 stroke-[2.5px]" />
                         Payment

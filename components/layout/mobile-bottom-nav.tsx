@@ -48,7 +48,7 @@ function NavLink({
             <Icon className="h-4.5 w-4.5" strokeWidth={1.9} />
             <span
                 className={cn(
-                    "text-[10px] font-medium tracking-[0.03em]",
+                    "text-xs font-medium tracking-[0.02em]",
                     active ? "text-[var(--primary)]" : "text-[var(--text-secondary)]"
                 )}
             >
@@ -269,10 +269,10 @@ export function MobileBottomNav() {
                     <button
                         type="button"
                         onClick={() => setQuickActionsOpen(true)}
-                        className="absolute left-1/2 top-1/2 z-20 inline-flex h-9 w-9 -translate-x-1/2 -translate-y-[52%] items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[var(--shadow-apple)] transition-transform active:scale-[0.97]"
+                        className="absolute left-1/2 top-1/2 z-20 inline-flex h-11 w-11 -translate-x-1/2 -translate-y-[52%] items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[var(--shadow-apple)] transition-transform active:scale-[0.97]"
                         aria-label="Quick actions"
                     >
-                        <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
+                        <Plus className="h-4.5 w-4.5" strokeWidth={2.25} />
                     </button>
 
                     <div className="grid grid-cols-5 gap-1 px-1.5 pb-[max(0.3rem,env(safe-area-inset-bottom))] pt-2">
@@ -295,7 +295,7 @@ export function MobileBottomNav() {
                             <Menu className="h-4.5 w-4.5" strokeWidth={1.9} />
                             <span
                                 className={cn(
-                                    "text-[10px] font-medium tracking-[0.03em]",
+                                    "text-xs font-medium tracking-[0.02em]",
                                     menuActive ? "text-[var(--primary)]" : "text-[var(--text-secondary)]"
                                 )}
                             >
@@ -315,7 +315,7 @@ export function MobileBottomNav() {
                     <SheetTitle className="sr-only">Quick actions</SheetTitle>
                     <div className="p-5 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-3">
                         <div className="mx-auto h-1.5 w-10 rounded-full bg-[var(--line-subtle)]" />
-                        <p className="text-center text-[12px] font-medium tracking-[0.04em] text-[var(--text-secondary)]">
+                        <p className="text-center text-xs font-medium tracking-[0.04em] text-[var(--text-secondary)]">
                             Quick Actions
                         </p>
 

@@ -171,7 +171,7 @@ export function LmsTasksDateRangeFilters() {
               >
                 Clear range
               </Button>
-              <span className="text-[12px] font-medium text-[var(--text-secondary)]">Pick start and end date</span>
+              <span className="text-xs font-medium text-[var(--text-secondary)]">Pick start and end date</span>
             </div>
           </div>
         </PopoverContent>

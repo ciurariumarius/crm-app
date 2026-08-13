@@ -240,7 +240,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
     // toggleService moved to ProjectSheetContent
 
     const renderHeader = () => (
-        <div className={cn("glass hidden md:flex h-10 items-center px-6 mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground w-full md:min-w-[1080px] xl:min-w-[1280px] gap-5 rounded-lg", layout === "grid" && "hidden")}>
+        <div className={cn("glass hidden md:flex h-10 items-center px-6 mb-2 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground w-full md:min-w-[1080px] xl:min-w-[1280px] gap-5 rounded-lg", layout === "grid" && "hidden")}>
             <div className="flex-1 min-w-[320px] shrink-0">Project name</div>
             <div className="w-[80px] shrink-0 text-center">Status</div>
             <div className="w-[70px] shrink-0 text-center">Type</div>
@@ -494,7 +494,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                                     />
                                 </svg>
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-[10px] font-semibold text-[var(--text-secondary)] dark:text-[var(--text-muted)]">{completedTasks}/{totalTasks}</span>
+                                    <span className="text-xs font-semibold text-[var(--text-secondary)] dark:text-[var(--text-muted)]">{completedTasks}/{totalTasks}</span>
                                 </div>
                             </div>
                         )
@@ -503,7 +503,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
 
                 {/* 7. Time Tracking */}
                 <div className="w-[75px] shrink-0 flex items-center justify-center">
-                    <span className="rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2 py-1 text-center font-mono text-[11px] font-semibold tracking-[0.01em] text-[var(--text-secondary)] tabular-nums">
+                    <span className="rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2 py-1 text-center font-mono text-xs font-semibold tracking-[0.01em] text-[var(--text-secondary)] tabular-nums">
                         {(() => {
                             const totalSeconds = project.tasks?.reduce((acc: number, task: ProjectTaskSummary) => {
                                 const taskLogs = task.timeLogs?.reduce((lAcc: number, log: ProjectTimeLog) => lAcc + (log.durationSeconds || 0), 0) || 0
@@ -525,14 +525,14 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
 
                 {/* 9. Last Edited */}
                 <div className="w-[100px] shrink-0 flex items-center justify-end">
-                    <span className="text-[11px] text-muted-foreground font-medium text-right font-mono tabular-nums">
+                    <span className="text-xs text-muted-foreground font-medium text-right font-mono tabular-nums">
                         {project.updatedAt ? formatRelativeDate(project.updatedAt) : "-"}
                     </span>
                 </div>
 
                 {/* 10. Created */}
                 <div className="w-[70px] shrink-0 flex items-center justify-end">
-                    <span className="text-[11px] text-muted-foreground/60 font-medium text-right font-mono tabular-nums">
+                    <span className="text-xs text-muted-foreground/60 font-medium text-right font-mono tabular-nums">
                         {project.createdAt ? formatRelativeDate(project.createdAt) : "-"}
                     </span>
 
@@ -540,6 +540,8 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label="Delete project"
+                            title="Delete project"
                             className="h-8 w-8 rounded-full bg-[var(--surface-lowest)] dark:bg-zinc-800 shadow-sm border border-border/40 text-muted-foreground hover:text-rose-500 hover:border-rose-200 transition-colors"
                             onClick={(e) => {
                                 e.stopPropagation()

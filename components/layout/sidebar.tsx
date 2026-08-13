@@ -112,9 +112,9 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
       <Link
         key={item.href}
         href={item.href}
-        title={isDesktopCollapsed ? item.name : undefined}
+        aria-label={isDesktopCollapsed ? item.name : undefined}
         className={cn(
-          "group relative flex min-h-10 items-center gap-3 rounded-[12px] border border-transparent px-3 py-2.5 text-[13px] font-medium transition-colors xl:text-[14px]",
+          "group relative flex min-h-10 items-center gap-3 rounded-[12px] border border-transparent px-3 py-2.5 text-[13px] font-medium transition-colors xl:text-sm",
           isDesktopCollapsed && "justify-center px-0",
           isActive
             ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
@@ -126,6 +126,11 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         ) : null}
         <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
         {!isDesktopCollapsed && <span className="truncate">{item.name}</span>}
+        {isDesktopCollapsed ? (
+          <span role="tooltip" className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-[10px] border border-[var(--line-subtle)] bg-[var(--popover)] px-2.5 py-1.5 text-xs font-semibold text-[var(--popover-foreground)] opacity-0 shadow-[var(--shadow-apple)] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            {item.name}
+          </span>
+        ) : null}
       </Link>
     )
   }
@@ -138,7 +143,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         href={item.href}
         onClick={() => setIsMobileMenuOpen(false)}
         className={cn(
-          "group relative flex min-h-11 items-center gap-3 rounded-[12px] border border-transparent px-4 py-3 text-[14px] font-medium transition-colors",
+          "group relative flex min-h-11 items-center gap-3 rounded-[12px] border border-transparent px-4 py-3 text-sm font-medium transition-colors",
           isActive
             ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
@@ -181,6 +186,9 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                 <span className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--brand-primary)]" />
               ) : null}
               <GroupIcon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+              <span role="tooltip" className="pointer-events-none absolute left-[calc(100%+12px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-[10px] border border-[var(--line-subtle)] bg-[var(--popover)] px-2.5 py-1.5 text-xs font-semibold text-[var(--popover-foreground)] opacity-0 shadow-[var(--shadow-apple)] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                {label}
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="start" sideOffset={10} className="w-56">
@@ -216,7 +224,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         type="button"
         onClick={onToggle}
         className={cn(
-          "group relative flex min-h-10 w-full items-center gap-3 rounded-[12px] border border-transparent px-3 py-2.5 text-[13px] font-medium transition-colors xl:text-[14px]",
+          "group relative flex min-h-10 w-full items-center gap-3 rounded-[12px] border border-transparent px-3 py-2.5 text-[13px] font-medium transition-colors xl:text-sm",
           isActive
             ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
@@ -251,7 +259,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         type="button"
         onClick={onToggle}
         className={cn(
-          "group relative flex min-h-11 w-full items-center gap-3 rounded-[12px] border border-transparent px-4 py-3 text-[14px] font-medium transition-colors",
+          "group relative flex min-h-11 w-full items-center gap-3 rounded-[12px] border border-transparent px-4 py-3 text-sm font-medium transition-colors",
           isActive
             ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
@@ -306,7 +314,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{displayName}</p>
-                  <p className="text-[11px] text-[var(--text-muted)]">{displayRole}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{displayRole}</p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -395,7 +403,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{displayName}</p>
-                  <p className="text-[11px] text-[var(--text-muted)]">{displayRole}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{displayRole}</p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

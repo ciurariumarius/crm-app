@@ -366,7 +366,7 @@ export function InlineQuickAddRow({
                                 <select
                                     value={selectedPartnerId}
                                     onChange={(event) => setSelectedPartnerId(event.target.value)}
-                                    className="h-10 w-full appearance-none rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 pr-10 text-[13px] font-medium text-[var(--text-secondary)] outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                    className="h-10 w-full appearance-none rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 pr-10 text-[13px] font-medium text-[var(--text-secondary)] outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--ring)_28%,transparent)]"
                                     aria-label="Partner"
                                 >
                                     <option value="">Select partner</option>
@@ -394,9 +394,9 @@ export function InlineQuickAddRow({
                                     className={cn(
                                         "h-10 rounded-xl border bg-[var(--surface-lowest)] pr-16 text-[13px] font-medium",
                                         !selectedPartnerId && "cursor-not-allowed bg-[var(--surface-low)] text-[var(--text-muted)]",
-                                        domainValue && !domainLooksValid && "border-rose-300",
-                                        domainLooksValid && !matchedSite && "border-blue-300",
-                                        matchedSite && "border-emerald-300"
+                                        domainValue && !domainLooksValid && "border-[color:color-mix(in_srgb,var(--state-urgent)_28%,var(--line-subtle))]",
+                                        domainLooksValid && !matchedSite && "border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))]",
+                                        matchedSite && "border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))]"
                                     )}
                                 />
                                 <datalist id={domainListId}>
@@ -405,17 +405,17 @@ export function InlineQuickAddRow({
                                     ))}
                                 </datalist>
                                 {selectedPartnerId ? (
-                                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                         {sitesForPartner.length} {sitesForPartner.length === 1 ? "site" : "sites"}
                                     </span>
                                 ) : null}
                                 {domainLooksValid ? (
                                     <span
                                         className={cn(
-                                            "pointer-events-none absolute right-2 -top-2 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em]",
+                                            "pointer-events-none absolute right-2 -top-2 rounded-full px-2 py-0.5 text-xs font-black uppercase tracking-[0.08em]",
                                             matchedSite
-                                                ? "bg-emerald-100 text-emerald-700"
-                                                : "bg-blue-100 text-blue-700"
+                                                ? "bg-[var(--state-success-surface)] text-[var(--state-success)]"
+                                                : "bg-[var(--sidebar-accent)] text-[var(--primary)]"
                                         )}
                                     >
                                         {matchedSite ? "linked" : "new"}
@@ -436,7 +436,7 @@ export function InlineQuickAddRow({
                                         }
                                         setServicePickerValue("")
                                     }}
-                                    className="h-10 w-full appearance-none rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 pr-10 text-[13px] font-medium text-[var(--text-secondary)] outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                    className="h-10 w-full appearance-none rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 pr-10 text-[13px] font-medium text-[var(--text-secondary)] outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--ring)_28%,transparent)]"
                                     aria-label="Add service"
                                 >
                                     <option value="">Add service</option>
@@ -453,7 +453,7 @@ export function InlineQuickAddRow({
                         <label className="flex flex-col gap-1.5">
                             <span className="caption-caps">Amount</span>
                             <div className="relative">
-                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                                     RON
                                 </span>
                                 <Input
@@ -504,7 +504,7 @@ export function InlineQuickAddRow({
                                 type="button"
                                 onClick={() => setStatus(option)}
                                 className={cn(
-                                    "inline-flex h-6 items-center gap-1 rounded-lg px-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-all",
+                                    "inline-flex h-6 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold uppercase tracking-[0.08em] transition-all",
                                     isActive
                                         ? option === "Active"
                                             ? "bg-primary text-primary-foreground shadow-sm"
@@ -532,7 +532,7 @@ export function InlineQuickAddRow({
                                 type="button"
                                 onClick={() => setPaymentStatus(option)}
                                 className={cn(
-                                    "inline-flex h-6 items-center rounded-lg px-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-all",
+                                    "inline-flex h-6 items-center rounded-lg px-2.5 text-xs font-semibold uppercase tracking-[0.08em] transition-all",
                                     isActive
                                         ? option === "Paid"
                                             ? "bg-[var(--success-surface)] text-[var(--success-foreground)] shadow-sm"
@@ -551,7 +551,7 @@ export function InlineQuickAddRow({
                         key={service.id}
                         type="button"
                         onClick={() => toggleService(service.id)}
-                        className="inline-flex h-8 items-center gap-1 rounded-full border border-blue-200/70 bg-blue-50 px-2.5 text-[11px] font-semibold text-blue-700 shadow-sm"
+                        className="inline-flex h-8 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] bg-[var(--sidebar-accent)] px-2.5 text-xs font-semibold text-[var(--primary)] shadow-sm"
                         title="Remove service"
                     >
                         <span className="max-w-[180px] truncate">{service.serviceName}</span>
@@ -559,7 +559,7 @@ export function InlineQuickAddRow({
                     </button>
                 ))}
 
-                <span className="inline-flex h-7 items-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2.5 text-[10px] font-medium tracking-[0.01em] text-[var(--text-secondary)]">
+                <span className="inline-flex h-7 items-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2.5 text-xs font-medium tracking-[0.01em] text-[var(--text-secondary)]">
                     {!selectedPartnerId ? (
                         <span>Choose a partner to unlock domain suggestions.</span>
                     ) : !domainValue ? (
@@ -567,22 +567,22 @@ export function InlineQuickAddRow({
                             Start typing a domain for {selectedPartnerName}. {sitesForPartner.length} known {sitesForPartner.length === 1 ? "site" : "sites"} available.
                         </span>
                     ) : !domainLooksValid ? (
-                        <span className="text-rose-600">Enter a valid domain (example.com).</span>
+                        <span className="text-[var(--state-urgent)]">Enter a valid domain (example.com).</span>
                     ) : matchedSite ? (
-                        <span className="text-emerald-700">Matched an existing site for {selectedPartnerName}.</span>
+                        <span className="text-[var(--state-success)]">Matched an existing site for {selectedPartnerName}.</span>
                     ) : matchedSiteOtherPartner ? (
-                        <span className="text-amber-700">Domain exists under another partner. Saving will also add it to {selectedPartnerName}.</span>
+                        <span className="text-[var(--state-warning)]">Domain exists under another partner. Saving will also add it to {selectedPartnerName}.</span>
                     ) : (
-                        <span className="text-blue-700">This will create a new site for {selectedPartnerName}.</span>
+                        <span className="text-[var(--primary)]">This will create a new site for {selectedPartnerName}.</span>
                     )}
                 </span>
 
                 {missingRequirements.length > 0 ? (
-                    <span className="inline-flex h-7 items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-rose-700">
+                    <span className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--state-urgent)_28%,var(--line-subtle))] bg-[var(--state-danger-surface)] px-2.5 text-xs font-semibold uppercase tracking-[0.07em] text-[var(--state-urgent)]">
                         Required: {missingRequirements.join(" · ")}
                     </span>
                 ) : (
-                    <span className="inline-flex h-7 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-emerald-700">
+                    <span className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] bg-[var(--state-success-surface)] px-2.5 text-xs font-semibold uppercase tracking-[0.07em] text-[var(--state-success)]">
                         Ready
                     </span>
                 )}

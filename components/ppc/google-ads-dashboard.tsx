@@ -4,6 +4,8 @@ import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { IconButton } from "@/components/ui/app-surface"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { ExternalLink, TrendingUp, TrendingDown, LayoutGrid, List } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -41,35 +43,31 @@ export function GoogleAdsDashboard({ accounts }: GoogleAdsProps) {
     const [viewMode, setViewMode] = React.useState<"grid" | "list">("list")
 
     return (
-        <div className="flex h-full flex-col bg-[var(--surface-low)]/50 p-6 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-black text-foreground uppercase tracking-tight">
-                        Google Ads Overview
-                    </h1>
-                    <p className="text-sm text-muted-foreground font-medium mt-1">
-                        Monitoring {accounts.length} active campaigns from Google Sheets
-                    </p>
-                </div>
-                <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border">
-                    <Button
+        <div className="ui-page-stack h-full">
+            <AppPageHeader
+                title="Google Ads"
+                subtitle={`Monitoring ${accounts.length} accounts from Google Sheets.`}
+                secondaryActions={
+                  <div className="flex items-center gap-1 rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-1">
+                    <IconButton
+                        label="Show accounts as a list"
                         variant={viewMode === "list" ? "secondary" : "ghost"}
-                        size="sm"
                         onClick={() => setViewMode("list")}
-                        className="h-8 w-8 p-0"
+                        className="h-11 w-11"
                     >
                         <List className="h-4 w-4" />
-                    </Button>
-                    <Button
+                    </IconButton>
+                    <IconButton
+                        label="Show accounts as a grid"
                         variant={viewMode === "grid" ? "secondary" : "ghost"}
-                        size="sm"
                         onClick={() => setViewMode("grid")}
-                        className="h-8 w-8 p-0"
+                        className="h-11 w-11"
                     >
                         <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
+                    </IconButton>
+                  </div>
+                }
+            />
 
             {viewMode === "list" ? (
                 <div className="space-y-4">
@@ -128,8 +126,8 @@ function AccountListCard({ account }: { account: AdsAccount }) {
 
                     {/* Actions */}
                     <div className="flex items-center justify-end pl-0 lg:pl-4">
-                        <Button variant="outline" size="icon" asChild className="h-10 w-10 rounded-full hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all">
-                            <a href={account.link} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="icon" asChild className="h-11 w-11 rounded-[12px] hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all">
+                            <a href={account.link} target="_blank" rel="noopener noreferrer" aria-label={`Open ${account.name} in Google Ads`}>
                                 <ExternalLink className="h-4 w-4" />
                             </a>
                         </Button>
@@ -158,8 +156,8 @@ function AccountGridCard({ account }: { account: AdsAccount }) {
                             </span>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 -mr-2 -mt-2 text-muted-foreground hover:text-foreground">
-                        <a href={account.link} target="_blank" rel="noopener noreferrer">
+                    <Button variant="ghost" size="icon" asChild className="h-11 w-11 -mr-2 -mt-2 text-muted-foreground hover:text-foreground">
+                        <a href={account.link} target="_blank" rel="noopener noreferrer" aria-label={`Open ${account.name} in Google Ads`}>
                             <ExternalLink className="h-4 w-4" />
                         </a>
                     </Button>

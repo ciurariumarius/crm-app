@@ -26,7 +26,7 @@ export function ProjectBoardHeaderRow({
                 type="button"
                 onClick={() => onSort("name")}
                 className={cn(
-                    "ui-overline inline-flex items-center gap-1.5 text-left text-[10px]",
+                    "ui-overline inline-flex items-center gap-1.5 text-left text-xs",
                     sortBy === "name" ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 )}
                 title={`Sort by name (${sortBy === "name" ? (sortDirection === "desc" ? "Z-A" : "A-Z") : "A-Z"})`}
@@ -34,14 +34,14 @@ export function ProjectBoardHeaderRow({
                 Project name
                 <ArrowDownUp className="h-3 w-3" />
             </button>
-            <span className="ui-overline text-center text-[10px] text-[var(--text-muted)]">Status</span>
-            <span className="ui-overline text-center text-[10px] text-[var(--text-muted)]">Payment</span>
-            <span className="ui-overline text-center text-[10px] text-[var(--text-muted)]">Type</span>
+            <span className="ui-overline text-center text-xs text-[var(--text-muted)]">Status</span>
+            <span className="ui-overline text-center text-xs text-[var(--text-muted)]">Payment</span>
+            <span className="ui-overline text-center text-xs text-[var(--text-muted)]">Type</span>
             <button
                 type="button"
                 onClick={() => onSort("amount")}
                 className={cn(
-                    "ui-overline inline-flex items-center justify-end gap-1.5 text-right text-[10px]",
+                    "ui-overline inline-flex items-center justify-end gap-1.5 text-right text-xs",
                     sortBy === "amount" ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 )}
                 title={`Sort by amount (${sortBy === "amount" && sortDirection === "desc" ? "high to low" : "low to high"})`}
@@ -49,12 +49,12 @@ export function ProjectBoardHeaderRow({
                 Amount
                 <ArrowDownUp className="h-3 w-3" />
             </button>
-            <span className="ui-overline text-center text-[10px] text-[var(--text-muted)]">Tasks</span>
+            <span className="ui-overline text-center text-xs text-[var(--text-muted)]">Tasks</span>
             <button
                 type="button"
                 onClick={() => onSort("time")}
                 className={cn(
-                    "ui-overline inline-flex items-center justify-center gap-1.5 text-center text-[10px]",
+                    "ui-overline inline-flex items-center justify-center gap-1.5 text-center text-xs",
                     sortBy === "time" ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 )}
                 title={`Sort by time (${sortBy === "time" && sortDirection === "desc" ? "most to least" : "least to most"})`}
@@ -62,12 +62,12 @@ export function ProjectBoardHeaderRow({
                 Time
                 <ArrowDownUp className="h-3 w-3" />
             </button>
-            <span className="ui-overline text-[10px] text-[var(--text-muted)]">Partner</span>
+            <span className="ui-overline text-xs text-[var(--text-muted)]">Partner</span>
             <button
                 type="button"
                 onClick={() => onSort("createdAt")}
                 className={cn(
-                    "ui-overline inline-flex items-center justify-end gap-1.5 text-right text-[10px]",
+                    "ui-overline inline-flex items-center justify-end gap-1.5 text-right text-xs",
                     sortBy === "createdAt" ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 )}
                 title={`Sort by created date (${sortBy === "createdAt" && sortDirection === "desc" ? "newest first" : "oldest first"})`}

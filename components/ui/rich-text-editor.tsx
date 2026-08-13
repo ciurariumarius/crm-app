@@ -521,7 +521,7 @@ export function RichTextEditor({
         editorProps: {
             attributes: {
                 class: cn(
-                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-[var(--line-subtle)] [&_pre]:bg-[var(--surface-low)] [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_70%,transparent)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-[12px] [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-[var(--surface-low)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-[var(--line-subtle)] [&_pre]:bg-[var(--surface-low)] [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_70%,transparent)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-xs [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-[var(--surface-low)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
                     "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li>label]:mt-1 [&_ul[data-type=taskList]_li>div]:min-w-0 [&_ul[data-type=taskList]_input]:accent-[var(--brand-primary)]",
                     mode === "document" && "min-h-full",
                     notesFirstLineClass
@@ -875,7 +875,7 @@ export function RichTextEditor({
                                         ? editor.chain().focus().setHeading({ level: 2 }).run()
                                         : editor.chain().focus().setParagraph().run()
                                 }
-                                className={cn(compactControlClass, "p-0 text-[12px] font-semibold", notesControlClass)}
+                                className={cn(compactControlClass, "p-0 text-xs font-semibold", notesControlClass)}
                                 aria-label="Text format"
                                 title="Text format"
                             >
@@ -1009,49 +1009,49 @@ export function RichTextEditor({
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().addColumnBefore().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             >
                                 + Col
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().addColumnAfter().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             >
                                 Col +
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().addRowBefore().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             >
                                 + Row
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().addRowAfter().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             >
                                 Row +
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().deleteColumn().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-50"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-[var(--state-urgent)] hover:bg-[var(--state-danger-surface)]"
                             >
                                 Del Col
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().deleteRow().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-50"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-[var(--state-urgent)] hover:bg-[var(--state-danger-surface)]"
                             >
                                 Del Row
                             </button>
                             <button
                                 type="button"
                                 onClick={() => editor.chain().focus().deleteTable().run()}
-                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold text-rose-700 hover:bg-rose-50"
+                                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-[var(--state-urgent)] hover:bg-[var(--state-danger-surface)]"
                             >
                                 Delete Table
                             </button>
@@ -1071,9 +1071,9 @@ export function RichTextEditor({
                             className={cn(
                                 "absolute z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-sm transition",
                                 codeCopyState === "copied"
-                                    ? "text-emerald-600"
+                                    ? "text-[var(--state-success)]"
                                     : codeCopyState === "error"
-                                        ? "text-rose-600"
+                                        ? "text-[var(--state-urgent)]"
                                         : "text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                             )}
                             aria-label="Copy code"
@@ -1092,8 +1092,8 @@ export function RichTextEditor({
                         className={cn(
                             "mx-4 mb-2 flex items-center justify-between rounded-lg px-3 py-2 text-xs",
                             uploadState.error
-                                ? "border border-rose-200 bg-rose-50 text-rose-700"
-                                : "border border-blue-200 bg-blue-50 text-blue-700"
+                                ? "border border-[color:color-mix(in_srgb,var(--state-urgent)_28%,var(--line-subtle))] bg-[var(--state-danger-surface)] text-[var(--state-urgent)]"
+                                : "border border-[color:color-mix(in_srgb,var(--info)_28%,var(--line-subtle))] bg-[var(--state-info-surface)] text-[var(--info)]"
                         )}
                     >
                         <span>
@@ -1152,7 +1152,7 @@ export function RichTextEditor({
                                         : "mx-auto w-full max-w-4xl px-6")
                             )}
                         >
-                            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
                                 Screenshot Gallery ({imageSources.length})
                             </div>
                             <div className="flex gap-2 overflow-x-auto pb-1">

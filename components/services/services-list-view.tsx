@@ -77,7 +77,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                         <div className="flex items-center gap-2 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-1.5 shadow-sm backdrop-blur-md">
                         <div className="flex items-center gap-2 text-[var(--text-muted)]">
                             <ListFilter className="h-4 w-4" />
-                            <span className="text-[11px] font-medium">Sort by</span>
+                            <span className="text-xs font-medium">Sort by</span>
                         </div>
                         <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
                             <SelectTrigger className="h-7 w-[160px] border-none bg-transparent text-xs font-bold shadow-none focus:ring-0 p-0 text-[var(--text-secondary)]">
@@ -135,7 +135,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                                     One-time
                                                 </StatusChip>
                                             )}
-                                            <CardTitle className="text-[18px] font-bold tracking-tight text-[var(--text-primary)]">{service.serviceName}</CardTitle>
+                                            <CardTitle className="text-lg font-bold tracking-tight text-[var(--text-primary)]">{service.serviceName}</CardTitle>
                                         </div>
                                     </div>
                                     <CardDescription className="pt-2 flex flex-col gap-0.5">
@@ -154,7 +154,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                 </CardHeader>
                                 <CardContent className="pt-5">
                                     <div className="space-y-3">
-                                        <div className="text-[11px] font-semibold tracking-[0.03em] text-[var(--text-secondary)] flex items-center gap-2">
+                                        <div className="text-xs font-semibold tracking-[0.03em] text-[var(--text-secondary)] flex items-center gap-2">
                                             <ListFilter className="h-3 w-3" /> Standard Checklist
                                         </div>
                                         <ul className="text-[13px] space-y-2 list-none font-medium text-[var(--text-secondary)]">
@@ -164,7 +164,7 @@ export function ServicesListView({ services }: ServicesListViewProps) {
                                                     <span>{task}</span>
                                                 </li>
                                             ))}
-                                            {tasks.length > 4 && <li className="text-blue-600/70 text-[11px] font-medium pl-3.5">+{tasks.length - 4} more steps</li>}
+                                            {tasks.length > 4 && <li className="text-blue-600/70 text-xs font-medium pl-3.5">+{tasks.length - 4} more steps</li>}
                                             {tasks.length === 0 && <li className="italic text-[var(--text-muted)] pl-3.5 font-normal">No standard tasks defined</li>}
                                         </ul>
                                     </div>

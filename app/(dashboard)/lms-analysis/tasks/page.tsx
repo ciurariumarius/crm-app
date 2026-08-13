@@ -619,7 +619,7 @@ export default function LmsAnalysisTasksPage() {
             {activeFilters.map((filter) => (
               <span
                 key={filter.id}
-                className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
+                className="inline-flex h-7 items-center rounded-full border border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,var(--surface-lowest))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] px-2.5 text-xs font-semibold uppercase tracking-[0.03em] text-[var(--brand-primary)]"
               >
                 <span>{filter.label}</span>
                 <button
@@ -636,7 +636,7 @@ export default function LmsAnalysisTasksPage() {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="inline-flex h-7 items-center rounded-full px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                className="inline-flex h-7 items-center rounded-full px-2 text-xs font-semibold uppercase tracking-[0.06em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
               >
                 Clear all
               </button>
@@ -660,7 +660,7 @@ export default function LmsAnalysisTasksPage() {
                 numberClassName="font-bold text-[var(--text-primary)]"
                 unitClassName="font-bold text-[var(--text-muted)]"
               />
-              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[var(--brand-primary)]">Within selected filters</p>
+              <p className="mt-2 text-xs font-black uppercase tracking-wider text-[var(--brand-primary)]">Within selected filters</p>
             </div>
           </div>
         </div>
@@ -674,7 +674,7 @@ export default function LmsAnalysisTasksPage() {
           <div className="mt-6 flex items-end justify-between">
             <div>
               <p className="text-[32px] font-bold leading-none tracking-tight text-[var(--text-primary)]">{totalTasks}</p>
-              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">In current selection</p>
+              <p className="mt-2 text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">In current selection</p>
             </div>
           </div>
         </div>
@@ -688,7 +688,7 @@ export default function LmsAnalysisTasksPage() {
           <div className="mt-6 flex items-end justify-between">
             <div>
               <p className="text-[32px] font-bold leading-none tracking-tight text-[var(--text-primary)]">{workingDays}</p>
-              <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">{start} to {end}</p>
+              <p className="mt-2 text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">{start} to {end}</p>
             </div>
           </div>
         </div>
@@ -702,15 +702,15 @@ export default function LmsAnalysisTasksPage() {
           <div className="mt-6 flex items-end gap-6">
             <div className="min-w-[60px]">
               <p className="text-[32px] font-bold leading-none tracking-tight text-[var(--text-primary)]">{internalTaskCount}</p>
-              <p className="mt-1 text-[10px] italic text-[var(--text-muted)]">Total tasks</p>
+              <p className="mt-1 text-xs italic text-[var(--text-muted)]">Total tasks</p>
             </div>
             <div className="flex-1 space-y-2 border-l border-[var(--line-subtle)] pl-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--brand-primary)]">Ratio</span>
+                <span className="text-xs font-black uppercase tracking-wider text-[var(--brand-primary)]">Ratio</span>
                 <span className="text-sm font-bold text-[var(--text-primary)]">{internalTaskPercent.toFixed(1)}%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--brand-primary)]">Hours</span>
+                <span className="text-xs font-black uppercase tracking-wider text-[var(--brand-primary)]">Hours</span>
                 <DurationValue minutes={internalMinutes} className="text-sm" numberClassName="font-bold text-[var(--text-primary)]" unitClassName="font-bold text-[var(--text-secondary)]" />
               </div>
             </div>
@@ -800,7 +800,7 @@ export default function LmsAnalysisTasksPage() {
                       <p>Internal: <span className="font-semibold text-[var(--text-primary)]">{row.internalPercent.toFixed(1)}%</span></p>
                     </div>
                     <div className="mt-3">
-                      <div className="mb-1 flex items-center justify-between text-[11px]">
+                      <div className="mb-1 flex items-center justify-between text-xs">
                         <span className="font-semibold text-[var(--text-secondary)]">Capacity</span>
                         <span className="font-semibold text-[var(--text-primary)]">{row.utilizationPercent.toFixed(1)}%</span>
                       </div>
@@ -921,7 +921,7 @@ export default function LmsAnalysisTasksPage() {
                     <button
                       type="button"
                       onClick={() => toggleTaskLogSort("domain")}
-                      className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center gap-1.5 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                       aria-label="Sort by domain"
                     >
                       <span>Domain</span>
@@ -933,7 +933,7 @@ export default function LmsAnalysisTasksPage() {
                     <button
                       type="button"
                       onClick={() => toggleTaskLogSort("minutes")}
-                      className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center gap-1.5 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                       aria-label="Sort by hours worked"
                     >
                       <span>Hours Worked</span>
@@ -944,7 +944,7 @@ export default function LmsAnalysisTasksPage() {
                     <button
                       type="button"
                       onClick={() => toggleTaskLogSort("date")}
-                      className="inline-flex items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                      className="inline-flex items-center gap-1.5 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                       aria-label="Sort by date entry"
                     >
                       <span>Date Entry</span>
@@ -1004,7 +1004,7 @@ export default function LmsAnalysisTasksPage() {
                   <select
                     value={taskLogPageSize}
                     onChange={(event) => setTaskLogPageSize(Number(event.target.value))}
-                    className="h-8 min-w-[58px] appearance-none rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-6 text-[11px] font-semibold text-[var(--text-primary)] outline-none"
+                    className="h-8 min-w-[58px] appearance-none rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] pl-2 pr-6 text-xs font-semibold text-[var(--text-primary)] outline-none"
                     aria-label="Rows per page"
                   >
                     {TASK_LOGS_PAGE_SIZE_OPTIONS.map((size) => (
@@ -1015,7 +1015,7 @@ export default function LmsAnalysisTasksPage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
                 </div>
-                <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-2.5 text-[11px] font-semibold text-[var(--text-primary)]">
+                <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-2.5 text-xs font-semibold text-[var(--text-primary)]">
                   {taskLogPage}/{taskLogTotalPages}
                 </span>
               </div>
@@ -1100,7 +1100,7 @@ function DateFilterCombobox({
                 setOpen(false)
               }}
               className={cn(
-                "inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-[11px] font-semibold transition-colors",
+                "inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-xs font-semibold transition-colors",
                 index === 0 ? "w-full" : "w-[calc(50%-4px)]",
                 activePresetId === preset.id
                   ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] text-[var(--brand-primary)]"
@@ -1132,12 +1132,12 @@ function DateFilterCombobox({
             month: "w-full",
             month_grid: "w-full table-fixed border-collapse",
             weekdays: "grid w-full grid-cols-7",
-            weekday: "text-center text-[9px] font-medium text-[var(--text-secondary)]",
+            weekday: "text-center text-xs font-medium text-[var(--text-secondary)]",
             weeks: "w-full",
             week: "mt-0 grid w-full grid-cols-7",
             day: "w-full",
             nav: "absolute inset-x-0 top-1 flex w-full items-center justify-between px-1",
-            month_caption: "flex h-5 w-full items-center justify-center px-6 text-[12px]",
+            month_caption: "flex h-5 w-full items-center justify-center px-6 text-xs",
             button_previous: "h-4.5 w-4.5",
             button_next: "h-4.5 w-4.5",
           }}
@@ -1150,11 +1150,11 @@ function DateFilterCombobox({
               onSelectPreset("all")
               setOpen(false)
             }}
-            className="text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             Clear range
           </button>
-          <span className="text-[9px] font-medium text-[var(--text-secondary)]">
+          <span className="text-xs font-medium text-[var(--text-secondary)]">
             Pick start and end date
           </span>
         </div>

@@ -54,9 +54,8 @@ import {
 import type { NotesQueryView } from "@/lib/notes/queries.server"
 import { updateProject } from "@/lib/actions/projects"
 import { updateTask } from "@/lib/actions/tasks"
-import { DashboardPageHeader } from "@/components/layout/dashboard-page-header"
+import { AppPageHeader } from "@/components/layout/app-page-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -157,7 +156,6 @@ type DateGroup = {
   notes: NoteRecord[]
 }
 
-const NO_FOLDER_VALUE = "__none__"
 const DEFAULT_RAIL_KEY: RailKey = "all"
 const NOTE_SURFACE_FONT = "[font-family:var(--font-geist-sans),sans-serif]"
 
@@ -466,7 +464,6 @@ export function NotesWorkspace({
   )
   const [emptyEditorDraft, setEmptyEditorDraft] = React.useState("")
   const [search, setSearch] = React.useState("")
-  const [isMobileRailOpen, setIsMobileRailOpen] = React.useState(false)
   const [mobilePane, setMobilePane] = React.useState<MobilePane>(
     initialSelectedNoteId ? "editor" : "folders"
   )
@@ -1212,7 +1209,6 @@ export function NotesWorkspace({
         }
         selectNoteId(result.data.id)
         setEditorFocusToken((current) => current + 1)
-        setIsMobileRailOpen(false)
         return result.data.id
       } finally {
         setIsCreating(false)
@@ -1229,7 +1225,6 @@ export function NotesWorkspace({
     setSearchScope("view")
     setSaveState("idle")
     setEditorFocusToken((current) => current + 1)
-    setIsMobileRailOpen(false)
   }, [flushSelectedNote, selectNoteId])
 
   const handleSelectNote = React.useCallback(
@@ -1906,7 +1901,7 @@ export function NotesWorkspace({
 
   const railButtonClass = (active: boolean) =>
     cn(
-      "group grid h-9 w-full grid-cols-[minmax(0,1fr)_32px] items-center gap-2 rounded-lg border px-2.5 text-left text-[12px] font-medium transition-colors",
+      "group grid h-9 w-full grid-cols-[minmax(0,1fr)_32px] items-center gap-2 rounded-lg border px-2.5 text-left text-xs font-medium transition-colors",
       NOTE_SURFACE_FONT,
       active
         ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))] text-[var(--text-primary)]"
@@ -1914,7 +1909,7 @@ export function NotesWorkspace({
     )
 
   const railCountBadgeClass =
-    "inline-flex h-6 w-8 shrink-0 items-center justify-center justify-self-end rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_82%,transparent)] px-1 text-[10px] tabular-nums text-[var(--text-muted)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--line-subtle)_80%,transparent)]"
+    "inline-flex h-6 w-8 shrink-0 items-center justify-center justify-self-end rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_82%,transparent)] px-1 text-xs tabular-nums text-[var(--text-muted)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--line-subtle)_80%,transparent)]"
 
   const renderLeftRail = (isMobile = false, compact = false) => (
     <div className={cn(compact ? "flex shrink-0 flex-col" : "flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
@@ -1945,7 +1940,7 @@ export function NotesWorkspace({
               <h3
                 id={isMobile ? "mobile-note-folders" : "desktop-note-folders"}
                 className={cn(
-                  "inline-flex min-w-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                  "inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em]",
                   draggedNoteId ? "text-[var(--primary)]" : "text-[var(--text-muted)]"
                 )}
               >
@@ -1990,7 +1985,7 @@ export function NotesWorkspace({
                     }
                   }}
                   placeholder={newFolderParentId ? "Subfolder name" : "Folder name"}
-                  className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-[12px] shadow-none focus-visible:ring-0"
+                  className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus-visible:ring-0"
                   autoFocus
                 />
                 <button
@@ -2079,7 +2074,7 @@ export function NotesWorkspace({
                               cancelRenameFolder()
                             }
                           }}
-                          className="h-8 min-w-0 flex-1 rounded-lg border-[var(--brand-cyan)] bg-[var(--surface-lowest)] px-2 text-[12px] shadow-none focus-visible:ring-[var(--brand-cyan)]"
+                          className="h-8 min-w-0 flex-1 rounded-lg border-[var(--brand-cyan)] bg-[var(--surface-lowest)] px-2 text-xs shadow-none focus-visible:ring-[var(--brand-cyan)]"
                           autoFocus
                         />
                         <button
@@ -2161,7 +2156,7 @@ export function NotesWorkspace({
                             >
                               {!folder.parentId ? (
                                 <DropdownMenuItem
-                                  className="rounded-lg px-2.5 py-2 text-[12px]"
+                                  className="rounded-lg px-2.5 py-2 text-xs"
                                   onSelect={() => {
                                     setNewFolderParentId(folder.id)
                                     setNewFolderName("")
@@ -2173,21 +2168,21 @@ export function NotesWorkspace({
                                 </DropdownMenuItem>
                               ) : null}
                               <DropdownMenuItem
-                                className="rounded-lg px-2.5 py-2 text-[12px]"
+                                className="rounded-lg px-2.5 py-2 text-xs"
                                 onSelect={() => startRenameFolder(folder)}
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                                 Rename
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="rounded-lg px-2.5 py-2 text-[12px]"
+                                className="rounded-lg px-2.5 py-2 text-xs"
                                 onSelect={() => void reorderFolder(folder, -1)}
                               >
                                 <ChevronUp className="h-3.5 w-3.5" />
                                 Move Up
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="rounded-lg px-2.5 py-2 text-[12px]"
+                                className="rounded-lg px-2.5 py-2 text-xs"
                                 onSelect={() => void reorderFolder(folder, 1)}
                               >
                                 <ChevronDown className="h-3.5 w-3.5" />
@@ -2198,7 +2193,7 @@ export function NotesWorkspace({
                                   <DropdownMenuSeparator className="bg-[var(--line-subtle)]" />
                                   <DropdownMenuItem
                                     variant="destructive"
-                                    className="rounded-lg px-2.5 py-2 text-[12px]"
+                                    className="rounded-lg px-2.5 py-2 text-xs"
                                     onSelect={() => setPendingDeleteFolder(folder)}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -2226,7 +2221,7 @@ export function NotesWorkspace({
           <div className="mb-1.5 flex h-7 items-center px-2">
             <h3
               id={isMobile ? "mobile-note-collections" : "desktop-note-collections"}
-              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
+              className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
             >
               Collections
             </h3>
@@ -2254,7 +2249,7 @@ export function NotesWorkspace({
         {productivityFeaturesEnabled ? (
           <section className="mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Smart Folders and Tags">
             <div className="mb-1.5 flex h-7 items-center justify-between px-2">
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 Smart Folders &amp; Tags
               </h3>
               <button
@@ -2315,7 +2310,7 @@ export function NotesWorkspace({
 
         <section className="mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Linked Notes">
           <div className="mb-1.5 flex h-7 items-center px-2">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
               Linked Notes
             </h3>
           </div>
@@ -2342,7 +2337,7 @@ export function NotesWorkspace({
             <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
               {searchQuery ? "Search Results" : effectiveListLabel}
             </p>
-            <p className="text-[11px] tabular-nums text-[var(--text-muted)]">
+            <p className="text-xs tabular-nums text-[var(--text-muted)]">
               {filteredNotes.length}
               {personalListPage?.key === personalQueryKey && personalListPage.nextCursor ? "+" : ""}{" "}
               {filteredNotes.length === 1 ? "note" : "notes"}
@@ -2405,7 +2400,7 @@ export function NotesWorkspace({
             <div className="space-y-4">
               {groupedNotes.map((group) => (
                 <div key={group.key}>
-                  <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{group.label}</p>
+                  <p className="px-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{group.label}</p>
                   <div className={cn("mt-1.5", listMode === "gallery" ? "grid grid-cols-2 gap-2" : "space-y-1")}>
                     {group.notes.map((note) => {
                     const selected = note.id === selectedNoteId
@@ -2462,10 +2457,10 @@ export function NotesWorkspace({
                             </div>
                           ) : null}
                           <div className="min-w-0 flex-1">
-                            <p className="line-clamp-1 text-[14px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{getNoteDisplayTitle(note)}</p>
-                            <p className="mt-0.5 line-clamp-1 text-[12px] text-[var(--text-secondary)]">{getNotePreview(note)}</p>
+                            <p className="line-clamp-1 text-sm font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{getNoteDisplayTitle(note)}</p>
+                            <p className="mt-0.5 line-clamp-1 text-xs text-[var(--text-secondary)]">{getNotePreview(note)}</p>
                             <div className="mt-1.5 flex items-center justify-between gap-2">
-                              <p className="truncate text-[11px] text-[var(--text-muted)]">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</p>
+                              <p className="truncate text-xs text-[var(--text-muted)]">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</p>
                               <div className="flex items-center gap-0.5">
                                 {!isLinked ? (
                                   <DropdownMenu
@@ -2525,7 +2520,7 @@ export function NotesWorkspace({
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 ) : (
-                                  <span className="rounded-md bg-[var(--surface-low)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
+                                  <span className="rounded-md bg-[var(--surface-low)] px-1.5 py-0.5 text-xs text-[var(--text-secondary)]">
                                     {sourceType === "project" ? "Project" : "Task"}
                                   </span>
                                 )}
@@ -2546,7 +2541,7 @@ export function NotesWorkspace({
                   <button
                     type="button"
                     onClick={() => setPersonalListReloadToken((current) => current + 1)}
-                    className="text-[12px] font-semibold text-rose-600 hover:underline"
+                    className="text-xs font-semibold text-rose-600 hover:underline"
                   >
                     Couldn&apos;t refresh notes · Retry
                   </button>
@@ -2564,7 +2559,7 @@ export function NotesWorkspace({
                   </Button>
                 ) : null}
                 {isPersonalListLoading ? (
-                  <span className="text-[11px] text-[var(--text-muted)]">Refreshing…</span>
+                  <span className="text-xs text-[var(--text-muted)]">Refreshing…</span>
                 ) : null}
               </div>
             ) : null}
@@ -2574,7 +2569,7 @@ export function NotesWorkspace({
             <p className="text-sm font-medium text-[var(--text-primary)]">
               {searchQuery ? `No results for "${searchQuery}"` : "No notes in this view"}
             </p>
-            <p className="mt-1 text-[12px] text-[var(--text-muted)]">
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               {searchQuery ? "Try another keyword or clear search." : "Create a note or switch collection."}
             </p>
             {searchQuery ? (
@@ -2625,7 +2620,7 @@ export function NotesWorkspace({
     if (!selectedNote) {
       return (
         <div className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
-          <div className="flex h-12 items-center border-b border-[var(--line-subtle)] px-5 text-[12px] text-[var(--text-muted)]">
+          <div className="flex h-12 items-center border-b border-[var(--line-subtle)] px-5 text-xs text-[var(--text-muted)]">
             {effectiveListLabel}
           </div>
           <div className="ui-scrollbar flex-1 overflow-y-auto px-5 py-5 lg:px-8">
@@ -2653,7 +2648,7 @@ export function NotesWorkspace({
     return (
       <div className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
         <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--line-subtle)] px-4 py-2 lg:px-6">
-          <div className="min-w-0 text-[11px] text-[var(--text-muted)]">
+          <div className="min-w-0 text-xs text-[var(--text-muted)]">
             <span>
               Edited {format(new Date(selectedNote.updatedAt), "d MMM yyyy, HH:mm")}
             </span>
@@ -2734,7 +2729,7 @@ export function NotesWorkspace({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <span className="rounded-md bg-[var(--surface-low)] px-2 py-1 text-[10px] font-medium text-[var(--text-secondary)]">
+            <span className="rounded-md bg-[var(--surface-low)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)]">
               {selectedNoteSourceType === "project" ? "Project" : "Task"}
               {selectedNote.sourceLabel ? ` · ${selectedNote.sourceLabel}` : ""}
             </span>
@@ -2780,8 +2775,6 @@ export function NotesWorkspace({
     )
   }
 
-  const showArchivedMode = activeRailKey === "archived"
-
   return (
     <div className={cn("flex h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))] min-h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))] flex-col gap-3 overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:min-h-[calc(100dvh-3.5rem)]", NOTE_SURFACE_FONT)}>
       <div
@@ -2790,14 +2783,13 @@ export function NotesWorkspace({
         aria-hidden="true"
         className="pointer-events-none fixed -top-[1000px] left-0 z-50 inline-flex h-9 w-max max-w-[240px] items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-[10px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[13px] font-semibold text-[var(--text-primary)] shadow-[var(--shadow-apple)]"
       />
-      <div className="shrink-0 rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-4">
-        <DashboardPageHeader
+        <AppPageHeader
           title="Notes"
-          showMobile
-          actions={
+          subtitle="Capture, organize and edit personal, project and task notes."
+          primaryAction={
             <Button
               type="button"
-              className="!h-10 !w-auto !rounded-[20px] !bg-[var(--primary)] !px-5 !text-white hover:!bg-[var(--brand-primary-strong)]"
+              className="!h-11 !w-auto !rounded-[12px] !bg-[var(--primary)] !px-5 !text-white hover:!bg-[var(--brand-primary-strong)]"
               onClick={() => {
                 beginNewNote()
                 setMobilePane("editor")
@@ -2809,7 +2801,6 @@ export function NotesWorkspace({
             </Button>
           }
         />
-      </div>
 
       <main className="min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] xl:grid"
         style={{
@@ -2875,7 +2866,7 @@ export function NotesWorkspace({
             <section className="h-full bg-[var(--surface-low)]">
               <div className="flex h-11 items-center justify-between border-b border-[var(--line-subtle)] px-3">
                 <span className="text-[15px] font-semibold text-[var(--text-primary)]">Folders</span>
-                <span className="text-[11px] text-[var(--text-muted)]">{smartCollectionCounts.all} notes</span>
+                <span className="text-xs text-[var(--text-muted)]">{smartCollectionCounts.all} notes</span>
               </div>
               <div
                 className="h-[calc(100%-44px)]"
@@ -2914,299 +2905,6 @@ export function NotesWorkspace({
         </div>
       </main>
 
-      {false ? (
-      <div className="rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-3 shadow-[var(--shadow-apple)] sm:p-4 lg:p-4">
-        <DashboardPageHeader
-          title="Notes"
-          showMobile
-          className={NOTE_SURFACE_FONT}
-          search={
-            <div className="flex items-center gap-2">
-              <NotesSearchInput ref={searchRef} value={search} onChange={setSearch} variant="apple" density="comfortable" />
-              <Button
-                type="button"
-                variant={showArchivedMode ? "default" : "outline"}
-                className="h-10 rounded-[12px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 text-[13px] font-semibold text-[var(--text-secondary)]"
-                onClick={() => setActiveRailKey(showArchivedMode ? "all" : "archived")}
-              >
-                {showArchivedMode ? "Archived" : "Active"}
-              </Button>
-            </div>
-          }
-          mobileSearch={<NotesSearchInput ref={searchRef} value={search} onChange={setSearch} showShortcutHint={false} variant="apple" density="compact" />}
-          actions={
-            <Button
-              type="button"
-              className="!h-10 !w-auto !min-w-0 !rounded-[12px] !border !border-[var(--line-subtle)] !bg-[var(--surface-lowest)] !px-5 !text-[var(--text-primary)] hover:!bg-[var(--surface-low)]"
-              onClick={beginNewNote}
-              disabled={isCreating || storageUnavailable}
-            >
-              <FilePlus2 className="h-4 w-4" />
-              <span className="inline text-sm font-semibold">Add</span>
-            </Button>
-          }
-          mobileActions={
-            <Button
-              type="button"
-              className="!h-10 !w-auto !min-w-0 !rounded-[12px] !border !border-[var(--line-subtle)] !bg-[var(--surface-lowest)] !px-5 !text-[var(--text-primary)] hover:!bg-[var(--surface-low)]"
-              onClick={beginNewNote}
-              disabled={isCreating || storageUnavailable}
-            >
-              <FilePlus2 className="h-4 w-4" />
-              <span className="inline text-sm font-semibold">Add</span>
-            </Button>
-          }
-        />
-      </div>
-      ) : null}
-
-      {false ? (
-      <Card className="flex-1 min-h-0 gap-0 overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] py-0 shadow-[var(--shadow-apple)]">
-        <CardContent className="flex-1 min-h-0 p-0">
-          <div className="hidden h-full min-h-0 md:grid md:grid-cols-[312px_minmax(0,1fr)] xl:grid-cols-[336px_minmax(0,1fr)]">
-            <aside className="min-h-0 border-r border-[var(--line-subtle)] bg-[var(--surface-low)]">
-              <div className="flex h-full min-h-0 flex-col">
-                <div className="min-h-0 flex-1">
-                  {renderMiddleList(false)}
-                </div>
-                <div className="shrink-0 border-t border-[var(--line-subtle)]">
-                  {renderLeftRail(false, true)}
-                </div>
-              </div>
-            </aside>
-
-            <section className="min-w-0 min-h-0 overflow-hidden bg-white">
-              {selectedNote ? (
-                <div className="flex h-full min-h-0 flex-col">
-                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-4 lg:pr-3">
-                    <RichTextEditor
-                      value={selectedEditorDraft}
-                      onChange={(value) => handleContentDraftChange(selectedNote!.id, value)}
-                      placeholder="Start writing"
-                      variant="plain"
-                      mode="document"
-                      notesMode
-                      notesAppearance="apple"
-                      focusToken={editorFocusToken}
-                      documentLayout="left"
-                      uploadProjectId={editorUploadContextId}
-                      documentWidth="reading"
-                      imageUploadFallback="error"
-                      toolbarActions={
-                        selectedNoteIsLinked ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={appendTemplate}
-                            className="h-10 w-10 rounded-[10px] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] lg:h-8 lg:w-8"
-                            aria-label="Add template"
-                            title="Add template"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        ) : undefined
-                      }
-                      className="rounded-[14px] bg-transparent"
-                      minHeightClassName="min-h-[56vh]"
-                    />
-                  </div>
-                  <div className="border-t border-[var(--line-subtle)] px-5 py-2 lg:px-7">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2 text-[12px] text-[var(--text-muted)]">
-                        <span>{format(new Date(selectedNote!.updatedAt), "d MMMM yyyy 'at' HH:mm")}</span>
-                        <span>•</span>
-                        <span>{activeRailLabel}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {!selectedNoteIsLinked && foldersEnabled ? (
-                          <Select
-                            value={selectedNote!.folderId || (defaultFolder?.id ?? NO_FOLDER_VALUE)}
-                            onValueChange={(value) => {
-                              void handleAssignFolder(selectedNote!, value === NO_FOLDER_VALUE ? null : value)
-                            }}
-                          >
-                            <SelectTrigger className="h-8 min-w-[160px] rounded-[10px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-xs font-medium text-[var(--text-secondary)] shadow-none">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-[var(--line-subtle)]">
-                              {!foldersEnabled || !defaultFolder ? <SelectItem value={NO_FOLDER_VALUE}>Unfiled</SelectItem> : null}
-                              {folders.map((folder) => (
-                                <SelectItem key={folder.id} value={folder.id}>
-                                  {folder.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : null}
-                        {selectedNoteIsLinked ? (
-                          <span className="rounded-lg bg-[var(--surface-low)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-                            {selectedNoteSourceType === "project" ? "Project" : "Task"}
-                            {selectedNote!.sourceLabel ? ` · ${selectedNote!.sourceLabel}` : ""}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-full min-h-0 flex-col">
-                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-3 lg:px-6 lg:pb-4 lg:pt-4 lg:pr-3">
-                    <RichTextEditor
-                      value={emptyEditorDraft}
-                      onChange={setEmptyEditorDraft}
-                      placeholder="Start writing"
-                      variant="plain"
-                      mode="document"
-                      notesMode
-                      notesAppearance="apple"
-                      documentLayout="left"
-                      documentWidth="reading"
-                      className="rounded-[14px] bg-transparent"
-                      minHeightClassName="min-h-[56vh]"
-                    />
-                  </div>
-                  <div className="border-t border-[var(--line-subtle)] px-5 py-2 lg:px-7">
-                    <div className="flex items-center gap-2 text-[12px] text-[var(--text-muted)]">
-                      <span>{activeRailLabel}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
-          </div>
-
-          <div className="md:hidden h-full min-h-0">
-            <div className="flex items-center gap-2 border-b border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2.5">
-              <Sheet open={isMobileRailOpen} onOpenChange={setIsMobileRailOpen}>
-                <SheetTrigger asChild>
-                  <Button type="button" variant="outline" size="sm" className="h-8 rounded-[12px] border-[var(--line-subtle)] bg-[var(--surface-lowest)]">
-                    <Folder className="mr-1.5 h-4 w-4" />
-                    Sidebar
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[90vw] border-r border-[var(--line-subtle)] bg-[var(--surface-low)] p-0 sm:max-w-md">
-                  <SheetHeader className="border-b border-[var(--line-subtle)] bg-[var(--surface-low)] px-4 py-3">
-                    <SheetTitle className={NOTE_SURFACE_FONT}>Notes</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex h-full min-h-0 flex-col">
-                    <div className="min-h-0 flex-1">
-                      {renderMiddleList(true)}
-                    </div>
-                    <div className="shrink-0 border-t border-[var(--line-subtle)]">
-                      {renderLeftRail(true, true)}
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
-              <div className={cn("text-[12px] text-[var(--text-secondary)]", NOTE_SURFACE_FONT)}>
-                {activeRailLabel} ({filteredNotes.length})
-              </div>
-            </div>
-
-            <section className="h-[calc(100%-53px)] min-h-0 overflow-hidden bg-white">
-              {selectedNote ? (
-                <div className="flex h-full min-h-0 flex-col">
-                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2">
-                    <RichTextEditor
-                      value={selectedEditorDraft}
-                      onChange={(value) => handleContentDraftChange(selectedNote!.id, value)}
-                      placeholder="Start writing"
-                      variant="plain"
-                      mode="document"
-                      notesMode
-                      notesAppearance="apple"
-                      focusToken={editorFocusToken}
-                      documentLayout="left"
-                      uploadProjectId={editorUploadContextId}
-                      documentWidth="reading"
-                      imageUploadFallback="error"
-                      toolbarActions={
-                        selectedNoteIsLinked ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={appendTemplate}
-                            className="h-10 w-10 rounded-[10px] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
-                            aria-label="Add template"
-                            title="Add template"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        ) : undefined
-                      }
-                      className="rounded-[16px] bg-transparent"
-                      minHeightClassName="min-h-[60vh]"
-                    />
-                  </div>
-                  <div className="border-t border-[var(--line-subtle)] px-4 py-2">
-                    <div className="space-y-2">
-                      <div className={cn("flex items-center gap-2 text-[12px] text-[var(--text-muted)]", NOTE_SURFACE_FONT)}>
-                        <span>{formatDistanceToNow(new Date(selectedNote!.updatedAt), { addSuffix: true })}</span>
-                        <span>•</span>
-                        <span className="truncate">{activeRailLabel}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {!selectedNoteIsLinked && foldersEnabled ? (
-                          <Select
-                            value={selectedNote!.folderId || (defaultFolder?.id ?? NO_FOLDER_VALUE)}
-                            onValueChange={(value) => {
-                              void handleAssignFolder(selectedNote!, value === NO_FOLDER_VALUE ? null : value)
-                            }}
-                          >
-                            <SelectTrigger className="h-8 min-w-[150px] rounded-[10px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-xs font-medium text-[var(--text-secondary)] shadow-none">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-[var(--line-subtle)]">
-                              {!foldersEnabled || !defaultFolder ? <SelectItem value={NO_FOLDER_VALUE}>Unfiled</SelectItem> : null}
-                              {folders.map((folder) => (
-                                <SelectItem key={folder.id} value={folder.id}>
-                                  {folder.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : null}
-                        {selectedNoteIsLinked ? (
-                          <span className="rounded-lg bg-[var(--surface-low)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-                            {selectedNoteSourceType === "project" ? "Project" : "Task"}
-                            {selectedNote!.sourceLabel ? ` · ${selectedNote!.sourceLabel}` : ""}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-full min-h-0 flex-col">
-                  <div className="ui-scrollbar ui-scrollbar-inset mr-1 flex-1 min-h-0 overflow-y-auto p-3 pr-2">
-                    <RichTextEditor
-                      value={emptyEditorDraft}
-                      onChange={setEmptyEditorDraft}
-                      placeholder="Start writing"
-                      variant="plain"
-                      mode="document"
-                      notesMode
-                      notesAppearance="apple"
-                      documentLayout="left"
-                      documentWidth="reading"
-                      className="rounded-[16px] bg-transparent"
-                      minHeightClassName="min-h-[60vh]"
-                    />
-                  </div>
-                  <div className="border-t border-[var(--line-subtle)] px-4 py-2">
-                    <div className={cn("flex items-center gap-2 text-[12px] text-[var(--text-muted)]", NOTE_SURFACE_FONT)}>
-                      <span className="truncate">{activeRailLabel}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
-          </div>
-        </CardContent>
-      </Card>
-      ) : null}
 
       <Dialog open={isSmartFolderDialogOpen} onOpenChange={setIsSmartFolderDialogOpen}>
         <DialogContent className="max-w-lg">
