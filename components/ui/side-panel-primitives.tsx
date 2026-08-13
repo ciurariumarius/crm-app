@@ -143,7 +143,7 @@ type SidePanelInfoCardProps = {
 
 export function SidePanelInfoCard({ title, subtitle, action, className, children }: SidePanelInfoCardProps) {
     return (
-        <div className={cn("group rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]", className)}>
+        <div className={cn("group rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] transition hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]", className)}>
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <p className="ui-text-section text-[var(--text-secondary)]">{title}</p>

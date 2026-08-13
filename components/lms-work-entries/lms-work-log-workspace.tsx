@@ -1753,7 +1753,7 @@ export function LmsWorkLogWorkspace({
               </Label>
             </div>
             <Button
-              className="shrink-0"
+              className="shrink-0 border-transparent bg-[var(--action-strong)] text-[var(--action-strong-foreground)] hover:bg-[color:color-mix(in_srgb,var(--action-strong)_88%,var(--text-secondary))]"
               type="button"
               onClick={handleExport}
               disabled={exportBusy || (exportAll ? exportAllEntryCount === 0 : data.unexportedEntries === 0)}
@@ -1840,7 +1840,7 @@ export function LmsWorkLogWorkspace({
                 <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedEntryIds([])} disabled={exportBusy}>
                   Clear
                 </Button>
-                <Button type="button" size="sm" onClick={handleExportSelected} disabled={exportBusy}>
+                <Button type="button" size="sm" onClick={handleExportSelected} disabled={exportBusy} className="bg-[var(--action-strong)] text-[var(--action-strong-foreground)] hover:bg-[color:color-mix(in_srgb,var(--action-strong)_88%,var(--text-secondary))]">
                   {exportingSelected ? <Loader2 className="animate-spin" /> : <Download />}
                   Export selected
                 </Button>

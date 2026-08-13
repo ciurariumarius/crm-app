@@ -24,7 +24,7 @@ export function QuickStart({ recentProjects }: QuickStartProps) {
                     onClick={() => startTimer(project.id, undefined, `Working on ${project.name}`)}
                 >
                     {/* Mesh Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                    <div className="absolute inset-0 bg-[var(--sidebar-accent)] opacity-0 transition-opacity duration-300 group-hover:opacity-40" />
 
                     <div className="flex items-center w-full justify-between relative z-10">
                         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 transition-transform duration-500 group-hover:rotate-[360deg]">

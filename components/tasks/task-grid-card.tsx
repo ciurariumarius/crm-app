@@ -121,8 +121,8 @@ export function TaskGridCard({
         <div
             className={cn(
                 "group relative flex h-full cursor-pointer flex-col overflow-hidden border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] transition-all duration-200",
-                compact ? "rounded-[16px] px-2.5 py-3" : "rounded-[18px] p-3.5",
-                "hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[0_6px_14px_rgba(15,23,42,0.06)]",
+                compact ? "rounded-[16px] px-2.5 py-3" : "rounded-[14px] p-3.5",
+                "hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[var(--shadow-apple)]",
                 isRunning && "border-[color:color-mix(in_srgb,var(--primary)_42%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary)_10%,var(--surface-lowest))]",
                 isSelected && "border-[color:color-mix(in_srgb,var(--primary)_34%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary)_8%,var(--surface-lowest))]",
                 className

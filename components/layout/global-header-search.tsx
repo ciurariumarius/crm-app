@@ -32,7 +32,7 @@ export function GlobalHeaderSearch() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search projects (or 's: site')..."
-                className="pl-10 h-9 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary/50"
+                className="h-11 border-[var(--line-subtle)] bg-[var(--surface-low)] pl-10 shadow-none focus-visible:bg-[var(--surface-lowest)]"
             />
         </form>
     )

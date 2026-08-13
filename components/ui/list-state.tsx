@@ -16,12 +16,12 @@ export function ListEmptyState({
     return (
         <div
             className={cn(
-                "rounded-[24px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,var(--surface-lowest)_18%)] px-6 py-10 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
+                "rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-low)] px-6 py-10 text-center",
                 className
             )}
         >
             {icon ? (
-                <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-[12px] border border-[color:color-mix(in_srgb,var(--brand-primary)_18%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--brand-primary)]">
                     {icon}
                 </div>
             ) : null}
@@ -41,7 +41,7 @@ export function ListLoadingState({
     return (
         <div
             className={cn(
-                "flex items-center justify-center gap-2 rounded-[20px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,var(--surface-lowest)_18%)] px-4 py-6 text-[var(--text-secondary)] shadow-[0_4px_14px_rgba(15,23,42,0.025)]",
+                "flex items-center justify-center gap-2 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-low)] px-4 py-6 text-[var(--text-secondary)]",
                 className
             )}
         >
@@ -63,7 +63,7 @@ export function ListSkeletonRows({
             {Array.from({ length: rows }).map((_, index) => (
                 <div
                     key={index}
-                    className="h-12 animate-pulse rounded-[18px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,var(--surface-lowest)_18%)]"
+                    className="h-12 animate-pulse rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-low)]"
                 />
             ))}
         </div>

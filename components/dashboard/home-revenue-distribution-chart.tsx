@@ -64,16 +64,16 @@ type HomeRevenueDistributionChartProps = {
 }
 
 const COLORS = [
-    "#3b82f6", // Blue
-    "#10b981", // Green
-    "#eab308", // Yellow
-    "#f97316", // Orange
-    "#ef4444", // Red
-    "#1e293b", // Slate 900
-    "#8b5cf6", // Violet
-    "#ec4899", // Pink
-    "#06b6d4", // Cyan
-    "#64748b", // Slate
+    "var(--brand-primary)",
+    "#70d1a7",
+    "#a7dfc7",
+    "var(--state-review)",
+    "var(--state-warning)",
+    "var(--brand-indigo)",
+    "#2f6f55",
+    "#8fb8a4",
+    "var(--info)",
+    "var(--text-muted)",
 ]
 
 const MODE_OPTIONS: Array<{ label: string; value: RevenueMode }> = [
@@ -482,9 +482,9 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
 
     if (rows.length === 0) {
         return (
-            <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-6 shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
+            <section className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-6 shadow-[var(--shadow-apple)]">
                 <p className="ui-text-section text-[var(--text-primary)]">Revenue Analysis</p>
-                <p className="mt-4 rounded-[24px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_78%,transparent)] px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
+                <p className="mt-4 rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_78%,transparent)] px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
                     No revenue data available for this period.
                 </p>
             </section>
@@ -492,7 +492,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
     }
 
     return (
-        <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-6 lg:p-8">
+        <section className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-6 lg:p-8">
             <div className="mb-4 flex flex-col gap-2.5 sm:mb-6 sm:gap-4 lg:mb-8 lg:flex-row lg:items-end lg:justify-between">
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">

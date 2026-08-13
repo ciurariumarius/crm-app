@@ -93,7 +93,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
         <div className="relative">
             <div className="overflow-x-auto">
                 {/* Unified Header */}
-                <div className="mb-3 hidden h-12 w-full items-center rounded-[20px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] px-5 text-[var(--text-secondary)] shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:grid md:min-w-[960px] xl:min-w-[1240px] md:grid-cols-[250px_200px_130px_150px_64px] xl:grid-cols-[380px_350px_180px_200px_80px] gap-x-6">
+                <div className="mb-3 hidden h-12 w-full items-center rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-low)] px-5 text-[var(--text-secondary)] shadow-[var(--shadow-apple)] md:grid md:min-w-[960px] xl:min-w-[1240px] md:grid-cols-[250px_200px_130px_150px_64px] xl:grid-cols-[380px_350px_180px_200px_80px] gap-x-6">
                     <div className="ui-overline">Project Name</div>
                     <div className="ui-overline">Task Name</div>
                     <div className="ui-overline">Time Range</div>
@@ -132,7 +132,7 @@ export function TimeLogsTable({ logs, projects, tasks }: TimeLogsTableProps) {
                                                 key={log.id}
                                                 onClick={() => setSelectedLog(log)}
                                                 className={cn(
-                                                    "group stagger-row-enter premium-card relative grid min-h-[68px] items-center rounded-[20px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-5 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80 hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.96))] md:grid-cols-[250px_200px_130px_150px_64px] xl:grid-cols-[380px_350px_180px_200px_80px] gap-x-6 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                                                    "group stagger-row-enter premium-card relative grid min-h-[68px] cursor-pointer items-center gap-x-6 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-5 py-4 shadow-[var(--shadow-apple)] transition-colors duration-150 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_65%,var(--text-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] md:grid-cols-[250px_200px_130px_150px_64px] xl:grid-cols-[380px_350px_180px_200px_80px]"
                                                 )}
                                                 style={{ animationDelay: `${rowIdx * 0.05}s` }}
                                                 role="button"

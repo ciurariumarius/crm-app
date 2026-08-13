@@ -46,13 +46,13 @@ export function StatsCard({
         {
             name: 'Monthly',
             value: monthlyTotal,
-            color: '#3b82f6',
+            color: 'var(--brand-primary)',
             percentage: monthlyPercent.toFixed(1)
         },
         {
             name: 'One-Time',
             value: oneTimeTotal,
-            color: '#a855f7',
+            color: 'var(--state-review)',
             percentage: oneTimePercent.toFixed(1)
         },
     ]
@@ -60,7 +60,7 @@ export function StatsCard({
     // Handle empty data case
     if (monthlyTotal === 0 && oneTimeTotal === 0) {
         data[0].value = 1
-        data[0].color = '#e5e7eb'
+        data[0].color = 'var(--line-subtle)'
         data[0].percentage = "0.0"
     }
 
@@ -144,7 +144,7 @@ export function StatsCard({
                             </div>
                             <div className="space-y-1">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/80">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                                    <div className="h-1.5 w-1.5 rounded-full bg-[var(--state-review)]" />
                                     <span>{Math.round(oneTimePercent)}% One-Time</span>
                                 </div>
                                 <div className="text-2xl font-bold text-foreground tabular-nums pl-3.5">

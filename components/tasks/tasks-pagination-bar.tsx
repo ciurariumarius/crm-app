@@ -49,7 +49,7 @@ export function TasksPaginationBar({
     }
 
     return (
-        <div className="rounded-[18px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-2.5 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-3">
+        <div className="rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 py-2 shadow-[var(--shadow-apple)] sm:px-3">
             <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                     <DropdownMenu>

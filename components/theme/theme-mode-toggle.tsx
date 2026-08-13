@@ -35,7 +35,7 @@ export function ThemeModeToggle({ className }: { className?: string }) {
             className={cn(
               "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-[12px] font-semibold transition-all",
               isActive
-                ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.08)]"
+                ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-[var(--shadow-apple)]"
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_76%,transparent)]"
             )}
             aria-pressed={isActive}

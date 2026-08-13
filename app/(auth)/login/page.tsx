@@ -5,7 +5,7 @@ import { loginUser, verifyTwoFactor } from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Lock, User, ShieldCheck, Eye, EyeOff } from "lucide-react"
+import { Loader2, Lock, User, ShieldCheck, Eye, EyeOff, Zap } from "lucide-react"
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false)
@@ -62,43 +62,43 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-background relative overflow-hidden">
-            {/* Minimal Decorative Background element */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl opacity-50 pointer-events-none" />
+        <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[var(--bg-canvas)] p-4 md:p-8">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--brand-primary)_14%,transparent),transparent_66%)]" />
 
-            <div className="w-full max-w-[400px] p-8 z-10">
-                <div className="mb-12 text-center">
-                    <h1 className="text-3xl font-bold uppercase tracking-tight text-foreground">
-                        Pixelist<span className="text-primary">.</span>
-                    </h1>
-                    <p className="text-sm tracking-wide text-muted-foreground/70 mt-2 font-semibold">Authorized access only</p>
+            <div className="z-10 w-full max-w-[420px]">
+                <div className="mb-8 flex flex-col items-center text-center">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[var(--brand-primary)] text-white shadow-[var(--shadow-apple)]">
+                        <Zap className="h-6 w-6 fill-current" />
+                    </div>
+                    <h1 className="text-[30px] font-semibold tracking-[-0.03em] text-foreground">Pixelist</h1>
+                    <p className="mt-2 text-sm font-medium text-muted-foreground">Authorized access only</p>
                 </div>
 
-                <div className="bg-card/50 backdrop-blur-xl border border-border rounded-3xl p-8 shadow-2xl">
+                <div className="rounded-[20px] border border-border bg-card p-6 shadow-[var(--shadow-shell)] sm:p-8">
                     {requiresTwoFactor ? (
                         <form onSubmit={handleVerify} className="space-y-6">
                             <div className="flex justify-center mb-6">
-                                <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-[16px] bg-[var(--sidebar-accent)] text-primary">
                                     <ShieldCheck className="h-8 w-8" />
                                 </div>
                             </div>
                             <div className="space-y-2 text-center mb-6">
-                                <h2 className="text-lg font-bold">Two-Factor Authentication</h2>
+                                <h2 className="text-xl font-semibold">Two-Factor Authentication</h2>
                                 <p className="text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
                             </div>
 
                             {error && (
-                                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-xs font-bold text-center">
+                                <div className="rounded-[12px] border border-rose-500/20 bg-rose-500/10 p-3 text-center text-xs font-semibold text-rose-500">
                                     {error}
                                 </div>
                             )}
 
                             <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Auth Code</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground">Auth Code</Label>
                                 <Input
                                     type="text"
                                     placeholder="000 000"
-                                    className="h-12 text-center text-xl font-mono tracking-widest bg-background border-border"
+                                    className="h-12 bg-background text-center font-mono text-xl tracking-widest"
                                     maxLength={6}
                                     value={token}
                                     onChange={(e) => setToken(e.target.value.replace(/[^0-9]/g, ""))}
@@ -107,7 +107,7 @@ export default function LoginPage() {
                                 />
                             </div>
 
-                            <Button type="submit" className="w-full h-12 rounded-xl font-bold tracking-wide mt-4" disabled={loading}>
+                            <Button type="submit" className="mt-4 h-12 w-full" disabled={loading}>
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify Identity"}
                             </Button>
 
@@ -126,19 +126,19 @@ export default function LoginPage() {
                     ) : (
                         <form onSubmit={handleLogin} method="post" className="space-y-6">
                             {error && (
-                                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-xs font-bold text-center">
+                                <div className="rounded-[12px] border border-rose-500/20 bg-rose-500/10 p-3 text-center text-xs font-semibold text-rose-500">
                                     {error}
                                 </div>
                             )}
 
                             <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Username</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground">Username</Label>
                                 <div className="relative">
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                                     <Input
                                         name="username"
                                         placeholder="admin"
-                                        className="pl-10 h-12 bg-background border-border"
+                                        className="h-12 bg-background pl-10"
                                         required
                                         autoFocus
                                     />
@@ -146,14 +146,14 @@ export default function LoginPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Password</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground">Password</Label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                                     <Input
                                         name="password"
                                         type={showLoginPassword ? "text" : "password"}
                                         placeholder="••••••••"
-                                        className="pl-10 pr-10 h-12 bg-background border-border"
+                                        className="h-12 bg-background pl-10 pr-10"
                                         required
                                     />
                                     <button
@@ -183,7 +183,7 @@ export default function LoginPage() {
                                 Keep me signed in on this device
                             </label>
 
-                            <Button type="submit" className="w-full h-12 rounded-xl font-bold tracking-wide mt-4" disabled={loading}>
+                            <Button type="submit" className="mt-4 h-12 w-full" disabled={loading}>
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
                             </Button>
                             <p className="text-xs text-center text-muted-foreground mt-2">

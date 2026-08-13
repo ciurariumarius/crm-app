@@ -1,10 +1,25 @@
 "use client"
 
 import { useState, Fragment } from "react"
+import { useRouter } from "next/navigation"
 import { cn, formatCurrency, formatProjectName, formatRelativeDate } from "@/lib/utils"
-import { CreditCard, History, Undo2, ChevronRight } from "lucide-react"
+import { CreditCard, History, Undo2, ChevronRight, Loader2 } from "lucide-react"
 import { StatusChip } from "@/components/ui/status-chip"
 import { ListEmptyState } from "@/components/ui/list-state"
+import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
+import { voidSettlement } from "@/lib/actions/settlement"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type SettlementProjectEntry = {
     id: string
@@ -24,6 +39,7 @@ type PaymentLogEntry = {
     status: string
     details: string | null
     date: Date | string
+    canRevert?: boolean
 }
 
 type PaymentProjectSummary = {
@@ -59,7 +75,32 @@ function toProjectFee(value: PaymentProjectSummary["currentFee"]) {
 }
 
 export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
+    const router = useRouter()
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+    const [revertingId, setRevertingId] = useState<string | null>(null)
+    const [revertedIds, setRevertedIds] = useState<Set<string>>(new Set())
+
+    const handleRevert = async (auditLogId: string) => {
+        setRevertingId(auditLogId)
+        try {
+            const result = await voidSettlement(auditLogId)
+            if (!result.success) {
+                toast.error(result.error || "Failed to revert settlement")
+                return
+            }
+
+            setRevertedIds((current) => new Set(current).add(auditLogId))
+            const skippedCopy = result.skippedCount
+                ? ` ${result.skippedCount} later-changed project${result.skippedCount === 1 ? " was" : "s were"} preserved.`
+                : ""
+            toast.success(`Reverted ${result.count} project${result.count === 1 ? "" : "s"} to unpaid.${skippedCopy}`)
+            router.refresh()
+        } catch {
+            toast.error("Failed to revert settlement")
+        } finally {
+            setRevertingId(null)
+        }
+    }
 
     const toggleRow = (id: string, isExpandable: boolean) => {
         if (!isExpandable) return
@@ -154,28 +195,31 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
     return (
         <div className="overflow-x-auto pb-4 hidescrollbar">
             {/* Header */}
-            <div className="mb-3 hidden rounded-[20px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-5 py-3 text-[var(--text-secondary)] shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:block md:min-w-[940px] xl:min-w-[1200px]">
-                <div className="grid w-full items-center gap-x-4 md:grid-cols-[240px_minmax(190px,1fr)_100px_120px_100px] xl:grid-cols-[340px_1fr_120px_150px_120px]">
+            <div className="mb-3 hidden rounded-[20px] border border-[var(--line-subtle)]/80 bg-[var(--surface-lowest)] px-5 py-3 text-[var(--text-secondary)] shadow-[var(--shadow-apple)] md:block md:min-w-[1040px] xl:min-w-[1200px]">
+                <div className="grid w-full items-center gap-x-4 md:grid-cols-[220px_minmax(180px,1fr)_100px_120px_110px_90px] xl:grid-cols-[300px_1fr_120px_140px_120px_100px]">
                     <div className="ui-overline">Project / Partner</div>
                     <div className="ui-overline pl-4">Transaction action</div>
                     <div className="ui-overline text-right">Amount</div>
                     <div className="ui-overline text-center">Status</div>
                     <div className="ui-overline text-right">Date</div>
+                    <div className="ui-overline text-right">Actions</div>
                 </div>
             </div>
 
             {/* Body */}
-            <div className="flex flex-col gap-2.5 md:min-w-[940px] xl:min-w-[1200px]">
+            <div className="flex flex-col gap-2.5 md:min-w-[1040px] xl:min-w-[1200px]">
                 {logs.map((log, index) => {
                     const { projectName, extraProjects, totalAmount } = parseDetails(log.details)
                     const isExpandable = extraProjects.length > 0
                     const isExpanded = expandedRows.has(log.id)
+                    const canRevert = log.action === "SETTLE_PARTNER" && log.canRevert && !revertedIds.has(log.id)
+                    const isReverting = revertingId === log.id
 
                     return (
                         <Fragment key={log.id}>
                             <div
                                 className={cn(
-                                    "group stagger-row-enter relative flex cursor-pointer items-center rounded-[20px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-4 py-3 shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80 hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] md:px-5",
+                                    "group stagger-row-enter relative flex cursor-pointer items-center rounded-[20px] border border-[var(--line-subtle)]/80 bg-[var(--surface-lowest)] px-4 py-3 shadow-[var(--shadow-apple)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80 hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_86%,var(--surface-low)_14%)] md:px-5",
                                     isExpanded && "border-blue-200/80 bg-[color:color-mix(in_srgb,var(--brand-cyan)_10%,var(--surface-lowest))] ring-1 ring-blue-500/10",
                                     log.status === "Unpaid" && "shadow-[0_4px_16px_rgba(244,63,94,0.05)]",
                                     log.status === "Paid" && "shadow-[0_4px_16px_rgba(16,185,129,0.05)]"
@@ -192,7 +236,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                     }
                                 }}
                             >
-                                <div className="grid w-full gap-y-3 md:grid-cols-[240px_minmax(190px,1fr)_100px_120px_100px] xl:grid-cols-[340px_1fr_120px_150px_120px] md:items-center md:gap-x-4 md:gap-y-0">
+                                <div className="grid w-full gap-y-3 md:grid-cols-[220px_minmax(180px,1fr)_100px_120px_110px_90px] xl:grid-cols-[300px_1fr_120px_140px_120px_100px] md:items-center md:gap-x-4 md:gap-y-0">
                                     {/* 1. Project */}
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2.5">
@@ -257,21 +301,58 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                             {formatRelativeDate(log.date)}
                                         </span>
                                     </div>
+
+                                    {/* 6. Reversal */}
+                                    <div className="flex items-center justify-between gap-3 md:justify-end" onClick={(event) => event.stopPropagation()}>
+                                        <span className="ui-overline md:hidden">Actions</span>
+                                        {canRevert ? (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-8 rounded-xl px-2.5 text-[11px] font-semibold text-amber-700 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-800"
+                                                        disabled={isReverting}
+                                                    >
+                                                        {isReverting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Undo2 className="mr-1.5 h-3.5 w-3.5" />}
+                                                        Revert
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent onClick={(event) => event.stopPropagation()}>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Revert this settlement?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This will mark the projects from this settlement as unpaid again. Any project changed afterward will be preserved.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => void handleRevert(log.id)}>
+                                                            Revert to unpaid
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        ) : (
+                                            <span className="text-[11px] font-medium text-[var(--text-muted)]">—</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Expanded Content (Settlements) */}
                             {isExpanded && (extraProjects.length > 0) && (
                                 <div className="mb-2 flex animate-in slide-in-from-top-2 fade-in duration-300">
-                                    <div className="mr-1 flex-1 rounded-[20px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-low)_88%,var(--surface-lowest)_12%)] p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.03)] md:ml-10 md:mr-2">
-                                        <div className="rounded-[16px] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)] p-4">
+                                    <div className="mr-1 flex-1 rounded-[20px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-low)_88%,var(--surface-lowest)_12%)] p-1.5 shadow-[var(--shadow-apple)] md:ml-10 md:mr-2">
+                                        <div className="rounded-[16px] bg-[var(--surface-lowest)] p-4">
                                             <div className="mb-3 flex items-center gap-2">
                                                 <History className="h-3.5 w-3.5 text-blue-500" />
                                                 <span className="ui-overline text-blue-700">Settlement breakdown</span>
                                             </div>
                                             <div className="space-y-2">
                                                 {extraProjects.map((projectEntry) => (
-                                                    <div key={projectEntry.id} className="flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-4 py-2.5 transition-colors hover:bg-[var(--surface-lowest)]">
+                                                    <div key={projectEntry.id} className="flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)]/70 bg-[var(--surface-lowest)] px-4 py-2.5 transition-colors hover:bg-[var(--surface-lowest)]">
                                                         <span className="text-sm font-bold text-[var(--text-secondary)]">{projectEntry.name}</span>
                                                         <span className="font-mono text-xs font-black text-[var(--text-primary)] pl-4">
                                                             {formatCurrency(projectEntry.fee)}

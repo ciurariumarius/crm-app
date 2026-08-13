@@ -1,4 +1,4 @@
-import { Plus_Jakarta_Sans } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 import type { Metadata } from "next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
@@ -9,9 +9,15 @@ import { DEFAULT_THEME_MODE, THEME_STORAGE_KEY } from "@/lib/theme"
 import { headers } from "next/headers"
 import { getAppShellData, getCachedSession } from "@/lib/server/app-shell"
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const geistSans = Geist({
   subsets: ["latin"],
-  variable: "--font-plus-jakarta-sans",
+  variable: "--font-geist-sans",
+  display: "swap",
+})
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
   display: "swap",
 })
 
@@ -44,8 +50,8 @@ const themeInitScript = `
 
 export const viewport: import("next").Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f9fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#090f1a" },
+    { media: "(prefers-color-scheme: light)", color: "#eaeeeb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d110f" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -93,7 +99,7 @@ export default async function RootLayout({
     : null
 
   return (
-    <html lang="en" suppressHydrationWarning className={plusJakartaSans.variable}>
+    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
         <meta name="color-scheme" content="light dark" />
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInitScript }} />

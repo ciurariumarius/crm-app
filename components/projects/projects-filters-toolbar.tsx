@@ -32,7 +32,7 @@ const STATUS_OPTIONS = [
   { label: "All", value: "All", dotClass: "bg-[var(--text-muted)]", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Active", value: "Active", dotClass: "bg-emerald-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Paused", value: "Paused", dotClass: "bg-amber-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
-  { label: "Completed", value: "Completed", dotClass: "bg-cyan-700", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+  { label: "Completed", value: "Completed", dotClass: "bg-[var(--brand-primary-strong)]", activeClass: "bg-[var(--brand-primary)] text-white shadow-[var(--shadow-apple)]" },
   { label: "Closed", value: "Closed", dotClass: "bg-[var(--text-secondary)]", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
 ]
 
@@ -81,10 +81,10 @@ function parseMaybeDate(value: string | null | undefined) {
 
 function triggerClassName(isActive: boolean, extraClassName?: string) {
   return cn(
-    "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+    "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-semibold transition-all shadow-[var(--shadow-apple)]",
     isActive
       ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_16%,var(--surface-lowest))] text-[var(--brand-primary)]"
-      : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]",
+      : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]",
     extraClassName
   )
 }
@@ -208,7 +208,7 @@ export function ProjectsFiltersToolbar({
 
   return (
     <div className="space-y-2.5 sm:space-y-3">
-      <FilterBarShell className="rounded-[22px] border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] px-2.5 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:px-3.5 sm:py-3">
+      <FilterBarShell className="rounded-[16px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 py-2.5 shadow-[var(--shadow-apple)] sm:px-3.5 sm:py-3">
         <div className="relative -mx-1 sm:mx-0">
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-[var(--surface-lowest)] via-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] to-transparent sm:hidden" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-[var(--surface-lowest)] via-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] to-transparent sm:hidden" />
@@ -281,7 +281,7 @@ export function ProjectsFiltersToolbar({
                 type="button"
                 onClick={() => pushWithOverrides({ view: "grid" })}
                 className={cn(
-                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[var(--shadow-apple)]",
                   currentView === "grid"
                     ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
                     : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"
@@ -296,7 +296,7 @@ export function ProjectsFiltersToolbar({
                 type="button"
                 onClick={() => pushWithOverrides({ view: "list" })}
                 className={cn(
-                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[0_2px_8px_rgba(15,23,42,0.02)]",
+                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors shadow-[var(--shadow-apple)]",
                   currentView === "list"
                     ? "border-[var(--line-subtle)] bg-[var(--bg-surface-soft)] text-[var(--brand-primary)]"
                     : "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)]"

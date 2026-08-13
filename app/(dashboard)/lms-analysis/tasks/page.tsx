@@ -57,7 +57,14 @@ type ComboboxOption = {
   value: string
 }
 
-const TASK_TYPE_CHART_COLORS = ["#3b82f6", "#10b981", "#eab308", "#f97316", "#ef4444", "#1e293b"]
+const TASK_TYPE_CHART_COLORS = [
+  "var(--brand-primary)",
+  "#70d1a7",
+  "var(--state-warning)",
+  "var(--state-overdue)",
+  "var(--state-urgent)",
+  "var(--brand-indigo)",
+]
 const TASK_LOGS_DEFAULT_PAGE_SIZE = 25
 const TASK_LOGS_PAGE_SIZE_OPTIONS = [25, 50] as const
 
@@ -638,7 +645,7 @@ export default function LmsAnalysisTasksPage() {
         </FilterResultsRow>
       </div>
 
-      <div className="flex flex-col lg:flex-row overflow-hidden rounded-[24px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+      <div className="flex flex-col lg:flex-row overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
         {/* Worked Hours Card */}
         <div className="relative flex-1 border-b border-[var(--line-subtle)] p-6 lg:border-b-0 lg:border-r lg:p-8">
           <div className="flex items-start justify-between">

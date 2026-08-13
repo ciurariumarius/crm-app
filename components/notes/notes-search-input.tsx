@@ -43,12 +43,12 @@ export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchIn
             inputHeight,
             isApple
               ? "rounded-[14px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,var(--surface-lowest))] text-[var(--text-primary)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_75%,transparent)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_18%,transparent)]"
-              : "rounded-[28px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,transparent)]"
+              : "rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-[var(--shadow-apple)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,transparent)]"
           )}
         />
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
           {showShortcutHint && !hasValue ? (
-            <kbd className="hidden h-6 items-center rounded-md border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-1.5 text-[10px] font-semibold text-[var(--text-muted)] md:inline-flex">
+            <kbd className="hidden h-6 items-center rounded-md border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-1.5 text-[10px] font-semibold text-[var(--text-muted)] md:inline-flex">
               /
             </kbd>
           ) : null}

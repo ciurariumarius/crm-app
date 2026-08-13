@@ -47,7 +47,7 @@ export function SidePanelNotesSection({
     expandLabel = "Open notes in full view",
     extraToolbarActions,
     className,
-    editorClassName = "rounded-[22px] bg-[var(--surface-lowest)]",
+    editorClassName = "rounded-[16px] bg-[var(--surface-lowest)]",
     minHeightClassName = "h-[360px]",
 }: SidePanelNotesSectionProps) {
     return (

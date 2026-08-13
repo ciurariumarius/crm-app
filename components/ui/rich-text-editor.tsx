@@ -767,7 +767,7 @@ export function RichTextEditor({
                         mode === "panel" &&
                         (isBorderlessPanel
                             ? "border-0 bg-transparent shadow-none"
-                            : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_1px_2px_0_rgba(15,23,42,0.04),0_8px_24px_-20px_rgba(15,23,42,0.35)]"),
+                            : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]"),
                     variant === "plain" &&
                         mode === "document" &&
                         (isAppleNotesAppearance
@@ -787,8 +787,8 @@ export function RichTextEditor({
                             "flex items-center",
                             isTopRightToolbar &&
                                 (isAppleNotesAppearance
-                                    ? "fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-1.25rem)] -translate-x-1/2 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,var(--surface-low)_8%)] shadow-[0_10px_28px_-16px_rgba(15,23,42,0.26)] supports-[backdrop-filter]:backdrop-blur-xl md:absolute md:bottom-auto md:left-auto md:right-2.5 md:top-2.5 md:max-w-[calc(100%-1.25rem)] md:translate-x-0"
-                                    : "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_10px_20px_-18px_rgba(15,23,42,0.46)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3"),
+                                    ? "fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-1.25rem)] -translate-x-1/2 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,var(--surface-low)_8%)] shadow-[var(--shadow-apple)] supports-[backdrop-filter]:backdrop-blur-xl md:absolute md:bottom-auto md:left-auto md:right-2.5 md:top-2.5 md:max-w-[calc(100%-1.25rem)] md:translate-x-0"
+                                    : "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[var(--shadow-apple)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3"),
                             isCompactToolbar ? "gap-1 px-1.5 py-1 md:px-2" : "gap-1.5 p-1.5",
                             isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",
                             !isTopRightToolbar && variant === "default" && "border-b bg-muted/20",
@@ -806,14 +806,14 @@ export function RichTextEditor({
                                         "mx-1 mt-1 mb-2 rounded-xl px-2 py-1.5 md:px-2.5 md:py-2 supports-[backdrop-filter]:backdrop-blur-xl",
                                         isReadingWidth ? "w-[calc(100%-0.5rem)] max-w-[860px]" : "w-[calc(100%-0.5rem)]",
                                         isQuietToolbar
-                                            ? "border border-[var(--line-subtle)]/65 bg-[color:color-mix(in_srgb,var(--surface-lowest)_84%,var(--surface-low)_16%)] shadow-[0_10px_22px_-22px_rgba(15,23,42,0.45)]"
-                                            : "border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)]"
+                                            ? "border border-[var(--line-subtle)]/65 bg-[color:color-mix(in_srgb,var(--surface-lowest)_84%,var(--surface-low)_16%)] shadow-[var(--shadow-apple)]"
+                                            : "border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[var(--shadow-apple)]"
                                     )
                                     : cn(
                                         "mx-4 md:mx-auto mt-4 mb-6 w-full md:w-[calc(100%-2rem)] max-w-4xl rounded-xl px-3 pt-2 pb-2 backdrop-blur-sm",
                                         isQuietToolbar
-                                            ? "border border-[var(--line-subtle)]/65 bg-[var(--surface-lowest)] shadow-[0_10px_22px_-22px_rgba(15,23,42,0.45)]"
-                                            : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_12px_24px_-20px_rgba(15,23,42,0.45)]"
+                                            ? "border border-[var(--line-subtle)]/65 bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]"
+                                            : "border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]"
                                     ))
                         )}
                     >

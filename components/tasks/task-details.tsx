@@ -509,8 +509,8 @@ export function TaskDetails({
                                             className={cn(
                                                 "group/status relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
                                                 status === "Active"
-                                                    ? "border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-100/50 text-blue-600 shadow-[0_2px_10px_-4px_rgba(37,99,235,0.15)] hover:border-blue-300/60"
-                                                    : "border-emerald-200/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/50 text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.15)] hover:border-emerald-300/60"
+                                                    ? "border-[color:color-mix(in_srgb,var(--state-review)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)] hover:border-[var(--state-review)]"
+                                                    : "border-[color:color-mix(in_srgb,var(--brand-primary)_25%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--brand-primary)] hover:border-[var(--brand-primary)]"
                                             )}
                                         >
                                             <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_22%,transparent)] transition-transform duration-300 group-hover/status:translate-y-0" />
@@ -541,9 +541,9 @@ export function TaskDetails({
                                             type="button"
                                             className={cn(
                                                 "group/priority relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
-                                                urgency === "Urgent" && "border-rose-200/50 bg-gradient-to-br from-rose-50/80 to-rose-100/50 text-rose-600 shadow-[0_2px_10px_-4px_rgba(225,29,72,0.15)] hover:border-rose-300/60",
-                                                urgency === "Normal" && "border-amber-200/50 bg-gradient-to-br from-amber-50/80 to-amber-100/50 text-amber-600 shadow-[0_2px_10px_-4px_rgba(217,119,6,0.15)] hover:border-amber-300/60",
-                                                urgency === "Idea" && "border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-100/50 text-blue-600 shadow-[0_2px_10px_-4px_rgba(37,99,235,0.15)] hover:border-blue-300/60"
+                                                urgency === "Urgent" && "border-[color:color-mix(in_srgb,var(--state-urgent)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-urgent)_10%,var(--surface-lowest))] text-[var(--state-urgent)] hover:border-[var(--state-urgent)]",
+                                                urgency === "Normal" && "border-[color:color-mix(in_srgb,var(--state-warning)_25%,var(--line-subtle))] bg-[var(--warning-surface)] text-[var(--warning-foreground)] hover:border-[var(--state-warning)]",
+                                                urgency === "Idea" && "border-[color:color-mix(in_srgb,var(--state-review)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)] hover:border-[var(--state-review)]"
                                             )}
                                         >
                                             <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_22%,transparent)] transition-transform duration-300 group-hover/priority:translate-y-0" />
@@ -583,7 +583,7 @@ export function TaskDetails({
                                         <button
                                             type="button"
                                             className={cn(
-                                                "group/deadline relative flex h-10 w-full items-center justify-between overflow-hidden rounded-full border px-3 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
+                                                "group/deadline relative flex h-10 w-full items-center justify-between overflow-hidden rounded-full border px-3 shadow-[var(--shadow-apple)] transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
                                                 deadline
                                                     ? "border-blue-200/70 bg-blue-50/40 text-blue-700 hover:border-blue-300/70"
                                                     : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"

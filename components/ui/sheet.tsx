@@ -36,7 +36,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[rgba(15,23,42,0.20)] backdrop-blur-[6px]",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[rgba(13,17,15,0.32)] backdrop-blur-[5px]",
         className
       )}
       {...props}
@@ -60,7 +60,7 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 border border-[var(--line-subtle)] bg-[rgba(255,255,255,0.96)] shadow-[var(--shadow-apple)] backdrop-blur-[10px] transition data-[state=closed]:duration-300 data-[state=open]:duration-300 ease-[var(--ease-spring)]",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_20px_56px_rgba(13,17,15,0.16)] transition data-[state=closed]:duration-300 data-[state=open]:duration-300 ease-out",
           side === "right" &&
           "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-[min(760px,100vw)]",
           side === "left" &&
@@ -75,7 +75,7 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-[10px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-1.5 text-[var(--text-secondary)] opacity-90 transition hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)] focus:ring-2 focus:outline-hidden disabled:pointer-events-none">
+          <SheetPrimitive.Close className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-[10px] border border-transparent bg-[var(--bg-surface-soft)] p-1.5 text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus:ring-2 focus:outline-hidden disabled:pointer-events-none">
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>

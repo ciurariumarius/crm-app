@@ -103,7 +103,7 @@ export function LmsTasksDateRangeFilters() {
             className={cn(
               "h-10 min-w-[132px] w-full md:w-auto justify-between rounded-xl px-4 gap-2 text-xs font-semibold shadow-none",
               activePresetId !== "custom" && activePresetId !== "all" 
-                ? "bg-cyan-50/50 text-cyan-800 border-cyan-200 hover:bg-cyan-100/50" 
+                ? "border-[color:color-mix(in_srgb,var(--brand-primary)_24%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--brand-primary-strong)] hover:bg-[var(--sidebar-accent)]"
                 : "bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] border-[var(--line-subtle)]"
             )}
           >
@@ -125,7 +125,7 @@ export function LmsTasksDateRangeFilters() {
                   onClick={() => applyPreset(preset.id)}
                   className={cn(
                     "h-10 px-3 w-full justify-center font-medium shadow-none text-[var(--text-secondary)] border-[var(--line-subtle)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
-                    activePresetId === preset.id && "bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-100 hover:text-cyan-800 shadow-sm",
+                    activePresetId === preset.id && "border-[color:color-mix(in_srgb,var(--brand-primary)_24%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--brand-primary-strong)] hover:bg-[var(--sidebar-accent)] shadow-[var(--shadow-apple)]",
                     // make the 7th element (last-year) span full width
                     i === 6 && "col-span-2"
                   )}
@@ -154,11 +154,11 @@ export function LmsTasksDateRangeFilters() {
                   week: "grid w-full grid-cols-7 mt-2",
                   day: "w-full",
                   nav_button: "hover:bg-[var(--surface-low)]",
-                  day_selected: "bg-cyan-600 text-white hover:bg-cyan-600 hover:text-white",
+                  day_selected: "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-strong)] hover:text-white",
                   day_today: "bg-[var(--surface-low)] text-[var(--text-primary)] font-bold",
-                  day_range_start: "bg-cyan-600 text-white",
-                  day_range_end: "bg-cyan-600 text-white",
-                  day_range_middle: "text-[var(--text-primary)] bg-cyan-50 rounded-none",
+                  day_range_start: "bg-[var(--brand-primary)] text-white",
+                  day_range_end: "bg-[var(--brand-primary)] text-white",
+                  day_range_middle: "rounded-none bg-[var(--sidebar-accent)] text-[var(--text-primary)]",
                 }}
               />
             </div>

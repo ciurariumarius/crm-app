@@ -78,16 +78,16 @@ export default async function SitesPage({
 
     return (
         <div className="flex flex-col gap-8 pb-8 sm:gap-10">
-            <div className="rounded-[28px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Domains"
-                    actions={<CreateSiteDialog partners={partners} label="Add" showLabelOnMobile className="!h-11 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white xl:!px-9" />}
+                    actions={<CreateSiteDialog partners={partners} label="Add" showLabelOnMobile className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9" />}
                     mobileActions={
                         <CreateSiteDialog
                             partners={partners}
                             label="Add"
                             showLabelOnMobile
-                            className="!h-11 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white xl:!px-9"
+                            className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
                         />
                     }
                     showMobile
@@ -107,7 +107,7 @@ export default async function SitesPage({
                 />
                 
                 {/* Pagination Footer */}
-                <div className="flex items-center justify-between rounded-[18px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.9))] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
+                <div className="flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-low)] px-3 py-2 shadow-[var(--shadow-apple)] sm:px-4">
                     <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-secondary)]">
                         {page}/{totalPages || 1}
                     </span>

@@ -191,8 +191,8 @@ function EmptyProjectsState({
     description: string
 }) {
     return (
-        <div className="rounded-[24px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] px-5 py-9 text-center">
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+        <div className="rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] px-5 py-9 text-center">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
                 <Building2 className="h-5 w-5 text-[var(--text-muted)]" />
             </div>
             <p className="mt-4 text-sm font-semibold tracking-tight text-[var(--text-primary)]">{title}</p>
@@ -209,7 +209,7 @@ function ProjectsGridSkeleton() {
             {Array.from({ length: 6 }).map((_, index) => (
                 <div
                     key={`project-grid-skeleton-${index}`}
-                    className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
+                    className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)]"
                 >
                     <div className="animate-pulse space-y-3">
                         <div className="flex items-start gap-3">
@@ -236,7 +236,7 @@ function ProjectsListSkeleton() {
                 {Array.from({ length: 2 }).map((_, sectionIndex) => (
                     <section
                         key={`project-list-skeleton-section-${sectionIndex}`}
-                        className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4"
+                        className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)] sm:p-4"
                     >
                         <div className="mb-3 flex items-center gap-3">
                             <span className="h-5 w-1 rounded-full bg-[var(--surface-low)]" />
@@ -247,14 +247,14 @@ function ProjectsListSkeleton() {
                             {Array.from({ length: 4 }).map((_, rowIndex) => (
                                 <div
                                     key={`project-list-skeleton-row-${sectionIndex}-${rowIndex}`}
-                                    className="h-[72px] animate-pulse rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
+                                    className="h-[72px] animate-pulse rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
                                 />
                             ))}
                         </div>
                     </section>
                 ))}
 
-                <div className="h-[74px] animate-pulse rounded-[22px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)]" />
+                <div className="h-[74px] animate-pulse rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)]" />
             </div>
         </div>
     )
@@ -808,7 +808,7 @@ export function ProjectsBoardRows({
         <>
             <div className="space-y-6 overflow-x-auto pb-0 hidescrollbar">
                 <div className="space-y-6 md:min-w-[1240px] xl:min-w-[1320px]">
-                <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+                <section className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)] sm:p-4">
                     <div className="mb-3 flex items-center gap-3">
                         <span className="h-5 w-1 rounded-full bg-emerald-500" />
                         <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">One-time Projects</h2>
@@ -844,7 +844,7 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project)}
-                                        className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[0_2px_8px_rgba(15,23,42,0.02)] md:hidden"
+                                        className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[var(--shadow-apple)] md:hidden"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
@@ -888,7 +888,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-4 rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-6 py-3 text-left shadow-[var(--shadow-apple)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -1092,9 +1092,9 @@ export function ProjectsBoardRows({
                     </div>
                 </section>
 
-                <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+                <section className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)] sm:p-4">
                     <div className="mb-3 flex items-center gap-3">
-                        <span className="h-5 w-1 rounded-full bg-violet-500" />
+                        <span className="h-5 w-1 rounded-full bg-[var(--state-review)]" />
                         <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Monthly Projects</h2>
                     </div>
 
@@ -1128,7 +1128,7 @@ export function ProjectsBoardRows({
                                     <button
                                         type="button"
                                         onClick={() => openDetails(project)}
-                                        className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[0_2px_8px_rgba(15,23,42,0.02)] md:hidden"
+                                        className="w-full rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left shadow-[var(--shadow-apple)] md:hidden"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
@@ -1175,7 +1175,7 @@ export function ProjectsBoardRows({
                                                 openDetails(project)
                                             }
                                         }}
-                                        className={cn("hidden w-full items-center gap-x-4 rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-6 py-3 text-left shadow-[0_2px_10px_rgba(15,23,42,0.018)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
+                                        className={cn("hidden w-full items-center gap-x-4 rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-6 py-3 text-left shadow-[var(--shadow-apple)] md:grid md:min-w-[1240px] xl:min-w-[1320px]", LIST_GRID_COLUMNS)}
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
@@ -1390,7 +1390,7 @@ export function ProjectsBoardRows({
                                 type="button"
                                 onClick={() => setCreateProjectOpen(true)}
                                 className={cn(
-                                    "grid w-full items-center gap-x-2 rounded-[18px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] px-5 py-3.5 text-left transition-all hover:border-blue-300 hover:bg-blue-50/40 group/shadow",
+                                    "grid w-full items-center gap-x-2 rounded-[14px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] px-5 py-3.5 text-left transition-all hover:border-blue-300 hover:bg-blue-50/40 group/shadow",
                                     LIST_GRID_COLUMNS
                                 )}
                             >

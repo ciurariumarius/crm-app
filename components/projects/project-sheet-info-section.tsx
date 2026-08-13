@@ -96,7 +96,7 @@ export function ProjectSheetInfoSection({
                 </SidePanelInfoCard>
             </div>
 
-            <div className="rounded-[26px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)]">
                 <div className="flex items-center justify-between gap-3">
                     <SidePanelSectionTitle title="Project services" className="text-xs" />
                     <button
@@ -124,7 +124,7 @@ export function ProjectSheetInfoSection({
             </div>
 
             {isEditingServices && (
-                <div className="rounded-[26px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
+                <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
                             <StatusChip tone="recurring" size="xs" className="mb-2">Recurring</StatusChip>

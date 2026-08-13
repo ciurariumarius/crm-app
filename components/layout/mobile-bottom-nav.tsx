@@ -40,7 +40,7 @@ function NavLink({
             className={cn(
                 "relative inline-flex h-[56px] flex-col items-center justify-center gap-1 rounded-xl border border-transparent px-1 transition-colors",
                 active
-                    ? "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--primary)] shadow-[0_6px_14px_-10px_rgba(15,23,42,0.45)]"
+                    ? "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--primary)] shadow-[var(--shadow-apple)]"
                     : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             )}
             aria-current={active ? "page" : undefined}
@@ -80,14 +80,9 @@ export function MobileBottomNav() {
     const directionalTravelRef = React.useRef(0)
     const lastDirectionRef = React.useRef<"up" | "down" | null>(null)
     const touchStartYRef = React.useRef<number | null>(null)
-    const appScrollContainerRef = React.useRef<HTMLElement | null>(null)
     const HIDE_MIN_SCROLL = 72
     const HIDE_DISTANCE = 26
     const SHOW_DISTANCE = 16
-
-    React.useEffect(() => {
-        appScrollContainerRef.current = document.getElementById("app-scroll-container")
-    }, [])
 
     React.useEffect(() => {
         if (
@@ -135,7 +130,6 @@ export function MobileBottomNav() {
 
     React.useEffect(() => {
         const currentY = Math.max(
-            appScrollContainerRef.current?.scrollTop ?? 0,
             window.scrollY ?? 0,
             document.documentElement?.scrollTop ?? 0
         )
@@ -149,7 +143,6 @@ export function MobileBottomNav() {
     React.useEffect(() => {
         const getFallbackY = () =>
             Math.max(
-                appScrollContainerRef.current?.scrollTop ?? 0,
                 window.scrollY ?? 0,
                 document.documentElement?.scrollTop ?? 0
             )
@@ -202,10 +195,6 @@ export function MobileBottomNav() {
             lastScrollYRef.current = currentY
         }
 
-        const onContainerScroll = () => {
-            handleScroll(appScrollContainerRef.current?.scrollTop ?? getFallbackY())
-        }
-
         const onWindowScroll = () => {
             handleScroll(getFallbackY())
         }
@@ -246,11 +235,6 @@ export function MobileBottomNav() {
             touchStartYRef.current = currentY
         }
 
-        const scrollContainer = appScrollContainerRef.current
-        if (scrollContainer) {
-            scrollContainer.addEventListener("scroll", onContainerScroll, { passive: true })
-        }
-
         window.addEventListener("scroll", onWindowScroll, { passive: true })
         document.addEventListener("scroll", onDocumentScrollCapture, { passive: true, capture: true })
         window.addEventListener("wheel", onWheel, { passive: true })
@@ -258,9 +242,6 @@ export function MobileBottomNav() {
         window.addEventListener("touchmove", onTouchMove, { passive: true })
 
         return () => {
-            if (scrollContainer) {
-                scrollContainer.removeEventListener("scroll", onContainerScroll)
-            }
             window.removeEventListener("scroll", onWindowScroll)
             document.removeEventListener("scroll", onDocumentScrollCapture, true)
             window.removeEventListener("wheel", onWheel)
@@ -284,11 +265,11 @@ export function MobileBottomNav() {
                 )}
                 aria-label="Mobile navigation"
             >
-                <div className="pointer-events-auto relative w-full max-w-[430px] rounded-[22px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] shadow-[0_14px_26px_-18px_rgba(15,23,42,0.42)] backdrop-blur-[12px]">
+                <div className="pointer-events-auto relative w-full max-w-[430px] rounded-[16px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,transparent)] shadow-[var(--shadow-apple)] backdrop-blur-[12px]">
                     <button
                         type="button"
                         onClick={() => setQuickActionsOpen(true)}
-                        className="absolute left-1/2 top-1/2 z-20 inline-flex h-9 w-9 -translate-x-1/2 -translate-y-[52%] items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[0_10px_20px_-10px_color-mix(in_srgb,var(--primary)_70%,transparent),0_4px_12px_-6px_rgba(15,23,42,0.35)] transition-transform active:scale-[0.97]"
+                        className="absolute left-1/2 top-1/2 z-20 inline-flex h-9 w-9 -translate-x-1/2 -translate-y-[52%] items-center justify-center rounded-full border border-primary/35 bg-primary text-primary-foreground shadow-[var(--shadow-apple)] transition-transform active:scale-[0.97]"
                         aria-label="Quick actions"
                     >
                         <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
@@ -305,7 +286,7 @@ export function MobileBottomNav() {
                             className={cn(
                                 "relative inline-flex h-[56px] flex-col items-center justify-center gap-1 rounded-xl border border-transparent px-1 transition-colors",
                                 menuActive
-                                    ? "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--primary)] shadow-[0_6px_14px_-10px_rgba(15,23,42,0.45)]"
+                                    ? "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--primary)] shadow-[var(--shadow-apple)]"
                                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                             )}
                             aria-label="Open menu"

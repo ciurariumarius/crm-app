@@ -12,11 +12,11 @@ type ProjectBoardSummaryCardsProps = {
 }
 
 const summaryRowClass =
-    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] xl:w-full"
+    "flex w-max min-w-full overflow-hidden rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] xl:w-full"
 const summaryItemClass =
     "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-[var(--surface-lowest)]/60 xl:min-w-0 xl:flex-1"
 const summaryIconContainerClass =
-    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-[var(--surface-lowest)] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_3px_rgba(15,23,42,0.08)]"
+    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]"
 
 function SummaryItem({
     icon,
@@ -66,7 +66,7 @@ export function ProjectBoardSummaryCards({
             icon: <RefreshCcw className="h-3.5 w-3.5" />,
             value: monthlyCount,
             label: "Monthly Projects",
-            toneClass: "border-violet-100/80 bg-violet-50/80 text-violet-700",
+            toneClass: "border-[color:color-mix(in_srgb,var(--state-review)_22%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)]",
         },
         {
             icon: <Wallet className="h-3.5 w-3.5" />,

@@ -1045,7 +1045,7 @@ export function ProjectSheetContent({
                             </div>
 
                             <div className="flex flex-col justify-center">
-                                <div className="group/amount relative flex h-10 items-center overflow-hidden rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[0_1px_3px_rgba(15,23,42,0.03)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] sm:h-11 sm:px-5">
+                                <div className="group/amount relative flex h-10 items-center overflow-hidden rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[var(--shadow-apple)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] sm:h-11 sm:px-5">
                                     <Input
                                         type="number"
                                         step={1}
@@ -1061,7 +1061,7 @@ export function ProjectSheetContent({
                         </div>
 
                         {project.status === "Closed" && (
-                            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] px-3 py-2">
+                            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2">
                                 <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
                                     Closed on {project.closedAt ? format(new Date(project.closedAt), "dd MMM yyyy") : "—"}
                                 </span>
@@ -1152,7 +1152,7 @@ export function ProjectSheetContent({
                             </div>
 
                             {!budgetInsights.hasHourlyRate ? (
-                                <div className="rounded-[26px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-2.5">
+                                <div className="rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-2.5">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Hourly Budget</p>
                                     <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
                                         Set your hourly rate to enable fee based hour recommendations.
@@ -1162,14 +1162,14 @@ export function ProjectSheetContent({
                                     </Link>
                                 </div>
                             ) : !budgetInsights.hasFee ? (
-                                <div className="rounded-[26px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-2.5">
+                                <div className="rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-2.5">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Hourly Budget</p>
                                     <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
                                         Set project amount to compute recommended hours.
                                     </p>
                                 </div>
                             ) : (
-                                <div className="rounded-[26px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                                <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)]">
                                     <div className="grid w-full grid-cols-1 gap-2 lg:grid-cols-4">
                                         <div className="grid grid-cols-3 gap-1.5 lg:col-span-3 lg:gap-2">
                                             <div className="rounded-2xl border border-blue-100 bg-blue-50/50 px-2.5 py-2 sm:px-3 sm:py-2.5">

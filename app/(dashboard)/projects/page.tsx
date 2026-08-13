@@ -169,7 +169,7 @@ export default async function ProjectsPage({
             <ProjectsSearchProvider initialSearch={q || ""}>
                 <div className="space-y-5 sm:space-y-6">
                     <div className="flex flex-col gap-3.5 sm:gap-4">
-                        <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
+                        <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-4 lg:p-5">
                             <DashboardPageHeader
                                 title="Projects"
                                 showMobile
@@ -180,7 +180,7 @@ export default async function ProjectsPage({
                                         variant="full"
                                         label="Add"
                                         showLabelOnMobile
-                                        className="!h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
+                                        className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
                                         partners={partnersForClient}
                                         services={servicesForClient}
                                     />
@@ -190,7 +190,7 @@ export default async function ProjectsPage({
                                         variant="full"
                                         label="Add"
                                         showLabelOnMobile
-                                        className="!h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
+                                        className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
                                         partners={partnersForClient}
                                         services={servicesForClient}
                                     />

@@ -43,7 +43,7 @@ export default function LmsAllocationsPage() {
               return (
                 <TableRow
                   key={`${row.client}-${row.specialist}`}
-                  className={hasRisk ? "bg-[color:color-mix(in_srgb,#fff3e8_55%,var(--surface-lowest))] hover:bg-[color:color-mix(in_srgb,#fff3e8_72%,var(--surface-lowest))]" : undefined}
+                  className={hasRisk ? "bg-[color:color-mix(in_srgb,var(--state-warning)_9%,var(--surface-lowest))] hover:bg-[color:color-mix(in_srgb,var(--state-warning)_13%,var(--surface-lowest))]" : undefined}
                 >
                   <TableCell className="font-semibold">{row.client}</TableCell>
                   <TableCell>{row.specialist || "Unassigned"}</TableCell>

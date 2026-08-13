@@ -9,6 +9,22 @@ function read(filePath: string) {
 }
 
 function run() {
+  const shellFrame = read("components/layout/shell-frame.tsx")
+  assert.match(shellFrame, /window\.scrollTo\(\{ top: 0, left: 0 \}\)/)
+  assert.match(shellFrame, /<div className="min-h-dvh bg-\[var\(--bg-canvas\)\]/)
+  assert.match(shellFrame, /md:min-h-\[calc\(100dvh-1rem\)\]/)
+  assert.match(shellFrame, /<main className="[^"]*min-h-full[^"]*flex-1[^"]*overflow-x-clip/)
+  assert.doesNotMatch(shellFrame, /app-scroll-container/)
+  assert.doesNotMatch(shellFrame, /overflow-y-auto/)
+  assert.doesNotMatch(shellFrame, /<main className="[^"]*overflow-hidden/)
+
+  const sidebar = read("components/layout/sidebar.tsx")
+  assert.match(sidebar, /fixed left-0 top-0[^"]*md:left-2 md:top-2[^"]*xl:left-4 xl:top-4/)
+
+  const mobileBottomNav = read("components/layout/mobile-bottom-nav.tsx")
+  assert.match(mobileBottomNav, /window\.addEventListener\("scroll", onWindowScroll/)
+  assert.doesNotMatch(mobileBottomNav, /appScrollContainer/)
+
   const tablePrimitive = read("components/ui/table.tsx")
   assert.match(tablePrimitive, /md:whitespace-nowrap/)
   assert.match(tablePrimitive, /whitespace-normal/)

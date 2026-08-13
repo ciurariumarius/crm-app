@@ -4,8 +4,8 @@
     "description": "Personal CRM & Time-Tracker",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#F5F5F7",
-    "theme_color": "#0D9488",
+    "background_color": "#EAEEEB",
+    "theme_color": "#0A9F69",
     "icons": [
         {
             "src": "/icons/icon.svg",

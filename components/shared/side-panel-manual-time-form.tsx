@@ -26,7 +26,7 @@ export function SidePanelManualTimeForm({
     className,
 }: SidePanelManualTimeFormProps) {
     return (
-        <div className={className || "rounded-[26px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"}>
+        <div className={className || "rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)]"}>
             <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
                 <Input
                     type="number"

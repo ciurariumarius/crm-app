@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
 import { Prisma } from "@prisma/client"
+import { parseVoidedSettlementId } from "@/lib/payments/settlement-audit"
 
 export async function getProjectPaymentHistory(projectId: string) {
     try {
@@ -186,6 +187,25 @@ export async function getPaymentLogs(params: {
             prisma.auditLog.count({ where })
         ])
 
+        const settlementIds = logs
+            .filter((log) => log.action === "SETTLE_PARTNER")
+            .map((log) => log.id)
+        const voidLogs = settlementIds.length > 0
+            ? await prisma.auditLog.findMany({
+                where: {
+                    action: "SETTLE_PARTNER_VOIDED",
+                    success: true,
+                    OR: settlementIds.map((id) => ({ details: { contains: id } })),
+                },
+                select: { details: true },
+            })
+            : []
+        const voidedSettlementIds = new Set(
+            voidLogs
+                .map((log) => parseVoidedSettlementId(log.details))
+                .filter((id): id is string => Boolean(id))
+        )
+
         return {
             success: true,
             data: logs.map(log => {
@@ -202,7 +222,8 @@ export async function getPaymentLogs(params: {
                     action: log.action,
                     date: log.createdAt,
                     status,
-                    details: log.details
+                    details: log.details,
+                    canRevert: log.action === "SETTLE_PARTNER" && !voidedSettlementIds.has(log.id),
                 }
             }),
             total

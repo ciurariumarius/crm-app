@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { settlePartnerDebt, settleProject } from "@/lib/actions/settlement"
+import { settlePartnerDebt, settleProject, voidSettlement } from "@/lib/actions/settlement"
 import { formatCurrency, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -38,6 +38,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
     }, [partners])
 
     const handleMarkAllPaid = async (partnerId: string) => {
+        const settledPartner = items.find((partner) => partner.id === partnerId)
         setSettlingId(partnerId)
         try {
             const result = await settlePartnerDebt(partnerId)
@@ -48,7 +49,24 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
 
             setItems((prev) => prev.filter((partner) => partner.id !== partnerId))
             if (expandedId === partnerId) setExpandedId(null)
-            toast.success(`Marked ${result.count} project${result.count === 1 ? "" : "s"} as paid`)
+            toast.success(`Marked ${result.count} project${result.count === 1 ? "" : "s"} as paid`, {
+                duration: 10_000,
+                action: settledPartner && result.auditLogId ? {
+                    label: "Undo",
+                    onClick: async () => {
+                        const undoResult = await voidSettlement(result.auditLogId)
+                        if (!undoResult.success) {
+                            toast.error(undoResult.error || "Failed to revert settlement")
+                            return
+                        }
+                        setItems((current) => current.some((partner) => partner.id === settledPartner.id)
+                            ? current
+                            : [...current, settledPartner].sort((a, b) => b.totalUnpaid - a.totalUnpaid))
+                        toast.success(`Reverted ${undoResult.count} project${undoResult.count === 1 ? "" : "s"} to unpaid`)
+                        router.refresh()
+                    },
+                } : undefined,
+            })
             router.refresh()
         } catch {
             toast.error("Failed to mark projects as paid")
@@ -105,7 +123,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
             </div>
 
             {items.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-emerald-100 bg-[linear-gradient(180deg,rgba(236,253,245,0.75),rgba(220,252,231,0.48))] px-4 py-8 text-center">
+                <div className="rounded-[16px] border border-dashed border-[color:color-mix(in_srgb,var(--brand-primary)_20%,var(--line-subtle))] bg-[var(--sidebar-accent)] px-4 py-8 text-center">
                     <p className="text-sm font-semibold text-emerald-700">All partner balances are currently settled.</p>
                     <p className="mt-1 text-sm font-medium text-emerald-600/80">New unpaid projects will appear here automatically.</p>
                 </div>
@@ -115,7 +133,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                         const isExpanded = expandedId === partner.id
                         const isSettling = settlingId === partner.id
                         return (
-                            <div key={partner.id} className="flex flex-col overflow-hidden rounded-[24px] border border-[var(--line-subtle)]/90 bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] shadow-[0_6px_18px_rgba(15,23,42,0.03)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80">
+                            <div key={partner.id} className="flex flex-col overflow-hidden rounded-[20px] border border-[var(--line-subtle)]/90 bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]/80">
                                 <div className="flex flex-col p-5 gap-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex flex-col flex-1 min-w-0">
@@ -183,7 +201,7 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
                                                 return (
                                                     <div
                                                         key={project.id}
-                                                        className="flex flex-col gap-2 rounded-[16px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] p-3 shadow-[0_2px_8px_rgba(15,23,42,0.025)]"
+                                                        className="flex flex-col gap-2 rounded-[16px] border border-[var(--line-subtle)]/80 bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)]"
                                                     >
                                                         <span className="text-[13px] font-bold text-[var(--text-secondary)] line-clamp-1">{project.name}</span>
                                                         <div className="flex items-center justify-between">

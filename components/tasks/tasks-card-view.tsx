@@ -239,7 +239,7 @@ export function TasksCardView({
 
     const getUrgencyIcon = (urgency: string) => {
         const normalizedUrgency = normalizeTaskUrgency(urgency)
-        if (normalizedUrgency === "Urgent") return <AlertTriangle className="h-4 w-4 fill-[#F84444] text-white" />
+        if (normalizedUrgency === "Urgent") return <AlertTriangle className="h-4 w-4 fill-[var(--state-urgent)] text-white" />
         if (normalizedUrgency === "Idea") return <Lightbulb className="h-3 w-3" />
         return <ArrowRight className="h-3 w-3" strokeWidth={3} />
     }
@@ -465,7 +465,7 @@ export function TasksCardView({
                 onSubmit={(event) => {
                     void handleQuickCaptureSubmit(event)
                 }}
-                className="flex h-full flex-col rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_86%,transparent)] p-2.5 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
+                className="flex h-full flex-col rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_86%,transparent)] p-2.5 shadow-[var(--shadow-apple)]"
             >
                 <div className="flex items-center gap-2">
                     <Input
@@ -547,7 +547,7 @@ export function TasksCardView({
                 {Array.from({ length: skeletonCount }).map((_, index) => (
                     <div
                         key={`tasks-grid-skeleton-${index}`}
-                        className="rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)] sm:p-5"
+                        className="rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5"
                     >
                         <div className="animate-pulse space-y-3">
                             <div className="flex items-start justify-between gap-3">
@@ -568,7 +568,7 @@ export function TasksCardView({
     }
 
     const renderListView = () => (
-        <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+        <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)] sm:p-4">
             <div className="mb-3 hidden grid-cols-[auto_1fr_auto_auto_auto] gap-6 border-b border-[var(--line-subtle)] px-5 pb-3 pt-1 text-xs font-semibold text-muted-foreground lg:grid">
                 <div className="flex w-16 items-center gap-6">
                     <span className="w-8 text-center">PRI</span>
@@ -596,7 +596,7 @@ export function TasksCardView({
                         <div
                             key={task.id}
                             className={cn(
-                                "group relative flex cursor-pointer flex-col gap-4 overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.02)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)] lg:flex-row lg:items-center lg:gap-6 lg:px-6",
+                                "group relative flex cursor-pointer flex-col gap-4 overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-5 shadow-[var(--shadow-apple)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[var(--shadow-apple)] lg:flex-row lg:items-center lg:gap-6 lg:px-6",
                                 selectedIds.includes(task.id) && "border-primary ring-2 ring-primary/20 bg-primary/5"
                             )}
                             onClick={() => setSelectedTask(task)}
@@ -635,7 +635,7 @@ export function TasksCardView({
                                     {task.deadline ? (
                                         <div className={cn(
                                             "flex items-center gap-1.5 text-xs font-semibold tracking-tight uppercase",
-                                            isOverdue ? "text-[#F84444]" : "text-blue-600"
+                                            isOverdue ? "text-[var(--state-urgent)]" : "text-[var(--state-review)]"
                                         )}>
                                             {isOverdue ? <Clock className="w-3.5 h-3.5" /> : isDueToday ? <CalendarClock className="w-4 h-4" /> : <Target className="w-3.5 h-3.5" />}
                                             {isDueToday ? "TODAY" : format(new Date(task.deadline), "dd MMM")}
@@ -701,12 +701,12 @@ export function TasksCardView({
     )
 
     const renderListSkeleton = () => (
-        <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+        <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)] sm:p-4">
             <div className="space-y-3">
                 {Array.from({ length: 6 }).map((_, index) => (
                     <div
                         key={`tasks-list-skeleton-${index}`}
-                        className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
+                        className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-5 shadow-[var(--shadow-apple)]"
                     >
                         <div className="animate-pulse space-y-3">
                             <div className="flex items-start justify-between gap-4">
@@ -781,8 +781,8 @@ export function TasksCardView({
             {showSearchSkeleton ? (
                 view === "list" ? renderListSkeleton() : renderGridSkeleton()
             ) : visibleTasks.length === 0 ? (
-                <div className="col-span-full flex h-64 flex-col items-center justify-center rounded-[28px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] px-5 text-center">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                <div className="col-span-full flex h-64 flex-col items-center justify-center rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] px-5 text-center">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
                         <Clock className="h-5 w-5 text-[var(--text-muted)]" strokeWidth={1.6} />
                     </div>
                     <p className="mt-4 text-sm font-semibold tracking-tight text-[var(--text-primary)]">

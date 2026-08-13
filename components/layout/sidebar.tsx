@@ -114,17 +114,17 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         href={item.href}
         title={isDesktopCollapsed ? item.name : undefined}
         className={cn(
-          "group relative flex items-center gap-3 rounded-[10px] border border-transparent px-3 py-2.5 text-[13px] xl:text-[14px] font-medium transition-colors",
+          "group relative flex min-h-10 items-center gap-3 rounded-[12px] border border-transparent px-3 py-2.5 text-[13px] font-medium transition-colors xl:text-[14px]",
           isDesktopCollapsed && "justify-center px-0",
           isActive
-            ? "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--line-subtle)]"
+            ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
         )}
       >
         {isActive ? (
-          <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-[var(--brand-cyan)]" />
+          <span className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--brand-primary)]" />
         ) : null}
-        <item.icon className={cn("h-[16px] w-[16px] shrink-0")} strokeWidth={1.8} />
+        <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
         {!isDesktopCollapsed && <span className="truncate">{item.name}</span>}
       </Link>
     )
@@ -138,16 +138,16 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         href={item.href}
         onClick={() => setIsMobileMenuOpen(false)}
         className={cn(
-          "group relative flex items-center gap-3 rounded-[10px] border border-transparent px-4 py-3 text-[14px] font-medium transition-colors",
+          "group relative flex min-h-11 items-center gap-3 rounded-[12px] border border-transparent px-4 py-3 text-[14px] font-medium transition-colors",
           isActive
-            ? "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--line-subtle)]"
+            ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
         )}
       >
         {isActive ? (
-          <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-[var(--brand-cyan)]" />
+          <span className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--brand-primary)]" />
         ) : null}
-        <item.icon className="h-[16px] w-[16px] shrink-0" strokeWidth={1.8} />
+        <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
         <span className="truncate">{item.name}</span>
       </Link>
     )
@@ -169,18 +169,18 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
             <button
               type="button"
               className={cn(
-                "group relative flex w-full items-center justify-center rounded-[10px] border border-transparent px-0 py-2.5 text-[13px] font-medium transition-colors",
+                "group relative flex min-h-10 w-full items-center justify-center rounded-[12px] border border-transparent px-0 py-2.5 text-[13px] font-medium transition-colors",
                 isActive
-                  ? "border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-primary)]"
+                  ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
                   : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
               )}
               title={label}
               aria-label={`Open ${label} menu`}
             >
               {isActive ? (
-                <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-[var(--brand-cyan)]" />
+                <span className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--brand-primary)]" />
               ) : null}
-              <GroupIcon className="h-[16px] w-[16px] shrink-0" strokeWidth={1.8} />
+              <GroupIcon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="start" sideOffset={10} className="w-56">
@@ -200,7 +200,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
                   <Link href={item.href}>
                     <item.icon className="h-4 w-4" strokeWidth={1.8} />
                     <span className="flex-1">{item.name}</span>
-                    {itemIsActive ? <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-cyan)]" /> : null}
+                    {itemIsActive ? <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-primary)]" /> : null}
                   </Link>
                 </DropdownMenuItem>
               )
@@ -216,16 +216,16 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         type="button"
         onClick={onToggle}
         className={cn(
-          "group relative flex w-full items-center gap-3 rounded-[10px] border border-transparent px-3 py-2.5 text-[13px] xl:text-[14px] font-medium transition-colors",
+          "group relative flex min-h-10 w-full items-center gap-3 rounded-[12px] border border-transparent px-3 py-2.5 text-[13px] font-medium transition-colors xl:text-[14px]",
           isActive
-            ? "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--line-subtle)]"
+            ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
         )}
       >
         {isActive ? (
-          <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-[var(--brand-cyan)]" />
+          <span className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--brand-primary)]" />
         ) : null}
-        <GroupIcon className="h-[16px] w-[16px] shrink-0" strokeWidth={1.8} />
+        <GroupIcon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
         <span className="truncate">{label}</span>
         <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", expanded && "rotate-180")} />
       </button>
@@ -251,16 +251,16 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         type="button"
         onClick={onToggle}
         className={cn(
-          "group relative flex w-full items-center gap-3 rounded-[10px] border border-transparent px-4 py-3 text-[14px] font-medium transition-colors",
+          "group relative flex min-h-11 w-full items-center gap-3 rounded-[12px] border border-transparent px-4 py-3 text-[14px] font-medium transition-colors",
           isActive
-            ? "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--line-subtle)]"
+            ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-soft)] hover:text-[var(--text-primary)]"
         )}
       >
         {isActive ? (
-          <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-[var(--brand-cyan)]" />
+          <span className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--brand-primary)]" />
         ) : null}
-        <GroupIcon className="h-[16px] w-[16px] shrink-0" strokeWidth={1.8} />
+        <GroupIcon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
         <span className="truncate">{label}</span>
         <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", expanded && "rotate-180")} />
       </button>
@@ -280,11 +280,11 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
           <div className="flex h-full flex-col overflow-y-auto">
             <div className="border-b border-[var(--line-subtle)] px-5 py-5">
               <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[linear-gradient(135deg,var(--brand-primary-strong),var(--brand-cyan))] text-white shadow-[var(--shadow-apple)]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[var(--brand-primary)] text-white shadow-[var(--shadow-apple)]">
                   <Zap className="h-5 w-5 fill-current" />
                 </div>
                 <div>
-                  <h1 className="text-[31px] font-bold tracking-[-0.03em] text-[var(--text-primary)] leading-none">Pixelist</h1>
+                  <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-primary)] leading-none">Pixelist</h1>
                 </div>
               </Link>
             </div>
@@ -339,10 +339,10 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 hidden h-screen border-r border-[var(--line-subtle)] bg-[var(--bg-sidebar)] md:flex transition-[width] duration-300",
+          "fixed left-0 top-0 z-50 hidden h-dvh border-r border-[var(--line-subtle)] bg-[var(--bg-sidebar)] transition-[width] duration-300 md:left-2 md:top-2 md:flex md:h-[calc(100dvh-1rem)] md:rounded-l-[14px] xl:left-4 xl:top-4 xl:h-[calc(100dvh-2rem)] xl:rounded-l-[20px]",
           isDesktopCollapsed
-            ? "w-[78px] xl:w-[92px]"
-            : "w-[208px] xl:w-[236px]"
+            ? "w-[80px]"
+            : "w-[232px]"
         )}
       >
         <button
@@ -354,7 +354,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
             }
             setIsSidebarCollapsed(true)
           }}
-          className="absolute -right-3 top-8 inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] shadow-[var(--shadow-apple)] transition-colors hover:text-[var(--text-primary)]"
+          className="absolute -right-3 top-8 inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] shadow-[var(--shadow-apple)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
           aria-label={isDesktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-expanded={!isDesktopCollapsed}
           aria-controls="desktop-sidebar-nav"
@@ -365,12 +365,12 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
         <div className="flex h-full w-full flex-col px-3 py-4">
           <div className={cn("border-b border-[var(--line-subtle)] pb-4", isDesktopCollapsed ? "flex justify-center" : "px-2")}>
             <Link href="/" className={cn("inline-flex items-center gap-3", isDesktopCollapsed && "justify-center")}>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(135deg,var(--brand-primary-strong),var(--brand-cyan))] text-white shadow-[var(--shadow-apple)]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[var(--brand-primary)] text-white shadow-[var(--shadow-apple)]">
                 <Zap className="h-5 w-5 fill-current" />
               </div>
               {!isDesktopCollapsed ? (
                 <div>
-                  <h1 className="text-[27px] xl:text-[31px] font-bold tracking-[-0.03em] text-[var(--text-primary)] leading-none">Pixelist</h1>
+                  <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[var(--text-primary)] leading-none">Pixelist</h1>
                 </div>
               ) : null}
             </Link>
@@ -388,7 +388,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
             {renderDesktopItem({ name: "Settings", href: "/settings", icon: Settings })}
 
             {!isDesktopCollapsed ? (
-              <div className="flex items-center gap-3 rounded-[10px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 shadow-[var(--shadow-apple)]">
+              <div className="flex items-center gap-3 rounded-[14px] border border-[var(--line-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 shadow-[var(--shadow-apple)]">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.profilePic || "/avatar.png"} alt={displayName} />
                   <AvatarFallback>{initials}</AvatarFallback>

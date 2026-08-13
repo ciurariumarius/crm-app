@@ -21,15 +21,15 @@ export default async function ServicesPage() {
 
     return (
         <div className="flex flex-col gap-6 pb-8 sm:gap-8">
-            <div className="rounded-[28px] border border-[var(--line-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Services"
-                    actions={<CreateServiceDialog label="Add" showLabelOnMobile className="!h-11 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white xl:!px-9" />}
+                    actions={<CreateServiceDialog label="Add" showLabelOnMobile className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9" />}
                     mobileActions={
                         <CreateServiceDialog
                             label="Add"
                             showLabelOnMobile
-                            className="!h-11 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white xl:!px-9"
+                            className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
                         />
                     }
                     showMobile

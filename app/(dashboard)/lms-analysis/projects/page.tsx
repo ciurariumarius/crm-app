@@ -857,7 +857,7 @@ export default function LmsAnalysisProjectsPage() {
                         row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
                         row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
                         row.workVolumeStatus === "High" && "border-rose-300 bg-rose-50 text-rose-700",
-                        row.workVolumeStatus === "Extra" && "border-violet-300 bg-violet-50 text-violet-700"
+                        row.workVolumeStatus === "Extra" && "border-[color:color-mix(in_srgb,var(--state-review)_28%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)]"
                       )}
                     >
                       {row.workVolumeStatus}
@@ -1094,7 +1094,7 @@ export default function LmsAnalysisProjectsPage() {
                         row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
                         row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
                         row.workVolumeStatus === "High" && "border-rose-300 bg-rose-50 text-rose-700",
-                        row.workVolumeStatus === "Extra" && "border-violet-300 bg-violet-50 text-violet-700"
+                        row.workVolumeStatus === "Extra" && "border-[color:color-mix(in_srgb,var(--state-review)_28%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)]"
                       )}
                     >
                       {row.workVolumeStatus}

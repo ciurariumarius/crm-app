@@ -103,9 +103,9 @@ export function BusinessHealthPulse({
                                 <RotateCw className="h-3.5 w-3.5 text-blue-600" strokeWidth={2.5} />
                                 <span className="text-sm font-black text-blue-700">{activeMonthlyProjects}</span>
                             </div>
-                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-indigo-50/50 rounded-xl border border-indigo-100" title="One-time Projects">
-                                <Zap className="h-3.5 w-3.5 text-indigo-600" strokeWidth={2.5} />
-                                <span className="text-sm font-black text-indigo-700">{activeOneTimeProjects}</span>
+                            <div className="flex items-center gap-2 rounded-xl border border-[color:color-mix(in_srgb,var(--state-review)_24%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] px-2.5 py-1.5" title="One-time Projects">
+                                <Zap className="h-3.5 w-3.5 text-[var(--state-review)]" strokeWidth={2} />
+                                <span className="text-sm font-semibold text-[var(--state-review)]">{activeOneTimeProjects}</span>
                             </div>
                         </div>
                     </div>

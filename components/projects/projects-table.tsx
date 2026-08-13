@@ -386,7 +386,7 @@ export function ProjectsTable({ projects, allServices, partners = [], layout = "
                 key={project.id}
                 className={cn(
                     "group stagger-row-enter premium-card relative flex min-h-[52px] items-center bg-[var(--surface-lowest)] rounded-xl p-4 border border-border/60 w-full cursor-pointer overflow-x-auto md:min-w-[1080px] xl:min-w-[1280px] gap-5 px-6",
-                    project.paymentStatus === "Unpaid" ? "cockpit-debt-row" : "hover:bg-[#F1F5F9]"
+                    project.paymentStatus === "Unpaid" ? "cockpit-debt-row" : "hover:bg-[var(--surface-low)]"
                 )}
                 style={{ animationDelay: `${rowIndex * 0.05}s` }}
                 onClick={() => setSelectedProject(project)}

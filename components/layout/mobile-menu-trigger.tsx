@@ -11,7 +11,7 @@ export function MobileMenuTrigger() {
         <Button
             variant="ghost"
             size="icon"
-            className="z-40 h-11 w-11 shrink-0 rounded-[28px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--text-secondary)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] hover:text-[var(--text-primary)] md:hidden"
+            className="z-40 h-11 w-11 shrink-0 rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] shadow-[var(--shadow-apple)] transition-colors hover:border-[var(--brand-primary)] hover:bg-[var(--surface-low)] hover:text-[var(--brand-primary)] md:hidden"
             onClick={() => setIsMobileMenuOpen(true)}
             aria-label="Open navigation menu"
         >

@@ -119,7 +119,7 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
             <button
                 onClick={() => setOpen(true)}
                 className={cn(
-                    "mx-auto hidden h-11 w-full max-w-[560px] items-center gap-3 rounded-[28px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] pl-4 pr-4 text-[var(--text-muted)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_74%,var(--text-muted)_26%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,transparent)] focus-visible:ring-offset-0 md:flex",
+                    "mx-auto hidden h-11 w-full max-w-[560px] items-center gap-3 rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-4 pr-4 text-[var(--text-muted)] shadow-[var(--shadow-apple)] transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_74%,var(--text-muted)_26%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,transparent)] focus-visible:ring-offset-0 md:flex",
                     desktopTriggerClassName
                 )}
             >
@@ -133,7 +133,7 @@ export function GlobalSearch({ mobileMode = "icon", desktopTriggerClassName }: G
             {mobileMode === "full" ? (
                 <button
                     onClick={() => setOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-[28px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left text-[var(--text-secondary)] shadow-sm transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_74%,var(--text-muted)_26%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] md:hidden"
+                    className="flex w-full items-center gap-3 rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 text-left text-[var(--text-secondary)] shadow-sm transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_74%,var(--text-muted)_26%)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] md:hidden"
                 >
                     <Search className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
                     <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--text-secondary)]">

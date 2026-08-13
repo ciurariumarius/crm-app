@@ -127,7 +127,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
                                 </div>
                             </div>
                             <div className="flex items-center justify-center gap-2.5">
-                                <Briefcase className="h-3.5 w-3.5 text-indigo-500/70 shrink-0" />
+                                <Briefcase className="h-3.5 w-3.5 shrink-0 text-[var(--state-review)]" />
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-black text-[var(--text-primary)] tabular-nums leading-none">{totalProjects}</span>
                                     <span className="text-[11px] font-medium text-[var(--text-secondary)] leading-none">Projects</span>

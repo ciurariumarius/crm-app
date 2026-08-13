@@ -38,7 +38,7 @@ export function TimeTrackerWidget({
     const primaryActionLabel = isRunning ? "Pause" : isPaused ? "Resume" : "Start"
 
     return (
-        <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-3 shadow-[var(--shadow-apple)]">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-5 overflow-hidden">
                     {/* Total Tracked */}

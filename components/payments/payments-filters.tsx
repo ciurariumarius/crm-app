@@ -123,7 +123,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
 
     return (
         <div className="space-y-2.5 sm:space-y-3">
-            <FilterBarShell className="rounded-[24px] border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] px-3 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.035)] sm:px-5 sm:py-4">
+            <FilterBarShell className="rounded-[20px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-3 shadow-[var(--shadow-apple)] sm:px-5 sm:py-4">
                 <FilterBarScroll>
                     <FilterBarRow className="xl:gap-4">
                     <FilterBarGroup className="gap-4 xl:gap-4">
@@ -163,7 +163,7 @@ export function PaymentsFilters({ partners, projects, totalLogs }: PaymentsFilte
                 </FilterBarScroll>
             </FilterBarShell>
 
-            <FilterResultsRow className="justify-between gap-3 rounded-[18px] border border-[var(--line-subtle)]/80 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,transparent)] px-3 py-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.025)] sm:gap-4 sm:px-4 sm:py-3">
+            <FilterResultsRow className="justify-between gap-3 rounded-[14px] border border-[var(--line-subtle)]/80 bg-[var(--surface-lowest)] px-3 py-2.5 shadow-[var(--shadow-apple)] sm:gap-4 sm:px-4 sm:py-3">
                 <p className="ui-text-label">{totalLogs} Results found</p>
                 {activeFilters.length > 0 && <span className="text-[var(--text-muted)]/60">|</span>}
                 {activeFilters.map((filter) => (

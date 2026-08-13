@@ -222,7 +222,7 @@ export function SettingsContent({
                 <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-violet-500/10 rounded-xl flex items-center justify-center text-violet-500">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--sidebar-accent)] text-[var(--brand-primary)]">
                                 <Palette className="h-5 w-5" />
                             </div>
                             <div>
@@ -391,7 +391,7 @@ export function SettingsContent({
                     <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--sidebar-accent)] text-[var(--brand-primary)]">
                                     <Shield className="h-5 w-5" />
                                 </div>
                                 <h2 className="text-xl font-bold">Two-Factor Auth</h2>
@@ -437,7 +437,7 @@ export function SettingsContent({
                                 </p>
 
                                 {!qrCodeUrl ? (
-                                    <Button onClick={handleGenerate2FA} className="w-full bg-indigo-500 hover:bg-indigo-600" disabled={loading}>
+                                    <Button onClick={handleGenerate2FA} className="w-full" disabled={loading}>
                                         <QrCode className="mr-2 h-4 w-4" /> Setup Authenticator App
                                     </Button>
                                 ) : (

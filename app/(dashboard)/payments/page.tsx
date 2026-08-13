@@ -140,7 +140,7 @@ export default async function PaymentsPage({
 
     return (
         <div className="flex flex-col gap-8 pb-10 sm:gap-10">
-            <div className="rounded-[28px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                 <DashboardPageHeader
                     title="Payments"
                     search={<PaymentsSearchInput />}
@@ -159,7 +159,7 @@ export default async function PaymentsPage({
 
             {/* KPI Section */}
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <article className="relative rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                <article className="relative rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
                         <p className="ui-overline text-[var(--text-muted)]">Current Month</p>
                         <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50/80 text-rose-400 shadow-[0_4px_10px_rgba(244,63,94,0.06)]">
@@ -176,15 +176,15 @@ export default async function PaymentsPage({
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-700/80">Recurring</p>
                                 <p className="mt-1 text-[13px] font-bold text-emerald-700">{formatCurrency(currentMonthUnpaid.recurring)}</p>
                             </div>
-                            <div className="rounded-xl border border-indigo-100/80 bg-indigo-50/60 px-2.5 py-2">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-indigo-700/80">One-time</p>
-                                <p className="mt-1 text-[13px] font-bold text-indigo-700">{formatCurrency(currentMonthUnpaid.oneTime)}</p>
+                            <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--state-review)_20%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_9%,var(--surface-lowest))] px-2.5 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--state-review)]">One-time</p>
+                                <p className="mt-1 text-[13px] font-semibold text-[var(--state-review)]">{formatCurrency(currentMonthUnpaid.oneTime)}</p>
                             </div>
                         </div>
                     </div>
                 </article>
 
-                <article className="relative rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                <article className="relative rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
                         <p className="ui-overline text-[var(--text-muted)]">Previous Months</p>
                         <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50/80 text-amber-500 shadow-[0_4px_10px_rgba(245,158,11,0.08)]">
@@ -201,18 +201,18 @@ export default async function PaymentsPage({
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-700/80">Recurring</p>
                                 <p className="mt-1 text-[13px] font-bold text-emerald-700">{formatCurrency(previousMonthsUnpaid.recurring)}</p>
                             </div>
-                            <div className="rounded-xl border border-indigo-100/80 bg-indigo-50/60 px-2.5 py-2">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-indigo-700/80">One-time</p>
-                                <p className="mt-1 text-[13px] font-bold text-indigo-700">{formatCurrency(previousMonthsUnpaid.oneTime)}</p>
+                            <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--state-review)_20%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_9%,var(--surface-lowest))] px-2.5 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--state-review)]">One-time</p>
+                                <p className="mt-1 text-[13px] font-semibold text-[var(--state-review)]">{formatCurrency(previousMonthsUnpaid.oneTime)}</p>
                             </div>
                         </div>
                     </div>
                 </article>
 
-                <article className="relative rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                <article className="relative rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
                         <p className="ui-overline text-[var(--text-muted)]">Partners</p>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[0_4px_10px_rgba(15,23,42,0.03)]">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[var(--shadow-apple)]">
                             <Users className="h-4.5 w-4.5" />
                         </div>
                     </div>
@@ -222,10 +222,10 @@ export default async function PaymentsPage({
                     </div>
                 </article>
 
-                <article className="relative rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6">
+                <article className="relative rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                     <div className="flex items-start justify-between gap-3">
                         <p className="ui-overline text-[var(--text-muted)]">Events</p>
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[0_4px_10px_rgba(15,23,42,0.03)]">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-[var(--shadow-apple)]">
                             <History className="h-4.5 w-4.5" />
                         </div>
                     </div>
@@ -262,7 +262,7 @@ export default async function PaymentsPage({
                     />
 
                     {/* Pagination Footer */}
-                    <div className="flex items-center justify-between rounded-[18px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] px-3 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.03)] sm:px-4">
+                    <div className="flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2 shadow-[var(--shadow-apple)] sm:px-4">
                         <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-[11px] font-semibold text-[var(--text-primary)]">
                             {page}/{totalPages}
                         </span>

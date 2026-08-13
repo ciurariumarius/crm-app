@@ -219,7 +219,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                             <TableRow>
                                 <TableCell colSpan={6} className="h-32 text-center">
                                     <div className="mx-auto flex max-w-md flex-col items-center justify-center px-4">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
                                             <Clock className="h-4 w-4 text-[var(--text-muted)]" />
                                         </div>
                                         <p className="mt-3 text-sm font-semibold tracking-tight text-[var(--text-primary)]">

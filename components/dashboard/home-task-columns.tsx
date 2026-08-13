@@ -313,7 +313,7 @@ export function HomeTaskColumns({
                     </div>
                 </div>
 
-                <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4">
+                <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-[var(--shadow-apple)] sm:p-4">
                     <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
                         <div className="grid grid-cols-3 gap-2 sm:gap-5">
                             <Link
@@ -369,7 +369,7 @@ export function HomeTaskColumns({
                         onSubmit={(event) => {
                             void handleQuickCaptureSubmit(event)
                         }}
-                        className="flex h-full flex-col rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_86%,transparent)] p-2.5 shadow-[0_2px_10px_rgba(15,23,42,0.02)]"
+                        className="flex h-full flex-col rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_86%,transparent)] p-2.5 shadow-[var(--shadow-apple)]"
                     >
                         <div className="flex items-center gap-2">
                             <Input
@@ -444,7 +444,7 @@ export function HomeTaskColumns({
                 </div>
 
                 {visibleTasks.length === 0 && (
-                    <div className="mt-3 rounded-[18px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_78%,transparent)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+                    <div className="mt-3 rounded-[14px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_78%,transparent)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                         No active tasks yet. Use quick capture to add one.
                     </div>
                 )}

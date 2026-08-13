@@ -26,7 +26,7 @@ export function PaymentsAddPaymentAction({
   services: ServiceOption[]
   mobile?: boolean
 }) {
-  const compactClassName = "!h-11 !w-auto !min-w-0 !rounded-[28px] !px-8 !gap-2 !text-white xl:!px-9"
+  const compactClassName = "!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
 
   if (mobile) {
     return (

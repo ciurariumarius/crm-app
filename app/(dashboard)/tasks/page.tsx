@@ -30,11 +30,11 @@ const SORT_OPTIONS = [
 const SORT_VALUES = new Set(SORT_OPTIONS.map((option) => option.value))
 const COL_VALUES = new Set(["3", "4"])
 const OVERVIEW_ROW_CLASS =
-    "flex w-max min-w-full overflow-hidden rounded-[22px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[0_6px_18px_rgba(15,23,42,0.04)] md:w-full"
+    "flex w-max min-w-full overflow-hidden rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] md:w-full"
 const OVERVIEW_ITEM_CLASS =
     "group relative flex min-w-[182px] items-center gap-3 px-3.5 py-3 transition-all hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] md:min-w-0 md:flex-1"
 const OVERVIEW_ICON_CLASS =
-    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-[var(--surface-lowest)] shadow-[0_1px_3px_rgba(15,23,42,0.08)]"
+    "flex h-8 w-8 items-center justify-center rounded-[10px] border bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]"
 
 function buildSort(sort: string): Prisma.TaskOrderByWithRelationInput[] {
     switch (sort) {
@@ -291,7 +291,7 @@ export default async function TasksPage({
                         label: "Due Today",
                         value: dueTodayTasksCount,
                         icon: <CalendarDays className="h-3.5 w-3.5" />,
-                        toneClass: "border-indigo-100/80 bg-indigo-50/80 text-indigo-700",
+                        toneClass: "border-[color:color-mix(in_srgb,var(--state-review)_22%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)]",
                     },
                 ].map((item, index, all) => (
                     <Link
@@ -333,7 +333,7 @@ export default async function TasksPage({
     return (
         <TasksSearchProvider initialSearch={q || ""}>
             <div className="flex flex-col gap-3.5 sm:gap-4">
-                <div className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,var(--surface-low)_4%)] p-3.5 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-4 lg:p-5">
+                <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-4 lg:p-5">
                     <DashboardPageHeader
                         title="Tasks"
                         showMobile
@@ -344,7 +344,7 @@ export default async function TasksPage({
                                 projects={activeProjects}
                                 label="Add"
                                 showLabelOnMobile
-                                className="!h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
+                                className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
                             />
                         }
                         actions={
@@ -352,7 +352,7 @@ export default async function TasksPage({
                                 projects={activeProjects}
                                 label="Add"
                                 showLabelOnMobile
-                                className="!h-11 !w-auto !min-w-0 !rounded-[24px] !px-8 !gap-2 !text-white xl:!px-9"
+                                className="!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
                             />
                         }
                     />

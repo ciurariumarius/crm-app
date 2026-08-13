@@ -37,7 +37,7 @@ function run() {
   assert.match(projectsRows, /md:min-w-\[1240px\] xl:min-w-\[1320px\]/)
 
   const paymentsTable = read("components/payments/payments-table.tsx")
-  assert.match(paymentsTable, /md:min-w-\[940px\] xl:min-w-\[1200px\]/)
+  assert.match(paymentsTable, /md:min-w-\[1040px\] xl:min-w-\[1200px\]/)
 
   const timeTable = read("components/time/time-logs-table.tsx")
   assert.match(timeTable, /md:min-w-\[960px\] xl:min-w-\[1240px\]/)

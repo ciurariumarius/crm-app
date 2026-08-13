@@ -1,11 +1,11 @@
 export default function PaymentsLoading() {
     return (
         <div className="flex flex-col gap-8 pb-10 sm:gap-10">
-            <div className="rounded-[28px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5 lg:p-6">
+            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                 <div className="animate-pulse space-y-3">
                     <div className="h-7 w-28 rounded bg-[color:color-mix(in_srgb,var(--surface-highest)_72%,var(--surface-lowest)_28%)]" />
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="h-11 w-full rounded-[28px] bg-[color:color-mix(in_srgb,var(--surface-highest)_72%,var(--surface-lowest)_28%)] sm:max-w-[420px]" />
+                        <div className="h-11 w-full rounded-[20px] bg-[color:color-mix(in_srgb,var(--surface-highest)_72%,var(--surface-lowest)_28%)] sm:max-w-[420px]" />
                         <div className="h-10 w-24 rounded-[16px] bg-[color:color-mix(in_srgb,var(--surface-highest)_72%,var(--surface-lowest)_28%)]" />
                     </div>
                 </div>
@@ -15,7 +15,7 @@ export default function PaymentsLoading() {
                 {Array.from({ length: 3 }).map((_, index) => (
                     <article
                         key={`payments-kpi-loading-${index}`}
-                        className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] sm:p-5 lg:p-6"
+                        className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6"
                     >
                         <div className="animate-pulse space-y-3">
                             <div className="h-3.5 w-20 rounded bg-[color:color-mix(in_srgb,var(--surface-highest)_72%,var(--surface-lowest)_28%)]" />
@@ -27,10 +27,10 @@ export default function PaymentsLoading() {
             </section>
 
             <div className="flex flex-col gap-8 sm:gap-10">
-                <section className="rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)] p-4 shadow-[0_6px_18px_rgba(15,23,42,0.03)] sm:p-5 lg:p-6">
+                <section className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5 lg:p-6">
                     <div className="animate-pulse space-y-4">
                         <div className="h-6 w-44 rounded bg-[color:color-mix(in_srgb,var(--surface-highest)_72%,var(--surface-lowest)_28%)]" />
-                        <div className="h-[260px] rounded-[18px] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] sm:h-[300px]" />
+                        <div className="h-[260px] rounded-[14px] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] sm:h-[300px]" />
                     </div>
                 </section>
 
@@ -42,19 +42,19 @@ export default function PaymentsLoading() {
                         </div>
                     </div>
 
-                    <div className="h-[112px] animate-pulse rounded-[24px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)]" />
+                    <div className="h-[112px] animate-pulse rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)]" />
 
                     <div className="space-y-2.5">
                         <div className="hidden h-12 animate-pulse rounded-[20px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] md:block" />
                         {Array.from({ length: 8 }).map((_, index) => (
                             <div
                                 key={`payments-row-loading-${index}`}
-                                className="h-[78px] animate-pulse rounded-[20px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,transparent)]"
+                                className="h-[78px] animate-pulse rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
                             />
                         ))}
                     </div>
 
-                    <div className="h-[78px] animate-pulse rounded-[20px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_94%,var(--surface-low)_6%)]" />
+                    <div className="h-[78px] animate-pulse rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)]" />
                 </div>
             </div>
         </div>

@@ -41,7 +41,7 @@ export function DashboardPageHeader({
     return (
         <>
             {showMobile ? (
-                <div className="flex flex-col gap-3 md:hidden">
+                <div className="flex flex-col gap-3 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] md:hidden">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
                             <MobileMenuTrigger />
@@ -65,7 +65,7 @@ export function DashboardPageHeader({
                 </div>
             ) : null}
 
-            <div className={["hidden items-center gap-3 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(320px,640px)_minmax(180px,1fr)] xl:hidden", className].filter(Boolean).join(" ")}>
+            <div className={["hidden items-center gap-4 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-5 py-4 shadow-[var(--shadow-apple)] md:grid md:grid-cols-[minmax(180px,1fr)_minmax(320px,640px)_minmax(180px,1fr)] xl:hidden", className].filter(Boolean).join(" ")}>
                 <div className="min-w-0 justify-self-start">
                     <div className="min-w-0">
                         {eyebrow ? (
@@ -82,7 +82,7 @@ export function DashboardPageHeader({
                 {resolvedTabletActions ? <div className="min-w-0 justify-self-end flex items-center justify-end gap-2.5">{resolvedTabletActions}</div> : <div className="min-w-0" />}
             </div>
 
-            <div className={["hidden gap-4 xl:grid xl:grid-cols-[minmax(240px,1fr)_minmax(360px,640px)_minmax(240px,1fr)] xl:items-center", className].filter(Boolean).join(" ")}>
+            <div className={["hidden gap-5 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-6 py-4 shadow-[var(--shadow-apple)] xl:grid xl:grid-cols-[minmax(240px,1fr)_minmax(360px,640px)_minmax(240px,1fr)] xl:items-center", className].filter(Boolean).join(" ")}>
                 <div className="min-w-0 justify-self-start">
                     <div className="flex items-start gap-3">
                         <MobileMenuTrigger />

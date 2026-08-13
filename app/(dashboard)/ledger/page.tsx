@@ -127,7 +127,7 @@ export default async function LedgerPage({
                             </div>
                         )}
                     </div>
-                    <div className="flex items-center justify-between rounded-[18px] border border-border/60 bg-card/50 px-3 py-2">
+                    <div className="flex items-center justify-between rounded-[14px] border border-border/60 bg-card/50 px-3 py-2">
                         <span className="inline-flex h-8 items-center rounded-lg border border-border bg-background px-2.5 text-[11px] font-semibold text-foreground">
                             {page}/{totalPages}
                         </span>

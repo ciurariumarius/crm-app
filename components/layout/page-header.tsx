@@ -22,7 +22,7 @@ export function PageHeader({
     const effectiveSubtitle = subtitle ?? description
 
     return (
-        <div className={cn("flex flex-col gap-2", className)}>
+        <div className={cn("flex flex-col gap-2 rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4 shadow-[var(--shadow-apple)] md:px-6", className)}>
             <div className="flex min-h-10 items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                     <MobileMenuTrigger />
