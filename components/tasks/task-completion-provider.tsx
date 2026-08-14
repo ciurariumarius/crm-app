@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { CalendarDays, Check, CheckCircle2, ChevronsUpDown, Clock3, Loader2 } from "lucide-react"
+import { CalendarDays, Check, CheckCircle2, ChevronsUpDown, Clock3, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,6 +24,7 @@ import {
   resolveCompletionDefaultMinutes,
   validCompletionMinutes,
 } from "@/components/tasks/task-completion-defaults"
+import { AddLmsClientDialog } from "@/components/lms-work-entries/add-lms-client-dialog"
 
 export type TaskCompletionTask = {
   id: string
@@ -211,6 +212,7 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
   const [workDate, setWorkDate] = React.useState("")
   const [durationMinutes, setDurationMinutes] = React.useState("")
   const [formAttempted, setFormAttempted] = React.useState(false)
+  const [addProjectOpen, setAddProjectOpen] = React.useState(false)
 
   const loadLmsOptions = React.useCallback(async (force = false) => {
     if (lmsOptionsLoaded && !force) return lmsOptions
@@ -244,6 +246,7 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
     activeDialogTaskIdRef.current = null
     setDialogTask(null)
     setCompletionCallback(null)
+    setAddProjectOpen(false)
     router.refresh()
   }, [completionCallback, router])
 
@@ -412,7 +415,20 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
           <form onSubmit={submitLmsCompletion} className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="task-completion-lms-project">LMS project *</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="task-completion-lms-project">LMS project *</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs font-semibold text-[var(--primary)]"
+                    disabled={lmsOptionsLoading || Boolean(pendingTaskId)}
+                    onClick={() => setAddProjectOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    New project
+                  </Button>
+                </div>
                 <CompletionCombobox
                   id="task-completion-lms-project"
                   label="Select LMS project"
@@ -503,6 +519,15 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
           </form>
         </DialogContent>
       </Dialog>
+      <AddLmsClientDialog
+        open={addProjectOpen}
+        onOpenChange={setAddProjectOpen}
+        wording="project"
+        onCreated={(client) => {
+          setLmsAllocationId(client.id)
+          void loadLmsOptions(true)
+        }}
+      />
     </TaskCompletionContext.Provider>
   )
 }

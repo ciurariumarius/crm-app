@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client"
 import { normalizeTaskUrgency, type TaskUrgency } from "../status"
 
 const TASK_STATUS_FILTER_VALUES = ["All", "Active", "Completed"] as const
-const TASK_SCOPE_FILTER_VALUES = ["ALL", "GENERAL", "FREELANCE", "LMS"] as const
+const TASK_SCOPE_FILTER_VALUES = ["ALL", "FREELANCE", "LMS"] as const
 
 export type TaskStatusFilter = (typeof TASK_STATUS_FILTER_VALUES)[number]
 export type TaskScopeFilter = (typeof TASK_SCOPE_FILTER_VALUES)[number]

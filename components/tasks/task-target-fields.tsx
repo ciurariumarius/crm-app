@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { BriefcaseBusiness, Check, ChevronsUpDown, CircleDot, GraduationCap } from "lucide-react"
+import { BriefcaseBusiness, Check, ChevronsUpDown, GraduationCap, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
+import { AddLmsClientDialog } from "@/components/lms-work-entries/add-lms-client-dialog"
 
 export const TASK_SCOPE_VALUES = ["GENERAL", "FREELANCE", "LMS"] as const
 export type TaskScopeValue = (typeof TASK_SCOPE_VALUES)[number]
@@ -37,12 +38,6 @@ const TARGET_OPTIONS: Array<{
     description: "My job",
     icon: GraduationCap,
   },
-  {
-    value: "GENERAL",
-    label: "No project",
-    description: "Standalone",
-    icon: CircleDot,
-  },
 ]
 
 export function TaskTargetSelector({
@@ -57,7 +52,7 @@ export function TaskTargetSelector({
   freelanceAvailable?: boolean
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Task target">
+    <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Task target">
       {TARGET_OPTIONS.map((option) => {
         const Icon = option.icon
         const selected = value === option.value
@@ -99,6 +94,8 @@ function LmsOptionCombobox({
   options,
   value,
   onValueChange,
+  onCreateRequest,
+  createLabel,
   disabled,
 }: {
   label: string
@@ -108,13 +105,21 @@ function LmsOptionCombobox({
   options: Array<{ id: string; label: string }>
   value: string
   onValueChange: (value: string) => void
+  onCreateRequest?: (suggestedName: string) => void
+  createLabel?: string
   disabled?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState("")
   const selected = options.find((option) => option.id === value)
 
+  function changeOpen(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) setSearch("")
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -134,7 +139,7 @@ function LmsOptionCombobox({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-[280px] p-0">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           <CommandList className="max-h-[280px]">
             <CommandEmpty>{emptyLabel}</CommandEmpty>
             <CommandGroup>
@@ -161,6 +166,22 @@ function LmsOptionCombobox({
                   <span className="truncate">{option.label}</span>
                 </CommandItem>
               ))}
+              {onCreateRequest ? (
+                <CommandItem
+                  value={`create ${createLabel || "option"} ${search}`}
+                  onSelect={() => {
+                    const suggestedName = search.trim()
+                    changeOpen(false)
+                    onCreateRequest(suggestedName)
+                  }}
+                  className="border-t border-[var(--line-subtle)] text-[var(--primary)]"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="truncate">
+                    {search.trim() ? `Create ${createLabel || "option"} “${search.trim()}”` : `Create ${createLabel || "option"}`}
+                  </span>
+                </CommandItem>
+              ) : null}
             </CommandGroup>
           </CommandList>
         </Command>
@@ -187,6 +208,8 @@ export function TaskLmsFields({
   compact?: boolean
 }) {
   const { lmsOptions, lmsOptionsLoading, lmsOptionsError, loadLmsOptions } = useTaskCompletion()
+  const [addProjectOpen, setAddProjectOpen] = React.useState(false)
+  const [addProjectInitialName, setAddProjectInitialName] = React.useState("")
 
   React.useEffect(() => {
     void loadLmsOptions()
@@ -195,9 +218,25 @@ export function TaskLmsFields({
   return (
     <div className={cn("grid gap-4", !compact && "sm:grid-cols-2")}>
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-[var(--text-secondary)]">
-          LMS project{required ? " *" : " (optional)"}
-        </Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-xs font-semibold text-[var(--text-secondary)]">
+            LMS project{required ? " *" : " (optional)"}
+          </Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs font-semibold text-[var(--primary)]"
+            disabled={disabled}
+            onClick={() => {
+              setAddProjectInitialName("")
+              setAddProjectOpen(true)
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New project
+          </Button>
+        </div>
         <LmsOptionCombobox
           label="Select LMS project"
           placeholder={lmsOptionsLoading ? "Loading LMS projects…" : "Not linked yet"}
@@ -206,6 +245,11 @@ export function TaskLmsFields({
           options={lmsOptions.allocations.map((option) => ({ id: option.id, label: option.client }))}
           value={lmsAllocationId}
           onValueChange={onAllocationChange}
+          onCreateRequest={(suggestedName) => {
+            setAddProjectInitialName(suggestedName)
+            setAddProjectOpen(true)
+          }}
+          createLabel="LMS project"
           disabled={disabled || lmsOptionsLoading}
         />
       </div>
@@ -232,6 +276,16 @@ export function TaskLmsFields({
           </button>
         </p>
       ) : null}
+      <AddLmsClientDialog
+        open={addProjectOpen}
+        onOpenChange={setAddProjectOpen}
+        initialName={addProjectInitialName}
+        wording="project"
+        onCreated={(client) => {
+          onAllocationChange(client.id)
+          void loadLmsOptions(true)
+        }}
+      />
     </div>
   )
 }

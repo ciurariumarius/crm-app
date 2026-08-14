@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { addTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
@@ -52,7 +52,7 @@ interface GlobalCreateTaskDialogProps {
 export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalCreateTaskDialogProps) {
     const [name, setName] = useState("")
     const [selectedProjectId, setSelectedProjectId] = useState("")
-    const defaultTaskScope: TaskScopeValue = projects.length > 0 ? "FREELANCE" : "GENERAL"
+    const defaultTaskScope: TaskScopeValue = "FREELANCE"
     const [taskScope, setTaskScope] = useState<TaskScopeValue>(defaultTaskScope)
     const [lmsAllocationId, setLmsAllocationId] = useState("")
     const [lmsTaskTypeId, setLmsTaskTypeId] = useState("")
@@ -66,11 +66,6 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
     const [openCombobox, setOpenCombobox] = useState(false)
     const [showDetails, setShowDetails] = useState(false)
     const router = useRouter()
-
-    useEffect(() => {
-        if (!open) return
-        if (projects.length === 0 && taskScope === "FREELANCE") setTaskScope("GENERAL")
-    }, [open, projects.length, taskScope])
 
     // Filter projects based on the "showCompleted" toggle
     const displayProjects = projects.filter(p => showCompleted || p.status === "Active")
@@ -90,7 +85,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                 lmsTaskTypeId: taskScope === "LMS" ? lmsTaskTypeId || null : null,
             })
             if (result.success) {
-                toast.success(taskScope === "LMS" ? "LMS task created" : result.data?.projectId ? "Task created" : "General task created")
+                toast.success(taskScope === "LMS" ? "LMS task created" : "Task created")
                 setName("")
                 setSelectedProjectId("")
                 setTaskScope(defaultTaskScope)
@@ -134,10 +129,8 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                             />
                             <p className="text-xs leading-5 text-[var(--text-muted)]">
                                 {taskScope === "LMS"
-                                    ? "LMS stays separate from freelance clients and projects. You can finish the LMS links now or when completing the task."
-                                    : taskScope === "GENERAL"
-                                      ? "A standalone task with no client or project relationship."
-                                      : "A task connected to the existing freelance project workflow."}
+                                    ? "LMS stays separate from freelance projects. Link or create the LMS project now, or finish the link when completing the task."
+                                    : "Choose the freelance project, including your Personal project for standalone work."}
                             </p>
                         </div>
 
@@ -165,7 +158,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                         <span className="truncate pr-4">
                                             {selectedProjectId
                                                 ? formatProjectName(projects.find((p) => p.id === selectedProjectId)!)
-                                                : "No project selected"}
+                                                : "Select a freelance project"}
                                         </span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
@@ -176,26 +169,6 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                         <CommandList className="max-h-[200px] overflow-y-auto">
                                             <CommandEmpty>No project found.</CommandEmpty>
                                             <CommandGroup>
-                                                <CommandItem
-                                                    value="No project selected"
-                                                    onSelect={() => {
-                                                        setSelectedProjectId("")
-                                                        setOpenCombobox(false)
-                                                    }}
-                                                    className="flex items-center justify-between py-3"
-                                                >
-                                                    <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
-                                                        <Check
-                                                            className={cn(
-                                                                "h-4 w-4 shrink-0",
-                                                                !selectedProjectId ? "opacity-100" : "opacity-0"
-                                                            )}
-                                                        />
-                                                        <span className="truncate leading-tight font-medium">
-                                                            No project selected
-                                                        </span>
-                                                    </div>
-                                                </CommandItem>
                                                 {displayProjects.map((p) => (
                                                     <CommandItem
                                                         key={p.id}

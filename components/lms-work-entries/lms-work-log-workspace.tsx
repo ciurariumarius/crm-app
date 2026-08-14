@@ -30,7 +30,6 @@ import {
 import { toast } from "sonner"
 import { reopenTask } from "@/lib/actions/tasks"
 import {
-  createLmsWorkClient,
   createLmsWorkEntry,
   deleteLmsWorkEntry,
   getLmsWorkComposerContext,
@@ -88,6 +87,7 @@ import {
 } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { AddLmsClientDialog } from "@/components/lms-work-entries/add-lms-client-dialog"
 
 const CUSTOM_PERIOD = "custom"
 const CUSTOM_DURATION_VALUE = "custom"
@@ -1200,84 +1200,6 @@ function EditEntryDialog({
   )
 }
 
-export function AddClientDialog({
-  open,
-  onOpenChange,
-  onCreated,
-  initialName = "",
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onCreated: (client: LmsWorkClientOption) => void
-  initialName?: string
-}) {
-  const [name, setName] = React.useState(initialName)
-  const [saving, setSaving] = React.useState(false)
-
-  React.useEffect(() => {
-    if (open) setName(initialName)
-  }, [initialName, open])
-
-  function changeOpen(nextOpen: boolean) {
-    if (!nextOpen && !saving) setName("")
-    onOpenChange(nextOpen)
-  }
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!name.trim()) return
-
-    setSaving(true)
-    const result = await createLmsWorkClient(name)
-    setSaving(false)
-    if (!result.success) {
-      toast.error(result.error)
-      return
-    }
-
-    onCreated(result.client)
-    setName("")
-    onOpenChange(false)
-    toast.success(result.existed ? "Existing client selected" : "Client added and selected")
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add client</DialogTitle>
-          <DialogDescription>
-            Enter the LMS client name or domain. If it already exists, it will be selected instead of duplicated.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="new-lms-client">Client name or domain</Label>
-            <Input
-              id="new-lms-client"
-              autoFocus
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="example.ro"
-              maxLength={255}
-              disabled={saving}
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => changeOpen(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving || !name.trim()}>
-              {saving ? <Loader2 className="animate-spin" /> : <UserPlus />}
-              {saving ? "Adding…" : "Add client"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 export function LmsWorkLogWorkspace({
   data,
   activePeriod,
@@ -2257,7 +2179,7 @@ export function LmsWorkLogWorkspace({
       </Card>
 
       <EditEntryDialog entry={editingEntry} clients={clientOptions} tasks={data.tasks} onClose={() => setEditingEntry(null)} />
-      <AddClientDialog
+      <AddLmsClientDialog
         open={addClientOpen}
         onOpenChange={setAddClientOpen}
         initialName={addClientInitialName}

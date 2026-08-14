@@ -296,6 +296,10 @@ export function TasksCardView({
             toast.error("Task title is required")
             return
         }
+        if (!quickProjectId) {
+            toast.error("Choose a freelance project or LMS")
+            return
+        }
 
         const isLmsTask = quickProjectId === QUICK_CAPTURE_LMS_TARGET
         const selectedProject = quickProjectId && !isLmsTask ? quickCaptureProjectMap.get(quickProjectId) : null
@@ -306,14 +310,14 @@ export function TasksCardView({
 
         setIsCreatingQuickTask(true)
         try {
-            const result = await addTask(isLmsTask ? undefined : quickProjectId || undefined, title, isLmsTask ? { taskScope: "LMS" } : undefined)
+            const result = await addTask(isLmsTask ? undefined : quickProjectId, title, isLmsTask ? { taskScope: "LMS" } : undefined)
             if (!result.success) {
                 toast.error(result.error || "Failed to create task")
                 return
             }
 
             setQuickTaskTitle("")
-            toast.success(isLmsTask ? "LMS task created" : result.data?.projectId ? "Task created" : "General task created")
+            toast.success(isLmsTask ? "LMS task created" : "Task created")
             router.refresh()
         } catch {
             toast.error("Failed to create task")
@@ -516,7 +520,7 @@ export function TasksCardView({
                                 aria-label="Select task target"
                                 title={quickProjectId === QUICK_CAPTURE_LMS_TARGET
                                     ? "LMS"
-                                    : quickCaptureProjectMap.get(quickProjectId)?.label || "No project"}
+                                    : quickCaptureProjectMap.get(quickProjectId)?.label || "Select target"}
                             >
                                 <FolderSearch className="h-4 w-4" />
                             </Button>
@@ -527,17 +531,6 @@ export function TasksCardView({
                                 <CommandList className="max-h-[240px]">
                                     <CommandEmpty>No project found.</CommandEmpty>
                                     <CommandGroup>
-                                        <CommandItem
-                                            value="No project"
-                                            onSelect={() => {
-                                                setQuickProjectId("")
-                                                setQuickProjectPickerOpen(false)
-                                            }}
-                                            className="text-sm"
-                                        >
-                                            <Check className={cn("mr-2 h-4 w-4", quickProjectId ? "opacity-0" : "opacity-100")} />
-                                            <span className="truncate">No project</span>
-                                        </CommandItem>
                                         <CommandItem
                                             value="LMS my job"
                                             onSelect={() => {
@@ -575,7 +568,8 @@ export function TasksCardView({
                     className="mt-2 h-9 rounded-xl text-sm font-semibold"
                     disabled={
                         isCreatingQuickTask ||
-                        !quickTaskTitle.trim().length
+                        !quickTaskTitle.trim().length ||
+                        !quickProjectId
                     }
                 >
                     {isCreatingQuickTask ? "Creating..." : "Create task"}

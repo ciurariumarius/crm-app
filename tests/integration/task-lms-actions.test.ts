@@ -123,6 +123,16 @@ afterAll(async () => {
 })
 
 describe("Task to LMS work-entry transactions", () => {
+  it.each([
+    ["implicit", undefined],
+    ["explicit", { taskScope: "GENERAL" as const }],
+  ])("rejects %s standalone task creation", async (_label, options) => {
+    const result = await taskActions.addTask(null, "Standalone task", options)
+
+    expect(result).toMatchObject({ success: false, code: "TASK_TARGET_REQUIRED" })
+    expect(await prisma.task.count({ where: { name: "Standalone task" } })).toBe(0)
+  })
+
   it("transitions a task target from general to freelance to LMS and back to general", async () => {
     const [task, project, allocation, workTask] = await Promise.all([
       prisma.task.create({

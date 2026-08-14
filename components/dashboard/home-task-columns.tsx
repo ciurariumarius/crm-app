@@ -44,6 +44,7 @@ interface HomeTaskColumnsProps {
 }
 
 const HOME_MAX_VISIBLE_TASKS = 6
+const HOME_QUICK_CAPTURE_LMS_TARGET = "__lms__"
 
 function uniqueById(tasks: HomeTaskColumnsTask[]) {
     const seen = new Set<string>()
@@ -204,6 +205,7 @@ export function HomeTaskColumns({
 
     React.useEffect(() => {
         if (!quickProjectId) return
+        if (quickProjectId === HOME_QUICK_CAPTURE_LMS_TARGET) return
         if (quickCaptureProjectMap.has(quickProjectId)) return
         setQuickProjectId("")
     }, [quickCaptureProjectMap, quickProjectId])
@@ -218,30 +220,41 @@ export function HomeTaskColumns({
             toast.error("Task title is required")
             return
         }
-        const selectedProject = quickProjectId ? quickCaptureProjectMap.get(quickProjectId) : null
-        if (quickProjectId && !selectedProject) {
+        if (!quickProjectId) {
+            toast.error("Choose a freelance project or LMS")
+            return
+        }
+        const isLmsTask = quickProjectId === HOME_QUICK_CAPTURE_LMS_TARGET
+        const selectedProject = isLmsTask ? null : quickCaptureProjectMap.get(quickProjectId)
+        if (!isLmsTask && !selectedProject) {
             toast.error("Selected project is no longer available")
             return
         }
 
         setIsCreatingQuickTask(true)
         try {
-            const result = await addTask(quickProjectId || undefined, title)
+            const result = await addTask(
+                isLmsTask ? undefined : quickProjectId,
+                title,
+                isLmsTask ? { taskScope: "LMS" } : undefined
+            )
             if (!result.success) {
                 toast.error(result.error || "Failed to create task")
                 return
             }
 
-            const isGlobalTask = !result.data?.projectId
-            const effectiveProjectId = result.data?.projectId || quickProjectId || null
-            const effectiveProjectLabel = selectedProject?.label || result.data?.projectName || (isGlobalTask ? "Global task" : "Project")
+            const effectiveProjectId = isLmsTask ? null : result.data?.projectId || quickProjectId
+            const effectiveProjectLabel = selectedProject?.label || result.data?.projectName || "Project"
             const effectiveDomainName = selectedProject?.domainName || result.data?.projectDomain || "No domain"
             const effectiveCreatedAt = selectedProject?.createdAt || new Date().toISOString()
             const effectiveServices = selectedProject?.services || []
             const temporaryTaskId = `quick-${crypto.randomUUID()}`
             const optimisticTask: HomeTaskColumnsTask = {
                 id: temporaryTaskId,
-                projectId: effectiveProjectId || undefined,
+                projectId: isLmsTask ? undefined : effectiveProjectId || undefined,
+                taskScope: isLmsTask ? "LMS" : "FREELANCE",
+                lmsAllocationId: null,
+                lmsTaskTypeId: null,
                 name: title,
                 description: "",
                 status: "Active",
@@ -249,7 +262,7 @@ export function HomeTaskColumns({
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 timeLogs: [],
-                project: isGlobalTask
+                project: isLmsTask
                     ? null
                     : {
                         id: effectiveProjectId || "global-task",
@@ -271,7 +284,7 @@ export function HomeTaskColumns({
             setNormalState((prev) => [optimisticTask, ...prev.filter((task) => task.id !== temporaryTaskId)])
             setRecentTaskId(temporaryTaskId)
             setQuickTaskTitle("")
-            toast.success(isGlobalTask ? "Global task created" : "Task created")
+            toast.success(isLmsTask ? "LMS task created" : "Task created")
             router.refresh()
         } catch {
             toast.error("Failed to create task")
@@ -384,7 +397,10 @@ export function HomeTaskColumns({
                                         size="icon"
                                         disabled={isCreatingQuickTask}
                                         className="h-9 w-9 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
-                                        aria-label="Select project (optional)"
+                                        aria-label="Select task target"
+                                        title={quickProjectId === HOME_QUICK_CAPTURE_LMS_TARGET
+                                            ? "LMS"
+                                            : quickCaptureProjectMap.get(quickProjectId)?.label || "Select target"}
                                     >
                                         <FolderSearch className="h-4 w-4" />
                                     </Button>
@@ -396,15 +412,15 @@ export function HomeTaskColumns({
                                             <CommandEmpty>No project found.</CommandEmpty>
                                             <CommandGroup>
                                                 <CommandItem
-                                                    value="No project selected"
+                                                    value="LMS my job"
                                                     onSelect={() => {
-                                                        setQuickProjectId("")
+                                                        setQuickProjectId(HOME_QUICK_CAPTURE_LMS_TARGET)
                                                         setQuickProjectPickerOpen(false)
                                                     }}
                                                     className="text-sm"
                                                 >
-                                                    <Check className={cn("mr-2 h-4 w-4", quickProjectId ? "opacity-0" : "opacity-100")} />
-                                                    <span className="truncate">No project selected</span>
+                                                    <Check className={cn("mr-2 h-4 w-4", quickProjectId === HOME_QUICK_CAPTURE_LMS_TARGET ? "opacity-100" : "opacity-0")} />
+                                                    <span className="truncate">LMS</span>
                                                 </CommandItem>
                                                 {quickCaptureProjects.map((project) => (
                                                     <CommandItem
@@ -432,7 +448,8 @@ export function HomeTaskColumns({
                             className="mt-2 h-9 rounded-xl text-sm font-semibold"
                             disabled={
                                 isCreatingQuickTask ||
-                                !quickTaskTitle.trim().length
+                                !quickTaskTitle.trim().length ||
+                                !quickProjectId
                             }
                         >
                             {isCreatingQuickTask ? "Creating..." : "Create task"}

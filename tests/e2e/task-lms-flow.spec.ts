@@ -188,6 +188,17 @@ test("creates, maps, and completes an LMS task without mixing manual work", asyn
     const createDialog = page.getByRole("dialog", { name: "Add New Task" })
     await expect(createDialog).toBeVisible()
     await createDialog.getByRole("radio", { name: /^LMS\b/ }).click()
+    let lmsProjectLabel = ""
+    if (preferredLmsProject) {
+      await createDialog.getByRole("button", { name: "New project", exact: true }).click()
+      const addProjectDialog = page.getByRole("dialog", { name: "Add LMS project" })
+      await expect(addProjectDialog).toBeVisible()
+      await addProjectDialog.getByLabel("LMS project name or domain").fill(preferredLmsProject)
+      await addProjectDialog.getByRole("button", { name: "Add project", exact: true }).click()
+      await expect(addProjectDialog).toBeHidden({ timeout: 20_000 })
+      await expect(createDialog.getByRole("combobox", { name: "Select LMS project" })).toContainText(preferredLmsProject)
+      lmsProjectLabel = preferredLmsProject
+    }
     await createDialog.getByPlaceholder("ex. Verificare dataLayer").fill(taskName)
     await createDialog.getByRole("button", { name: "Add Additional Details" }).click()
     await createDialog.getByPlaceholder("ex. 60").fill("37")
@@ -200,12 +211,14 @@ test("creates, maps, and completes an LMS task without mixing manual work", asyn
     await expect(taskSheet.getByText("LMS time is recorded on completion", { exact: true })).toBeVisible()
     await expect(taskSheet.getByText("Add Time", { exact: true })).toHaveCount(0)
 
-    const lmsProjectLabel = await chooseLmsOption({
-      page,
-      combobox: taskSheet.getByRole("combobox", { name: "Select LMS project" }),
-      searchPlaceholder: "Search LMS project…",
-      preferredLabel: preferredLmsProject,
-    })
+    if (!lmsProjectLabel) {
+      lmsProjectLabel = await chooseLmsOption({
+        page,
+        combobox: taskSheet.getByRole("combobox", { name: "Select LMS project" }),
+        searchPlaceholder: "Search LMS project…",
+        preferredLabel: preferredLmsProject,
+      })
+    }
     await expect.poll(
       () => taskSheet.getByRole("combobox", { name: "Select LMS project" }).textContent(),
       { timeout: 20_000 }

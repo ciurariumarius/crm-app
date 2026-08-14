@@ -22,10 +22,10 @@ import type {
   LmsWorkRecurrenceRow,
 } from "@/lib/lms-work-entries/types"
 import {
-  AddClientDialog,
   ClientCombobox,
   TaskCombobox,
 } from "@/components/lms-work-entries/lms-work-log-workspace"
+import { AddLmsClientDialog } from "@/components/lms-work-entries/add-lms-client-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -455,7 +455,7 @@ export function LmsWorkRecurrences({ data }: { data: LmsWorkRecurrencePageData }
             </p>
           ) : null}
         </div>
-        <AddClientDialog
+        <AddLmsClientDialog
           open={addClientOpen}
           onOpenChange={setAddClientOpen}
           initialName={addClientInitialName}

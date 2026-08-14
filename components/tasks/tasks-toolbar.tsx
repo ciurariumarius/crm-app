@@ -50,7 +50,6 @@ const SCOPE_OPTIONS = [
   { label: "All targets", value: "ALL" },
   { label: "Freelance project", value: "FREELANCE" },
   { label: "LMS", value: "LMS" },
-  { label: "No project", value: "GENERAL" },
 ] as const
 
 function triggerClassName(isActive: boolean, extraClassName?: string) {

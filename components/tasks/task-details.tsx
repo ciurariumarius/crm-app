@@ -818,7 +818,7 @@ export function TaskDetails({
                             <div className="flex items-center justify-between gap-3">
                                 <SidePanelSectionTitle title="Task target" icon={<FolderOpen className="h-3.5 w-3.5" />} />
                                 <span className="text-xs font-medium text-[var(--text-muted)]">
-                                    {taskScope === "LMS" ? "Shared with LMS" : taskScope === "FREELANCE" ? "Freelance workflow" : "Standalone"}
+                                    {taskScope === "LMS" ? "Shared with LMS" : taskScope === "FREELANCE" ? "Freelance workflow" : "Choose a target"}
                                 </span>
                             </div>
                             <TaskTargetSelector
@@ -867,6 +867,9 @@ export function TaskDetails({
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                     Saving task target… Project actions are paused until it finishes.
                                 </p>
+                            ) : null}
+                            {taskScope === "GENERAL" ? (
+                                <p className="text-xs leading-5 text-[var(--state-urgent)]">This is a legacy no-project task. Choose Freelance or LMS; use your Personal freelance project for standalone work.</p>
                             ) : null}
                             {status === "Completed" ? (
                                 <p className="text-xs leading-5 text-[var(--text-muted)]">Reopen the task before changing its target or LMS links. Existing LMS work remains historical.</p>
@@ -978,9 +981,9 @@ export function TaskDetails({
                                 ) : taskScope === "GENERAL" ? (
                                     <SidePanelInfoCard
                                         title="Target"
-                                        subtitle={<p className="text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">No project</p>}
+                                        subtitle={<p className="text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">Target required</p>}
                                     >
-                                        <p className="text-xs font-medium text-[var(--text-secondary)]">No client or project relationship</p>
+                                        <p className="text-xs font-medium text-[var(--text-secondary)]">Move this legacy task to Freelance or LMS</p>
                                     </SidePanelInfoCard>
                                 ) : <>
                                 <button

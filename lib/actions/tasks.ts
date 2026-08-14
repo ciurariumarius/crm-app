@@ -213,6 +213,12 @@ export async function addTask(
 
             const taskScope = validated.options?.taskScope ?? inferTaskScope(targetProject?.id)
             assertTaskScopeProject(taskScope, targetProject?.id ?? null)
+            if (taskScope === "GENERAL") {
+                throw new ActionError(
+                    "TASK_TARGET_REQUIRED",
+                    "Choose a freelance project or LMS for this task"
+                )
+            }
             if (taskScope === "LMS" && validated.options?.status === "Completed") {
                 throw new ActionError(
                     "LMS_COMPLETION_DETAILS_REQUIRED",
