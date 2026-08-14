@@ -134,23 +134,34 @@ async function openTask(page: Page, taskName: string) {
   return taskSheet
 }
 
-async function reopenGeneratedWorkEntry(page: Page, taskName: string) {
+async function reopenGeneratedWorkEntry(
+  page: Page,
+  taskName: string,
+  { required = false }: { required?: boolean } = {}
+) {
   await page.goto("/lms-analysis/work-log?origin=CRM_TASK&exportStatus=not-exported&pageSize=100")
+  await expect(page.getByText("Record work", { exact: true }).first()).toBeVisible({ timeout: 20_000 })
+
   const reopenButton = page.getByRole("button", { name: `Reopen CRM task ${taskName}`, exact: true }).last()
-  if (!await reopenButton.isVisible().catch(() => false)) return
+  if (!required && !await reopenButton.isVisible().catch(() => false)) return false
+  await expect(reopenButton).toBeVisible({ timeout: 20_000 })
 
   page.once("dialog", async (dialog) => {
     await dialog.accept()
   })
   await reopenButton.click()
-  await expect(page.getByText("CRM task reopened", { exact: true })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText("CRM task reopened", { exact: true }).last()).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText(`CRM: ${taskName}`, { exact: true })).toHaveCount(0, { timeout: 20_000 })
+  return true
 }
 
 async function deleteTaskIfPresent(page: Page, taskName: string) {
   await page.goto(`/tasks?status=All&q=${encodeURIComponent(taskName)}`)
+  await expect(page.getByRole("heading", { name: "Tasks", exact: true }).first()).toBeVisible({ timeout: 20_000 })
+  if (!await getPersistedLmsMapping(page, taskName)) return
+
   const taskHeading = page.getByRole("heading", { name: taskName, exact: true }).first()
-  if (!await taskHeading.isVisible().catch(() => false)) return
+  await expect(taskHeading).toBeVisible({ timeout: 20_000 })
 
   const taskSheet = await openTask(page, taskName)
   const completedButton = taskSheet.getByRole("button", { name: "Completed", exact: true })
@@ -257,7 +268,8 @@ test("creates, maps, and completes an LMS task without mixing manual work", asyn
     await expect(page.getByText("CRM task", { exact: true }).last()).toBeVisible()
     await expectNoHorizontalOverflow(page)
 
-    await reopenGeneratedWorkEntry(page, taskName)
+    const reopened = await reopenGeneratedWorkEntry(page, taskName, { required: true })
+    expect(reopened).toBe(true)
     await page.goto(`/tasks?q=${encodeURIComponent(taskName)}`)
     taskSheet = await openTask(page, taskName)
     await expect(taskSheet.getByRole("button", { name: "Active", exact: true })).toBeVisible()
