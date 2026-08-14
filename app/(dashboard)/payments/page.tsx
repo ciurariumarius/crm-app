@@ -223,7 +223,7 @@ export default async function PaymentsPage({
                         <div className="flex flex-col">
                             <h2 className="ui-text-title-sm text-[var(--text-primary)]">Transaction History</h2>
                             <p className="ui-text-caption">
-                                Review payment changes, manual entries, and settlement events.
+                                Review payment changes and use Revert to unpaid on a partner settlement whenever you need to undo Mark all paid.
                             </p>
                         </div>
                     </div>

@@ -6,16 +6,13 @@ import { format, isToday, isPast } from "date-fns"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { useDebounce } from "@/hooks/use-debounce"
-import { addTask, deleteTasks, updateTasksStatus } from "@/lib/actions/tasks"
+import { deleteTasks, updateTasksStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Square, Target, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle, Check, FolderSearch } from "lucide-react"
+import { Clock, Trash2, MoreVertical, Play, Pause, Square, Target, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
-import { TaskGridCard } from "./task-grid-card"
-import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { TASK_CARD_SHELL_CLASS, TaskGridCard } from "./task-grid-card"
 
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
@@ -34,8 +31,6 @@ import type { TaskDialogProject } from "./global-create-task-dialog"
 import type { SearchPaginationState } from "@/types/search-pagination"
 import { sidePanelClass } from "@/lib/ui/side-panels"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
-
-const QUICK_CAPTURE_LMS_TARGET = "__lms__"
 
 type TimeLogSummary = {
     id?: string
@@ -95,7 +90,6 @@ interface TasksCardViewProps {
     initialActiveTimer?: unknown
     projects?: TaskDialogProject[]
     view?: "grid" | "list"
-    cols?: number
     hourlyRate?: number
     searchApiFilters?: {
         status: string
@@ -118,7 +112,6 @@ export function TasksCardView({
     initialActiveTimer: _initialActiveTimer,
     projects = [],
     view = "grid",
-    cols = 3,
     hourlyRate = 0,
     searchApiFilters,
 }: TasksCardViewProps) {
@@ -136,10 +129,6 @@ export function TasksCardView({
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
     const [isBulkOperating, setIsBulkOperating] = React.useState(false)
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
-    const [quickTaskTitle, setQuickTaskTitle] = React.useState("")
-    const [quickProjectId, setQuickProjectId] = React.useState("")
-    const [quickProjectPickerOpen, setQuickProjectPickerOpen] = React.useState(false)
-    const [isCreatingQuickTask, setIsCreatingQuickTask] = React.useState(false)
     const [remoteTasks, setRemoteTasks] = React.useState<TaskCardViewTask[] | null>(null)
     const searchCacheRef = React.useRef<
         Map<string, { tasks: TaskCardViewTask[]; total: number; pagination: SearchPaginationState }>
@@ -256,75 +245,7 @@ export function TasksCardView({
         return <ArrowRight className="h-3 w-3" strokeWidth={3} />
     }
 
-    const colsClass = {
-        2: "grid-cols-1 sm:grid-cols-2",
-        3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-        4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-    }[cols] ?? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-
-    const quickCaptureProjects = React.useMemo(() => {
-        return projects
-            .filter((project) => project.status === "Active")
-            .map((project) => ({
-                id: project.id,
-                label: formatProjectName(project),
-            }))
-            .sort((left, right) => left.label.localeCompare(right.label))
-    }, [projects])
-
-    const quickCaptureProjectMap = React.useMemo(() => {
-        const map = new Map<string, { id: string; label: string }>()
-        for (const project of quickCaptureProjects) {
-            map.set(project.id, project)
-        }
-        return map
-    }, [quickCaptureProjects])
-
-    React.useEffect(() => {
-        if (!quickProjectId) return
-        if (quickProjectId === QUICK_CAPTURE_LMS_TARGET) return
-        if (quickCaptureProjectMap.has(quickProjectId)) return
-        setQuickProjectId("")
-    }, [quickCaptureProjectMap, quickProjectId])
-
-    const handleQuickCaptureSubmit = React.useCallback(async (event?: React.FormEvent<HTMLFormElement>) => {
-        event?.preventDefault()
-        if (isCreatingQuickTask) return
-
-        const title = quickTaskTitle.trim()
-        if (!title) {
-            toast.error("Task title is required")
-            return
-        }
-        if (!quickProjectId) {
-            toast.error("Choose a freelance project or LMS")
-            return
-        }
-
-        const isLmsTask = quickProjectId === QUICK_CAPTURE_LMS_TARGET
-        const selectedProject = quickProjectId && !isLmsTask ? quickCaptureProjectMap.get(quickProjectId) : null
-        if (quickProjectId && !isLmsTask && !selectedProject) {
-            toast.error("Selected project is no longer available")
-            return
-        }
-
-        setIsCreatingQuickTask(true)
-        try {
-            const result = await addTask(isLmsTask ? undefined : quickProjectId, title, isLmsTask ? { taskScope: "LMS" } : undefined)
-            if (!result.success) {
-                toast.error(result.error || "Failed to create task")
-                return
-            }
-
-            setQuickTaskTitle("")
-            toast.success(isLmsTask ? "LMS task created" : "Task created")
-            router.refresh()
-        } catch {
-            toast.error("Failed to create task")
-        } finally {
-            setIsCreatingQuickTask(false)
-        }
-    }, [isCreatingQuickTask, quickTaskTitle, quickProjectId, quickCaptureProjectMap, router])
+    const gridClass = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
 
     const normalizedSearch = (searchContext?.searchTerm || "").trim().toLowerCase()
     const debouncedSearch = useDebounce(normalizedSearch, 250)
@@ -465,6 +386,18 @@ export function TasksCardView({
         })
     }, [normalizedSearch, remoteTasks, searchSourceTasks])
 
+    const hasRefiningFilters = Boolean(
+        normalizedSearch
+        || (searchApiFilters?.status && searchApiFilters.status !== "Active")
+        || searchApiFilters?.partnerId
+        || searchApiFilters?.projectId
+        || searchApiFilters?.taskId
+        || (searchApiFilters?.urgency && searchApiFilters.urgency !== "all")
+        || searchApiFilters?.overdue
+        || searchApiFilters?.dueToday
+        || (searchApiFilters?.scope && searchApiFilters.scope !== "ALL")
+    )
+
     React.useEffect(() => {
         setSelectedTask((current) => {
             if (!current) return current
@@ -477,7 +410,7 @@ export function TasksCardView({
     }, [searchSourceTasks, tasks])
 
     const renderGridView = () => (
-        <div className={cn("grid gap-3.5 sm:gap-4", colsClass)}>
+        <div className={cn("grid gap-5 2xl:gap-6", gridClass)} data-slot="tasks-grid">
             {visibleTasks.map((task) => (
                 <TaskGridCard
                     key={task.id}
@@ -490,102 +423,35 @@ export function TasksCardView({
                     renderMenu={renderTaskActionMenu}
                     isSelected={selectedIds.includes(task.id)}
                     onSelect={toggleSelect}
-                    compact
-                    className="h-full"
+                    className="h-full min-w-0"
                 />
             ))}
-
-            <form
-                onSubmit={(event) => {
-                    void handleQuickCaptureSubmit(event)
-                }}
-                className="flex h-full flex-col rounded-[16px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_86%,transparent)] p-2.5 shadow-[var(--shadow-apple)]"
+            <button
+                type="button"
+                data-slot="add-task-card"
+                aria-label="Add task"
+                title="Add task"
+                onClick={() => setCreateTaskOpen(true)}
+                className={cn(
+                    TASK_CARD_SHELL_CLASS,
+                    "group min-w-0 items-center justify-center text-[var(--text-muted)] outline-none hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] hover:text-[var(--primary)] hover:shadow-[var(--shadow-apple)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+                )}
             >
-                <div className="flex items-center gap-2">
-                    <Input
-                        value={quickTaskTitle}
-                        onChange={(event) => setQuickTaskTitle(event.target.value)}
-                        placeholder="Task title"
-                        className="h-11 flex-1 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[15px] font-semibold"
-                        disabled={isCreatingQuickTask}
-                    />
-                    <Popover open={quickProjectPickerOpen} onOpenChange={setQuickProjectPickerOpen}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                disabled={isCreatingQuickTask}
-                                className="h-9 w-9 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
-                                aria-label="Select task target"
-                                title={quickProjectId === QUICK_CAPTURE_LMS_TARGET
-                                    ? "LMS"
-                                    : quickCaptureProjectMap.get(quickProjectId)?.label || "Select target"}
-                            >
-                                <FolderSearch className="h-4 w-4" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="end" className="w-[280px] rounded-xl p-0">
-                            <Command>
-                                <CommandInput placeholder="Search project..." />
-                                <CommandList className="max-h-[240px]">
-                                    <CommandEmpty>No project found.</CommandEmpty>
-                                    <CommandGroup>
-                                        <CommandItem
-                                            value="LMS my job"
-                                            onSelect={() => {
-                                                setQuickProjectId(QUICK_CAPTURE_LMS_TARGET)
-                                                setQuickProjectPickerOpen(false)
-                                            }}
-                                            className="text-sm"
-                                        >
-                                            <Check className={cn("mr-2 h-4 w-4", quickProjectId === QUICK_CAPTURE_LMS_TARGET ? "opacity-100" : "opacity-0")} />
-                                            <span className="truncate">LMS</span>
-                                        </CommandItem>
-                                        {quickCaptureProjects.map((project) => (
-                                            <CommandItem
-                                                key={project.id}
-                                                value={project.label}
-                                                onSelect={() => {
-                                                    setQuickProjectId(project.id)
-                                                    setQuickProjectPickerOpen(false)
-                                                }}
-                                                className="text-sm"
-                                            >
-                                                <Check className={cn("mr-2 h-4 w-4", quickProjectId === project.id ? "opacity-100" : "opacity-0")} />
-                                                <span className="truncate">{project.label}</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-
-                <Button
-                    type="submit"
-                    className="mt-2 h-9 rounded-xl text-sm font-semibold"
-                    disabled={
-                        isCreatingQuickTask ||
-                        !quickTaskTitle.trim().length ||
-                        !quickProjectId
-                    }
-                >
-                    {isCreatingQuickTask ? "Creating..." : "Create task"}
-                </Button>
-            </form>
+                <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
+                    <Plus className="h-6 w-6" strokeWidth={1.8} />
+                </span>
+            </button>
         </div>
     )
 
     const renderGridSkeleton = () => {
-        const skeletonCount = cols >= 4 ? 8 : cols === 2 ? 4 : 6
+        const skeletonCount = 8
         return (
-            <div className={cn("grid gap-3.5 sm:gap-4", colsClass)}>
+            <div className={cn("grid gap-5 2xl:gap-6", gridClass)}>
                 {Array.from({ length: skeletonCount }).map((_, index) => (
                     <div
                         key={`tasks-grid-skeleton-${index}`}
-                        className="rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:p-5"
+                        className={cn(TASK_CARD_SHELL_CLASS, "p-4 sm:p-5")}
                     >
                         <div className="animate-pulse space-y-3">
                             <div className="flex items-start justify-between gap-3">
@@ -834,34 +700,20 @@ export function TasksCardView({
             {showSearchSkeleton ? (
                 view === "list" ? renderListSkeleton() : renderGridSkeleton()
             ) : visibleTasks.length === 0 ? (
-                <div className="col-span-full flex h-64 flex-col items-center justify-center rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] px-5 text-center">
+                !hasRefiningFilters && view === "grid" ? renderGridView() : <div className="col-span-full flex h-64 flex-col items-center justify-center rounded-[20px] border border-dashed border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_80%,transparent)] px-5 text-center">
                     <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
                         <Clock className="h-5 w-5 text-[var(--text-muted)]" strokeWidth={1.6} />
                     </div>
                     <p className="mt-4 text-sm font-semibold tracking-tight text-[var(--text-primary)]">
-                        {tasks.length === 0
-                            ? "No tasks yet"
-                            : normalizedSearch
+                        {normalizedSearch
                               ? "No matching tasks"
                               : "No tasks for these filters"}
                     </p>
                     <p className="mt-1 max-w-md text-sm font-medium leading-6 text-[var(--text-secondary)]">
-                        {tasks.length === 0
-                            ? "Create your first task to start tracking delivery and time across projects."
-                            : normalizedSearch
+                        {normalizedSearch
                               ? "Try a different search term or relax your filters to bring tasks back into view."
                               : "Adjust the current filters to broaden the task list."}
                     </p>
-                    {tasks.length === 0 ? (
-                        <Button
-                            type="button"
-                            onClick={() => setCreateTaskOpen(true)}
-                            className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add first task
-                        </Button>
-                    ) : null}
                 </div>
             ) : (
                 view === "list" ? renderListView() : renderGridView()

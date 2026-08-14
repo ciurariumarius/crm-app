@@ -22,6 +22,7 @@ const viewports = [
   { name: "tablet-portrait", width: 768, height: 1024 },
   { name: "tablet-landscape", width: 1024, height: 768 },
   { name: "desktop", width: 1440, height: 900 },
+  { name: "wide-desktop", width: 1920, height: 1080 },
 ] as const
 
 test.describe("design system route captures", () => {
@@ -45,6 +46,11 @@ test.describe("design system route captures", () => {
             document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
           )
           expect(hasPageOverflow, `${route} must not create page-level horizontal overflow`).toBeFalsy()
+
+          if (route === "/tasks") {
+            await expect(page.locator('[data-slot="add-task-card"]')).toHaveCount(1)
+            await expect(page.getByRole("button", { name: /^Filters/ }).first()).toBeVisible()
+          }
 
           const slug = route === "/" ? "overview" : route.slice(1).replaceAll("/", "-")
           await page.screenshot({

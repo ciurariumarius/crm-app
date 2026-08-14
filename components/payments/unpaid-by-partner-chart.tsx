@@ -50,9 +50,10 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
             setItems((prev) => prev.filter((partner) => partner.id !== partnerId))
             if (expandedId === partnerId) setExpandedId(null)
             toast.success(`Marked ${result.count} project${result.count === 1 ? "" : "s"} as paid`, {
-                duration: 10_000,
+                description: "Undo here, or use Revert to unpaid later in Transaction History.",
+                duration: Infinity,
                 action: settledPartner && result.auditLogId ? {
-                    label: "Undo",
+                    label: "Undo mark all paid",
                     onClick: async () => {
                         const undoResult = await voidSettlement(result.auditLogId)
                         if (!undoResult.success) {

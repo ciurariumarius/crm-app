@@ -34,6 +34,31 @@ function run() {
   assert.match(tasksPage, /hidden md:block/)
   assert.match(tasksPage, /md:hidden/)
 
+  const crmTasksToolbar = read("components/tasks/tasks-toolbar.tsx")
+  assert.match(crmTasksToolbar, /SheetContent side="bottom"/)
+  assert.match(crmTasksToolbar, /hidden md:block/)
+  assert.match(crmTasksToolbar, /md:hidden/)
+
+  const crmTasksCards = read("components/tasks/tasks-card-view.tsx")
+  assert.match(crmTasksCards, /data-slot="add-task-card"/)
+  assert.match(crmTasksCards, /grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4/)
+  assert.doesNotMatch(crmTasksCards, /renderQuickComposer|QUICK_CAPTURE_LMS_TARGET/)
+  assert.doesNotMatch(crmTasksCards, /Time \(min\)|quickEstimatedMinutes/)
+
+  const createTaskDialog = read("components/tasks/global-create-task-dialog.tsx")
+  assert.match(createTaskDialog, /max-h-\[min\(90dvh,760px\)\]/)
+  assert.match(createTaskDialog, /create-task-form-scroll-area/)
+  assert.match(createTaskDialog, /max-w-\[calc\(100vw-2rem\)\]/)
+  assert.doesNotMatch(createTaskDialog, /LMS stays separate|Available for Freelance and LMS|Client work|My job/)
+
+  const dashboardTasks = read("components/dashboard/home-task-columns.tsx")
+  const projectTasks = read("components/projects/project-tasks.tsx")
+  assert.doesNotMatch(dashboardTasks, /Time \(min\)|quickEstimatedMinutes/)
+  assert.doesNotMatch(projectTasks, /newTaskEstimatedMinutes|Planned time in minutes/)
+
+  const tasksPagination = read("components/tasks/tasks-pagination-bar.tsx")
+  assert.match(tasksPagination, /if \(!display\.shouldPaginate\) return null/)
+
   const workLog = read("components/lms-work-entries/lms-work-log-workspace.tsx")
   assert.match(workLog, /hidden (?:overflow-hidden|overflow-x-auto) rounded-2xl[^\n]+md:block/)
   assert.match(workLog, /\[&_table\]:min-w-\[980px\]/)

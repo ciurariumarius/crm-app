@@ -45,11 +45,13 @@ export function TaskTargetSelector({
   onValueChange,
   disabled,
   freelanceAvailable = true,
+  compact = false,
 }: {
   value: TaskScopeValue
   onValueChange: (value: TaskScopeValue) => void
   disabled?: boolean
   freelanceAvailable?: boolean
+  compact?: boolean
 }) {
   return (
     <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Task target">
@@ -67,18 +69,21 @@ export function TaskTargetSelector({
             title={unavailable ? "This task is not linked to a freelance project" : undefined}
             onClick={() => onValueChange(option.value)}
             className={cn(
-              "flex min-h-[76px] flex-col items-start justify-center rounded-xl border px-3 py-2.5 text-left transition",
+              "flex rounded-xl border transition",
+              compact
+                ? "h-11 items-center justify-center gap-2 px-3 text-center"
+                : "min-h-[76px] flex-col items-start justify-center px-3 py-2.5 text-left",
               selected
                 ? "border-[color:color-mix(in_srgb,var(--primary)_54%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_14%,var(--surface-lowest))] text-[var(--text-primary)] shadow-sm"
                 : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)]",
               (disabled || unavailable) && "cursor-not-allowed opacity-50"
             )}
           >
-            <span className="flex items-start gap-2 text-sm font-semibold leading-tight">
+            <span className="flex items-center gap-2 text-sm font-semibold leading-tight">
               <Icon className={cn("h-4 w-4 shrink-0", selected && "text-[var(--primary)]")} />
-              {option.label}
+              {compact && option.value === "FREELANCE" ? "Freelance" : option.label}
             </span>
-            <span className="mt-0.5 pl-6 text-xs text-[var(--text-muted)]">{option.description}</span>
+            {!compact ? <span className="mt-0.5 pl-6 text-xs text-[var(--text-muted)]">{option.description}</span> : null}
           </button>
         )
       })}
@@ -137,10 +142,16 @@ function LmsOptionCombobox({
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-[280px] p-0">
-        <Command>
+      <PopoverContent
+        align="start"
+        collisionPadding={16}
+        className="w-[var(--radix-popover-trigger-width)] min-w-0 max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+        onWheelCapture={(event) => event.stopPropagation()}
+        onTouchMoveCapture={(event) => event.stopPropagation()}
+      >
+        <Command className="flex min-h-0 flex-col">
           <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
-          <CommandList className="max-h-[280px]">
+          <CommandList className="max-h-[min(300px,calc(var(--radix-popover-content-available-height)-3rem))] touch-pan-y overflow-y-auto overscroll-contain">
             <CommandEmpty>{emptyLabel}</CommandEmpty>
             <CommandGroup>
               <CommandItem

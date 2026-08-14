@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
+import { TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
 
 type TaskWithLogs = {
     id: string
@@ -45,6 +46,9 @@ export function ProjectTasks({
     initialTasks: TaskWithLogs[]
 }) {
     const [newTaskName, setNewTaskName] = useState("")
+    const [newTaskScope, setNewTaskScope] = useState<TaskScopeValue>("FREELANCE")
+    const [newTaskLmsAllocationId, setNewTaskLmsAllocationId] = useState("")
+    const [newTaskLmsTaskTypeId, setNewTaskLmsTaskTypeId] = useState("")
     const [loading, setLoading] = useState<string | null>(null)
     const { startTimer } = useTimer()
     const { requestCompletion, requestReopen } = useTaskCompletion()
@@ -67,10 +71,14 @@ export function ProjectTasks({
 
         setLoading("add")
         try {
-            const result = await addTask(projectId, name)
+            const result = await addTask(newTaskScope === "FREELANCE" ? projectId : undefined, name, {
+                taskScope: newTaskScope,
+                lmsAllocationId: newTaskScope === "LMS" ? newTaskLmsAllocationId || null : null,
+                lmsTaskTypeId: newTaskScope === "LMS" ? newTaskLmsTaskTypeId || null : null,
+            })
             if (result.success) {
                 setNewTaskName("")
-                toast.success("Task added")
+                toast.success(newTaskScope === "LMS" ? "LMS task added in Tasks" : "Task added")
                 router.refresh()
                 return
             }
@@ -98,26 +106,51 @@ export function ProjectTasks({
 
     return (
         <div className="space-y-3">
-            <div className="relative">
-                <Input
-                    value={newTaskName}
-                    onChange={(e) => setNewTaskName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-                    placeholder="Type a task..."
-                    className="h-14 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-low)]/70 pr-16 text-base placeholder:text-[var(--text-muted)]"
+            <form
+                onSubmit={(event) => {
+                    event.preventDefault()
+                    void handleAddTask()
+                }}
+                className="space-y-3 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-low)]/50 p-3"
+            >
+                <TaskTargetSelector
+                    value={newTaskScope}
+                    onValueChange={setNewTaskScope}
+                    disabled={loading === "add"}
                 />
-                <Button
-                    type="button"
-                    size="icon"
-                    aria-label="Add task"
-                    title="Add task"
-                    onClick={handleAddTask}
-                    disabled={loading === "add" || !newTaskName.trim()}
-                    className="absolute right-2 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-sm hover:bg-[var(--surface-low)] hover:text-[var(--text-secondary)]"
-                >
-                    {loading === "add" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                </Button>
-            </div>
+                {newTaskScope === "LMS" ? (
+                    <TaskLmsFields
+                        compact
+                        lmsAllocationId={newTaskLmsAllocationId}
+                        lmsTaskTypeId={newTaskLmsTaskTypeId}
+                        onAllocationChange={setNewTaskLmsAllocationId}
+                        onWorkTaskChange={setNewTaskLmsTaskTypeId}
+                        disabled={loading === "add"}
+                    />
+                ) : (
+                    <p className="text-xs text-[var(--text-muted)]">The task will be linked to this freelance project.</p>
+                )}
+                <div className="flex gap-2">
+                    <Input
+                        value={newTaskName}
+                        onChange={(e) => setNewTaskName(e.target.value)}
+                        placeholder="Type a task..."
+                        aria-label="Task name"
+                        className="h-12 min-w-0 flex-1 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-base placeholder:text-[var(--text-muted)]"
+                        disabled={loading === "add"}
+                    />
+                    <Button
+                        type="submit"
+                        size="icon"
+                        aria-label="Add task"
+                        title="Add task"
+                        disabled={loading === "add" || !newTaskName.trim()}
+                        className="h-12 w-12 shrink-0 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-sm hover:bg-[var(--surface-low)] hover:text-[var(--text-secondary)]"
+                    >
+                        {loading === "add" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    </Button>
+                </div>
+            </form>
 
             <div className="space-y-2">
                 {sortedTasks.length === 0 && (

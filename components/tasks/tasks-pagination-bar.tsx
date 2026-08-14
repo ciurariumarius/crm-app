@@ -31,6 +31,8 @@ export function TasksPaginationBar({
     const display = livePagination ?? fallback
     const isSearching = Boolean(searchContext?.isSearching && hasSearchTerm)
 
+    if (!display.shouldPaginate) return null
+
     const buildHref = (overrides: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams.toString())
         for (const [key, value] of Object.entries(overrides)) {

@@ -22,6 +22,8 @@ function run() {
   assert.match(header, /data-slot="app-page-header"/)
   assert.match(header, /primaryAction\?: React\.ReactNode/)
   assert.match(header, /mobilePrimaryAction\?: React\.ReactNode/)
+  assert.match(header, /controls\?: React\.ReactNode/)
+  assert.match(header, /footer\?: React\.ReactNode/)
 
   const surface = read("components/ui/app-surface.tsx")
   assert.match(surface, /export function SectionCard/)

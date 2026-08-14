@@ -1,26 +1,16 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { addTask } from "@/lib/actions/tasks"
-import { toast } from "sonner"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Calendar as CalendarIcon, Check, ChevronsUpDown, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react"
-import { formatProjectName } from "@/lib/utils"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
+import * as React from "react"
 import { format } from "date-fns"
+import { Calendar as CalendarIcon, Check, ChevronDown, ChevronUp, ChevronsUpDown, Loader2, SlidersHorizontal } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { addTask } from "@/lib/actions/tasks"
+import { formatProjectName } from "@/lib/utils"
+import { MAX_TASK_ESTIMATED_MINUTES, parseTaskEstimatedMinutesInput } from "@/lib/tasks/estimated-time"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
     Command,
     CommandEmpty,
@@ -29,9 +19,19 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
-
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
 import { TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
 
 export interface TaskDialogProject {
@@ -49,163 +49,205 @@ interface GlobalCreateTaskDialogProps {
     projects: TaskDialogProject[]
 }
 
+const DEFAULT_TASK_SCOPE: TaskScopeValue = "FREELANCE"
+
 export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalCreateTaskDialogProps) {
-    const [name, setName] = useState("")
-    const [selectedProjectId, setSelectedProjectId] = useState("")
-    const defaultTaskScope: TaskScopeValue = "FREELANCE"
-    const [taskScope, setTaskScope] = useState<TaskScopeValue>(defaultTaskScope)
-    const [lmsAllocationId, setLmsAllocationId] = useState("")
-    const [lmsTaskTypeId, setLmsTaskTypeId] = useState("")
-    const [status, setStatus] = useState("Active")
-    const [urgency, setUrgency] = useState("Normal")
-    const [deadline, setDeadline] = useState<Date>()
-    const [estimatedMinutes, setEstimatedMinutes] = useState<string>("")
-    const [isLoading, setIsLoading] = useState(false)
-    const [showCompleted, setShowCompleted] = useState(false)
-    const [openPopover, setOpenPopover] = useState(false)
-    const [openCombobox, setOpenCombobox] = useState(false)
-    const [showDetails, setShowDetails] = useState(false)
     const router = useRouter()
+    const nameInputRef = React.useRef<HTMLInputElement>(null)
+    const [name, setName] = React.useState("")
+    const [selectedProjectId, setSelectedProjectId] = React.useState("")
+    const [taskScope, setTaskScope] = React.useState<TaskScopeValue>(DEFAULT_TASK_SCOPE)
+    const [lmsAllocationId, setLmsAllocationId] = React.useState("")
+    const [lmsTaskTypeId, setLmsTaskTypeId] = React.useState("")
+    const [status, setStatus] = React.useState("Active")
+    const [urgency, setUrgency] = React.useState("Normal")
+    const [deadline, setDeadline] = React.useState<Date>()
+    const [estimatedMinutes, setEstimatedMinutes] = React.useState("")
+    const [isLoading, setIsLoading] = React.useState(false)
+    const [showCompleted, setShowCompleted] = React.useState(false)
+    const [deadlineOpen, setDeadlineOpen] = React.useState(false)
+    const [projectOpen, setProjectOpen] = React.useState(false)
+    const [showDetails, setShowDetails] = React.useState(false)
+    const [touched, setTouched] = React.useState({ name: false, project: false, minutes: false })
 
-    // Filter projects based on the "showCompleted" toggle
-    const displayProjects = projects.filter(p => showCompleted || p.status === "Active")
+    const displayProjects = React.useMemo(
+        () => projects.filter((project) => showCompleted || project.status === "Active"),
+        [projects, showCompleted]
+    )
+    const parsedEstimatedMinutes = parseTaskEstimatedMinutesInput(estimatedMinutes)
+    const nameInvalid = !name.trim()
+    const projectInvalid = taskScope === "FREELANCE" && !selectedProjectId
+    const minutesInvalid = parsedEstimatedMinutes === undefined
+    const formValid = !nameInvalid && !projectInvalid && !minutesInvalid
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const resetForm = React.useCallback(() => {
+        setName("")
+        setSelectedProjectId("")
+        setTaskScope(DEFAULT_TASK_SCOPE)
+        setLmsAllocationId("")
+        setLmsTaskTypeId("")
+        setStatus("Active")
+        setUrgency("Normal")
+        setDeadline(undefined)
+        setEstimatedMinutes("")
+        setShowCompleted(false)
+        setDeadlineOpen(false)
+        setProjectOpen(false)
+        setShowDetails(false)
+        setTouched({ name: false, project: false, minutes: false })
+    }, [])
+
+    const changeDialogOpen = (nextOpen: boolean) => {
+        if (!nextOpen && !isLoading) resetForm()
+        onOpenChange(nextOpen)
+    }
+
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault()
+        setTouched({ name: true, project: true, minutes: true })
+        if (!formValid || isLoading) return
 
         setIsLoading(true)
         try {
-            const result = await addTask(taskScope === "FREELANCE" ? selectedProjectId || undefined : undefined, name, {
-                status,
+            const result = await addTask(taskScope === "FREELANCE" ? selectedProjectId : undefined, name.trim(), {
+                status: taskScope === "LMS" ? "Active" : status,
                 urgency,
                 deadline,
-                estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
+                estimatedMinutes: parsedEstimatedMinutes ?? undefined,
                 taskScope,
                 lmsAllocationId: taskScope === "LMS" ? lmsAllocationId || null : null,
                 lmsTaskTypeId: taskScope === "LMS" ? lmsTaskTypeId || null : null,
             })
-            if (result.success) {
-                toast.success(taskScope === "LMS" ? "LMS task created" : "Task created")
-                setName("")
-                setSelectedProjectId("")
-                setTaskScope(defaultTaskScope)
-                setLmsAllocationId("")
-                setLmsTaskTypeId("")
-                setStatus("Active")
-                setUrgency("Normal")
-                setDeadline(undefined)
-                setEstimatedMinutes("")
-                setShowCompleted(false)
-                onOpenChange(false)
-                router.refresh()
-            } else {
+
+            if (!result.success) {
                 toast.error(result.error || "Failed to create task")
+                return
             }
+
+            toast.success(taskScope === "LMS" ? "LMS task created" : "Task created")
+            resetForm()
+            onOpenChange(false)
+            router.refresh()
         } catch {
-            toast.error("Process failed")
+            toast.error("Failed to create task")
         } finally {
             setIsLoading(false)
         }
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[90vh]">
-                <DialogHeader className="p-8 pb-5 border-b">
-                    <DialogTitle className="text-2xl font-bold tracking-tight">Add New Task</DialogTitle>
+        <Dialog open={open} onOpenChange={changeDialogOpen}>
+            <DialogContent className="flex max-h-[min(90dvh,760px)] w-[calc(100vw-1.5rem)] flex-col gap-0 overflow-hidden rounded-[22px] border-[var(--line-subtle)] p-0 shadow-2xl sm:max-w-[560px]">
+                <DialogHeader className="shrink-0 border-b border-[var(--line-subtle)] px-5 py-4 sm:px-6">
+                    <DialogTitle className="text-xl font-bold tracking-tight">Add task</DialogTitle>
+                    <DialogDescription className="sr-only">Create a Freelance or LMS task.</DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
-                    <div className="flex-1 overflow-y-auto p-8 py-6 space-y-6 scrollbar-thin scrollbar-thumb-primary/10">
-                        <div className="space-y-3">
-                            <Label className="text-xs font-semibold text-muted-foreground/80">Task Target</Label>
+
+                <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6" data-slot="create-task-form-scroll-area">
+                        <div className="space-y-2">
+                            <Label htmlFor="new-task-name" className="text-xs font-semibold text-[var(--text-secondary)]">Task name *</Label>
+                            <Input
+                                ref={nameInputRef}
+                                id="new-task-name"
+                                autoFocus
+                                placeholder="What needs to be done?"
+                                className={cn(
+                                    "h-12 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/20",
+                                    touched.name && nameInvalid && "border-[var(--state-urgent)]"
+                                )}
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
+                                onBlur={() => setTouched((current) => ({ ...current, name: true }))}
+                                aria-invalid={touched.name && nameInvalid}
+                                aria-describedby={touched.name && nameInvalid ? "new-task-name-error" : undefined}
+                                disabled={isLoading}
+                            />
+                            {touched.name && nameInvalid ? <p id="new-task-name-error" className="text-xs font-medium text-[var(--state-urgent)]">Enter a task name.</p> : null}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-[var(--text-secondary)]">Type</Label>
                             <TaskTargetSelector
                                 value={taskScope}
                                 onValueChange={(value) => {
                                     setTaskScope(value)
-                                    if (value !== "FREELANCE") setSelectedProjectId("")
+                                    setTouched((current) => ({ ...current, project: false }))
                                     if (value === "LMS") setStatus("Active")
                                 }}
                                 disabled={isLoading}
+                                compact
                             />
-                            <p className="text-xs leading-5 text-[var(--text-muted)]">
-                                {taskScope === "LMS"
-                                    ? "LMS stays separate from freelance projects. Link or create the LMS project now, or finish the link when completing the task."
-                                    : "Choose the freelance project, including your Personal project for standalone work."}
-                            </p>
                         </div>
 
-                        {taskScope === "FREELANCE" ? <div className="space-y-3 flex flex-col">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-xs font-semibold text-muted-foreground/80">Target Project</Label>
-                                <div className="flex items-center gap-2">
-                                    <Label htmlFor="show-completed" className="text-xs font-medium text-muted-foreground/60 cursor-pointer">Show non-active</Label>
-                                    <Switch
-                                        id="show-completed"
-                                        checked={showCompleted}
-                                        onCheckedChange={setShowCompleted}
-                                        className="scale-75 origin-right"
-                                    />
-                                </div>
-                            </div>
-                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        aria-expanded={openCombobox}
-                                        className="w-full justify-between h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 text-left font-bold"
+                        {taskScope === "FREELANCE" ? (
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold text-[var(--text-secondary)]">Freelance project *</Label>
+                                <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-label="Select freelance project"
+                                            aria-expanded={projectOpen}
+                                            aria-invalid={touched.project && projectInvalid}
+                                            onBlur={() => setTouched((current) => ({ ...current, project: true }))}
+                                            className={cn(
+                                                "h-12 w-full justify-between rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-left font-semibold shadow-none focus:ring-1 focus:ring-primary/20",
+                                                touched.project && projectInvalid && "border-[var(--state-urgent)]"
+                                            )}
+                                            disabled={isLoading}
+                                        >
+                                            <span className={cn("truncate pr-4", !selectedProjectId && "font-normal text-[var(--text-muted)]")}>
+                                                {selectedProjectId
+                                                    ? formatProjectName(projects.find((project) => project.id === selectedProjectId) || {})
+                                                    : "Select a project"}
+                                            </span>
+                                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        align="start"
+                                        collisionPadding={16}
+                                        className="w-[var(--radix-popover-trigger-width)] min-w-0 max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+                                        onWheelCapture={(event) => event.stopPropagation()}
+                                        onTouchMoveCapture={(event) => event.stopPropagation()}
                                     >
-                                        <span className="truncate pr-4">
-                                            {selectedProjectId
-                                                ? formatProjectName(projects.find((p) => p.id === selectedProjectId)!)
-                                                : "Select a freelance project"}
-                                        </span>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 max-h-[250px] overflow-hidden flex flex-col" align="start">
-                                    <Command>
-                                        <CommandInput placeholder="Search project..." />
-                                        <CommandList className="max-h-[200px] overflow-y-auto">
-                                            <CommandEmpty>No project found.</CommandEmpty>
-                                            <CommandGroup>
-                                                {displayProjects.map((p) => (
-                                                    <CommandItem
-                                                        key={p.id}
-                                                        value={formatProjectName(p)}
-                                                        onSelect={() => {
-                                                            setSelectedProjectId(p.id)
-                                                            setOpenCombobox(false)
-                                                        }}
-                                                        className="flex items-center justify-between py-3"
-                                                    >
-                                                        <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
-                                                            <Check
-                                                                className={cn(
-                                                                    "h-4 w-4 shrink-0",
-                                                                    selectedProjectId === p.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            <span className="truncate leading-tight font-medium" title={formatProjectName(p)}>
-                                                                {formatProjectName(p)}
-                                                            </span>
-                                                        </div>
-                                                        {p.status !== "Active" && (
-                                                            <Badge variant="outline" className={cn(
-                                                                "text-xs font-medium ml-2 flex-shrink-0 px-2 py-0.5 border-dashed",
-                                                                p.status === "Completed" ? "text-blue-500 border-blue-500/30" : "text-[var(--text-secondary)] border-[var(--line-subtle)]"
-                                                            )}>
-                                                                {p.status}
-                                                            </Badge>
-                                                        )}
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div> : null}
+                                        <Command className="flex min-h-0 flex-col">
+                                            <CommandInput placeholder="Search projects…" />
+                                            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line-subtle)] px-3 py-2">
+                                                <Label htmlFor="include-inactive-projects" className="text-xs font-medium text-[var(--text-secondary)]">Include inactive</Label>
+                                                <Switch id="include-inactive-projects" checked={showCompleted} onCheckedChange={setShowCompleted} className="scale-75 origin-right" />
+                                            </div>
+                                            <CommandList className="max-h-[min(300px,calc(var(--radix-popover-content-available-height)-6rem))] touch-pan-y overflow-y-auto overscroll-contain">
+                                                <CommandEmpty>No project found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {displayProjects.map((project) => (
+                                                        <CommandItem
+                                                            key={project.id}
+                                                            value={`${formatProjectName(project)} ${project.id}`}
+                                                            onSelect={() => {
+                                                                setSelectedProjectId(project.id)
+                                                                setTouched((current) => ({ ...current, project: true }))
+                                                                setProjectOpen(false)
+                                                                window.requestAnimationFrame(() => nameInputRef.current?.focus())
+                                                            }}
+                                                            className="min-h-10"
+                                                        >
+                                                            <Check className={cn("mr-2 h-4 w-4 shrink-0", selectedProjectId === project.id ? "opacity-100" : "opacity-0")} />
+                                                            <span className="min-w-0 flex-1 truncate">{formatProjectName(project)}</span>
+                                                            {project.status !== "Active" ? <span className="ml-2 shrink-0 text-xs font-semibold text-[var(--text-muted)]">{project.status}</span> : null}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                {touched.project && projectInvalid ? <p className="text-xs font-medium text-[var(--state-urgent)]">Select a freelance project.</p> : null}
+                            </div>
+                        ) : null}
 
                         {taskScope === "LMS" ? (
                             <TaskLmsFields
@@ -214,122 +256,117 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                 onAllocationChange={setLmsAllocationId}
                                 onWorkTaskChange={setLmsTaskTypeId}
                                 disabled={isLoading}
+                                compact
                             />
                         ) : null}
 
-                        <div className="space-y-3">
-                            <Label className="text-xs font-semibold text-muted-foreground/80">Task Name</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="new-task-estimated-minutes" className="text-xs font-semibold text-[var(--text-secondary)]">Planned time (min)</Label>
                             <Input
-                                placeholder="ex. Verificare dataLayer"
-                                className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold rounded-xl"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
+                                id="new-task-estimated-minutes"
+                                type="number"
+                                inputMode="numeric"
+                                min={1}
+                                max={MAX_TASK_ESTIMATED_MINUTES}
+                                step={1}
+                                placeholder="60"
+                                className={cn(
+                                    "h-12 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/20",
+                                    touched.minutes && minutesInvalid && "border-[var(--state-urgent)]"
+                                )}
+                                value={estimatedMinutes}
+                                onChange={(event) => setEstimatedMinutes(event.target.value)}
+                                onBlur={() => setTouched((current) => ({ ...current, minutes: true }))}
+                                aria-invalid={touched.minutes && minutesInvalid}
+                                aria-describedby={touched.minutes && minutesInvalid ? "new-task-minutes-error" : undefined}
+                                disabled={isLoading}
                             />
+                            {touched.minutes && minutesInvalid ? (
+                                <p id="new-task-minutes-error" className="text-xs font-medium text-[var(--state-urgent)]">Use 1–{MAX_TASK_ESTIMATED_MINUTES} minutes, or leave it empty.</p>
+                            ) : null}
                         </div>
 
-                        {/* Toggle Advanced Details Button */}
-                        <div className="pt-2">
+                        <div>
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => setShowDetails(!showDetails)}
-                                className="w-full flex justify-between items-center h-12 bg-muted/10 hover:bg-muted/30 text-muted-foreground font-medium rounded-xl border border-dashed border-border"
+                                onClick={() => setShowDetails((current) => !current)}
+                                className="h-11 w-full justify-between rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                                aria-expanded={showDetails}
                             >
-                                <span className="flex items-center gap-2 text-sm">
-                                    <SlidersHorizontal className="w-4 h-4" />
-                                    {showDetails ? "Hide Additional Details" : "Add Additional Details"}
+                                <span className="flex items-center gap-2 text-sm font-semibold">
+                                    <SlidersHorizontal className="h-4 w-4" />
+                                    More options
                                 </span>
-                                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             </Button>
                         </div>
 
-                        {showDetails && (
-                            <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div className="space-y-3">
-                                        <Label className="text-xs font-semibold text-muted-foreground/80">Status</Label>
-                                        <Select value={status} onValueChange={setStatus}>
-                                            <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold rounded-xl">
-                                                <SelectValue />
-                                            </SelectTrigger>
+                        {showDetails ? (
+                            <div className="grid gap-4 animate-in fade-in slide-in-from-top-2 sm:grid-cols-2">
+                                {taskScope === "FREELANCE" ? (
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold text-[var(--text-secondary)]">Status</Label>
+                                        <Select value={status} onValueChange={setStatus} disabled={isLoading}>
+                                            <SelectTrigger className="h-11 w-full rounded-xl shadow-none"><SelectValue /></SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Active" className="font-bold">ACTIVE</SelectItem>
-                                                {taskScope !== "LMS" ? <SelectItem value="Completed" className="font-bold">COMPLETED</SelectItem> : null}
+                                                <SelectItem value="Active">Active</SelectItem>
+                                                <SelectItem value="Completed">Completed</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="space-y-3">
-                                        <Label className="text-xs font-semibold text-muted-foreground/80">Priority</Label>
-                                        <Select value={urgency} onValueChange={setUrgency}>
-                                            <SelectTrigger className="h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 font-bold rounded-xl">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Urgent" className="font-bold">URGENT</SelectItem>
-                                                <SelectItem value="Normal" className="font-bold">NORMAL</SelectItem>
-                                                <SelectItem value="Idea" className="font-bold">IDEA</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                ) : null}
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold text-[var(--text-secondary)]">Priority</Label>
+                                    <Select value={urgency} onValueChange={setUrgency} disabled={isLoading}>
+                                        <SelectTrigger className="h-11 w-full rounded-xl shadow-none"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Urgent">Urgent</SelectItem>
+                                            <SelectItem value="Normal">Normal</SelectItem>
+                                            <SelectItem value="Idea">Idea</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div className="space-y-3 flex flex-col">
-                                        <Label className="text-xs font-semibold text-muted-foreground/80">Deadline</Label>
-                                        <Popover open={openPopover} onOpenChange={setOpenPopover}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    className={cn(
-                                                        "pl-3 text-left font-bold w-full justify-start h-12 bg-muted/30 border-none shadow-none focus:ring-1 focus:ring-primary/20 rounded-xl",
-                                                        !deadline && "text-muted-foreground font-normal"
-                                                    )}
-                                                    type="button"
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                                                    {deadline ? format(deadline, "PPP") : <span>Pick a date</span>}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0 rounded-xl" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={deadline}
-                                                    onSelect={(d) => {
-                                                        setDeadline(d)
-                                                        setOpenPopover(false)
-                                                    }}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <Label className="text-xs font-semibold text-muted-foreground/80">Est. Time (min)</Label>
-                                        <Input
-                                            type="number"
-                                            placeholder="ex. 60"
-                                            className="h-12 bg-muted/30 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 font-bold rounded-xl"
-                                            value={estimatedMinutes}
-                                            onChange={(e) => setEstimatedMinutes(e.target.value)}
-                                        />
-                                    </div>
+                                <div className="space-y-2 sm:col-span-2">
+                                    <Label className="text-xs font-semibold text-[var(--text-secondary)]">Deadline</Label>
+                                    <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className={cn("h-11 w-full justify-start rounded-xl px-3 text-left font-semibold shadow-none", !deadline && "font-normal text-[var(--text-muted)]")}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                                                {deadline ? format(deadline, "PPP") : "Pick a date"}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto rounded-xl p-0" align="start" collisionPadding={16}>
+                                            <Calendar
+                                                mode="single"
+                                                selected={deadline}
+                                                onSelect={(date) => {
+                                                    setDeadline(date)
+                                                    setDeadlineOpen(false)
+                                                }}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                             </div>
-                        )}
+                        ) : null}
                     </div>
 
-                    <DialogFooter className="p-8 bg-muted/5 border-t">
+                    <DialogFooter className="shrink-0 border-t border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-5 py-4 sm:px-6">
                         <Button
                             type="submit"
-                            disabled={isLoading || !name.trim() || (taskScope === "FREELANCE" && !selectedProjectId)}
-                            className="w-full h-12 font-bold shadow-md shadow-primary/10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+                            disabled={isLoading || !formValid}
+                            className="h-12 w-full rounded-xl font-bold shadow-md shadow-primary/10"
                         >
-                            {isLoading ? (
-                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            ) : (
-                                "Create Task"
-                            )}
+                            {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                            {isLoading ? "Creating…" : "Create task"}
                         </Button>
                     </DialogFooter>
                 </form>

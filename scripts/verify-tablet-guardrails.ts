@@ -26,12 +26,18 @@ function run() {
   const appPageHeader = read("components/layout/app-page-header.tsx")
   assert.match(appPageHeader, /md:grid md:grid-cols-\[minmax\(180px,1fr\)_minmax\(280px,640px\)_minmax\(160px,1fr\)\]/)
   assert.match(appPageHeader, /xl:grid-cols-\[minmax\(240px,1fr\)_minmax\(360px,640px\)_minmax\(240px,1fr\)\]/)
+  assert.match(appPageHeader, /controls\?: React\.ReactNode/)
+  assert.match(appPageHeader, /xl:grid-cols-\[minmax\(150px,auto\)_minmax\(320px,1\.8fr\)_auto_auto_auto\]/)
 
   const projectsToolbar = read("components/projects/projects-filters-toolbar.tsx")
   assert.match(projectsToolbar, /overscroll-x-contain xl:overflow-visible xl:px-0/)
 
   const tasksToolbar = read("components/tasks/tasks-toolbar.tsx")
-  assert.match(tasksToolbar, /overscroll-x-contain xl:overflow-visible xl:px-0/)
+  assert.match(tasksToolbar, /<div className="hidden md:block">/)
+  assert.match(tasksToolbar, /<div className="md:hidden">/)
+  assert.match(tasksToolbar, /PopoverContent align="end" sideOffset=\{8\} className="w-\[540px\]/)
+  assert.match(tasksToolbar, /SheetContent side="bottom"/)
+  assert.doesNotMatch(tasksToolbar, /Grid columns|currentCols/)
 
   const projectsRows = read("components/projects/projects-board-rows.tsx")
   assert.match(projectsRows, /md:min-w-\[1240px\] xl:min-w-\[1320px\]/)

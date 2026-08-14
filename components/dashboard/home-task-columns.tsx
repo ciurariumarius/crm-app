@@ -236,7 +236,9 @@ export function HomeTaskColumns({
             const result = await addTask(
                 isLmsTask ? undefined : quickProjectId,
                 title,
-                isLmsTask ? { taskScope: "LMS" } : undefined
+                {
+                    taskScope: isLmsTask ? "LMS" : "FREELANCE",
+                }
             )
             if (!result.success) {
                 toast.error(result.error || "Failed to create task")
@@ -259,6 +261,7 @@ export function HomeTaskColumns({
                 description: "",
                 status: "Active",
                 urgency: "Normal",
+                estimatedMinutes: null,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 timeLogs: [],
@@ -443,17 +446,19 @@ export function HomeTaskColumns({
                             </Popover>
                         </div>
 
-                        <Button
-                            type="submit"
-                            className="mt-2 h-9 rounded-xl text-sm font-semibold"
-                            disabled={
-                                isCreatingQuickTask ||
-                                !quickTaskTitle.trim().length ||
-                                !quickProjectId
-                            }
-                        >
-                            {isCreatingQuickTask ? "Creating..." : "Create task"}
-                        </Button>
+                        <div className="mt-2">
+                            <Button
+                                type="submit"
+                                className="h-9 w-full rounded-xl text-sm font-semibold"
+                                disabled={
+                                    isCreatingQuickTask ||
+                                    !quickTaskTitle.trim().length ||
+                                    !quickProjectId
+                                }
+                            >
+                                {isCreatingQuickTask ? "Creating..." : "Create task"}
+                            </Button>
+                        </div>
                     </form>
                 </div>
 

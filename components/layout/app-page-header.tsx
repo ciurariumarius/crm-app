@@ -8,8 +8,10 @@ export type AppPageHeaderProps = {
   description?: string
   eyebrow?: string
   search?: React.ReactNode
+  controls?: React.ReactNode
   primaryAction?: React.ReactNode
   secondaryActions?: React.ReactNode
+  footer?: React.ReactNode
   mobileSearch?: React.ReactNode
   mobilePrimaryAction?: React.ReactNode
   tabletSearch?: React.ReactNode
@@ -55,8 +57,10 @@ export function AppPageHeader({
   description,
   eyebrow,
   search,
+  controls,
   primaryAction,
   secondaryActions,
+  footer,
   mobileSearch,
   mobilePrimaryAction,
   tabletSearch,
@@ -83,17 +87,55 @@ export function AppPageHeader({
           {resolvedMobileAction ? <div className="shrink-0">{resolvedMobileAction}</div> : null}
         </div>
         {resolvedMobileSearch}
-        {secondaryActions ? <div className="flex flex-wrap items-center gap-2">{secondaryActions}</div> : null}
+        {controls || secondaryActions ? (
+          <div className="flex min-w-0 items-center gap-2">
+            {controls ? <div className="min-w-0 flex-1">{controls}</div> : null}
+            {secondaryActions ? <div className="ml-auto shrink-0">{secondaryActions}</div> : null}
+          </div>
+        ) : null}
+        {footer}
       </div>
 
-      <div className="hidden items-center gap-4 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(280px,640px)_minmax(160px,1fr)] xl:grid-cols-[minmax(240px,1fr)_minmax(360px,640px)_minmax(240px,1fr)]">
-        <HeaderIdentity title={title} subtitle={resolvedSubtitle} eyebrow={eyebrow} />
-        {resolvedTabletSearch ? <div className="w-full justify-self-center">{resolvedTabletSearch}</div> : <div />}
-        <div className="flex min-w-0 items-center justify-end gap-2.5">
-          {secondaryActions}
-          {resolvedTabletAction ? <div className="shrink-0">{resolvedTabletAction}</div> : null}
+      {controls ? (
+        <div className="hidden items-center gap-x-4 gap-y-3 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(280px,640px)_auto] xl:grid-cols-[minmax(150px,auto)_minmax(320px,1.8fr)_auto_auto_auto]">
+          <div className="md:col-start-1 md:row-start-1 xl:col-start-1">
+            <HeaderIdentity title={title} subtitle={resolvedSubtitle} eyebrow={eyebrow} />
+          </div>
+          <div className="min-w-0 md:col-start-1 md:row-start-2 xl:col-start-3 xl:row-start-1">
+            {controls}
+          </div>
+          {resolvedTabletSearch ? (
+            <div className="w-full justify-self-center md:col-start-2 md:row-start-1 xl:col-start-2">
+              {resolvedTabletSearch}
+            </div>
+          ) : <div />}
+          {secondaryActions ? (
+            <div className="flex min-w-0 items-center justify-end md:col-span-2 md:col-start-2 md:row-start-2 xl:col-span-1 xl:col-start-4 xl:row-start-1">
+              {secondaryActions}
+            </div>
+          ) : null}
+          {resolvedTabletAction ? (
+            <div className="shrink-0 md:col-start-3 md:row-start-1 xl:col-start-5">
+              {resolvedTabletAction}
+            </div>
+          ) : null}
+          {footer ? (
+            <div className="min-w-0 md:col-span-3 md:row-start-3 xl:col-span-5 xl:row-start-2">
+              {footer}
+            </div>
+          ) : null}
         </div>
-      </div>
+      ) : (
+        <div className="hidden items-center gap-4 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(280px,640px)_minmax(160px,1fr)] xl:grid-cols-[minmax(240px,1fr)_minmax(360px,640px)_minmax(240px,1fr)]">
+          <HeaderIdentity title={title} subtitle={resolvedSubtitle} eyebrow={eyebrow} />
+          {resolvedTabletSearch ? <div className="w-full justify-self-center">{resolvedTabletSearch}</div> : <div />}
+          <div className="flex min-w-0 items-center justify-end gap-2.5">
+            {secondaryActions}
+            {resolvedTabletAction ? <div className="shrink-0">{resolvedTabletAction}</div> : null}
+          </div>
+          {footer ? <div className="col-span-3">{footer}</div> : null}
+        </div>
+      )}
     </header>
   )
 }

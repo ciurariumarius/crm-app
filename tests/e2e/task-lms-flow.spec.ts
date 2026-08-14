@@ -116,6 +116,7 @@ async function getPersistedLmsMapping(page: Page, taskName: string) {
   const payload = response.payload as {
     tasks?: Array<{
       name?: string
+      estimatedMinutes?: number | null
       lmsAllocationId?: string | null
       lmsTaskTypeId?: string | null
       lmsAllocation?: { client?: string | null } | null
@@ -128,9 +129,13 @@ async function getPersistedLmsMapping(page: Page, taskName: string) {
 async function openTask(page: Page, taskName: string) {
   const taskHeading = page.getByRole("heading", { name: taskName, exact: true }).first()
   await expect(taskHeading).toBeVisible({ timeout: 20_000 })
-  await taskHeading.locator("xpath=ancestor::div[@data-task-card-id]").click()
+  const taskCard = taskHeading.locator("xpath=ancestor::*[@data-task-card-id]")
+  await expect(taskCard).toBeVisible({ timeout: 20_000 })
   const taskSheet = page.locator('[data-slot="sheet-content"]').filter({ hasText: taskName }).last()
-  await expect(taskSheet).toBeVisible({ timeout: 20_000 })
+  await expect(async () => {
+    await taskCard.click()
+    await expect(taskSheet).toBeVisible({ timeout: 3_000 })
+  }).toPass({ timeout: 20_000, intervals: [250, 500, 1_000] })
   return taskSheet
 }
 
@@ -185,7 +190,7 @@ test("creates, maps, and completes an LMS task without mixing manual work", asyn
     await expectNoHorizontalOverflow(page)
     await page.getByRole("button", { name: "Add", exact: true }).click()
 
-    const createDialog = page.getByRole("dialog", { name: "Add New Task" })
+    const createDialog = page.getByRole("dialog", { name: "Add task" })
     await expect(createDialog).toBeVisible()
     await createDialog.getByRole("radio", { name: /^LMS\b/ }).click()
     let lmsProjectLabel = ""
@@ -199,17 +204,24 @@ test("creates, maps, and completes an LMS task without mixing manual work", asyn
       await expect(createDialog.getByRole("combobox", { name: "Select LMS project" })).toContainText(preferredLmsProject)
       lmsProjectLabel = preferredLmsProject
     }
-    await createDialog.getByPlaceholder("ex. Verificare dataLayer").fill(taskName)
-    await createDialog.getByRole("button", { name: "Add Additional Details" }).click()
-    await createDialog.getByPlaceholder("ex. 60").fill("37")
+    await createDialog.getByLabel(/Task name/).fill(taskName)
+    await createDialog.getByLabel("Planned time (min)").fill("37")
+    await createDialog.getByRole("button", { name: "More options" }).click()
     await expectNoHorizontalOverflow(page)
-    await createDialog.getByRole("button", { name: "Create Task" }).click()
+    await createDialog.getByRole("button", { name: "Create task" }).click()
     await expect(createDialog).toBeHidden({ timeout: 20_000 })
 
     await page.goto(`/tasks?q=${encodeURIComponent(taskName)}`)
     let taskSheet = await openTask(page, taskName)
     await expect(taskSheet.getByText("LMS time is recorded on completion", { exact: true })).toBeVisible()
     await expect(taskSheet.getByText("Add Time", { exact: true })).toHaveCount(0)
+    const plannedTimeInput = taskSheet.getByLabel("Planned time in minutes")
+    await expect(plannedTimeInput).toHaveValue("37")
+    await plannedTimeInput.fill("52")
+    await expect.poll(async () => {
+      const persisted = await getPersistedLmsMapping(page, taskName)
+      return persisted?.estimatedMinutes
+    }, { timeout: 20_000 }).toBe(52)
 
     if (!lmsProjectLabel) {
       lmsProjectLabel = await chooseLmsOption({
@@ -259,7 +271,7 @@ test("creates, maps, and completes an LMS task without mixing manual work", asyn
     await expect(completionDialog).toBeVisible({ timeout: 20_000 })
     await expect(completionDialog.getByRole("combobox", { name: "Select LMS project" })).toContainText(lmsProjectLabel)
     await expect(completionDialog.getByRole("combobox", { name: "Select LMS work category" })).toContainText(lmsCategoryLabel)
-    await expect(completionDialog.getByLabel(/Actual minutes/)).toHaveValue("37")
+    await expect(completionDialog.getByLabel(/Actual minutes/)).toHaveValue("52")
 
     const workDate = await completionDialog.getByLabel(/Work date/).inputValue()
     const workDay = new Date(`${workDate}T12:00:00Z`).getUTCDay()

@@ -6,6 +6,10 @@ import { requireAuth } from "@/lib/auth"
 import { getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { formatProjectName } from "@/lib/utils"
+import {
+    getLegacyAdHocPaymentDomain,
+    getPartnerAdHocPaymentDomain,
+} from "@/lib/payments/ad-hoc-payment"
 import { z } from "zod"
 
 const CreatePartnerSchema = z.object({
@@ -254,22 +258,31 @@ export async function addPartnerAdHocPayment(data: {
         const sourceProjectId = selectedProject?.id || "none"
 
         if (!siteIdForProject) {
-            // Find or create a generic Site for this Partner
+            // Older installations may already have the original shared-name
+            // site. Reuse it only when it belongs to this partner. New sites
+            // include the partner ID because Site.domainName is globally unique.
+            const legacyDomain = getLegacyAdHocPaymentDomain()
+            const paymentDomain = getPartnerAdHocPaymentDomain(validated.partnerId)
             let site = await prisma.site.findFirst({
                 where: {
                     partnerId: validated.partnerId,
-                    domainName: "ad-hoc-payments.local"
-                }
+                    domainName: { in: [legacyDomain, paymentDomain] },
+                },
             })
 
             if (!site) {
-                site = await prisma.site.create({
-                    data: {
+                site = await prisma.site.upsert({
+                    where: { domainName: paymentDomain },
+                    update: {},
+                    create: {
                         partnerId: validated.partnerId,
-                        domainName: "ad-hoc-payments.local",
+                        domainName: paymentDomain,
                         name: "Ad-Hoc Payments",
-                    }
+                    },
                 })
+            }
+            if (site.partnerId !== validated.partnerId) {
+                return { success: false, error: "The partner payment workspace belongs to another partner" }
             }
             siteIdForProject = site.id
         }
@@ -305,6 +318,7 @@ export async function addPartnerAdHocPayment(data: {
         
         return { success: true }
     } catch (error) {
+        console.error("[addPartnerAdHocPayment] failed", error)
         return { success: false, error: getActionErrorMessage(error, "Failed to add payment") }
     }
 }

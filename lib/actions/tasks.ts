@@ -23,6 +23,7 @@ import {
     NOTES_CLIENT_REFRESH_MESSAGE,
     NOTES_CLIENT_REFRESH_REQUIRED,
 } from "@/lib/notes/write-protocol"
+import { MAX_TASK_ESTIMATED_MINUTES } from "@/lib/tasks/estimated-time"
 import { z } from "zod"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
@@ -147,7 +148,7 @@ const AddTaskSchema = z.object({
         deadline: z.date().optional(),
         status: TaskStatusSchema.optional(),
         urgency: TaskUrgencySchema.optional(),
-        estimatedMinutes: z.number().int().min(0).max(100000).optional(),
+        estimatedMinutes: z.number().int().min(1).max(MAX_TASK_ESTIMATED_MINUTES).optional(),
         taskScope: TaskScopeSchema.optional(),
         lmsAllocationId: OptionalLmsReferenceSchema,
         lmsTaskTypeId: OptionalLmsReferenceSchema,
@@ -162,7 +163,10 @@ const UpdateTaskSchema = z.object({
     urgency: TaskUrgencySchema.optional(),
     isCompleted: z.boolean().optional(),
     deadline: z.union([z.date(), z.null()]).optional(),
-    estimatedMinutes: z.union([z.number().int().min(0).max(100000), z.null()]).optional(),
+    estimatedMinutes: z.union([
+        z.number().int().min(1).max(MAX_TASK_ESTIMATED_MINUTES),
+        z.null(),
+    ]).optional(),
     projectId: z.string().uuid().nullable().optional(),
     taskScope: TaskScopeSchema.optional(),
     lmsAllocationId: OptionalLmsReferenceSchema,
@@ -770,7 +774,7 @@ export async function updateTask(taskId: string, data: {
                 include: { project: { include: { site: true } } },
             })
             return { existingTask, task }
-        })
+        }, { timeout: 15_000 })
 
         const { existingTask, task } = mutation
         const nextPriority = task.urgency

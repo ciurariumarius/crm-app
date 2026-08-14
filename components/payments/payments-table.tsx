@@ -316,7 +316,7 @@ export function PaymentsTable({ logs, projects }: PaymentsTableProps) {
                                                         disabled={isReverting}
                                                     >
                                                         {isReverting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Undo2 className="mr-1.5 h-3.5 w-3.5" />}
-                                                        Revert
+                                                        Revert to unpaid
                                                     </Button>
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent onClick={(event) => event.stopPropagation()}>

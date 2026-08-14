@@ -8,6 +8,7 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
@@ -54,6 +55,7 @@ import {
     taskTargetsEqual,
     type TaskTargetSnapshot,
 } from "@/components/tasks/task-target-sync"
+import { MAX_TASK_ESTIMATED_MINUTES, parseTaskEstimatedMinutesInput } from "@/lib/tasks/estimated-time"
 
 type TaskTimeLog = {
     id?: string
@@ -173,6 +175,7 @@ export function TaskDetails({
     const [status, setStatus] = React.useState("")
     const [urgency, setUrgency] = React.useState("")
     const [deadline, setDeadline] = React.useState<Date | undefined>(undefined)
+    const [estimatedMinutes, setEstimatedMinutes] = React.useState("")
     const [taskScope, setTaskScope] = React.useState<TaskScopeValue>("GENERAL")
     const [projectId, setProjectId] = React.useState("")
     const [lmsAllocationId, setLmsAllocationId] = React.useState("")
@@ -234,6 +237,7 @@ export function TaskDetails({
             setStatus(normalizeTaskStatus(task.status))
             setUrgency(normalizeTaskUrgency(task.urgency))
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
+            setEstimatedMinutes(task.estimatedMinutes == null ? "" : String(task.estimatedMinutes))
             setIsManualTimeOpen(false)
             setManualMinutes("")
             setManualNotes("")
@@ -302,6 +306,12 @@ export function TaskDetails({
     const handleUpdate = React.useCallback((): Promise<boolean> => {
         if (!task) return Promise.resolve(false)
 
+        const parsedEstimatedMinutes = parseTaskEstimatedMinutesInput(estimatedMinutes)
+        if (parsedEstimatedMinutes === undefined) {
+            toast.error(`Planned time must be between 1 and ${MAX_TASK_ESTIMATED_MINUTES} minutes`)
+            return Promise.resolve(false)
+        }
+
         const taskId = task.id
         const saveRevision = targetRevisionRef.current
         const targetSnapshot = currentTarget
@@ -310,6 +320,7 @@ export function TaskDetails({
             description,
             urgency,
             deadline,
+            estimatedMinutes: parsedEstimatedMinutes,
             taskScope,
             projectId: taskScope === "FREELANCE" ? projectId || null : null,
             lmsAllocationId: taskScope === "LMS" ? lmsAllocationId || null : null,
@@ -360,7 +371,7 @@ export function TaskDetails({
 
         saveQueueRef.current = queuedSave.then(() => undefined, () => undefined)
         return queuedSave
-    }, [currentTarget, deadline, description, fetchTaskHistory, lmsAllocationId, lmsTaskTypeId, name, projectId, router, task, taskScope, urgency])
+    }, [currentTarget, deadline, description, estimatedMinutes, fetchTaskHistory, lmsAllocationId, lmsTaskTypeId, name, projectId, router, task, taskScope, urgency])
 
     // Auto-save logic
     React.useEffect(() => {
@@ -375,20 +386,26 @@ export function TaskDetails({
         const normalizedTaskDescription = task.description || ""
         const normalizedTaskUrgency = normalizeTaskUrgency(task.urgency)
         const normalizedTaskDeadline = task.deadline ? new Date(task.deadline).getTime() : undefined
+        const normalizedTaskEstimatedMinutes = task.estimatedMinutes ?? null
+        const parsedEstimatedMinutes = parseTaskEstimatedMinutesInput(estimatedMinutes)
         const timer = setTimeout(() => {
             if (
                 name !== normalizedTaskName ||
                 description !== normalizedTaskDescription ||
                 urgency !== normalizedTaskUrgency ||
                 deadline?.getTime() !== normalizedTaskDeadline ||
+                parsedEstimatedMinutes !== normalizedTaskEstimatedMinutes ||
                 targetDirty
             ) {
-                if (taskScope !== "FREELANCE" || projectId) handleUpdate()
+                if (
+                    parsedEstimatedMinutes !== undefined
+                    && (taskScope !== "FREELANCE" || projectId)
+                ) handleUpdate()
             }
         }, 400)
 
         return () => clearTimeout(timer)
-    }, [deadline, description, handleUpdate, name, projectId, task, taskScope, targetDirty, urgency])
+    }, [deadline, description, estimatedMinutes, handleUpdate, name, projectId, task, taskScope, targetDirty, urgency])
 
     const handleStatusChange = React.useCallback(async (nextStatus: "Active" | "Completed") => {
         if (!task || nextStatus === status || pendingTaskId === task.id || loading) return
@@ -813,6 +830,40 @@ export function TaskDetails({
                                 </Popover>
                             </div>
                         </div>
+
+                        <section className="space-y-2 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <SidePanelSectionTitle title="Planned time" icon={<Clock className="h-3.5 w-3.5" />} />
+                                <span className="text-xs font-medium text-[var(--text-muted)]">
+                                    {taskScope === "LMS" ? "Completion default" : "Estimate"}
+                                </span>
+                            </div>
+                            <div className="relative max-w-52">
+                                <Input
+                                    id="task-estimated-minutes"
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={1}
+                                    max={MAX_TASK_ESTIMATED_MINUTES}
+                                    step={1}
+                                    value={estimatedMinutes}
+                                    onChange={(event) => setEstimatedMinutes(event.target.value)}
+                                    placeholder="ex. 60"
+                                    aria-label="Planned time in minutes"
+                                    className={cn(
+                                        "h-11 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-low)] pr-14 font-semibold",
+                                        parseTaskEstimatedMinutesInput(estimatedMinutes) === undefined && "border-[var(--state-urgent)]"
+                                    )}
+                                    disabled={loading}
+                                />
+                                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[var(--text-muted)]">
+                                    min
+                                </span>
+                            </div>
+                            <p className="text-xs leading-5 text-[var(--text-muted)]">
+                                Leave empty for no estimate. LMS uses this value as the suggested duration when completing the task.
+                            </p>
+                        </section>
 
                         <section className="space-y-3 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] p-4">
                             <div className="flex items-center justify-between gap-3">

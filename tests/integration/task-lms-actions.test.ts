@@ -133,6 +133,54 @@ describe("Task to LMS work-entry transactions", () => {
     expect(await prisma.task.count({ where: { name: "Standalone task" } })).toBe(0)
   })
 
+  it("creates and later edits planned time for freelance and LMS tasks", async () => {
+    const project = await createFreelanceProject("Timed freelance project")
+    const [freelanceResult, lmsResult] = await Promise.all([
+      taskActions.addTask(project.id, "Timed freelance task", {
+        taskScope: "FREELANCE",
+        estimatedMinutes: 30,
+      }),
+      taskActions.addTask(null, "Timed LMS task", {
+        taskScope: "LMS",
+        estimatedMinutes: 45,
+      }),
+    ])
+
+    expect(freelanceResult.success).toBe(true)
+    expect(lmsResult.success).toBe(true)
+    const freelanceTaskId = "data" in freelanceResult ? freelanceResult.data?.taskId : undefined
+    const lmsTaskId = "data" in lmsResult ? lmsResult.data?.taskId : undefined
+    expect(freelanceTaskId).toBeTruthy()
+    expect(lmsTaskId).toBeTruthy()
+    if (!freelanceTaskId || !lmsTaskId) throw new Error("Expected created task ids")
+
+    await expect(prisma.task.findUniqueOrThrow({ where: { id: freelanceTaskId } })).resolves.toMatchObject({
+      taskScope: "FREELANCE",
+      estimatedMinutes: 30,
+    })
+    await expect(prisma.task.findUniqueOrThrow({ where: { id: lmsTaskId } })).resolves.toMatchObject({
+      taskScope: "LMS",
+      estimatedMinutes: 45,
+    })
+
+    expect(await taskActions.updateTask(freelanceTaskId, { estimatedMinutes: 75 })).toMatchObject({ success: true })
+    expect(await taskActions.updateTask(lmsTaskId, { estimatedMinutes: null })).toMatchObject({ success: true })
+
+    await expect(prisma.task.findUniqueOrThrow({ where: { id: freelanceTaskId } })).resolves.toMatchObject({ estimatedMinutes: 75 })
+    await expect(prisma.task.findUniqueOrThrow({ where: { id: lmsTaskId } })).resolves.toMatchObject({ estimatedMinutes: null })
+  })
+
+  it("rejects zero planned minutes", async () => {
+    const project = await createFreelanceProject("Invalid time project")
+    const result = await taskActions.addTask(project.id, "Invalid time task", {
+      taskScope: "FREELANCE",
+      estimatedMinutes: 0,
+    })
+
+    expect(result).toMatchObject({ success: false })
+    expect(await prisma.task.count({ where: { name: "Invalid time task" } })).toBe(0)
+  })
+
   it("transitions a task target from general to freelance to LMS and back to general", async () => {
     const [task, project, allocation, workTask] = await Promise.all([
       prisma.task.create({

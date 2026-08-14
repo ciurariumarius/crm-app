@@ -1,14 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { format, isBefore, startOfDay } from "date-fns"
-import { cn } from "@/lib/utils"
-import { normalizeTaskUrgency } from "@/lib/status"
-import {
-    CheckCheck,
-    MoreVertical,
-    Play,
-} from "lucide-react"
+import { format, isBefore, isToday, startOfDay } from "date-fns"
+import { CalendarDays, CheckCheck, MoreVertical, Play } from "lucide-react"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
 import { Button } from "@/components/ui/button"
@@ -18,6 +12,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
+import { normalizeTaskUrgency } from "@/lib/status"
+
+export const TASK_CARD_SHELL_CLASS =
+    "relative flex min-h-[176px] w-full overflow-hidden rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-all duration-200 sm:aspect-[4/3] sm:min-h-[190px] xl:min-h-[205px]"
 
 interface TaskGridCardProps {
     task: TaskCardItem
@@ -65,15 +64,7 @@ const ACTIVE_BADGE_THEME_CLASS = "border border-[color:color-mix(in_srgb,var(--p
 const COMPLETED_BADGE_THEME_CLASS = "border border-[color:color-mix(in_srgb,var(--state-success)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,transparent)] text-[var(--state-success)]"
 const PAUSED_BADGE_THEME_CLASS = "border border-[color:color-mix(in_srgb,var(--state-warning)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-warning)_14%,transparent)] text-[var(--state-warning)]"
 
-function getTaskFlag({
-    urgency,
-    status,
-    isOverdue,
-}: {
-    urgency: string
-    status: string
-    isOverdue: boolean
-}) {
+function getTaskFlag({ urgency, status, isOverdue }: { urgency: string; status: string; isOverdue: boolean }) {
     const normalizedUrgency = normalizeTaskUrgency(urgency)
 
     if (status === "Completed") return { label: "Completed", className: COMPLETED_BADGE_THEME_CLASS }
@@ -88,58 +79,67 @@ function toMonthYearLabel(value: string | Date | null | undefined) {
     if (!value) return ""
     const parsed = new Date(value)
     if (Number.isNaN(parsed.getTime())) return ""
-    return format(parsed, "MMMM yyyy")
+    return format(parsed, "MMM yyyy")
+}
+
+function toDeadlineLabel(value: string | Date | null | undefined) {
+    if (!value) return ""
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return ""
+    return isToday(parsed) ? "Due today" : `Due ${format(parsed, "dd MMM")}`
 }
 
 export function TaskGridCard({
     task,
     onOpen,
     onComplete,
+    renderMenu,
     isSelected,
     className,
-    compact = true,
+    compact: _compact,
 }: TaskGridCardProps) {
     const { timerState, startTimer, resumeTimer } = useTimer()
+    void _compact
 
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isRunning = isActiveTimerThisTask && timerState.isRunning
     const isPaused = isActiveTimerThisTask && !timerState.isRunning && timerState.elapsedSeconds > 0
-
     const services = task.project?.services || []
-    const serviceLabels = Array.from(
-        new Set(
-            services
-                .map((service) => service.serviceName?.trim())
-                .filter((serviceName): serviceName is string => Boolean(serviceName))
-        )
-    )
+    const serviceLabels = Array.from(new Set(
+        services
+            .map((service) => service.serviceName?.trim())
+            .filter((serviceName): serviceName is string => Boolean(serviceName))
+    ))
     const isRecurring = services.some((service) => service.isRecurring)
     const isLmsTask = task.taskScope === "LMS"
-    const projectDomain = isLmsTask ? "LMS" : task.project?.site?.domainName || "No project"
-    const isOverdue = task.status !== "Completed" && task.deadline ? isBefore(new Date(task.deadline), startOfDay(new Date())) : false
+    const scopeLabel = isLmsTask ? "LMS" : task.taskScope === "GENERAL" ? "General" : "Freelance"
+    const projectLabel = isLmsTask
+        ? task.lmsAllocation?.client || "LMS project not linked"
+        : task.project?.site?.domainName || task.project?.name || "Project not linked"
     const recurringMonthLabel = isRecurring ? toMonthYearLabel(task.project?.createdAt || task.createdAt) : ""
-    const servicesLine = isLmsTask
+    const categoryLabel = isLmsTask
         ? task.lmsTaskType?.name || "Work category not linked"
-        : serviceLabels.length > 0 ? serviceLabels.join(" · ") : (task.project?.name || "No project")
-    const secondaryLine = isLmsTask
-        ? [task.lmsAllocation?.client || "LMS project not linked", servicesLine].join(" · ")
-        : [servicesLine, recurringMonthLabel].filter(Boolean).join(" · ")
+        : [serviceLabels.join(" · ") || task.project?.name, recurringMonthLabel].filter(Boolean).join(" · ") || "No service details"
+    const deadlineLabel = toDeadlineLabel(task.deadline)
+    const isOverdue = task.status !== "Completed" && task.deadline
+        ? isBefore(new Date(task.deadline), startOfDay(new Date()))
+        : false
     const flag = getTaskFlag({ urgency: task.urgency || "Normal", status: task.status || "Active", isOverdue })
-    const topPillSizeClass = compact ? "h-[18px] px-2 text-xs leading-4" : "h-[22px] px-2 text-xs leading-4"
 
     return (
-        <div
+        <article
             data-task-card-id={task.id}
             className={cn(
-                "group relative flex h-full cursor-pointer flex-col overflow-hidden border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] transition-all duration-200",
-                compact ? "rounded-[16px] px-2.5 py-3" : "rounded-[14px] p-3.5",
-                "hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:shadow-[var(--shadow-apple)]",
-                isRunning && "border-[color:color-mix(in_srgb,var(--primary)_42%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary)_10%,var(--surface-lowest))]",
-                isSelected && "border-[color:color-mix(in_srgb,var(--primary)_34%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary)_8%,var(--surface-lowest))]",
+                TASK_CARD_SHELL_CLASS,
+                "group cursor-pointer flex-col p-4 outline-none hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_65%,var(--text-muted)_35%)] hover:shadow-[var(--shadow-apple)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 sm:p-5",
+                isRunning && "border-[color:color-mix(in_srgb,var(--primary)_42%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary)_8%,var(--surface-lowest))]",
+                isSelected && "border-[color:color-mix(in_srgb,var(--primary)_40%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary)_7%,var(--surface-lowest))] ring-2 ring-[color:color-mix(in_srgb,var(--primary)_16%,transparent)]",
+                task.status === "Completed" && "bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)]",
                 className
             )}
             onClick={() => onOpen(task.id)}
             onKeyDown={(event) => {
+                if (event.target !== event.currentTarget) return
                 if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault()
                     onOpen(task.id)
@@ -147,123 +147,94 @@ export function TaskGridCard({
             }}
             role="button"
             tabIndex={0}
+            aria-label={`Open task: ${task.name || "Untitled task"}`}
         >
-            {isRunning && (
-                <div className={cn("absolute inset-x-0 top-0 h-[1.5px] bg-[var(--primary)] animate-pulse", compact ? "rounded-t-[16px]" : "rounded-t-[18px]")} />
-            )}
+            {isRunning ? <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-[20px] bg-[var(--primary)] animate-pulse" /> : null}
 
-            <div onClick={(e) => e.stopPropagation()} className={cn("absolute right-1.5 top-1.5 z-10", compact ? "sm:right-2 sm:top-2" : "sm:right-2.5 sm:top-2.5")}>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Open task actions"
-                            title="Task actions"
-                            className={cn(
-                                "rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
-                                compact ? "h-[22px] w-[22px]" : "h-7 w-7"
-                            )}
-                        >
-                            <MoreVertical className={cn(compact ? "h-3 w-3" : "h-4 w-4")} />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-2 shadow-xl">
-                        <DropdownMenuItem
-                            onClick={() => {
-                                if (task.status === "Completed") {
-                                    return
-                                }
-                                onComplete(task.id)
-                            }}
-                            disabled={task.status === "Completed"}
-                            className="min-h-11 gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-55"
-                        >
-                            <CheckCheck className="h-4.5 w-4.5 text-[var(--text-secondary)]" />
-                            Complete task
-                        </DropdownMenuItem>
+            <div className="flex items-start justify-between gap-3">
+                <span className="inline-flex h-6 min-w-0 max-w-[45%] items-center rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]">
+                    <span className="truncate">{scopeLabel}</span>
+                </span>
 
-                        {!isLmsTask && task.projectId ? (
+                <div className="flex min-w-0 items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
+                    <span className={cn("inline-flex h-6 max-w-28 items-center justify-center truncate rounded-full px-2.5 text-xs font-black uppercase tracking-[0.06em]", flag.className)}>
+                        {flag.label}
+                    </span>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Open task actions"
+                                title="Task actions"
+                                className="h-8 w-8 shrink-0 rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                            >
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-2 shadow-xl">
                             <DropdownMenuItem
                                 onClick={() => {
-                                    if (isRunning) {
-                                        toast.message("Timer already running")
-                                        return
-                                    }
-                                    if (isPaused) {
-                                        resumeTimer()
-                                        return
-                                    }
-                                    startTimer(task.projectId as string, task.id, task.name || "Task")
+                                    if (task.status !== "Completed") onComplete(task.id)
                                 }}
-                                className="min-h-11 gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer"
+                                disabled={task.status === "Completed"}
+                                className="min-h-11 gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-55"
                             >
-                                <Play className="h-4.5 w-4.5 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />
-                                Start timer
+                                <CheckCheck className="h-4.5 w-4.5 text-[var(--text-secondary)]" />
+                                Complete task
                             </DropdownMenuItem>
-                        ) : null}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+
+                            {!isLmsTask && task.projectId ? (
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        if (isRunning) {
+                                            toast.message("Timer already running")
+                                            return
+                                        }
+                                        if (isPaused) {
+                                            resumeTimer()
+                                            return
+                                        }
+                                        startTimer(task.projectId as string, task.id, task.name || "Task")
+                                    }}
+                                    className="min-h-11 gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer"
+                                >
+                                    <Play className="h-4.5 w-4.5 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />
+                                    {isPaused ? "Resume timer" : "Start timer"}
+                                </DropdownMenuItem>
+                            ) : null}
+                            {renderMenu?.(task)}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
 
-            <div className={cn("flex min-h-0 flex-1 flex-col", compact ? "gap-1" : "gap-2.5")}>
-                <div className="flex items-start justify-between gap-2 pr-7 sm:pr-8">
-                    <div className="min-w-0 flex-1">
-                        <p
-                            className={cn(
-                                "inline-flex max-w-full items-center rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)]",
-                                topPillSizeClass
-                            )}
-                            title={projectDomain}
-                        >
-                            <span className="truncate font-semibold text-[var(--text-secondary)]">{projectDomain}</span>
-                        </p>
-                    </div>
-                    <span
-                        className={cn(
-                            "hidden shrink-0 items-center justify-center rounded-full font-black uppercase tracking-[0.07em] sm:inline-flex",
-                            topPillSizeClass,
-                            flag.className
-                        )}
-                    >
-                        {flag.label}
-                    </span>
-                </div>
+            <h3 className={cn(
+                "mt-4 line-clamp-2 pr-1 text-[19px] font-bold leading-[1.18] tracking-[-0.02em] text-[var(--text-primary)] sm:text-xl",
+                task.status === "Completed" && "line-through opacity-55"
+            )}>
+                {task.name || "Untitled task"}
+            </h3>
 
-                <h4
-                    className={cn(
-                        "pr-8 font-bold tracking-[-0.015em] text-[var(--text-primary)] whitespace-normal break-words",
-                        compact ? "py-2 text-base leading-[1.14]" : "min-h-[2.25rem] text-[19px] leading-[1.12]",
-                        task.status === "Completed" && "line-through opacity-50"
-                    )}
-                >
-                    {task.name || "Untitled task"}
-                </h4>
-
-                <div className="h-px w-full bg-[var(--line-subtle)]" />
-
-                <p
-                    className={cn(
-                        "line-clamp-1 min-h-[1rem] font-medium tracking-[0.01em] text-[var(--text-secondary)]",
-                        compact ? "text-xs leading-4" : "text-xs leading-[1.1rem]"
-                    )}
-                    title={secondaryLine}
-                >
-                    {secondaryLine}
+            <div className="mt-auto border-t border-[var(--line-subtle)] pt-4">
+                <p className="line-clamp-2 text-[15px] font-bold leading-5 tracking-[-0.01em] text-[var(--text-primary)]" title={projectLabel}>
+                    {projectLabel}
                 </p>
-
-                <div className="mt-auto sm:hidden">
-                    <span
-                        className={cn(
-                            "inline-flex items-center justify-center rounded-full px-2 text-xs font-black uppercase tracking-[0.07em]",
-                            compact ? "h-[18px]" : "h-[22px]",
-                            flag.className
-                        )}
-                    >
-                        {flag.label}
-                    </span>
+                <div className="mt-1.5 flex min-w-0 items-end justify-between gap-3">
+                    <p className="line-clamp-2 min-w-0 text-[13px] font-medium leading-[1.15rem] text-[var(--text-secondary)]" title={categoryLabel}>
+                        {categoryLabel}
+                    </p>
+                    {deadlineLabel ? (
+                        <span className={cn(
+                            "inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
+                            isOverdue ? "text-[var(--state-overdue)]" : "text-[var(--text-muted)]"
+                        )}>
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            {deadlineLabel}
+                        </span>
+                    ) : null}
                 </div>
             </div>
-        </div>
+        </article>
     )
 }
