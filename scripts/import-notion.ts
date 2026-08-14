@@ -119,7 +119,7 @@ async function importNotionProjects() {
                 const tasks = taskList.split(/,|\n/).map((t: string) => t.trim()).filter(Boolean)
                 for (const tName of tasks) {
                     await prisma.task.create({
-                        data: { projectId: project.id, name: tName, status: "Completed" }
+                        data: { projectId: project.id, taskScope: "FREELANCE", name: tName, status: "Completed" }
                     })
                 }
             }

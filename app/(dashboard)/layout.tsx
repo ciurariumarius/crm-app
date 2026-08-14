@@ -3,6 +3,7 @@ import { HeaderProvider } from "@/components/layout/header-context"
 import { ShellFrame } from "@/components/layout/shell-frame"
 import { redirect } from "next/navigation"
 import { getCachedSession } from "@/lib/server/app-shell"
+import { TaskCompletionProvider } from "@/components/tasks/task-completion-provider"
 
 export default async function DashboardLayout({
   children,
@@ -27,7 +28,9 @@ export default async function DashboardLayout({
       <ShellFrame
         user={user}
       >
-        {children}
+        <TaskCompletionProvider>
+          {children}
+        </TaskCompletionProvider>
       </ShellFrame>
     </HeaderProvider>
   );

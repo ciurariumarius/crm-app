@@ -7,12 +7,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CalendarDays, Loader2, Play, Plus } from "lucide-react"
-import { addTask, toggleTaskStatus } from "@/lib/actions/tasks"
+import { addTask } from "@/lib/actions/tasks"
 import { useTimer } from "@/components/providers/timer-provider"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { normalizeTaskUrgency } from "@/lib/status"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 
 type TaskWithLogs = {
     id: string
@@ -22,6 +23,11 @@ type TaskWithLogs = {
     deadline?: Date | string | null
     createdAt?: Date | string | null
     estimatedMinutes?: number | null
+    taskScope?: string | null
+    lmsAllocationId?: string | null
+    lmsTaskTypeId?: string | null
+    lmsAllocation?: { id?: string; client?: string | null } | null
+    lmsTaskType?: { id?: string; name?: string | null; defaultDurationMinutes?: number | null } | null
     timeLogs?: Array<{ durationSeconds?: number | null }>
 }
 
@@ -41,6 +47,7 @@ export function ProjectTasks({
     const [newTaskName, setNewTaskName] = useState("")
     const [loading, setLoading] = useState<string | null>(null)
     const { startTimer } = useTimer()
+    const { requestCompletion, requestReopen } = useTaskCompletion()
     const { openTask } = useContext(TaskSheetContext)
     const router = useRouter()
 
@@ -75,20 +82,18 @@ export function ProjectTasks({
         }
     }
 
-    const handleToggle = async (taskId: string, currentStatus: string) => {
-        setLoading(taskId)
-        try {
-            const result = await toggleTaskStatus(taskId, currentStatus, projectId)
-            if (!result.success) {
-                toast.error(result.error || "Failed to update task")
-                return
-            }
-            router.refresh()
-        } catch {
-            toast.error("Failed to update task")
-        } finally {
+    const handleToggle = (task: TaskWithLogs) => {
+        setLoading(task.id)
+        const done = () => {
             setLoading(null)
+            router.refresh()
         }
+        if (task.status === "Completed") {
+            void requestReopen({ ...task, taskScope: task.taskScope || "FREELANCE" }, { onCompleted: done })
+                .then((success) => { if (!success) setLoading(null) })
+            return
+        }
+        requestCompletion({ ...task, taskScope: task.taskScope || "FREELANCE" }, { onCompleted: done })
     }
 
     return (
@@ -139,7 +144,7 @@ export function ProjectTasks({
                             <Checkbox
                                 checked={isCompleted}
                                 disabled={loading === task.id}
-                                onCheckedChange={() => handleToggle(task.id, task.status)}
+                                onCheckedChange={() => handleToggle(task)}
                                 className="h-5 w-5 rounded-md border-[var(--line-subtle)]"
                             />
 

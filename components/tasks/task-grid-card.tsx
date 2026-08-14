@@ -51,6 +51,11 @@ type TaskCardItem = {
     deadline?: string | Date | null
     createdAt?: string | Date | null
     project?: TaskCardProject | null
+    taskScope?: string | null
+    lmsAllocationId?: string | null
+    lmsTaskTypeId?: string | null
+    lmsAllocation?: { id?: string; client?: string | null } | null
+    lmsTaskType?: { id?: string; name?: string | null } | null
 }
 
 const URGENT_BADGE_THEME_CLASS = "border border-[color:color-mix(in_srgb,var(--state-urgent)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_16%,transparent)] text-[var(--state-urgent)]"
@@ -109,16 +114,22 @@ export function TaskGridCard({
         )
     )
     const isRecurring = services.some((service) => service.isRecurring)
-    const projectDomain = task.project?.site?.domainName || "No domain"
+    const isLmsTask = task.taskScope === "LMS"
+    const projectDomain = isLmsTask ? "LMS" : task.project?.site?.domainName || "No project"
     const isOverdue = task.status !== "Completed" && task.deadline ? isBefore(new Date(task.deadline), startOfDay(new Date())) : false
     const recurringMonthLabel = isRecurring ? toMonthYearLabel(task.project?.createdAt || task.createdAt) : ""
-    const servicesLine = serviceLabels.length > 0 ? serviceLabels.join(" · ") : (task.project?.name || "Task")
-    const secondaryLine = [servicesLine, recurringMonthLabel].filter(Boolean).join(" · ")
+    const servicesLine = isLmsTask
+        ? task.lmsTaskType?.name || "Work category not linked"
+        : serviceLabels.length > 0 ? serviceLabels.join(" · ") : (task.project?.name || "No project")
+    const secondaryLine = isLmsTask
+        ? [task.lmsAllocation?.client || "LMS project not linked", servicesLine].join(" · ")
+        : [servicesLine, recurringMonthLabel].filter(Boolean).join(" · ")
     const flag = getTaskFlag({ urgency: task.urgency || "Normal", status: task.status || "Active", isOverdue })
     const topPillSizeClass = compact ? "h-[18px] px-2 text-xs leading-4" : "h-[22px] px-2 text-xs leading-4"
 
     return (
         <div
+            data-task-card-id={task.id}
             className={cn(
                 "group relative flex h-full cursor-pointer flex-col overflow-hidden border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] transition-all duration-200",
                 compact ? "rounded-[16px] px-2.5 py-3" : "rounded-[14px] p-3.5",
@@ -172,27 +183,25 @@ export function TaskGridCard({
                             Complete task
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                            onClick={() => {
-                                if (isRunning) {
-                                    toast.message("Timer already running")
-                                    return
-                                }
-                                if (isPaused) {
-                                    resumeTimer()
-                                    return
-                                }
-                                if (!task.projectId) {
-                                    toast.error("Task has no project")
-                                    return
-                                }
-                                startTimer(task.projectId, task.id, task.name || "Task")
-                            }}
-                            className="min-h-11 gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer"
-                        >
-                            <Play className="h-4.5 w-4.5 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />
-                            Start timer
-                        </DropdownMenuItem>
+                        {!isLmsTask && task.projectId ? (
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    if (isRunning) {
+                                        toast.message("Timer already running")
+                                        return
+                                    }
+                                    if (isPaused) {
+                                        resumeTimer()
+                                        return
+                                    }
+                                    startTimer(task.projectId as string, task.id, task.name || "Task")
+                                }}
+                                className="min-h-11 gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer"
+                            >
+                                <Play className="h-4.5 w-4.5 fill-[var(--text-secondary)] text-[var(--text-secondary)]" />
+                                Start timer
+                            </DropdownMenuItem>
+                        ) : null}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>

@@ -68,6 +68,7 @@ export default async function TasksPage({
         perPage?: string
         page?: string
         cols?: string
+        scope?: string
     }>
 }) {
     const session = await requireAuth()
@@ -81,6 +82,7 @@ export default async function TasksPage({
         urgency: params.urgency,
         overdue: params.overdue,
         dueToday: params.dueToday,
+        scope: params.scope,
     })
     const q = normalizedFilters.q
     const statusFilter = normalizedFilters.status
@@ -94,6 +96,7 @@ export default async function TasksPage({
     const sort = SORT_VALUES.has(sortRaw as (typeof SORT_OPTIONS)[number]["value"]) ? sortRaw : "newest"
     const colsRaw = params.cols || "3"
     const cols = COL_VALUES.has(colsRaw) ? Number(colsRaw) : 3
+    const taskScope = normalizedFilters.scope
     const perPageRaw = Number(params.perPage)
     const perPage = PAGE_SIZE_VALUES.has(perPageRaw) ? perPageRaw : DEFAULT_PAGE_SIZE
     const view = "grid" as const
@@ -124,6 +127,12 @@ export default async function TasksPage({
                     },
                 },
                 timeLogs: true,
+                lmsAllocation: {
+                    select: { id: true, client: true },
+                },
+                lmsTaskType: {
+                    select: { id: true, name: true, isActive: true, defaultDurationMinutes: true },
+                },
             },
             orderBy: buildSort(sort),
             ...(shouldPaginate ? { skip: (page - 1) * perPage, take: perPage } : {}),
@@ -225,6 +234,7 @@ export default async function TasksPage({
         if (dueTodayOnly) next.set("dueToday", "1")
         if (sort && sort !== "newest") next.set("sort", sort)
         if (cols !== 3) next.set("cols", String(cols))
+        if (taskScope !== "ALL") next.set("scope", taskScope)
         if (perPage !== DEFAULT_PAGE_SIZE) next.set("perPage", String(perPage))
         if (shouldPaginate) {
             next.set("page", String(page))
@@ -259,35 +269,35 @@ export default async function TasksPage({
             <div className={OVERVIEW_ROW_CLASS}>
                 {[
                     {
-                        href: buildTasksHref({ q: null, status: "All", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "All", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, scope: null, page: "1" }),
                         label: "Total Tasks",
                         value: totalTasksOverall,
                         icon: <ListChecks className="h-3.5 w-3.5" />,
                         toneClass: "border-blue-100/80 bg-blue-50/80 text-blue-700",
                     },
                     {
-                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, scope: null, page: "1" }),
                         label: "Active Tasks",
                         value: totalActiveTasks,
                         icon: <Play className="h-3.5 w-3.5 fill-current" />,
                         toneClass: "border-emerald-100/80 bg-emerald-50/80 text-emerald-700",
                     },
                     {
-                        href: buildTasksHref({ q: null, status: "Active", urgency: "Urgent", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "Urgent", overdue: null, dueToday: null, projectId: null, partnerId: null, taskId: null, scope: null, page: "1" }),
                         label: "Urgent Tasks",
                         value: urgentTasksCount,
                         icon: <AlertTriangle className="h-3.5 w-3.5" />,
                         toneClass: "border-rose-100/80 bg-rose-50/80 text-rose-700",
                     },
                     {
-                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: "1", dueToday: null, projectId: null, partnerId: null, taskId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: "1", dueToday: null, projectId: null, partnerId: null, taskId: null, scope: null, page: "1" }),
                         label: "Overdue Tasks",
                         value: overdueTasksCount,
                         icon: <CalendarClock className="h-3.5 w-3.5" />,
                         toneClass: "border-amber-100/80 bg-amber-50/80 text-amber-700",
                     },
                     {
-                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: "1", projectId: null, partnerId: null, taskId: null, page: "1" }),
+                        href: buildTasksHref({ q: null, status: "Active", urgency: "all", overdue: null, dueToday: "1", projectId: null, partnerId: null, taskId: null, scope: null, page: "1" }),
                         label: "Due Today",
                         value: dueTodayTasksCount,
                         icon: <CalendarDays className="h-3.5 w-3.5" />,
@@ -367,6 +377,7 @@ export default async function TasksPage({
                     currentProject={projectId || "all"}
                     currentTaskId={taskId || "all"}
                     currentPartner={partnerId || "all"}
+                    currentScope={taskScope}
                     totalTasks={totalTasks}
                 />
 
@@ -386,6 +397,7 @@ export default async function TasksPage({
                         urgency: urgencyFilter,
                         overdue: overdueOnly,
                         dueToday: dueTodayOnly,
+                        scope: taskScope,
                         sort,
                         page,
                         perPage,

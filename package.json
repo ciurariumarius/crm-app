@@ -15,6 +15,7 @@
     "test:filters": "tsx scripts/verify-filter-helpers.ts",
     "test:lms-work": "tsx scripts/verify-lms-work-entries.ts",
     "test:lms-daily-admin": "tsx scripts/verify-lms-daily-admin-integration.ts",
+    "test:task-lms-integration": "vitest run --config vitest.task-lms.config.ts",
     "test:data-queries": "tsx scripts/verify-data-query-optimizations.ts",
     "test:notes-drag-drop": "tsx scripts/verify-notes-drag-drop.ts",
     "verify:mobile": "tsx scripts/verify-mobile-guardrails.ts",

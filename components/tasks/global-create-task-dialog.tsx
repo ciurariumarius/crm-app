@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { addTask } from "@/lib/actions/tasks"
 import { toast } from "sonner"
@@ -32,6 +32,7 @@ import {
 
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
+import { TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
 
 export interface TaskDialogProject {
     id: string
@@ -51,6 +52,10 @@ interface GlobalCreateTaskDialogProps {
 export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalCreateTaskDialogProps) {
     const [name, setName] = useState("")
     const [selectedProjectId, setSelectedProjectId] = useState("")
+    const defaultTaskScope: TaskScopeValue = projects.length > 0 ? "FREELANCE" : "GENERAL"
+    const [taskScope, setTaskScope] = useState<TaskScopeValue>(defaultTaskScope)
+    const [lmsAllocationId, setLmsAllocationId] = useState("")
+    const [lmsTaskTypeId, setLmsTaskTypeId] = useState("")
     const [status, setStatus] = useState("Active")
     const [urgency, setUrgency] = useState("Normal")
     const [deadline, setDeadline] = useState<Date>()
@@ -62,6 +67,11 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
     const [showDetails, setShowDetails] = useState(false)
     const router = useRouter()
 
+    useEffect(() => {
+        if (!open) return
+        if (projects.length === 0 && taskScope === "FREELANCE") setTaskScope("GENERAL")
+    }, [open, projects.length, taskScope])
+
     // Filter projects based on the "showCompleted" toggle
     const displayProjects = projects.filter(p => showCompleted || p.status === "Active")
 
@@ -70,16 +80,22 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
 
         setIsLoading(true)
         try {
-            const result = await addTask(selectedProjectId || undefined, name, {
+            const result = await addTask(taskScope === "FREELANCE" ? selectedProjectId || undefined : undefined, name, {
                 status,
                 urgency,
                 deadline,
-                estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined
+                estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
+                taskScope,
+                lmsAllocationId: taskScope === "LMS" ? lmsAllocationId || null : null,
+                lmsTaskTypeId: taskScope === "LMS" ? lmsTaskTypeId || null : null,
             })
             if (result.success) {
-                toast.success(result.data?.projectId ? "Task created" : "Global task created")
+                toast.success(taskScope === "LMS" ? "LMS task created" : result.data?.projectId ? "Task created" : "General task created")
                 setName("")
                 setSelectedProjectId("")
+                setTaskScope(defaultTaskScope)
+                setLmsAllocationId("")
+                setLmsTaskTypeId("")
                 setStatus("Active")
                 setUrgency("Normal")
                 setDeadline(undefined)
@@ -105,7 +121,27 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
                     <div className="flex-1 overflow-y-auto p-8 py-6 space-y-6 scrollbar-thin scrollbar-thumb-primary/10">
-                        <div className="space-y-3 flex flex-col">
+                        <div className="space-y-3">
+                            <Label className="text-xs font-semibold text-muted-foreground/80">Task Target</Label>
+                            <TaskTargetSelector
+                                value={taskScope}
+                                onValueChange={(value) => {
+                                    setTaskScope(value)
+                                    if (value !== "FREELANCE") setSelectedProjectId("")
+                                    if (value === "LMS") setStatus("Active")
+                                }}
+                                disabled={isLoading}
+                            />
+                            <p className="text-xs leading-5 text-[var(--text-muted)]">
+                                {taskScope === "LMS"
+                                    ? "LMS stays separate from freelance clients and projects. You can finish the LMS links now or when completing the task."
+                                    : taskScope === "GENERAL"
+                                      ? "A standalone task with no client or project relationship."
+                                      : "A task connected to the existing freelance project workflow."}
+                            </p>
+                        </div>
+
+                        {taskScope === "FREELANCE" ? <div className="space-y-3 flex flex-col">
                             <div className="flex items-center justify-between">
                                 <Label className="text-xs font-semibold text-muted-foreground/80">Target Project</Label>
                                 <div className="flex items-center gap-2">
@@ -196,7 +232,17 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                     </Command>
                                 </PopoverContent>
                             </Popover>
-                        </div>
+                        </div> : null}
+
+                        {taskScope === "LMS" ? (
+                            <TaskLmsFields
+                                lmsAllocationId={lmsAllocationId}
+                                lmsTaskTypeId={lmsTaskTypeId}
+                                onAllocationChange={setLmsAllocationId}
+                                onWorkTaskChange={setLmsTaskTypeId}
+                                disabled={isLoading}
+                            />
+                        ) : null}
 
                         <div className="space-y-3">
                             <Label className="text-xs font-semibold text-muted-foreground/80">Task Name</Label>
@@ -236,7 +282,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Active" className="font-bold">ACTIVE</SelectItem>
-                                                <SelectItem value="Completed" className="font-bold">COMPLETED</SelectItem>
+                                                {taskScope !== "LMS" ? <SelectItem value="Completed" className="font-bold">COMPLETED</SelectItem> : null}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -303,7 +349,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                     <DialogFooter className="p-8 bg-muted/5 border-t">
                         <Button
                             type="submit"
-                            disabled={isLoading || !selectedProjectId || !name}
+                            disabled={isLoading || !name.trim() || (taskScope === "FREELANCE" && !selectedProjectId)}
                             className="w-full h-12 font-bold shadow-md shadow-primary/10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
                         >
                             {isLoading ? (

@@ -21,6 +21,7 @@ export interface TimeTrackerWidgetProps {
     timerStatusLabel: string
     onPrimaryAction: () => void
     onStopAction: () => void
+    isPrimaryDisabled?: boolean
     isStopDisabled?: boolean
 }
 
@@ -33,6 +34,7 @@ export function TimeTrackerWidget({
     timerStatusLabel,
     onPrimaryAction,
     onStopAction,
+    isPrimaryDisabled,
     isStopDisabled
 }: TimeTrackerWidgetProps) {
     const primaryActionLabel = isRunning ? "Pause" : isPaused ? "Resume" : "Start"
@@ -73,6 +75,7 @@ export function TimeTrackerWidget({
                 <div className="flex items-center gap-2 shrink-0 ml-auto">
                     <Button
                         type="button"
+                        disabled={isPrimaryDisabled}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrimaryAction(); }}
                         className={cn(
                             "h-9 rounded-full px-4 text-[13px] font-bold shadow-sm transition-all active:scale-[0.98]",

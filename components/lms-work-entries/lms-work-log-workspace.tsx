@@ -22,11 +22,13 @@ import {
   Loader2,
   Pencil,
   Plus,
+  RotateCcw,
   Trash2,
   UserPlus,
   UserRound,
 } from "lucide-react"
 import { toast } from "sonner"
+import { reopenTask } from "@/lib/actions/tasks"
 import {
   createLmsWorkClient,
   createLmsWorkEntry,
@@ -93,6 +95,11 @@ const EXPORT_STATUS_FILTER_OPTIONS = [
   { id: "not-exported", label: "Not exported" },
   { id: "exported", label: "Exported" },
 ]
+const ORIGIN_FILTER_OPTIONS = [
+  { id: "MANUAL", label: "Manual" },
+  { id: "RECURRENCE", label: "Recurring" },
+  { id: "CRM_TASK", label: "CRM task" },
+]
 
 function localToday() {
   return format(new Date(), "yyyy-MM-dd")
@@ -121,12 +128,14 @@ function WorkDatePicker({
   onValueChange,
   ariaLabel,
   className,
+  disabled,
 }: {
   id: string
   value: string
   onValueChange: (value: string) => void
   ariaLabel: string
   className?: string
+  disabled?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
   const [today, setToday] = React.useState("")
@@ -141,7 +150,7 @@ function WorkDatePicker({
   }, [])
 
   function chooseDate(date: Date | undefined) {
-    if (!date || isWeekend(date)) return
+    if (disabled || !date || isWeekend(date)) return
     onValueChange(format(date, "yyyy-MM-dd"))
     setOpen(false)
   }
@@ -155,6 +164,7 @@ function WorkDatePicker({
           variant="outline"
           aria-label={ariaLabel}
           aria-expanded={open}
+          disabled={disabled}
           className={cn("h-14 w-full justify-between rounded-xl px-4 text-left font-medium", className)}
         >
           <span className="flex min-w-0 items-center gap-3">
@@ -181,7 +191,7 @@ function WorkDatePicker({
             mode="single"
             selected={selectedDate}
             defaultMonth={selectedDate}
-            disabled={isWeekend}
+            disabled={disabled ? true : isWeekend}
             onSelect={chooseDate}
             initialFocus
             className="w-full bg-transparent p-0"
@@ -529,12 +539,113 @@ function ExportStatusBadge({ exportedAt }: { exportedAt: string | null }) {
   return (
     <Badge
       variant="outline"
-      className="border-emerald-200 bg-emerald-50 text-emerald-700"
+      className="border-[color:color-mix(in_srgb,var(--success)_38%,var(--line-subtle))] bg-[var(--success-surface)] text-[var(--success-foreground)]"
       title={`Exported ${formatExportedAt(exportedAt)}`}
     >
       <CheckCircle2 />
       Exported
     </Badge>
+  )
+}
+
+function OriginBadge({ origin }: { origin: LmsWorkEntryRow["origin"] }) {
+  if (origin === "CRM_TASK") {
+    return (
+      <Badge
+        variant="outline"
+        className="border-[color:color-mix(in_srgb,var(--brand-primary)_32%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-primary)_10%,var(--bg-surface))] text-[var(--brand-primary-strong)]"
+      >
+        CRM task
+      </Badge>
+    )
+  }
+
+  if (origin === "RECURRENCE") {
+    return (
+      <Badge
+        variant="outline"
+        className="border-[color:color-mix(in_srgb,var(--warning)_38%,var(--line-subtle))] bg-[var(--warning-surface)] text-[var(--warning-foreground)]"
+      >
+        Recurring
+      </Badge>
+    )
+  }
+
+  return <Badge variant="outline" className="text-[var(--text-secondary)]">Manual</Badge>
+}
+
+function WorkEntryActions({
+  entry,
+  deleting,
+  reopening,
+  onEdit,
+  onDelete,
+  onReopen,
+}: {
+  entry: LmsWorkEntryRow
+  deleting: boolean
+  reopening: boolean
+  onEdit: () => void
+  onDelete: () => void
+  onReopen: () => void
+}) {
+  const isCrmTaskEntry = entry.origin === "CRM_TASK"
+  const isOrphanCrmTaskEntry = isCrmTaskEntry && !entry.crmTaskId
+  const editLocked = isCrmTaskEntry && Boolean(entry.exportedAt)
+  const editLabel = editLocked
+    ? `Editing ${entry.taskName} is locked because the CRM task entry was exported`
+    : `Edit ${entry.taskName}`
+
+  return (
+    <div className="flex justify-end gap-1">
+      <span title={editLocked ? "Exported CRM task entries are locked" : undefined}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onEdit}
+          disabled={editLocked || deleting || reopening}
+          aria-label={editLabel}
+          className="h-11 w-11 md:h-8 md:w-8"
+        >
+          <Pencil />
+        </Button>
+      </span>
+      {isCrmTaskEntry && !isOrphanCrmTaskEntry ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onReopen}
+          disabled={!entry.crmTaskId || deleting || reopening}
+          aria-label={`Reopen CRM task ${entry.crmTaskName || entry.taskName}`}
+          title={entry.crmTaskId ? "Reopen the linked CRM task" : "Linked CRM task unavailable"}
+          className="h-11 w-11 text-[var(--brand-primary)] md:h-8 md:w-8"
+        >
+          {reopening ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+        </Button>
+      ) : isOrphanCrmTaskEntry && entry.exportedAt ? (
+        <span
+          className="inline-flex h-11 w-11 items-center justify-center text-xs text-[var(--text-muted)] md:h-8 md:w-8"
+          title="The source task no longer exists and this exported entry is locked"
+          aria-label="Exported orphan CRM task entry is locked"
+        >
+          —
+        </span>
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onDelete}
+          disabled={deleting || reopening}
+          aria-label={`Delete ${entry.taskName}`}
+          className="h-11 w-11 text-[var(--destructive)] md:h-8 md:w-8"
+        >
+          {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+        </Button>
+      )}
+    </div>
   )
 }
 
@@ -993,6 +1104,7 @@ function EditEntryDialog({
   const [workDate, setWorkDate] = React.useState("")
   const [minutes, setMinutes] = React.useState("")
   const [saving, setSaving] = React.useState(false)
+  const editLocked = entry?.origin === "CRM_TASK" && Boolean(entry.exportedAt)
 
   React.useEffect(() => {
     if (!entry) return
@@ -1001,7 +1113,7 @@ function EditEntryDialog({
         ? entry.lmsAllocationId
         : ""
     )
-    setTaskTypeId(entry.taskTypeId)
+    setTaskTypeId(entry.taskTypeId || "")
     setWorkDate(entry.workDate)
     setMinutes(String(entry.durationMinutes))
   }, [clients, entry])
@@ -1009,6 +1121,10 @@ function EditEntryDialog({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!entry) return
+    if (editLocked) {
+      toast.error("Exported CRM task entries are locked")
+      return
+    }
     const durationMinutes = Number(minutes)
     const canPreserveDetachedClient = entry.lmsAllocationId === null && !lmsAllocationId
     if ((!lmsAllocationId && !canPreserveDetachedClient) || !taskTypeId || !workDate || !Number.isInteger(durationMinutes) || durationMinutes < 1) {
@@ -1037,7 +1153,11 @@ function EditEntryDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit work entry</DialogTitle>
-          <DialogDescription>Client and task snapshots change only when you select a different value.</DialogDescription>
+          <DialogDescription>
+            {editLocked
+              ? "This CRM task entry was already exported and can no longer be edited here."
+              : "Client and task snapshots change only when you select a different value."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -1047,11 +1167,12 @@ function EditEntryDialog({
               value={workDate}
               onValueChange={setWorkDate}
               ariaLabel="Edit work date"
+              disabled={editLocked}
             />
           </div>
           <div className="space-y-2">
             <Label>Client</Label>
-            <ClientCombobox clients={clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} />
+            <ClientCombobox clients={clients} value={lmsAllocationId} onValueChange={setLmsAllocationId} disabled={editLocked} />
             {entry?.lmsAllocationId === null && !lmsAllocationId ? (
               <p className="text-xs text-amber-700">
                 {entry.clientDomain} is no longer in LMS Projects. You can keep this historical client or select a current one.
@@ -1060,15 +1181,15 @@ function EditEntryDialog({
           </div>
           <div className="space-y-2">
             <Label>Task</Label>
-            <TaskSelect tasks={tasks} value={taskTypeId} onValueChange={setTaskTypeId} currentTaskId={entry?.taskTypeId} />
+            <TaskSelect tasks={tasks} value={taskTypeId} onValueChange={setTaskTypeId} currentTaskId={entry?.taskTypeId || undefined} disabled={editLocked} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-work-minutes">Minutes</Label>
-            <Input id="edit-work-minutes" type="number" min={1} max={1440} step={1} value={minutes} onChange={(event) => setMinutes(event.target.value)} required />
+            <Input id="edit-work-minutes" type="number" min={1} max={1440} step={1} value={minutes} onChange={(event) => setMinutes(event.target.value)} disabled={editLocked} required />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || editLocked}>
               {saving ? <Loader2 className="animate-spin" /> : null}
               Save changes
             </Button>
@@ -1189,6 +1310,7 @@ export function LmsWorkLogWorkspace({
   const [selectedEntryIds, setSelectedEntryIds] = React.useState<string[]>([])
   const [editingEntry, setEditingEntry] = React.useState<LmsWorkEntryRow | null>(null)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const [reopeningId, setReopeningId] = React.useState<string | null>(null)
   const [period, setPeriod] = React.useState(activePeriod)
   const [customFrom, setCustomFrom] = React.useState(data.from || "")
   const [customTo, setCustomTo] = React.useState(data.to || "")
@@ -1341,7 +1463,7 @@ export function LmsWorkLogWorkspace({
     navigateToRange(CUSTOM_PERIOD, customFrom, customTo)
   }
 
-  function updateListFilter(name: "date" | "client" | "task" | "exportStatus" | "pageSize", value: string) {
+  function updateListFilter(name: "date" | "client" | "task" | "origin" | "exportStatus" | "pageSize", value: string) {
     const next = new URLSearchParams(searchParams.toString())
     if (value) next.set(name, value)
     else next.delete(name)
@@ -1456,6 +1578,25 @@ export function LmsWorkLogWorkspace({
     router.refresh()
   }
 
+  async function handleReopen(entry: LmsWorkEntryRow) {
+    if (!entry.crmTaskId) {
+      toast.error("The linked CRM task is no longer available")
+      return
+    }
+    if (!window.confirm(`Reopen CRM task “${entry.crmTaskName || entry.taskName}”?`)) return
+    setReopeningId(entry.id)
+    const result = await reopenTask(entry.crmTaskId)
+    setReopeningId(null)
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+    if ("warning" in result && result.warning) toast.warning(result.warning)
+    else toast.success("CRM task reopened")
+    setSelectedEntryIds((current) => current.filter((id) => id !== entry.id))
+    router.refresh()
+  }
+
   async function handleExport() {
     setExporting(true)
     try {
@@ -1465,6 +1606,7 @@ export function LmsWorkLogWorkspace({
       if (data.workDate) query.set("date", data.workDate)
       if (data.clientId) query.set("client", data.clientId)
       if (data.taskId) query.set("task", data.taskId)
+      query.set("origin", data.origin)
       query.set("exportStatus", data.exportStatus)
       if (exportAll) query.set("includeExported", "true")
       const response = await fetch(`/api/lms-work-entries/export?${query.toString()}`, { cache: "no-store" })
@@ -1492,7 +1634,7 @@ export function LmsWorkLogWorkspace({
       const response = await fetch("/api/lms-work-entries/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedEntryIds }),
+        body: JSON.stringify({ ids: selectedEntryIds, origin: data.origin }),
         cache: "no-store",
       })
       if (!response.ok) {
@@ -1806,6 +1948,18 @@ export function LmsWorkLogWorkspace({
               fullWidth
             />
             <WorkEntryFilterCombobox
+              ariaLabel="Filter work entries by source"
+              allLabel="All sources"
+              allValue="all"
+              searchPlaceholder="Search sources..."
+              emptyLabel="No source found."
+              unavailableLabel="Unavailable source"
+              options={ORIGIN_FILTER_OPTIONS}
+              value={data.origin}
+              onValueChange={(value) => updateListFilter("origin", value)}
+              fullWidth
+            />
+            <WorkEntryFilterCombobox
               ariaLabel="Filter work entries by CRM export status"
               allLabel="All export statuses"
               allValue="all"
@@ -1847,7 +2001,7 @@ export function LmsWorkLogWorkspace({
               </div>
             </div>
           ) : null}
-          <div className="hidden overflow-hidden rounded-2xl border border-[var(--line-subtle)] md:block">
+          <div className="hidden overflow-x-auto rounded-2xl border border-[var(--line-subtle)] md:block [&_table]:min-w-[980px]">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1901,6 +2055,20 @@ export function LmsWorkLogWorkspace({
                       triggerLabel="Task"
                     />
                   </TableHead>
+                  <TableHead>
+                    <WorkEntryFilterCombobox
+                      ariaLabel="Filter work entries by source"
+                      allLabel="All sources"
+                      allValue="all"
+                      searchPlaceholder="Search sources..."
+                      emptyLabel="No source found."
+                      unavailableLabel="Unavailable source"
+                      options={ORIGIN_FILTER_OPTIONS}
+                      value={data.origin}
+                      onValueChange={(value) => updateListFilter("origin", value)}
+                      triggerLabel="Source"
+                    />
+                  </TableHead>
                   <TableHead className="text-right">Minutes</TableHead>
                   <TableHead>
                     <WorkEntryFilterCombobox
@@ -1935,17 +2103,34 @@ export function LmsWorkLogWorkspace({
                     </TableCell>
                     <TableCell>{formatEntryDate(entry.workDate)}</TableCell>
                     <TableCell className="font-medium">{entry.clientDomain}</TableCell>
-                    <TableCell>{entry.taskName}</TableCell>
+                    <TableCell>
+                      <p>{entry.taskName}</p>
+                      {entry.origin === "CRM_TASK" && entry.crmTaskName ? (
+                        <p className="mt-1 max-w-64 truncate text-xs text-[var(--text-muted)]" title={entry.crmTaskName}>
+                          CRM: {entry.crmTaskName}
+                        </p>
+                      ) : null}
+                    </TableCell>
+                    <TableCell><OriginBadge origin={entry.origin} /></TableCell>
                     <TableCell className="text-right font-mono font-semibold">{entry.durationMinutes}</TableCell>
                     <TableCell><ExportStatusBadge exportedAt={entry.exportedAt} /></TableCell>
-                    <TableCell><div className="flex justify-end gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div></TableCell>
+                    <TableCell>
+                      <WorkEntryActions
+                        entry={entry}
+                        deleting={deletingId === entry.id}
+                        reopening={reopeningId === entry.id}
+                        onEdit={() => setEditingEntry(entry)}
+                        onDelete={() => handleDelete(entry)}
+                        onReopen={() => handleReopen(entry)}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
                 {data.entries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-12 text-center">
+                    <TableCell colSpan={8} className="py-12 text-center">
                       <p className="font-semibold text-[var(--text-primary)]">No work entries match these filters</p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">Change the date, client, task, export status, or range.</p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">Change the date, client, task, source, export status, or range.</p>
                     </TableCell>
                   </TableRow>
                 ) : null}
@@ -1956,7 +2141,7 @@ export function LmsWorkLogWorkspace({
             <div className="rounded-2xl border border-dashed border-[var(--line-subtle)] px-4 py-12 text-center md:hidden">
               <CalendarDays className="mx-auto mb-3 h-8 w-8 text-[var(--text-muted)]" />
               <p className="font-semibold text-[var(--text-primary)]">No work entries match these filters</p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Change the date, client, task, export status, or range.</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Change the date, client, task, source, export status, or range.</p>
             </div>
           ) : (
             <div className="space-y-3 md:hidden">
@@ -1977,16 +2162,32 @@ export function LmsWorkLogWorkspace({
                       aria-label={`Select ${entry.taskName} for ${entry.clientDomain}`}
                     />
                     <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-                      <div className="min-w-0"><p className="font-semibold text-[var(--text-primary)]">{entry.taskName}</p><p className="mt-1 truncate text-sm text-[var(--text-secondary)]">{entry.clientDomain}</p></div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[var(--text-primary)]">{entry.taskName}</p>
+                        {entry.origin === "CRM_TASK" && entry.crmTaskName ? (
+                          <p className="mt-1 truncate text-xs text-[var(--text-muted)]">CRM: {entry.crmTaskName}</p>
+                        ) : null}
+                        <p className="mt-1 truncate text-sm text-[var(--text-secondary)]">{entry.clientDomain}</p>
+                      </div>
                       <Badge variant="secondary">{formatMinutes(entry.durationMinutes)}</Badge>
                     </div>
                   </div>
                   <div className="mt-4 flex items-end justify-between gap-3">
                     <div className="space-y-2">
                       <span className="block text-xs text-[var(--text-muted)]">{formatEntryDate(entry.workDate)}</span>
-                      <ExportStatusBadge exportedAt={entry.exportedAt} />
+                      <div className="flex flex-wrap gap-2">
+                        <OriginBadge origin={entry.origin} />
+                        <ExportStatusBadge exportedAt={entry.exportedAt} />
+                      </div>
                     </div>
-                    <div className="flex gap-1"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setEditingEntry(entry)} aria-label={`Edit ${entry.taskName}`}><Pencil /></Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => handleDelete(entry)} disabled={deletingId === entry.id} aria-label={`Delete ${entry.taskName}`} className="text-red-600">{deletingId === entry.id ? <Loader2 className="animate-spin" /> : <Trash2 />}</Button></div>
+                    <WorkEntryActions
+                      entry={entry}
+                      deleting={deletingId === entry.id}
+                      reopening={reopeningId === entry.id}
+                      onEdit={() => setEditingEntry(entry)}
+                      onDelete={() => handleDelete(entry)}
+                      onReopen={() => handleReopen(entry)}
+                    />
                   </div>
                 </div>
               ))}

@@ -144,6 +144,7 @@ export async function createLmsWorkEntry(data: LmsWorkEntryInput) {
         clientDomainSnapshot: client.client,
         taskNameSnapshot: task.name,
         employeeNameSnapshot: LMS_CRM_EMPLOYEE_NAME,
+        origin: "MANUAL",
       },
       select: { id: true },
     })
@@ -175,9 +176,28 @@ export async function updateLmsWorkEntry(entryId: string, data: LmsWorkEntryUpda
     const validated = WorkEntryUpdateInputSchema.parse(data)
     const existing = await prisma.lmsWorkEntry.findFirst({
       where: { id: validatedId },
-      select: { id: true, lmsAllocationId: true, taskTypeId: true },
+      select: {
+        id: true,
+        lmsAllocationId: true,
+        taskTypeId: true,
+        origin: true,
+        crmTaskId: true,
+        exportedAt: true,
+      },
     })
     if (!existing) throw new ActionError("ENTRY_NOT_FOUND", "Work entry not found")
+    if (existing.origin === "CRM_TASK" && existing.exportedAt) {
+      throw new ActionError(
+        "LMS_CRM_TASK_ENTRY_EXPORTED",
+        "This CRM task entry was already exported and is locked. Adjust it in LMS if needed."
+      )
+    }
+    if (existing.origin === "CRM_TASK" && !isLmsWorkWeekday(validated.workDate)) {
+      throw new ActionError(
+        "LMS_CRM_TASK_WORK_DATE_INVALID",
+        "CRM task work can only be recorded Monday-Friday"
+      )
+    }
 
     if (validated.lmsAllocationId === null && existing.lmsAllocationId !== null) {
       throw new ActionError("LMS_CLIENT_REQUIRED", "Select a client from LMS Projects")
@@ -206,29 +226,55 @@ export async function updateLmsWorkEntry(entryId: string, data: LmsWorkEntryUpda
       throw new ActionError("TASK_NOT_FOUND", "Select an active predefined task")
     }
 
-    await prisma.lmsWorkEntry.update({
-      where: { id: existing.id },
-      data: {
-        workDate: validated.workDate,
-        durationMinutes: validated.durationMinutes,
-        exportedAt: null,
-        ...(nextClient
-          ? {
-              lmsAllocationId: nextClient.id,
-              clientDomainSnapshot: nextClient.client,
-            }
-          : {}),
-        ...(nextTask
-          ? {
-              taskTypeId: nextTask.id,
-              taskNameSnapshot: nextTask.name,
-            }
-          : {}),
-      },
-    })
+    const entryUpdate = {
+      workDate: validated.workDate,
+      durationMinutes: validated.durationMinutes,
+      exportedAt: null,
+      ...(nextClient
+        ? {
+            lmsAllocationId: nextClient.id,
+            clientDomainSnapshot: nextClient.client,
+          }
+        : {}),
+      ...(nextTask
+        ? {
+            taskTypeId: nextTask.id,
+            taskNameSnapshot: nextTask.name,
+          }
+        : {}),
+    }
+
+    if (existing.origin === "CRM_TASK") {
+      await prisma.$transaction(async (tx) => {
+        const updated = await tx.lmsWorkEntry.updateMany({
+          where: { id: existing.id, exportedAt: null },
+          data: entryUpdate,
+        })
+        if (updated.count !== 1) {
+          throw new ActionError(
+            "LMS_CRM_TASK_ENTRY_EXPORTED",
+            "This CRM task entry was exported while you were editing it. Refresh before making another change."
+          )
+        }
+        if (existing.crmTaskId) {
+          await tx.task.update({
+            where: { id: existing.crmTaskId },
+            data: {
+              lmsAllocationId: validated.lmsAllocationId,
+              lmsTaskTypeId: validated.taskTypeId,
+            },
+          })
+        }
+      })
+    } else {
+      await prisma.lmsWorkEntry.update({
+        where: { id: existing.id },
+        data: entryUpdate,
+      })
+    }
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_ENTRY_UPDATED",
-      details: `entryId=${existing.id}; lmsAllocationId=${validated.lmsAllocationId || "detached"}; workDate=${validated.workDate}`,
+      details: `entryId=${existing.id}; origin=${existing.origin}; crmTaskId=${existing.crmTaskId || "none"}; lmsAllocationId=${validated.lmsAllocationId || "detached"}; workDate=${validated.workDate}`,
     })
     revalidateWorkLog()
     return { success: true as const }
@@ -243,14 +289,26 @@ export async function deleteLmsWorkEntry(entryId: string) {
     const validatedId = EntryIdSchema.parse(entryId)
     const existing = await prisma.lmsWorkEntry.findFirst({
       where: { id: validatedId },
-      select: { id: true },
+      select: { id: true, origin: true, crmTaskId: true, exportedAt: true },
     })
     if (!existing) throw new ActionError("ENTRY_NOT_FOUND", "Work entry not found")
+    if (existing.crmTaskId) {
+      throw new ActionError(
+        "LMS_CRM_TASK_ENTRY_MANAGED_BY_TASK",
+        "This work entry was created from a CRM task. Reopen or update the task from Tasks instead of deleting the linked entry."
+      )
+    }
+    if (existing.origin === "CRM_TASK" && existing.exportedAt) {
+      throw new ActionError(
+        "LMS_CRM_TASK_ENTRY_EXPORTED",
+        "This exported CRM task entry is locked and cannot be deleted."
+      )
+    }
 
     await prisma.lmsWorkEntry.delete({ where: { id: existing.id } })
     await logSessionAuditEvent(session, {
       action: "LMS_WORK_ENTRY_DELETED",
-      details: `entryId=${existing.id}`,
+      details: `entryId=${existing.id}; origin=${existing.origin}`,
     })
     revalidateWorkLog()
     return { success: true as const }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { requireAuth } from "@/lib/auth"
-import { getActionErrorMessage } from "@/lib/action-errors"
+import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { z } from "zod"
 
@@ -308,68 +308,76 @@ export async function startTimer(projectId: string, taskId?: string, description
         const validatedProjectId = ProjectIdSchema.parse(projectId)
         const validatedTaskId = taskId ? TaskIdSchema.parse(taskId) : undefined
         const validatedDescription = description ? z.string().max(2000).parse(description) : undefined
-        const project = await prisma.project.findFirst({
-            where: { id: validatedProjectId },
-            select: { id: true },
-        })
-        if (!project) {
-            await logSessionAuditEvent(session, {
-                action: "TIME_TIMER_START_FAILED",
-                success: false,
-                details: `projectId=${validatedProjectId}; reason=project_not_found`,
-            })
-            return { success: false, error: "Project not found" }
-        }
-        if (validatedTaskId) {
-            const task = await prisma.task.findFirst({
-                where: { id: validatedTaskId, projectId: validatedProjectId },
+        const log = await prisma.$transaction(async (tx) => {
+            const project = await tx.project.findUnique({
+                where: { id: validatedProjectId },
                 select: { id: true },
             })
-            if (!task) {
-                await logSessionAuditEvent(session, {
-                    action: "TIME_TIMER_START_FAILED",
-                    success: false,
-                    details: `projectId=${validatedProjectId}; taskId=${validatedTaskId}; reason=task_not_found`,
+            if (!project) {
+                throw new ActionError("PROJECT_NOT_FOUND", "Project not found")
+            }
+            if (validatedTaskId) {
+                const task = await tx.task.findUnique({
+                    where: { id: validatedTaskId },
+                    select: { id: true, projectId: true, taskScope: true },
                 })
-                return { success: false, error: "Task not found for this project" }
-            }
-        }
-        const activeTimer = await prisma.timeLog.findFirst({
-            where: {
-                endTime: null,
-            }
-        })
-
-        if (activeTimer) {
-            const endTime = new Date()
-            const durationSeconds = Math.floor((endTime.getTime() - activeTimer.startTime.getTime()) / 1000)
-            await prisma.timeLog.update({
-                where: { id: activeTimer.id },
-                data: {
-                    endTime,
-                    durationSeconds
+                if (!task || task.projectId !== validatedProjectId || task.taskScope !== "FREELANCE") {
+                    throw new ActionError(
+                        "TASK_PROJECT_MISMATCH",
+                        "Task not found for this freelance project"
+                    )
                 }
+            }
+
+            const activeTimer = await tx.timeLog.findFirst({
+                where: { endTime: null },
             })
-        }
+            if (activeTimer) {
+                const endTime = new Date()
+                const durationSeconds = Math.max(
+                    0,
+                    Math.floor((endTime.getTime() - activeTimer.startTime.getTime()) / 1000)
+                )
+                await tx.timeLog.update({
+                    where: { id: activeTimer.id },
+                    data: { endTime, durationSeconds },
+                })
+            }
 
-        await prisma.timeLog.updateMany({
-            where: {
-                isPaused: true,
-            },
-            data: { isPaused: false }
-        })
+            await tx.timeLog.updateMany({
+                where: { isPaused: true },
+                data: { isPaused: false },
+            })
 
-        const log = await prisma.timeLog.create({
-            data: {
-                projectId: validatedProjectId,
-                taskId: validatedTaskId,
-                description: validatedDescription,
-                startTime: new Date(),
-                endTime: null,
-                durationSeconds: null,
-                source: "TIMER",
-            },
-            include: { project: { include: { site: true } } }
+            if (validatedTaskId) {
+                const stillAttached = await tx.task.findFirst({
+                    where: {
+                        id: validatedTaskId,
+                        projectId: validatedProjectId,
+                        taskScope: "FREELANCE",
+                    },
+                    select: { id: true },
+                })
+                if (!stillAttached) {
+                    throw new ActionError(
+                        "TASK_TARGET_CHANGED",
+                        "The task target changed before the timer could start"
+                    )
+                }
+            }
+
+            return tx.timeLog.create({
+                data: {
+                    projectId: validatedProjectId,
+                    taskId: validatedTaskId,
+                    description: validatedDescription,
+                    startTime: new Date(),
+                    endTime: null,
+                    durationSeconds: null,
+                    source: "TIMER",
+                },
+                include: { project: { include: { site: true } } },
+            })
         })
 
         await logSessionAuditEvent(session, {
@@ -377,10 +385,14 @@ export async function startTimer(projectId: string, taskId?: string, description
             details: `timeLogId=${log.id}; projectId=${validatedProjectId}`,
         })
         revalidateTimePaths(validatedProjectId)
-        return { success: true, data: log }
+        return { success: true as const, data: log }
     } catch (error) {
         console.error("Start timer failed:", error)
-        return { success: false, error: getActionErrorMessage(error, "Failed to start timer") }
+        return {
+            success: false as const,
+            error: getActionErrorMessage(error, "Failed to start timer"),
+            ...(error instanceof ActionError ? { code: error.code } : {}),
+        }
     }
 }
 

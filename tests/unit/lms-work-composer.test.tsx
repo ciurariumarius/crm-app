@@ -1,14 +1,19 @@
 // @vitest-environment jsdom
 
 import * as React from "react"
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import "@testing-library/jest-dom/vitest"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   createLmsWorkEntry: vi.fn(),
+  deleteLmsWorkEntry: vi.fn(),
   getLmsWorkComposerContext: vi.fn(),
+  reopenTask: vi.fn(),
+  toastError: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastWarning: vi.fn(),
 }))
 
 vi.mock("next/navigation", () => ({
@@ -20,13 +25,21 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/actions/lms-work-entries", () => ({
   createLmsWorkClient: vi.fn(),
   createLmsWorkEntry: mocks.createLmsWorkEntry,
-  deleteLmsWorkEntry: vi.fn(),
+  deleteLmsWorkEntry: mocks.deleteLmsWorkEntry,
   getLmsWorkComposerContext: mocks.getLmsWorkComposerContext,
   updateLmsWorkEntry: vi.fn(),
 }))
 
+vi.mock("@/lib/actions/tasks", () => ({
+  reopenTask: mocks.reopenTask,
+}))
+
 vi.mock("sonner", () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
+  toast: {
+    error: mocks.toastError,
+    success: mocks.toastSuccess,
+    warning: mocks.toastWarning,
+  },
 }))
 
 import { LmsWorkLogWorkspace } from "@/components/lms-work-entries/lms-work-log-workspace"
@@ -80,10 +93,16 @@ const pageData: LmsWorkLogPageData = {
   workDate: null,
   clientId: null,
   taskId: null,
+  origin: "all",
   exportStatus: "not-exported",
 }
 
 describe("Record Work composer", () => {
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     Object.defineProperty(window, "matchMedia", {
@@ -95,6 +114,8 @@ describe("Record Work composer", () => {
       })),
     })
     mocks.createLmsWorkEntry.mockResolvedValue({ success: true, id: "entry-1" })
+    mocks.deleteLmsWorkEntry.mockResolvedValue({ success: true })
+    mocks.reopenTask.mockResolvedValue({ success: true, data: { entryDeleted: true, exportedEntryPreserved: false } })
     mocks.getLmsWorkComposerContext.mockResolvedValue({
       success: true,
       context: {
@@ -143,5 +164,121 @@ describe("Record Work composer", () => {
     expect(screen.getByRole("combobox", { name: "Select predefined task" })).toHaveFocus()
     expect(screen.getByText(/Already logged:/)).toHaveTextContent("Already logged: 2h")
     expect(mocks.refresh).toHaveBeenCalled()
+  })
+
+  it("separates a linked CRM task entry and reopens it instead of offering delete", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true)
+    const crmTaskEntry = {
+      id: "33333333-3333-4333-8333-333333333333",
+      lmsAllocationId: clientId,
+      taskTypeId: taskId,
+      workDate: "2026-08-04",
+      durationMinutes: 90,
+      clientDomain: "example.ro",
+      taskName: "Development",
+      origin: "CRM_TASK" as const,
+      crmTaskId: "44444444-4444-4444-8444-444444444444",
+      crmTaskName: "Fix checkout tracking",
+      employeeName: "Marius Ciurariu",
+      exportedAt: null,
+      createdAt: "2026-08-04T10:00:00.000Z",
+      updatedAt: "2026-08-04T10:00:00.000Z",
+    }
+
+    render(
+      <LmsWorkLogWorkspace
+        data={{
+          ...pageData,
+          entries: [crmTaskEntry],
+          totalEntries: 1,
+          allMatchingEntries: 1,
+          unexportedEntries: 1,
+          totalMinutes: 90,
+          workedDays: 1,
+          firstWorkDate: crmTaskEntry.workDate,
+          lastWorkDate: crmTaskEntry.workDate,
+        }}
+        activePeriod="all"
+        initialComposerContext={composerContext}
+      />
+    )
+
+    expect(screen.getAllByText("CRM task").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("CRM: Fix checkout tracking").length).toBeGreaterThan(0)
+    expect(screen.queryByRole("button", { name: "Delete Development" })).not.toBeInTheDocument()
+
+    const reopenButtons = screen.getAllByRole("button", { name: "Reopen CRM task Fix checkout tracking" })
+    fireEvent.click(reopenButtons[0])
+    await waitFor(() => {
+      expect(mocks.reopenTask).toHaveBeenCalledWith(crmTaskEntry.crmTaskId)
+      expect(mocks.toastSuccess).toHaveBeenCalledWith("CRM task reopened")
+    })
+  })
+
+  it("locks exported CRM task edits while keeping reopen available", () => {
+    const crmTaskEntry = {
+      id: "55555555-5555-4555-8555-555555555555",
+      lmsAllocationId: clientId,
+      taskTypeId: taskId,
+      workDate: "2026-08-04",
+      durationMinutes: 90,
+      clientDomain: "example.ro",
+      taskName: "Development",
+      origin: "CRM_TASK" as const,
+      crmTaskId: "66666666-6666-4666-8666-666666666666",
+      crmTaskName: "Fix consent mode",
+      employeeName: "Marius Ciurariu",
+      exportedAt: "2026-08-05T10:00:00.000Z",
+      createdAt: "2026-08-04T10:00:00.000Z",
+      updatedAt: "2026-08-05T10:00:00.000Z",
+    }
+
+    render(
+      <LmsWorkLogWorkspace
+        data={{ ...pageData, entries: [crmTaskEntry], totalEntries: 1, allMatchingEntries: 1 }}
+        activePeriod="all"
+        initialComposerContext={composerContext}
+      />
+    )
+
+    for (const button of screen.getAllByRole("button", { name: /Editing Development is locked/ })) {
+      expect(button).toBeDisabled()
+    }
+    for (const button of screen.getAllByRole("button", { name: "Reopen CRM task Fix consent mode" })) {
+      expect(button).toBeEnabled()
+    }
+    expect(screen.queryByRole("button", { name: "Delete Development" })).not.toBeInTheDocument()
+  })
+
+  it("allows an unexported orphan CRM task entry to be cleaned up", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true)
+    const orphanEntry = {
+      id: "77777777-7777-4777-8777-777777777777",
+      lmsAllocationId: clientId,
+      taskTypeId: taskId,
+      workDate: "2026-08-04",
+      durationMinutes: 30,
+      clientDomain: "example.ro",
+      taskName: "Development",
+      origin: "CRM_TASK" as const,
+      crmTaskId: null,
+      crmTaskName: "Deleted CRM task",
+      employeeName: "Marius Ciurariu",
+      exportedAt: null,
+      createdAt: "2026-08-04T10:00:00.000Z",
+      updatedAt: "2026-08-04T10:00:00.000Z",
+    }
+
+    render(
+      <LmsWorkLogWorkspace
+        data={{ ...pageData, entries: [orphanEntry], totalEntries: 1, allMatchingEntries: 1 }}
+        activePeriod="all"
+        initialComposerContext={composerContext}
+      />
+    )
+
+    expect(screen.queryByRole("button", { name: /Reopen CRM task/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete Development" })[0])
+    await waitFor(() => expect(mocks.deleteLmsWorkEntry).toHaveBeenCalledWith(orphanEntry.id))
   })
 })

@@ -127,13 +127,23 @@ export default async function HomePage() {
             select: {
                 id: true,
                 projectId: true,
+                taskScope: true,
+                lmsAllocationId: true,
+                lmsTaskTypeId: true,
                 name: true,
                 description: true,
                 status: true,
                 urgency: true,
                 deadline: true,
+                estimatedMinutes: true,
                 createdAt: true,
                 updatedAt: true,
+                lmsAllocation: {
+                    select: { id: true, client: true },
+                },
+                lmsTaskType: {
+                    select: { id: true, name: true, defaultDurationMinutes: true },
+                },
                 timeLogs: {
                     select: {
                         id: true,
@@ -184,13 +194,23 @@ export default async function HomePage() {
             select: {
                 id: true,
                 projectId: true,
+                taskScope: true,
+                lmsAllocationId: true,
+                lmsTaskTypeId: true,
                 name: true,
                 description: true,
                 status: true,
                 urgency: true,
                 deadline: true,
+                estimatedMinutes: true,
                 createdAt: true,
                 updatedAt: true,
+                lmsAllocation: {
+                    select: { id: true, client: true },
+                },
+                lmsTaskType: {
+                    select: { id: true, name: true, defaultDurationMinutes: true },
+                },
                 timeLogs: {
                     select: {
                         id: true,
@@ -241,13 +261,23 @@ export default async function HomePage() {
             select: {
                 id: true,
                 projectId: true,
+                taskScope: true,
+                lmsAllocationId: true,
+                lmsTaskTypeId: true,
                 name: true,
                 description: true,
                 status: true,
                 urgency: true,
                 deadline: true,
+                estimatedMinutes: true,
                 createdAt: true,
                 updatedAt: true,
+                lmsAllocation: {
+                    select: { id: true, client: true },
+                },
+                lmsTaskType: {
+                    select: { id: true, name: true, defaultDurationMinutes: true },
+                },
                 timeLogs: {
                     select: {
                         id: true,

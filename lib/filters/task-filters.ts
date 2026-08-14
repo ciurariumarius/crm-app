@@ -2,8 +2,10 @@ import { Prisma } from "@prisma/client"
 import { normalizeTaskUrgency, type TaskUrgency } from "../status"
 
 const TASK_STATUS_FILTER_VALUES = ["All", "Active", "Completed"] as const
+const TASK_SCOPE_FILTER_VALUES = ["ALL", "GENERAL", "FREELANCE", "LMS"] as const
 
 export type TaskStatusFilter = (typeof TASK_STATUS_FILTER_VALUES)[number]
+export type TaskScopeFilter = (typeof TASK_SCOPE_FILTER_VALUES)[number]
 export type TaskUrgencyFilter = "all" | TaskUrgency
 
 export type TaskFiltersInput = {
@@ -15,6 +17,7 @@ export type TaskFiltersInput = {
     urgency?: string | null
     overdue?: string | null
     dueToday?: string | null
+    scope?: string | null
 }
 
 export type NormalizedTaskFilters = {
@@ -26,6 +29,7 @@ export type NormalizedTaskFilters = {
     urgency: TaskUrgencyFilter
     overdueOnly: boolean
     dueTodayOnly: boolean
+    scope: TaskScopeFilter
 }
 
 export type DayBounds = {
@@ -65,6 +69,10 @@ export function normalizeTaskFilters(input: TaskFiltersInput): NormalizedTaskFil
     const projectId = normalizeOptionalText(input.projectId)
     const partnerId = normalizeOptionalText(input.partnerId)
     const taskId = normalizeOptionalText(input.taskId)
+    const normalizedScope = normalizeOptionalText(input.scope)?.toUpperCase()
+    const scope = (TASK_SCOPE_FILTER_VALUES as readonly string[]).includes(normalizedScope || "")
+        ? (normalizedScope as TaskScopeFilter)
+        : "ALL"
 
     return {
         q,
@@ -75,6 +83,7 @@ export function normalizeTaskFilters(input: TaskFiltersInput): NormalizedTaskFil
         urgency,
         overdueOnly,
         dueTodayOnly,
+        scope,
     }
 }
 
@@ -88,6 +97,10 @@ export function buildTaskWhereInput(input: {
 
     if (filters.status !== "All") {
         where.status = filters.status === "Active" ? { in: ["Active", "Paused"] } : filters.status
+    }
+
+    if (filters.scope !== "ALL") {
+        where.taskScope = filters.scope
     }
 
     if (filters.taskId) {
@@ -114,6 +127,8 @@ export function buildTaskWhereInput(input: {
             { project: { name: { contains: filters.q } } },
             { project: { site: { domainName: { contains: filters.q } } } },
             { project: { site: { partner: { name: { contains: filters.q } } } } },
+            { lmsAllocation: { client: { contains: filters.q } } },
+            { lmsTaskType: { name: { contains: filters.q } } },
         ]
     }
 

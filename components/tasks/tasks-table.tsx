@@ -19,11 +19,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn, formatRelativeDate } from "@/lib/utils"
 import { normalizeTaskStatus } from "@/lib/status"
-import { updateTask, toggleTaskStatus } from "@/lib/actions/tasks"
-import { toast } from "sonner"
 import { Calendar as CalendarIcon, Clock, Users, Globe, Target } from "lucide-react"
 import { TaskDetails, type TaskDetailsTask } from "./task-details"
 import { useTimer } from "@/components/providers/timer-provider"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 
 type TaskTableTimeLog = {
     durationSeconds?: number | null
@@ -53,30 +52,22 @@ interface TasksTableProps {
 
 export function TasksTable({ tasks }: TasksTableProps) {
     const { timerState } = useTimer()
+    const { requestCompletion, requestReopen, pendingTaskId } = useTaskCompletion()
     const [selectedTask, setSelectedTask] = React.useState<TaskTableTask | null>(null)
-    const [updatingId, setUpdatingId] = React.useState<string | null>(null)
 
-    const handleStatusChange = async (taskId: string, currentStatus: string, projectId?: string | null) => {
-        setUpdatingId(taskId)
-        try {
-            await toggleTaskStatus(taskId, currentStatus, projectId)
-            toast.success("Task status updated")
-        } catch {
-            toast.error("Failed to update status")
-        } finally {
-            setUpdatingId(null)
-        }
-    }
+    React.useEffect(() => {
+        setSelectedTask((current) => {
+            if (!current) return current
+            return tasks.find((task) => task.id === current.id) || current
+        })
+    }, [tasks])
 
-    const handleUpdate = async (taskId: string, data: { status?: string }) => {
-        setUpdatingId(taskId)
-        try {
-            await updateTask(taskId, data)
-            toast.success("Task updated")
-        } catch {
-            toast.error("Failed to update task")
-        } finally {
-            setUpdatingId(null)
+    const handleStatusChange = (task: TaskTableTask, nextStatus?: string) => {
+        const shouldComplete = nextStatus ? nextStatus === "Completed" : task.status !== "Completed"
+        if (shouldComplete) {
+            requestCompletion(task)
+        } else {
+            void requestReopen(task)
         }
     }
 
@@ -105,8 +96,8 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 <TableCell onClick={(e) => e.stopPropagation()}>
                                     <Checkbox
                                         checked={task.status === "Completed"}
-                                        onCheckedChange={() => handleStatusChange(task.id, task.status, task.projectId)}
-                                        disabled={updatingId === task.id}
+                                        onCheckedChange={() => handleStatusChange(task)}
+                                        disabled={pendingTaskId === task.id}
                                     />
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)}>
@@ -126,21 +117,32 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)}>
                                     <div className="flex flex-col gap-1 max-w-[200px]">
-                                        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/70">
-                                            <Users className="h-3 w-3 opacity-50 shrink-0" />
-                                            <span className="truncate">{task.project?.site?.partner?.name || "No partner"}</span>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground/60 font-medium flex items-center gap-2">
-                                            <Globe className="h-3 w-3 opacity-40 shrink-0" />
-                                            <span className="truncate">{task.project?.site?.domainName || "No domain"}</span>
-                                        </div>
+                                        {task.taskScope === "LMS" ? <>
+                                            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--primary)]">
+                                                <Users className="h-3 w-3 shrink-0 opacity-70" />
+                                                <span className="truncate">LMS · {task.lmsAllocation?.client || "Project not linked"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground/60">
+                                                <Target className="h-3 w-3 shrink-0 opacity-50" />
+                                                <span className="truncate">{task.lmsTaskType?.name || "Category not linked"}</span>
+                                            </div>
+                                        </> : <>
+                                            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground/70">
+                                                <Users className="h-3 w-3 shrink-0 opacity-50" />
+                                                <span className="truncate">{task.project?.site?.partner?.name || "No partner"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground/60">
+                                                <Globe className="h-3 w-3 shrink-0 opacity-40" />
+                                                <span className="truncate">{task.project?.site?.domainName || "No domain"}</span>
+                                            </div>
+                                        </>}
                                     </div>
                                 </TableCell>
                                 <TableCell>
                                     <Select
-                                        defaultValue={normalizeTaskStatus(task.status)}
-                                        onValueChange={(val) => handleUpdate(task.id, { status: val })}
-                                        disabled={updatingId === task.id}
+                                        value={normalizeTaskStatus(task.status)}
+                                        onValueChange={(val) => handleStatusChange(task, val)}
+                                        disabled={pendingTaskId === task.id}
                                     >
                                         <SelectTrigger className={cn(
                                             "h-8 text-xs font-medium border-none bg-transparent hover:bg-muted/50 p-1 w-[120px]",
@@ -173,7 +175,12 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                     </div>
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)} className="cell-financial">
-                                    {(() => {
+                                    {task.taskScope === "LMS" ? (
+                                        <div className="flex items-center justify-end gap-2 text-xs font-semibold text-[var(--primary)]">
+                                            <Clock className="h-3 w-3" />
+                                            <span>On completion</span>
+                                        </div>
+                                    ) : (() => {
                                         const logsDuration = task.timeLogs?.reduce((acc: number, log: TaskTableTimeLog) => acc + (log.durationSeconds || 0), 0) || 0
                                         const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
                                         const totalSeconds = logsDuration + currentTimerDuration

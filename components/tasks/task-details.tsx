@@ -47,6 +47,13 @@ import { useRouter } from "next/navigation"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, SIDE_PANEL_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass, type SidePanelSize } from "@/lib/ui/side-panels"
 import { SidePanelChip, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
+import { TaskFreelanceProjectField, TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
+import {
+    shouldApplyIncomingTaskTarget,
+    taskTargetsEqual,
+    type TaskTargetSnapshot,
+} from "@/components/tasks/task-target-sync"
 
 type TaskTimeLog = {
     id?: string
@@ -81,6 +88,18 @@ type TaskDetailsProject = {
     [key: string]: unknown
 }
 
+function normalizeTaskTarget(task: TaskDetailsTask): TaskTargetSnapshot {
+    const taskScope = task.taskScope === "LMS" || task.taskScope === "FREELANCE" || task.taskScope === "GENERAL"
+        ? task.taskScope
+        : task.projectId ? "FREELANCE" : "GENERAL"
+    return {
+        taskScope,
+        projectId: taskScope === "FREELANCE" ? task.projectId || task.project?.id || "" : "",
+        lmsAllocationId: taskScope === "LMS" ? task.lmsAllocationId || task.lmsAllocation?.id || "" : "",
+        lmsTaskTypeId: taskScope === "LMS" ? task.lmsTaskTypeId || task.lmsTaskType?.id || "" : "",
+    }
+}
+
 export type TaskDetailsTask = {
     id: string
     projectId?: string | null
@@ -91,6 +110,12 @@ export type TaskDetailsTask = {
     deadline?: string | Date | null
     createdAt?: string | Date | null
     updatedAt?: string | Date | null
+    estimatedMinutes?: number | null
+    taskScope?: TaskScopeValue | string | null
+    lmsAllocationId?: string | null
+    lmsTaskTypeId?: string | null
+    lmsAllocation?: { id?: string; client?: string | null } | null
+    lmsTaskType?: { id?: string; name?: string | null; isActive?: boolean | null; defaultDurationMinutes?: number | null } | null
     timeLogs?: TaskTimeLog[] | null
     project?: TaskDetailsProject | null
     [key: string]: unknown
@@ -138,6 +163,7 @@ export function TaskDetails({
     panelStackLevel = 0,
 }: TaskDetailsProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
+    const { requestCompletion, requestReopen, pendingTaskId, lmsOptions } = useTaskCompletion()
     const router = useRouter()
     const [loading, setLoading] = React.useState(false)
 
@@ -147,6 +173,16 @@ export function TaskDetails({
     const [status, setStatus] = React.useState("")
     const [urgency, setUrgency] = React.useState("")
     const [deadline, setDeadline] = React.useState<Date | undefined>(undefined)
+    const [taskScope, setTaskScope] = React.useState<TaskScopeValue>("GENERAL")
+    const [projectId, setProjectId] = React.useState("")
+    const [lmsAllocationId, setLmsAllocationId] = React.useState("")
+    const [lmsTaskTypeId, setLmsTaskTypeId] = React.useState("")
+    const [savedTarget, setSavedTarget] = React.useState<TaskTargetSnapshot>({
+        taskScope: "GENERAL",
+        projectId: "",
+        lmsAllocationId: "",
+        lmsTaskTypeId: "",
+    })
     const [isManualTimeOpen, setIsManualTimeOpen] = React.useState(false)
     const [manualMinutes, setManualMinutes] = React.useState("")
     const [manualNotes, setManualNotes] = React.useState("")
@@ -158,8 +194,41 @@ export function TaskDetails({
 
     // Sync form state with task
     const skipNextAutoSave = React.useRef(true)
+    const selectedTaskIdRef = React.useRef<string | null>(null)
+    const targetRevisionRef = React.useRef(0)
+    const savedTargetRevisionRef = React.useRef(0)
+    const savedTargetRef = React.useRef<TaskTargetSnapshot>({
+        taskScope: "GENERAL",
+        projectId: "",
+        lmsAllocationId: "",
+        lmsTaskTypeId: "",
+    })
+    const awaitingTargetRefreshRef = React.useRef(false)
+    const saveQueueRef = React.useRef<Promise<void>>(Promise.resolve())
+    const pendingSaveCountRef = React.useRef(0)
+
     React.useEffect(() => {
-        if (task) {
+        if (!task) {
+            selectedTaskIdRef.current = null
+            return
+        }
+
+        const nextTarget = normalizeTaskTarget(task)
+        const taskChanged = selectedTaskIdRef.current !== task.id
+        const hasUnsavedTarget = targetRevisionRef.current !== savedTargetRevisionRef.current
+        const applyIncomingTarget = shouldApplyIncomingTaskTarget({
+            taskChanged,
+            hasUnsavedTarget,
+            awaitingSavedTarget: awaitingTargetRefreshRef.current,
+            incomingTarget: nextTarget,
+            savedTarget: savedTargetRef.current,
+        })
+
+        if (taskChanged) {
+            selectedTaskIdRef.current = task.id
+            targetRevisionRef.current = 0
+            savedTargetRevisionRef.current = 0
+            awaitingTargetRefreshRef.current = false
             setName(task.name || "")
             setDescription(task.description || "")
             setStatus(normalizeTaskStatus(task.status))
@@ -170,6 +239,23 @@ export function TaskDetails({
             setManualNotes("")
             setIsEditingTitle(false)
             skipNextAutoSave.current = true
+        } else {
+            // Status changes are action-driven, not part of the debounced form save.
+            setStatus(normalizeTaskStatus(task.status))
+        }
+
+        if (applyIncomingTarget) {
+            const awaitedTargetMatched = awaitingTargetRefreshRef.current
+                && taskTargetsEqual(nextTarget, savedTargetRef.current)
+            savedTargetRef.current = nextTarget
+            if (awaitedTargetMatched) {
+                awaitingTargetRefreshRef.current = false
+            }
+            setTaskScope(nextTarget.taskScope)
+            setProjectId(nextTarget.projectId)
+            setLmsAllocationId(nextTarget.lmsAllocationId)
+            setLmsTaskTypeId(nextTarget.lmsTaskTypeId)
+            setSavedTarget(nextTarget)
         }
     }, [task])
 
@@ -193,34 +279,88 @@ export function TaskDetails({
         void fetchTaskHistory()
     }, [task?.id, fetchTaskHistory])
 
-    const handleUpdate = React.useCallback(async () => {
-        if (!task) return
-        setLoading(true)
-        try {
-            const result = await updateTask(
-                task.id,
-                {
-                    name,
-                    description,
-                    status,
-                    urgency,
-                    deadline,
-                },
-                { notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION }
-            )
+    const currentTarget = React.useMemo<TaskTargetSnapshot>(() => ({
+        taskScope,
+        projectId: taskScope === "FREELANCE" ? projectId : "",
+        lmsAllocationId: taskScope === "LMS" ? lmsAllocationId : "",
+        lmsTaskTypeId: taskScope === "LMS" ? lmsTaskTypeId : "",
+    }), [lmsAllocationId, lmsTaskTypeId, projectId, taskScope])
+    const targetDirty = currentTarget.taskScope !== savedTarget.taskScope
+        || currentTarget.projectId !== savedTarget.projectId
+        || currentTarget.lmsAllocationId !== savedTarget.lmsAllocationId
+        || currentTarget.lmsTaskTypeId !== savedTarget.lmsTaskTypeId
+    const bumpTargetRevision = React.useCallback(() => {
+        targetRevisionRef.current += 1
+    }, [])
+    const projectActionsBlocked = loading || targetDirty
+    const savedProjectId = savedTarget.taskScope === "FREELANCE" ? savedTarget.projectId : ""
 
-            if (result.success) {
-                toast.success("Task updated")
-                void fetchTaskHistory()
-            } else {
-                toast.error(result.error || "Failed to update task")
-            }
-        } catch {
-            toast.error("Failed to update task")
-        } finally {
-            setLoading(false)
+    React.useEffect(() => {
+        if (savedTarget.taskScope !== "FREELANCE") setIsManualTimeOpen(false)
+    }, [savedTarget.taskScope])
+
+    const handleUpdate = React.useCallback((): Promise<boolean> => {
+        if (!task) return Promise.resolve(false)
+
+        const taskId = task.id
+        const saveRevision = targetRevisionRef.current
+        const targetSnapshot = currentTarget
+        const updateSnapshot = {
+            name,
+            description,
+            urgency,
+            deadline,
+            taskScope,
+            projectId: taskScope === "FREELANCE" ? projectId || null : null,
+            lmsAllocationId: taskScope === "LMS" ? lmsAllocationId || null : null,
+            lmsTaskTypeId: taskScope === "LMS" ? lmsTaskTypeId || null : null,
         }
-    }, [deadline, description, fetchTaskHistory, name, status, task, urgency])
+
+        pendingSaveCountRef.current += 1
+        setLoading(true)
+
+        const queuedSave = saveQueueRef.current
+            .catch(() => undefined)
+            .then(async () => {
+                try {
+                    const result = await updateTask(
+                        taskId,
+                        updateSnapshot,
+                        { notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION }
+                    )
+
+                    if (!result.success) {
+                        toast.error(result.error || "Failed to update task")
+                        return false
+                    }
+
+                    if (selectedTaskIdRef.current === taskId) {
+                        savedTargetRevisionRef.current = saveRevision
+                        savedTargetRef.current = targetSnapshot
+                        awaitingTargetRefreshRef.current = true
+                        setSavedTarget(targetSnapshot)
+                    }
+                    toast.success("Task updated")
+                    void fetchTaskHistory()
+
+                    // A stale save must never refresh an older target over a newer
+                    // local edit. The newest queued save owns the eventual refresh.
+                    if (selectedTaskIdRef.current === taskId && saveRevision === targetRevisionRef.current) {
+                        router.refresh()
+                    }
+                    return true
+                } catch {
+                    toast.error("Failed to update task")
+                    return false
+                } finally {
+                    pendingSaveCountRef.current = Math.max(0, pendingSaveCountRef.current - 1)
+                    if (pendingSaveCountRef.current === 0) setLoading(false)
+                }
+            })
+
+        saveQueueRef.current = queuedSave.then(() => undefined, () => undefined)
+        return queuedSave
+    }, [currentTarget, deadline, description, fetchTaskHistory, lmsAllocationId, lmsTaskTypeId, name, projectId, router, task, taskScope, urgency])
 
     // Auto-save logic
     React.useEffect(() => {
@@ -233,29 +373,67 @@ export function TaskDetails({
 
         const normalizedTaskName = task.name || ""
         const normalizedTaskDescription = task.description || ""
-        const normalizedTaskStatus = normalizeTaskStatus(task.status)
         const normalizedTaskUrgency = normalizeTaskUrgency(task.urgency)
         const normalizedTaskDeadline = task.deadline ? new Date(task.deadline).getTime() : undefined
-
         const timer = setTimeout(() => {
             if (
                 name !== normalizedTaskName ||
                 description !== normalizedTaskDescription ||
-                status !== normalizedTaskStatus ||
                 urgency !== normalizedTaskUrgency ||
-                deadline?.getTime() !== normalizedTaskDeadline
+                deadline?.getTime() !== normalizedTaskDeadline ||
+                targetDirty
             ) {
-                handleUpdate()
+                if (taskScope !== "FREELANCE" || projectId) handleUpdate()
             }
         }, 400)
 
         return () => clearTimeout(timer)
-    }, [deadline, description, handleUpdate, name, status, task, urgency])
+    }, [deadline, description, handleUpdate, name, projectId, task, taskScope, targetDirty, urgency])
+
+    const handleStatusChange = React.useCallback(async (nextStatus: "Active" | "Completed") => {
+        if (!task || nextStatus === status || pendingTaskId === task.id || loading) return
+        // Completion reads the persisted scope inside its transaction. Persist a newly
+        // selected target first so a fast click cannot complete against stale mappings.
+        if (targetDirty) {
+            if (taskScope === "FREELANCE" && !projectId) {
+                toast.error("Select a freelance project before changing the task status")
+                return
+            }
+            if (!await handleUpdate()) return
+        } else if (pendingSaveCountRef.current > 0) {
+            // Completion must observe every queued edit before reading the task
+            // target inside its transaction.
+            await saveQueueRef.current
+        }
+
+        const taskWithCurrentTarget: TaskDetailsTask = {
+            ...task,
+            projectId: taskScope === "FREELANCE" ? projectId || null : null,
+            taskScope,
+            lmsAllocationId: lmsAllocationId || null,
+            lmsTaskTypeId: lmsTaskTypeId || null,
+        }
+        if (nextStatus === "Completed") {
+            requestCompletion(taskWithCurrentTarget, {
+                onCompleted: () => {
+                    setStatus("Completed")
+                    void fetchTaskHistory()
+                },
+            })
+            return
+        }
+        await requestReopen(taskWithCurrentTarget, {
+            onCompleted: () => {
+                setStatus("Active")
+                void fetchTaskHistory()
+            },
+        })
+    }, [fetchTaskHistory, handleUpdate, lmsAllocationId, lmsTaskTypeId, loading, pendingTaskId, projectId, requestCompletion, requestReopen, status, targetDirty, task, taskScope])
 
     const handleDelete = async () => {
         if (!task) return
         try {
-            const result = await deleteTask(task.id, task.projectId)
+            const result = await deleteTask(task.id, savedProjectId || null)
             if (result.success) {
                 toast.success("Task deleted")
                 onOpenChange(false)
@@ -302,6 +480,12 @@ export function TaskDetails({
     }, [taskHistory, createdTimestamp, task?.id, status])
 
     if (!task) return null
+    const selectedLmsAllocationName = lmsOptions.allocations.find((option) => option.id === lmsAllocationId)?.client
+        || (task.lmsAllocation?.id === lmsAllocationId ? task.lmsAllocation.client : undefined)
+        || "Not linked"
+    const selectedLmsTaskTypeName = lmsOptions.workTasks.find((option) => option.id === lmsTaskTypeId)?.name
+        || (task.lmsTaskType?.id === lmsTaskTypeId ? task.lmsTaskType.name : undefined)
+        || "Not linked"
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isTaskRunning = isActiveTimerThisTask && timerState.isRunning
     const isTaskPaused = isActiveTimerThisTask && !timerState.isRunning
@@ -317,12 +501,16 @@ export function TaskDetails({
         const bTime = toDate(b.startTime)?.getTime() ?? 0
         return bTime - aTime
     })
-    const projectLabel = task.project ? formatProjectName(task.project) : "Project"
-    const projectPartnerLabel = task.project?.site?.partner?.name || "Partner"
-    const projectDomainLabel = task.project?.site?.domainName || "Domain"
-    const projectDomainUrl = normalizeExternalHttpUrl(task.project?.site?.domainName)
+    const savedProjectMatchesTaskProp = Boolean(savedProjectId && task.project?.id === savedProjectId)
+    const savedProjectOption = lmsOptions.projects.find((option) => option.id === savedProjectId)
+    const projectLabel = savedProjectMatchesTaskProp
+        ? formatProjectName(task.project || {})
+        : savedProjectOption?.label || (savedProjectId ? "Saved project" : "Project")
+    const projectPartnerLabel = savedProjectMatchesTaskProp ? task.project?.site?.partner?.name || "Partner" : "Refresh to load details"
+    const projectDomainLabel = savedProjectMatchesTaskProp ? task.project?.site?.domainName || "Domain" : "Project changed"
+    const projectDomainUrl = savedProjectMatchesTaskProp ? normalizeExternalHttpUrl(task.project?.site?.domainName) : null
     const projectSitePanelHref =
-        task.project?.site?.partner?.id && task.project?.site?.id
+        savedProjectMatchesTaskProp && task.project?.site?.partner?.id && task.project?.site?.id
             ? `/partners/${task.project.site.partner.id}/${task.project.site.id}`
             : null
     const lastUpdatedTimestamp = toDate(task.updatedAt)
@@ -338,30 +526,36 @@ export function TaskDetails({
             return
         }
 
-        if (!task.projectId) {
+        if (projectActionsBlocked) {
+            toast.message("Wait for the task target to finish saving")
+            return
+        }
+
+        if (!savedProjectId) {
             toast.error("Task has no project")
             return
         }
 
-        void globalStartTimer(task.projectId, task.id, task.name || "Task")
+        void globalStartTimer(savedProjectId, task.id, task.name || "Task")
     }
 
     const openProjectDetails = () => {
-        if (!task.projectId) return
-        if (onOpenProject) {
+        if (projectActionsBlocked || !savedProjectId) return
+        if (onOpenProject && savedProjectMatchesTaskProp) {
             onOpenProject({
                 ...(task.project || {}),
-                id: task.projectId,
+                id: savedProjectId,
                 tasks: task.project?.tasks || [],
                 timeLogs: task.project?.timeLogs || [],
             })
             return
         }
 
-        router.push(`/projects?openProject=${encodeURIComponent(task.projectId)}`)
+        router.push(`/projects?openProject=${encodeURIComponent(savedProjectId)}`)
     }
 
     const openSitePanel = () => {
+        if (projectActionsBlocked || !savedProjectMatchesTaskProp) return
         if (task.project?.site && onOpenSite) {
             onOpenSite(task.project.site)
             return
@@ -380,7 +574,12 @@ export function TaskDetails({
     }
 
     const handleManualLog = async () => {
-        if (!task.projectId) {
+        if (projectActionsBlocked) {
+            toast.message("Wait for the task target to finish saving")
+            return
+        }
+
+        if (!savedProjectId) {
             toast.error("Task has no project")
             return
         }
@@ -395,7 +594,7 @@ export function TaskDetails({
         try {
             const now = new Date()
             const response = await logTime({
-                projectId: task.projectId,
+                projectId: savedProjectId,
                 taskId: task.id,
                 durationSeconds: minutes * 60,
                 description: manualNotes || undefined,
@@ -479,6 +678,7 @@ export function TaskDetails({
                                                 size="icon"
                                                 className="h-8 w-8 shrink-0 rounded-lg text-[var(--text-muted)] opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                                                 onClick={() => setIsEditingTitle(true)}
+                                                disabled={loading}
                                                 aria-label="Edit task title"
                                                 title="Edit task title"
                                             >
@@ -506,6 +706,7 @@ export function TaskDetails({
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
+                                            disabled={loading || targetDirty || pendingTaskId === task.id}
                                             className={cn(
                                                 "group/status relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
                                                 status === "Active"
@@ -522,7 +723,8 @@ export function TaskDetails({
                                         {(["Active", "Completed"] as const).map((statusOption) => (
                                             <DropdownMenuItem
                                                 key={statusOption}
-                                                onSelect={() => setStatus(statusOption)}
+                                                onSelect={() => handleStatusChange(statusOption)}
+                                                disabled={loading || targetDirty || pendingTaskId === task.id}
                                                 className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
                                             >
                                                 <span className={cn("mr-2 h-2 w-2 rounded-full", statusOption === "Active" ? "bg-[var(--brand-primary)]" : "bg-[var(--state-success)]")} />
@@ -612,6 +814,67 @@ export function TaskDetails({
                             </div>
                         </div>
 
+                        <section className="space-y-3 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <SidePanelSectionTitle title="Task target" icon={<FolderOpen className="h-3.5 w-3.5" />} />
+                                <span className="text-xs font-medium text-[var(--text-muted)]">
+                                    {taskScope === "LMS" ? "Shared with LMS" : taskScope === "FREELANCE" ? "Freelance workflow" : "Standalone"}
+                                </span>
+                            </div>
+                            <TaskTargetSelector
+                                value={taskScope}
+                                disabled={loading || pendingTaskId === task.id || status === "Completed"}
+                                onValueChange={(value) => {
+                                    if (value !== "FREELANCE" && isActiveTimerThisTask) {
+                                        toast.error("Stop the active freelance timer before removing this task from its project")
+                                        return
+                                    }
+                                    if (value !== taskScope) bumpTargetRevision()
+                                    setTaskScope(value)
+                                }}
+                            />
+                            {taskScope === "FREELANCE" ? (
+                                <TaskFreelanceProjectField
+                                    projectId={projectId}
+                                    onProjectChange={(value) => {
+                                        if (isActiveTimerThisTask && value !== projectId) {
+                                            toast.error("Stop the active timer before moving this task to another project")
+                                            return
+                                        }
+                                        if (value !== projectId) bumpTargetRevision()
+                                        setProjectId(value)
+                                    }}
+                                    disabled={loading || pendingTaskId === task.id || status === "Completed"}
+                                />
+                            ) : taskScope === "LMS" ? (
+                                <TaskLmsFields
+                                    lmsAllocationId={lmsAllocationId}
+                                    lmsTaskTypeId={lmsTaskTypeId}
+                                    onAllocationChange={(value) => {
+                                        if (value !== lmsAllocationId) bumpTargetRevision()
+                                        setLmsAllocationId(value)
+                                    }}
+                                    onWorkTaskChange={(value) => {
+                                        if (value !== lmsTaskTypeId) bumpTargetRevision()
+                                        setLmsTaskTypeId(value)
+                                    }}
+                                    disabled={loading || pendingTaskId === task.id || status === "Completed"}
+                                    compact
+                                />
+                            ) : null}
+                            {targetDirty ? (
+                                <p className="inline-flex items-center gap-2 text-xs font-medium text-[var(--text-muted)]">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    Saving task target… Project actions are paused until it finishes.
+                                </p>
+                            ) : null}
+                            {status === "Completed" ? (
+                                <p className="text-xs leading-5 text-[var(--text-muted)]">Reopen the task before changing its target or LMS links. Existing LMS work remains historical.</p>
+                            ) : taskScope === "LMS" ? (
+                                <p className="text-xs leading-5 text-[var(--text-muted)]">Both LMS fields can be completed later. They become required when the task is marked completed.</p>
+                            ) : null}
+                        </section>
+
                         <SidePanelNotesSection
                             title="Task notes"
                             icon={<FileText className="h-3.5 w-3.5" />}
@@ -620,13 +883,14 @@ export function TaskDetails({
                             statusState={notesSaveState}
                             value={description}
                             onChange={setDescription}
-                            uploadProjectId={task?.projectId || task?.id}
+                            uploadProjectId={savedProjectId || task.id}
+                            imageUploadsDisabled={projectActionsBlocked}
                             onAddTemplate={appendTaskNotesTemplate}
                             onExpand={() => setIsNotesModalOpen(true)}
                             expandLabel="Open notes in full view"
                         />
 
-                    <section className="space-y-4">
+                    {taskScope !== "LMS" ? <section className="space-y-4">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <SidePanelSectionTitle title="Task time tracker" icon={<Clock className="h-3.5 w-3.5" />} />
@@ -634,6 +898,7 @@ export function TaskDetails({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setIsManualTimeOpen((current) => !current)}
+                                    disabled={projectActionsBlocked || !savedProjectId}
                                     className="h-8 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 ui-text-caption text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
                                 >
                                     <Plus className="mr-1 h-3.5 w-3.5" />
@@ -649,6 +914,7 @@ export function TaskDetails({
                                 timerStatusLabel={timerStatusLabel}
                                 onPrimaryAction={handleTaskTimerPrimaryAction}
                                 onStopAction={() => void globalStopTimer()}
+                                isPrimaryDisabled={projectActionsBlocked || (!savedProjectId && !isActiveTimerThisTask)}
                                 isStopDisabled={!isActiveTimerThisTask}
                             />
 
@@ -660,6 +926,7 @@ export function TaskDetails({
                                     onNotesChange={setManualNotes}
                                     onSave={handleManualLog}
                                     isSaving={isLoggingTime}
+                                    disabled={projectActionsBlocked || !savedProjectId}
                                     className="premium-card rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-sm"
                                 />
                             )}
@@ -678,18 +945,51 @@ export function TaskDetails({
                                 emptyMessage="No time logs recorded for this task yet."
                             />
                         </div>
-                    </section>
+                    </section> : (
+                        <section className="rounded-2xl border border-dashed border-[color:color-mix(in_srgb,var(--primary)_34%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_10%,var(--surface-lowest))] px-4 py-4">
+                            <div className="flex items-start gap-3">
+                                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary)]" />
+                                <div>
+                                    <p className="text-sm font-semibold text-[var(--text-primary)]">LMS time is recorded on completion</p>
+                                    <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">The freelance timer and CRM manual-time history are intentionally hidden for LMS tasks. Existing manual LMS Record Work entries remain separate.</p>
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                         <section className="space-y-3 border-t border-[var(--line-subtle)] pt-3">
                             <SidePanelSectionTitle title="Task info" icon={<Info className="h-3.5 w-3.5" />} />
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                {taskScope === "LMS" ? (
+                                    <>
+                                        <SidePanelInfoCard
+                                            title="LMS project"
+                                            subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">{lmsAllocationId ? selectedLmsAllocationName : "Not linked"}</p>}
+                                        >
+                                            <p className="text-xs font-medium text-[var(--text-secondary)]">My job · independent from freelance projects</p>
+                                        </SidePanelInfoCard>
+                                        <SidePanelInfoCard
+                                            title="Work category"
+                                            subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">{lmsTaskTypeId ? selectedLmsTaskTypeName : "Not linked"}</p>}
+                                        >
+                                            <p className="text-xs font-medium text-[var(--text-secondary)]">Used when the completion creates LMS work</p>
+                                        </SidePanelInfoCard>
+                                    </>
+                                ) : taskScope === "GENERAL" ? (
+                                    <SidePanelInfoCard
+                                        title="Target"
+                                        subtitle={<p className="text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">No project</p>}
+                                    >
+                                        <p className="text-xs font-medium text-[var(--text-secondary)]">No client or project relationship</p>
+                                    </SidePanelInfoCard>
+                                ) : <>
                                 <button
                                     type="button"
                                     onClick={openProjectDetails}
-                                    disabled={!task.projectId}
+                                    disabled={projectActionsBlocked || !savedProjectId}
                                     className={cn(
                                         "text-left",
-                                        task.projectId
+                                        !projectActionsBlocked && savedProjectId
                                             ? "hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
                                             : "cursor-not-allowed opacity-60"
                                     )}
@@ -713,10 +1013,10 @@ export function TaskDetails({
                                         <button
                                             type="button"
                                             onClick={openSitePanel}
-                                            disabled={!projectSitePanelHref && !onOpenSite}
+                                            disabled={projectActionsBlocked || !savedProjectMatchesTaskProp || (!projectSitePanelHref && !onOpenSite)}
                                             className={cn(
                                                 "truncate text-left text-base font-black leading-tight tracking-tight transition sm:text-lg",
-                                                projectSitePanelHref || onOpenSite
+                                                !projectActionsBlocked && savedProjectMatchesTaskProp && (projectSitePanelHref || onOpenSite)
                                                     ? "text-[var(--text-primary)] hover:text-[var(--primary)]"
                                                     : "cursor-not-allowed text-[var(--text-muted)]"
                                             )}
@@ -751,6 +1051,7 @@ export function TaskDetails({
                                         )}
                                     </div>
                                 </SidePanelInfoCard>
+                                </>}
                             </div>
                         </section>
 
@@ -801,7 +1102,8 @@ export function TaskDetails({
                                 mode="document"
                                 className="h-full"
                                 minHeightClassName="min-h-0"
-                                uploadProjectId={task?.projectId || task?.id}
+                                uploadProjectId={savedProjectId || task.id}
+                                imageUploadsDisabled={projectActionsBlocked}
                                 toolbarVisibility="always"
                                 toolbarActions={
                                     <Button

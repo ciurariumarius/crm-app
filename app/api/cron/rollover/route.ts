@@ -179,6 +179,7 @@ async function rolloverProject(project: {
             await tx.task.createMany({
                 data: uniqueTasks.map((taskName) => ({
                     projectId: createdProject.id,
+                    taskScope: 'FREELANCE',
                     name: taskName,
                     status: 'Active',
                 })),

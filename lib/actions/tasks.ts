@@ -4,9 +4,20 @@ import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { requireAuth } from "@/lib/auth"
-import { getActionErrorMessage } from "@/lib/action-errors"
+import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
 import { TASK_STATUS_VALUES, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
+import { formatProjectName } from "@/lib/utils"
+import {
+    buildCrmTaskWorkEntrySourceKey,
+    buildTaskTargetInput,
+    inferTaskScope,
+    LmsTaskCompletionSchema,
+    TaskScopeSchema,
+    type LmsTaskCompletionInput,
+    type TaskScope,
+} from "@/lib/tasks/lms-bridge"
 import {
     hasCurrentNotesWriteProtocol,
     NOTES_CLIENT_REFRESH_MESSAGE,
@@ -31,6 +42,96 @@ const TaskUrgencySchema = z.enum(["Low", "Normal", "High", "Urgent", "Idea"])
 const TaskIdSchema = z.string().uuid()
 const TaskIdsSchema = z.array(TaskIdSchema).max(500)
 const ProjectIdSchema = z.string().uuid()
+const OptionalLmsReferenceSchema = z.string().uuid().nullable().optional()
+
+const taskContextSelect = {
+    id: true,
+    projectId: true,
+    taskScope: true,
+    lmsAllocationId: true,
+    lmsTaskTypeId: true,
+    name: true,
+    status: true,
+    urgency: true,
+    deadline: true,
+    project: {
+        select: {
+            siteId: true,
+            site: {
+                select: {
+                    partnerId: true,
+                },
+            },
+        },
+    },
+} satisfies Prisma.TaskSelect
+
+function taskActionFailure(error: unknown, fallback: string) {
+    return {
+        success: false as const,
+        error: getActionErrorMessage(error, fallback),
+        ...(error instanceof ActionError ? { code: error.code } : {}),
+    }
+}
+
+function isPrismaUniqueConstraintError(error: unknown) {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002"
+}
+
+function normalizeStoredTaskScope(value: string | null | undefined, projectId?: string | null): TaskScope {
+    if (projectId) return "FREELANCE"
+    const parsed = TaskScopeSchema.safeParse(value)
+    return parsed.success ? parsed.data : inferTaskScope(projectId)
+}
+
+function revalidateLmsTaskPaths() {
+    revalidatePath("/lms-analysis/work-log")
+    revalidatePath("/lms-analysis/data")
+}
+
+async function resolveLmsTaskMapping(
+    tx: Prisma.TransactionClient,
+    lmsAllocationId: string | null | undefined,
+    lmsTaskTypeId: string | null | undefined
+) {
+    const [allocation, taskType] = await Promise.all([
+        lmsAllocationId
+            ? tx.lmsAllocation.findUnique({
+                where: { id: lmsAllocationId },
+                select: { id: true, client: true },
+            })
+            : Promise.resolve(null),
+        lmsTaskTypeId
+            ? tx.lmsWorkTask.findUnique({
+                where: { id: lmsTaskTypeId },
+                select: { id: true, name: true, isActive: true },
+            })
+            : Promise.resolve(null),
+    ])
+
+    if (lmsAllocationId && !allocation) {
+        throw new ActionError("LMS_ALLOCATION_NOT_FOUND", "Select a current LMS project")
+    }
+    if (lmsTaskTypeId && (!taskType || !taskType.isActive)) {
+        throw new ActionError("LMS_TASK_TYPE_NOT_FOUND", "Select an active LMS task type")
+    }
+
+    return { allocation, taskType }
+}
+
+function assertTaskScopeProject(scope: TaskScope, projectId: string | null) {
+    if (scope === "FREELANCE" && !projectId) {
+        throw new ActionError("FREELANCE_PROJECT_REQUIRED", "Select a freelance project")
+    }
+    if (scope !== "FREELANCE" && projectId) {
+        throw new ActionError(
+            "TASK_SCOPE_PROJECT_CONFLICT",
+            scope === "LMS"
+                ? "LMS tasks cannot belong to a freelance project"
+                : "General tasks cannot belong to a freelance project"
+        )
+    }
+}
 
 function formatAuditDateToken(value: Date | null | undefined) {
     if (!value) return "none"
@@ -47,6 +148,9 @@ const AddTaskSchema = z.object({
         status: TaskStatusSchema.optional(),
         urgency: TaskUrgencySchema.optional(),
         estimatedMinutes: z.number().int().min(0).max(100000).optional(),
+        taskScope: TaskScopeSchema.optional(),
+        lmsAllocationId: OptionalLmsReferenceSchema,
+        lmsTaskTypeId: OptionalLmsReferenceSchema,
     }).optional(),
 })
 
@@ -59,6 +163,10 @@ const UpdateTaskSchema = z.object({
     isCompleted: z.boolean().optional(),
     deadline: z.union([z.date(), z.null()]).optional(),
     estimatedMinutes: z.union([z.number().int().min(0).max(100000), z.null()]).optional(),
+    projectId: z.string().uuid().nullable().optional(),
+    taskScope: TaskScopeSchema.optional(),
+    lmsAllocationId: OptionalLmsReferenceSchema,
+    lmsTaskTypeId: OptionalLmsReferenceSchema,
 })
 
 export async function addTask(
@@ -69,6 +177,9 @@ export async function addTask(
         status?: string
         urgency?: string
         estimatedMinutes?: number
+        taskScope?: TaskScope
+        lmsAllocationId?: string | null
+        lmsTaskTypeId?: string | null
     }
 ) {
     try {
@@ -100,9 +211,34 @@ export async function addTask(
                 }
             }
 
+            const taskScope = validated.options?.taskScope ?? inferTaskScope(targetProject?.id)
+            assertTaskScopeProject(taskScope, targetProject?.id ?? null)
+            if (taskScope === "LMS" && validated.options?.status === "Completed") {
+                throw new ActionError(
+                    "LMS_COMPLETION_DETAILS_REQUIRED",
+                    "Create the LMS task as active, then complete it with its project, task type, date, and duration"
+                )
+            }
+
+            const lmsAllocationId = taskScope === "LMS"
+                ? validated.options?.lmsAllocationId ?? null
+                : null
+            const lmsTaskTypeId = taskScope === "LMS"
+                ? validated.options?.lmsTaskTypeId ?? null
+                : null
+            if (taskScope === "LMS") {
+                await resolveLmsTaskMapping(tx, lmsAllocationId, lmsTaskTypeId)
+            }
+            const taskTarget = buildTaskTargetInput({
+                taskScope,
+                projectId: targetProject?.id,
+                lmsAllocationId,
+                lmsTaskTypeId,
+            })
+
             const task = await tx.task.create({
                 data: {
-                    projectId: targetProject?.id ?? null,
+                    ...taskTarget,
                     name: validated.name,
                     status: validated.options?.status || "Active",
                     urgency: normalizeTaskUrgency(validated.options?.urgency),
@@ -120,7 +256,8 @@ export async function addTask(
 
             return {
                 ok: true as const,
-                projectId: targetProject?.id ?? null,
+                projectId: taskTarget.projectId,
+                taskScope,
                 task,
             }
         })
@@ -137,7 +274,7 @@ export async function addTask(
         const task = taskResult.task
         await logSessionAuditEvent(session, {
             action: "TASK_CREATED",
-            details: `taskId=${task.id}; projectId=${taskResult.projectId || "none"}; status=${task.status}; priority=${task.urgency}; deadline=${formatAuditDateToken(task.deadline)}`,
+            details: `taskId=${task.id}; projectId=${taskResult.projectId || "none"}; taskScope=${taskResult.taskScope}; status=${task.status}; priority=${task.urgency}; deadline=${formatAuditDateToken(task.deadline)}`,
         })
         revalidateTaskPaths(taskResult.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
         return {
@@ -145,13 +282,268 @@ export async function addTask(
             data: {
                 taskId: task.id,
                 projectId: taskResult.projectId,
+                taskScope: taskResult.taskScope,
+                lmsAllocationId: task.lmsAllocationId,
+                lmsTaskTypeId: task.lmsTaskTypeId,
                 projectName: task.project?.name || null,
                 projectDomain: task.project?.site?.domainName || null,
             },
         }
     } catch (error) {
         console.error("Add task failed:", error)
-        return { success: false, error: getActionErrorMessage(error, "Failed to add task") }
+        return taskActionFailure(error, "Failed to add task")
+    }
+}
+
+export async function completeTask(
+    taskId: string,
+    lmsCompletion?: LmsTaskCompletionInput
+) {
+    try {
+        const session = await requireAuth()
+        const validatedTaskId = TaskIdSchema.parse(taskId)
+        const validatedCompletion = lmsCompletion === undefined
+            ? undefined
+            : LmsTaskCompletionSchema.parse(lmsCompletion)
+
+        const runCompletion = () => prisma.$transaction(async (tx) => {
+            const task = await tx.task.findUnique({
+                where: { id: validatedTaskId },
+                select: taskContextSelect,
+            })
+            if (!task) throw new ActionError("TASK_NOT_FOUND", "Task not found")
+
+            const taskScope = normalizeStoredTaskScope(task.taskScope, task.projectId)
+            const existingEntry = taskScope === "LMS"
+                ? await tx.lmsWorkEntry.findUnique({
+                    where: { crmTaskId: task.id },
+                    select: { id: true, exportedAt: true },
+                })
+                : null
+
+            if (task.status === "Completed" && (taskScope !== "LMS" || existingEntry)) {
+                return {
+                    task,
+                    previousStatus: task.status,
+                    lmsEntryCreated: false,
+                    lmsEntryId: existingEntry?.id ?? null,
+                    lmsEntryAlreadyExists: Boolean(existingEntry),
+                }
+            }
+
+            if (taskScope !== "LMS") {
+                await tx.task.update({
+                    where: { id: task.id },
+                    data: { status: "Completed" },
+                })
+                return {
+                    task,
+                    previousStatus: task.status,
+                    lmsEntryCreated: false,
+                    lmsEntryId: null,
+                    lmsEntryAlreadyExists: false,
+                }
+            }
+
+            if (existingEntry) {
+                await tx.task.update({
+                    where: { id: task.id },
+                    data: { status: "Completed" },
+                })
+                return {
+                    task,
+                    previousStatus: task.status,
+                    lmsEntryCreated: false,
+                    lmsEntryId: existingEntry.id,
+                    lmsEntryAlreadyExists: true,
+                }
+            }
+
+            if (!validatedCompletion) {
+                throw new ActionError(
+                    "LMS_COMPLETION_DETAILS_REQUIRED",
+                    "Select the LMS project, task type, work date, and duration before completing this task"
+                )
+            }
+
+            const { allocation, taskType } = await resolveLmsTaskMapping(
+                tx,
+                validatedCompletion.lmsAllocationId,
+                validatedCompletion.lmsTaskTypeId
+            )
+            if (!allocation || !taskType) {
+                throw new ActionError(
+                    "LMS_COMPLETION_DETAILS_REQUIRED",
+                    "Select the LMS project and an active LMS task type"
+                )
+            }
+
+            await tx.task.update({
+                where: { id: task.id },
+                data: {
+                    projectId: null,
+                    taskScope: "LMS",
+                    lmsAllocationId: allocation.id,
+                    lmsTaskTypeId: taskType.id,
+                    status: "Completed",
+                },
+            })
+            const entry = await tx.lmsWorkEntry.create({
+                data: {
+                    lmsAllocationId: allocation.id,
+                    taskTypeId: taskType.id,
+                    crmTaskId: task.id,
+                    workDate: validatedCompletion.workDate,
+                    durationMinutes: validatedCompletion.durationMinutes,
+                    clientDomainSnapshot: allocation.client,
+                    taskNameSnapshot: taskType.name,
+                    crmTaskNameSnapshot: task.name,
+                    employeeNameSnapshot: LMS_CRM_EMPLOYEE_NAME,
+                    origin: "CRM_TASK",
+                    sourceKey: buildCrmTaskWorkEntrySourceKey(task.id),
+                },
+                select: { id: true },
+            })
+
+            return {
+                task,
+                previousStatus: task.status,
+                lmsEntryCreated: true,
+                lmsEntryId: entry.id,
+                lmsEntryAlreadyExists: false,
+            }
+        })
+
+        let result: Awaited<ReturnType<typeof runCompletion>>
+        try {
+            result = await runCompletion()
+        } catch (error) {
+            if (!isPrismaUniqueConstraintError(error)) throw error
+
+            const [task, existingEntry] = await Promise.all([
+                prisma.task.findUnique({
+                    where: { id: validatedTaskId },
+                    select: taskContextSelect,
+                }),
+                prisma.lmsWorkEntry.findUnique({
+                    where: { crmTaskId: validatedTaskId },
+                    select: { id: true },
+                }),
+            ])
+            if (!task || task.status !== "Completed" || !existingEntry) throw error
+
+            result = {
+                task,
+                previousStatus: "Completed",
+                lmsEntryCreated: false,
+                lmsEntryId: existingEntry.id,
+                lmsEntryAlreadyExists: true,
+            }
+        }
+
+        if (result.previousStatus !== "Completed") {
+            await logSessionAuditEvent(session, {
+                action: "TASK_STATUS_CHANGED",
+                details: `taskId=${result.task.id}; projectId=${result.task.projectId || "none"}; from=${result.previousStatus}; to=Completed; source=complete_task`,
+            })
+        }
+        if (result.lmsEntryCreated && result.lmsEntryId) {
+            await logSessionAuditEvent(session, {
+                action: "LMS_WORK_ENTRY_CREATED_FROM_TASK",
+                details: `taskId=${result.task.id}; entryId=${result.lmsEntryId}; source=crm_task`,
+            })
+        }
+
+        revalidateTaskPaths(
+            result.task.projectId || undefined,
+            result.task.project?.site?.partnerId,
+            result.task.project?.siteId
+        )
+        if (result.lmsEntryId) revalidateLmsTaskPaths()
+        return {
+            success: true as const,
+            data: {
+                lmsEntryCreated: result.lmsEntryCreated,
+                lmsEntryId: result.lmsEntryId,
+                lmsEntryAlreadyExists: result.lmsEntryAlreadyExists,
+            },
+        }
+    } catch (error) {
+        console.error("Complete task failed:", error)
+        return taskActionFailure(error, "Failed to complete task")
+    }
+}
+
+export async function reopenTask(taskId: string) {
+    try {
+        const session = await requireAuth()
+        const validatedTaskId = TaskIdSchema.parse(taskId)
+        const result = await prisma.$transaction(async (tx) => {
+            const task = await tx.task.findUnique({
+                where: { id: validatedTaskId },
+                select: taskContextSelect,
+            })
+            if (!task) throw new ActionError("TASK_NOT_FOUND", "Task not found")
+
+            const entry = await tx.lmsWorkEntry.findUnique({
+                where: { crmTaskId: task.id },
+                select: { id: true, exportedAt: true },
+            })
+            const entryDeleted = Boolean(entry && !entry.exportedAt)
+            const exportedEntryPreserved = Boolean(entry?.exportedAt)
+
+            if (entryDeleted && entry) {
+                await tx.lmsWorkEntry.delete({ where: { id: entry.id } })
+            }
+            if (task.status !== "Active") {
+                await tx.task.update({
+                    where: { id: task.id },
+                    data: { status: "Active" },
+                })
+            }
+
+            return {
+                task,
+                previousStatus: task.status,
+                entryId: entry?.id ?? null,
+                entryDeleted,
+                exportedEntryPreserved,
+            }
+        })
+
+        if (result.previousStatus !== "Active") {
+            await logSessionAuditEvent(session, {
+                action: "TASK_STATUS_CHANGED",
+                details: `taskId=${result.task.id}; projectId=${result.task.projectId || "none"}; from=${result.previousStatus}; to=Active; source=reopen_task`,
+            })
+        }
+        if (result.entryDeleted && result.entryId) {
+            await logSessionAuditEvent(session, {
+                action: "LMS_WORK_ENTRY_REMOVED_ON_TASK_REOPEN",
+                details: `taskId=${result.task.id}; entryId=${result.entryId}; source=crm_task`,
+            })
+        }
+
+        revalidateTaskPaths(
+            result.task.projectId || undefined,
+            result.task.project?.site?.partnerId,
+            result.task.project?.siteId
+        )
+        if (result.entryId) revalidateLmsTaskPaths()
+        const warning = result.exportedEntryPreserved
+            ? "The exported LMS work entry was preserved; reopening the task does not remove exported history."
+            : undefined
+        return {
+            success: true as const,
+            ...(warning ? { warning } : {}),
+            data: {
+                entryDeleted: result.entryDeleted,
+                exportedEntryPreserved: result.exportedEntryPreserved,
+            },
+        }
+    } catch (error) {
+        console.error("Reopen task failed:", error)
+        return taskActionFailure(error, "Failed to reopen task")
     }
 }
 
@@ -159,15 +551,12 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
     try {
         const session = await requireAuth()
         const validatedTaskId = TaskIdSchema.parse(taskId)
-        const validatedProjectId = projectId ? ProjectIdSchema.parse(projectId) : undefined
-        const validatedCurrentStatus = LegacyTaskStatusSchema.parse(currentStatus)
-        const normalizedCurrentStatus = normalizeTaskStatus(validatedCurrentStatus)
-        const isCompleted = normalizedCurrentStatus === "Completed"
-        const newStatus = isCompleted ? "Active" : "Completed"
+        if (projectId) ProjectIdSchema.parse(projectId)
+        LegacyTaskStatusSchema.parse(currentStatus)
 
         const taskEntity = await prisma.task.findFirst({
             where: { id: validatedTaskId },
-            select: { id: true },
+            select: { id: true, status: true },
         })
         if (!taskEntity) {
             await logSessionAuditEvent(session, {
@@ -178,46 +567,59 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
             return { success: false, error: "Task not found" }
         }
 
-        const task = await prisma.task.update({
-            where: { id: taskEntity.id },
-            data: {
-                status: newStatus,
-            },
-            include: { project: { include: { site: true } } }
-        })
+        const persistedStatus = normalizeTaskStatus(taskEntity.status)
+        const result = persistedStatus === "Completed"
+            ? await reopenTask(taskEntity.id)
+            : await completeTask(taskEntity.id)
+        if (!result.success) return result
+
         await logSessionAuditEvent(session, {
             action: "TASK_STATUS_TOGGLED",
-            details: `taskId=${validatedTaskId}; from=${normalizedCurrentStatus}; to=${newStatus}`,
+            details: `taskId=${validatedTaskId}; from=${persistedStatus}; to=${persistedStatus === "Completed" ? "Active" : "Completed"}`,
         })
-        await logSessionAuditEvent(session, {
-            action: "TASK_STATUS_CHANGED",
-            details: `taskId=${validatedTaskId}; projectId=${validatedProjectId || task.projectId || "none"}; from=${normalizedCurrentStatus}; to=${newStatus}; source=toggle_status`,
-        })
-        revalidateTaskPaths(
-            validatedProjectId || task.projectId || undefined,
-            task.project?.site?.partnerId,
-            task.project?.siteId
-        )
-        return { success: true }
+        return result
     } catch (error) {
         console.error("Toggle task status failed:", error)
-        return { success: false, error: getActionErrorMessage(error, "Failed to toggle task status") }
+        return taskActionFailure(error, "Failed to toggle task status")
     }
 }
 
 export async function updateTask(taskId: string, data: {
     name?: string
     description?: string
-    status?: string
     urgency?: string
-    isCompleted?: boolean
     deadline?: Date | null
     estimatedMinutes?: number | null
+    projectId?: string | null
+    taskScope?: TaskScope
+    lmsAllocationId?: string | null
+    lmsTaskTypeId?: string | null
 }, options: { notesWriteProtocol?: string } = {}) {
     try {
         const session = await requireAuth()
         const validated = UpdateTaskSchema.parse({ taskId, ...data })
-        const { isCompleted, taskId: validatedTaskId, ...restData } = validated
+        if (validated.status !== undefined || validated.isCompleted !== undefined) {
+            throw new ActionError(
+                "TASK_STATUS_ACTION_REQUIRED",
+                "Use the complete or reopen task action to change task status"
+            )
+        }
+        const {
+            taskId: validatedTaskId,
+            projectId: requestedProjectId,
+            taskScope: requestedScope,
+            lmsAllocationId: requestedLmsAllocationId,
+            lmsTaskTypeId: requestedLmsTaskTypeId,
+        } = validated
+        const editableFields = {
+            ...(validated.name !== undefined ? { name: validated.name } : {}),
+            ...(validated.description !== undefined ? { description: validated.description } : {}),
+            ...(validated.urgency !== undefined ? { urgency: validated.urgency } : {}),
+            ...(validated.deadline !== undefined ? { deadline: validated.deadline } : {}),
+            ...(validated.estimatedMinutes !== undefined
+                ? { estimatedMinutes: validated.estimatedMinutes }
+                : {}),
+        }
         if (
             validated.description !== undefined
             && !hasCurrentNotesWriteProtocol(options.notesWriteProtocol)
@@ -233,46 +635,140 @@ export async function updateTask(taskId: string, data: {
                 code: NOTES_CLIENT_REFRESH_REQUIRED,
             }
         }
-        const updateData: Prisma.TaskUpdateInput = { ...restData }
-        if (restData.urgency !== undefined) {
-            updateData.urgency = normalizeTaskUrgency(restData.urgency)
-        }
 
-        if (isCompleted === true) {
-            updateData.status = "Completed"
-        } else if (isCompleted === false && !data.status) {
-            updateData.status = "Active"
-        }
-
-        const existingTask = await prisma.task.findFirst({
-            where: { id: validatedTaskId },
-            select: { id: true, projectId: true, status: true, urgency: true, deadline: true },
-        })
-        if (!existingTask) {
-            await logSessionAuditEvent(session, {
-                action: "TASK_UPDATE_FAILED",
-                success: false,
-                details: `taskId=${validatedTaskId}; reason=not_found`,
+        const mutation = await prisma.$transaction(async (tx) => {
+            const existingTask = await tx.task.findUnique({
+                where: { id: validatedTaskId },
+                select: taskContextSelect,
             })
-            return { success: false, error: "Task not found" }
-        }
+            if (!existingTask) throw new ActionError("TASK_NOT_FOUND", "Task not found")
 
-        const task = await prisma.task.update({
-            where: { id: existingTask.id },
-            data: updateData,
-            include: { project: { include: { site: true } } }
+            const storedScope = normalizeStoredTaskScope(existingTask.taskScope, existingTask.projectId)
+            const nextScope = requestedScope ?? storedScope
+            const nextProjectId = nextScope === "FREELANCE"
+                ? requestedProjectId !== undefined
+                    ? requestedProjectId
+                    : storedScope === "FREELANCE" ? existingTask.projectId : null
+                : null
+            assertTaskScopeProject(nextScope, nextProjectId)
+            if (nextProjectId) {
+                const projectExists = await tx.project.findUnique({
+                    where: { id: nextProjectId },
+                    select: { id: true },
+                })
+                if (!projectExists) {
+                    throw new ActionError("FREELANCE_PROJECT_NOT_FOUND", "Select a current freelance project")
+                }
+            }
+
+            const nextLmsAllocationId = nextScope === "LMS"
+                ? requestedLmsAllocationId !== undefined
+                    ? requestedLmsAllocationId
+                    : storedScope === "LMS" ? existingTask.lmsAllocationId : null
+                : null
+            const nextLmsTaskTypeId = nextScope === "LMS"
+                ? requestedLmsTaskTypeId !== undefined
+                    ? requestedLmsTaskTypeId
+                    : storedScope === "LMS" ? existingTask.lmsTaskTypeId : null
+                : null
+            const nextTarget = buildTaskTargetInput({
+                taskScope: nextScope,
+                projectId: nextProjectId,
+                lmsAllocationId: nextLmsAllocationId,
+                lmsTaskTypeId: nextLmsTaskTypeId,
+            })
+            const targetChanged = nextTarget.taskScope !== storedScope
+                || nextTarget.projectId !== existingTask.projectId
+                || nextTarget.lmsAllocationId !== existingTask.lmsAllocationId
+                || nextTarget.lmsTaskTypeId !== existingTask.lmsTaskTypeId
+            const projectTargetChanged = nextTarget.projectId !== existingTask.projectId
+
+            if (targetChanged) {
+                if (projectTargetChanged) {
+                    const activeTimer = await tx.timeLog.findFirst({
+                        where: {
+                            taskId: existingTask.id,
+                            OR: [
+                                { endTime: null },
+                                { isPaused: true },
+                            ],
+                        },
+                        select: { id: true },
+                    })
+                    if (activeTimer) {
+                        throw new ActionError(
+                            "TASK_TARGET_LOCKED_BY_ACTIVE_TIMER",
+                            "Stop the task timer before changing its project or target"
+                        )
+                    }
+                }
+                if (existingTask.status === "Completed") {
+                    throw new ActionError(
+                        "TASK_TARGET_LOCKED_WHILE_COMPLETED",
+                        "Reopen this task before changing its target"
+                    )
+                }
+                const existingEntry = await tx.lmsWorkEntry.findUnique({
+                    where: { crmTaskId: existingTask.id },
+                    select: { exportedAt: true },
+                })
+                if (existingEntry) {
+                    throw new ActionError(
+                        "TASK_TARGET_LOCKED_BY_LMS_ENTRY",
+                        existingEntry.exportedAt
+                            ? "This task target cannot change because its LMS work entry was already exported"
+                            : "Reopen this task before changing its LMS target"
+                    )
+                }
+            }
+
+            if (nextScope === "LMS") {
+                await resolveLmsTaskMapping(tx, nextLmsAllocationId, nextLmsTaskTypeId)
+            }
+
+            const updateData: Prisma.TaskUncheckedUpdateInput = {
+                ...editableFields,
+                ...nextTarget,
+            }
+            if (editableFields.urgency !== undefined) {
+                updateData.urgency = normalizeTaskUrgency(editableFields.urgency)
+            }
+
+            const updated = await tx.task.updateMany({
+                where: {
+                    id: existingTask.id,
+                    ...(projectTargetChanged
+                        ? {
+                            projectId: existingTask.projectId,
+                            timeLogs: {
+                                none: {
+                                    OR: [
+                                        { endTime: null },
+                                        { isPaused: true },
+                                    ],
+                                },
+                            },
+                        }
+                        : {}),
+                },
+                data: updateData,
+            })
+            if (updated.count !== 1) {
+                throw new ActionError(
+                    "TASK_TARGET_LOCKED_BY_ACTIVE_TIMER",
+                    "Stop the task timer before changing its project or target"
+                )
+            }
+            const task = await tx.task.findUniqueOrThrow({
+                where: { id: existingTask.id },
+                include: { project: { include: { site: true } } },
+            })
+            return { existingTask, task }
         })
 
-        const nextStatus = typeof updateData.status === "string" ? updateData.status : existingTask.status
-        const nextPriority = typeof updateData.urgency === "string" ? updateData.urgency : existingTask.urgency
-        const nextDeadline = updateData.deadline === undefined ? existingTask.deadline : ((updateData.deadline as Date | null) ?? null)
-
-        if (nextStatus !== existingTask.status) {
-            await logSessionAuditEvent(session, {
-                action: "TASK_STATUS_CHANGED",
-                details: `taskId=${task.id}; projectId=${task.projectId}; from=${existingTask.status}; to=${nextStatus}; source=update_task`,
-            })
-        }
+        const { existingTask, task } = mutation
+        const nextPriority = task.urgency
+        const nextDeadline = task.deadline
 
         if (nextPriority !== existingTask.urgency) {
             await logSessionAuditEvent(session, {
@@ -293,10 +789,18 @@ export async function updateTask(taskId: string, data: {
             details: `taskId=${task.id}; projectId=${task.projectId || "none"}`,
         })
         revalidateTaskPaths(task.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
+        if (existingTask.projectId && existingTask.projectId !== task.projectId) {
+            revalidateTaskPaths(
+                existingTask.projectId,
+                existingTask.project?.site?.partnerId,
+                existingTask.project?.siteId
+            )
+        }
+
         return { success: true }
     } catch (error) {
         console.error("Update task failed:", error)
-        return { success: false, error: getActionErrorMessage(error, "Failed to update task") }
+        return taskActionFailure(error, "Failed to update task")
     }
 }
 
@@ -334,7 +838,7 @@ export async function deleteTasks(taskIds: string[]) {
     try {
         const session = await requireAuth()
         const validatedTaskIds = TaskIdsSchema.parse(taskIds)
-        if (validatedTaskIds.length === 0) return { success: true }
+        if (validatedTaskIds.length === 0) return { success: true as const }
         const deleted = await prisma.task.deleteMany({
             where: { id: { in: validatedTaskIds } }
         })
@@ -343,7 +847,7 @@ export async function deleteTasks(taskIds: string[]) {
             details: `requested=${validatedTaskIds.length}; deleted=${deleted.count}`,
         })
         revalidateTaskPaths()
-        return { success: true }
+        return { success: true as const }
     } catch (error) {
         console.error("Bulk delete tasks failed:", error)
         return { success: false, error: getActionErrorMessage(error, "Failed to delete tasks") }
@@ -355,10 +859,40 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
         const session = await requireAuth()
         const validatedTaskIds = TaskIdsSchema.parse(taskIds)
         const validatedStatus = TaskStatusSchema.parse(status)
-        if (validatedTaskIds.length === 0) return { success: true }
-        const updated = await prisma.task.updateMany({
-            where: { id: { in: validatedTaskIds } },
-            data: { status: validatedStatus }
+        if (validatedTaskIds.length === 0) return { success: true as const }
+        const uniqueTaskIds = Array.from(new Set(validatedTaskIds))
+
+        const updated = await prisma.$transaction(async (tx) => {
+            const tasks = await tx.task.findMany({
+                where: { id: { in: uniqueTaskIds } },
+                select: { id: true, projectId: true, taskScope: true },
+            })
+            if (tasks.length !== uniqueTaskIds.length) {
+                throw new ActionError(
+                    "TASK_SELECTION_STALE",
+                    "One or more selected tasks no longer exist. Refresh and try again."
+                )
+            }
+            if (tasks.some((task) => normalizeStoredTaskScope(task.taskScope, task.projectId) === "LMS")) {
+                throw new ActionError(
+                    "LMS_BULK_STATUS_NOT_SUPPORTED",
+                    validatedStatus === "Completed"
+                        ? "Complete LMS tasks individually so the project, task type, work date, and duration can be recorded"
+                        : "Reopen LMS tasks individually so their LMS work-entry history is handled safely"
+                )
+            }
+
+            const result = await tx.task.updateMany({
+                where: { id: { in: uniqueTaskIds }, taskScope: { not: "LMS" } },
+                data: { status: validatedStatus },
+            })
+            if (result.count !== uniqueTaskIds.length) {
+                throw new ActionError(
+                    "TASK_SELECTION_CHANGED",
+                    "The selected tasks changed while the update was running. Refresh and try again."
+                )
+            }
+            return result
         })
         await logSessionAuditEvent(session, {
             action: "TASKS_BULK_STATUS_UPDATED",
@@ -367,10 +901,52 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
         revalidatePath("/tasks")
         revalidatePath("/projects")
         revalidatePath("/")
-        return { success: true }
+        return { success: true as const }
     } catch (error) {
         console.error("Bulk update tasks status failed:", error)
-        return { success: false, error: getActionErrorMessage(error, "Failed to update tasks") }
+        return taskActionFailure(error, "Failed to update tasks")
+    }
+}
+
+export async function getTaskLmsOptions() {
+    try {
+        await requireAuth()
+        const [allocations, taskTypes, projectRows] = await Promise.all([
+            prisma.lmsAllocation.findMany({
+                select: { id: true, client: true },
+                orderBy: { client: "asc" },
+            }),
+            prisma.lmsWorkTask.findMany({
+                where: { isActive: true },
+                select: { id: true, name: true, defaultDurationMinutes: true },
+                orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+            }),
+            prisma.project.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    status: true,
+                    createdAt: true,
+                    site: { select: { domainName: true } },
+                    services: { select: { serviceName: true, isRecurring: true } },
+                },
+                orderBy: { updatedAt: "desc" },
+            }),
+        ])
+
+        const projects = projectRows.map((project) => ({
+            id: project.id,
+            label: `${formatProjectName(project)}${project.status === "Active" ? "" : ` · ${project.status}`}`,
+            status: project.status,
+        }))
+
+        return {
+            success: true as const,
+            data: { allocations, taskTypes, projects },
+        }
+    } catch (error) {
+        console.error("Get task LMS options failed:", error)
+        return taskActionFailure(error, "Failed to load LMS task options")
     }
 }
 

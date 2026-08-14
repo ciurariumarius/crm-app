@@ -1,4 +1,8 @@
-import type { LmsWorkExportStatus } from "@/lib/lms-work-entries/filters"
+import type {
+  LmsWorkEntryOrigin,
+  LmsWorkExportStatus,
+  LmsWorkOriginFilter,
+} from "@/lib/lms-work-entries/filters"
 
 export type LmsWorkClientOption = {
   id: string
@@ -39,11 +43,14 @@ export type LmsWorkEntryFilterOption = {
 export type LmsWorkEntryRow = {
   id: string
   lmsAllocationId: string | null
-  taskTypeId: string
+  taskTypeId: string | null
   workDate: string
   durationMinutes: number
   clientDomain: string
   taskName: string
+  origin: LmsWorkEntryOrigin
+  crmTaskId: string | null
+  crmTaskName: string | null
   employeeName: string
   exportedAt: string | null
   createdAt: string
@@ -86,6 +93,7 @@ export type LmsWorkLogPageData = {
   workDate: string | null
   clientId: string | null
   taskId: string | null
+  origin: LmsWorkOriginFilter
   exportStatus: LmsWorkExportStatus
 }
 

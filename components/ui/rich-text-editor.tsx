@@ -86,6 +86,7 @@ interface RichTextEditorProps {
     documentWidth?: "full" | "reading"
     readOnly?: boolean
     imageUploadFallback?: "data-url" | "error"
+    imageUploadsDisabled?: boolean
     onBlur?: () => void
 }
 
@@ -158,6 +159,7 @@ export function RichTextEditor({
     documentWidth = "full",
     readOnly = false,
     imageUploadFallback = "data-url",
+    imageUploadsDisabled = false,
     onBlur,
 }: RichTextEditorProps) {
     const [isFocused, setIsFocused] = React.useState(false)
@@ -278,6 +280,7 @@ export function RichTextEditor({
 
     const uploadAndInsertFiles = React.useCallback(
         async (files: File[]) => {
+            if (imageUploadsDisabled) return
             const imageFiles = files.filter((file) => file.type.startsWith("image/"))
             if (!imageFiles.length) return
 
@@ -301,7 +304,7 @@ export function RichTextEditor({
                 setTimeout(() => setUploadState(null), 2200)
             }
         },
-        [insertImageSource, uploadImageFile]
+        [imageUploadsDisabled, insertImageSource, uploadImageFile]
     )
 
     const handleToolbarImageUpload = React.useCallback(
@@ -551,7 +554,7 @@ export function RichTextEditor({
                 return false
             },
             handlePaste(_, event) {
-                if (readOnly) return false
+                if (readOnly || imageUploadsDisabled) return false
                 const files = Array.from(event.clipboardData?.files || []).filter((file) =>
                     file.type.startsWith("image/")
                 )
@@ -561,7 +564,7 @@ export function RichTextEditor({
                 return true
             },
             handleDrop(view, event) {
-                if (readOnly) return false
+                if (readOnly || imageUploadsDisabled) return false
                 const files = Array.from(event.dataTransfer?.files || []).filter((file) =>
                     file.type.startsWith("image/")
                 )
@@ -950,13 +953,14 @@ export function RichTextEditor({
                         <button
                             type="button"
                             onClick={() => imageInputRef.current?.click()}
+                            disabled={imageUploadsDisabled}
                             className={cn(
                                 "inline-flex items-center justify-center rounded-md border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
                                 compactControlClass,
                                 notesMode && "rounded-full"
                             )}
                             aria-label="Upload image"
-                            title="Upload image"
+                            title={imageUploadsDisabled ? "Wait for the task target to finish saving" : "Upload image"}
                         >
                             <ImagePlus className={compactIconClass} />
                         </button>
@@ -993,6 +997,7 @@ export function RichTextEditor({
                     type="file"
                     accept="image/*"
                     multiple
+                    disabled={imageUploadsDisabled}
                     className="hidden"
                     onChange={handleToolbarImageUpload}
                 />

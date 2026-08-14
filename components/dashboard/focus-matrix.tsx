@@ -6,12 +6,13 @@ import { TaskGridCard } from "@/components/tasks/task-grid-card"
 import { cn, formatProjectName } from "@/lib/utils"
 import { ListChecks, ArrowRight, Clock, Trash2 } from "lucide-react"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
-import { deleteTasks, updateTask } from "@/lib/actions/tasks"
+import { deleteTasks } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { isPast, isToday } from "date-fns"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 
 interface FocusMatrixProps {
     tasks: FocusTask[]
@@ -24,6 +25,12 @@ interface FocusTask {
     urgency?: string | null
     deadline?: Date | string | null
     projectId?: string | null
+    taskScope?: string | null
+    estimatedMinutes?: number | null
+    lmsAllocationId?: string | null
+    lmsTaskTypeId?: string | null
+    lmsAllocation?: { id?: string; client?: string | null } | null
+    lmsTaskType?: { id?: string; name?: string | null; defaultDurationMinutes?: number | null } | null
     project?: {
         name?: string | null
         createdAt?: string | Date | null
@@ -40,6 +47,7 @@ const OVERDUE_VISIBLE_CAP = 3
 
 export function FocusMatrix({ tasks }: FocusMatrixProps) {
     const { openTask } = React.useContext(TaskSheetContext)
+    const { requestCompletion } = useTaskCompletion()
     const [quickLogTask, setQuickLogTask] = React.useState<{
         id: string
         name: string
@@ -58,15 +66,12 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
         return isPast(date) && !isToday(date)
     }
 
-    const handleComplete = async (taskId: string) => {
-        React.startTransition(() => setOptimisticTasks(taskId))
-        try {
-            const result = await updateTask(taskId, { status: "Completed" })
-            if (result.success) toast.success("Task completed")
-            else toast.error("Failed to complete task")
-        } catch {
-            toast.error("An error occurred")
-        }
+    const handleComplete = (taskId: string) => {
+        const task = optimisticTasks.find((entry) => entry.id === taskId)
+        if (!task) return
+        requestCompletion(task, {
+            onCompleted: () => React.startTransition(() => setOptimisticTasks(taskId)),
+        })
     }
 
     const handleDeleteTask = async (taskId: string) => {
@@ -86,24 +91,22 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
 
     const renderTaskActionMenu = (task: FocusTask) => (
         <>
-            <DropdownMenuItem
-                onClick={(e) => {
-                    e.stopPropagation()
-                    if (!task.projectId) {
-                        toast.error("Task has no project")
-                        return
-                    }
-                    setQuickLogTask({
-                        id: task.id,
-                        name: task.name || "Task",
-                        projectId: task.projectId,
-                        project: task.project ?? null,
-                    })
-                }}
-                className="gap-2 text-sm font-medium cursor-pointer"
-            >
-                <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
-            </DropdownMenuItem>
+            {task.taskScope !== "LMS" && task.projectId ? (
+                <DropdownMenuItem
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        setQuickLogTask({
+                            id: task.id,
+                            name: task.name || "Task",
+                            projectId: task.projectId as string,
+                            project: task.project ?? null,
+                        })
+                    }}
+                    className="gap-2 text-sm font-medium cursor-pointer"
+                >
+                    <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
+                </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem
                 className="gap-2 text-sm font-medium text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
                 onClick={(e) => {

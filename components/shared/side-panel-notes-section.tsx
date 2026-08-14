@@ -16,6 +16,7 @@ type SidePanelNotesSectionProps = {
     onChange: (value: string) => void
     onBlur?: () => void
     uploadProjectId?: string
+    imageUploadsDisabled?: boolean
     onAddTemplate?: () => void
     onExpand?: () => void
     expandLabel?: string
@@ -42,6 +43,7 @@ export function SidePanelNotesSection({
     onChange,
     onBlur,
     uploadProjectId,
+    imageUploadsDisabled,
     onAddTemplate,
     onExpand,
     expandLabel = "Open notes in full view",
@@ -72,6 +74,7 @@ export function SidePanelNotesSection({
                 className={editorClassName}
                 minHeightClassName={minHeightClassName}
                 uploadProjectId={uploadProjectId}
+                imageUploadsDisabled={imageUploadsDisabled}
                 toolbarActions={
                     <>
                         {onAddTemplate ? (

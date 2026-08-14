@@ -161,6 +161,7 @@ export async function createProject(data: {
                 await tx.task.createMany({
                     data: uniqueTasks.map((taskName) => ({
                         projectId: project.id,
+                        taskScope: "FREELANCE",
                         name: taskName,
                         status: "Active",
                     })),

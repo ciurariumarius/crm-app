@@ -112,23 +112,32 @@ model Project {
 }
 
 model Task {
-  id               String    @id @default(uuid())
-  projectId        String?   @map("project_id")
-  name             String
-  description      String?
-  status           String    @default("Active") // Active, Completed
-  urgency          String    @default("Normal") // Normal, Idea, Urgent
-  deadline         DateTime?
-  estimatedMinutes Int?      @map("estimated_minutes")
+  id                String    @id @default(uuid())
+  projectId         String?   @map("project_id")
+  taskScope         String    @default("GENERAL") @map("task_scope") // GENERAL, FREELANCE, LMS
+  lmsAllocationId   String?   @map("lms_allocation_id")
+  lmsTaskTypeId     String?   @map("lms_task_type_id")
+  name              String
+  description       String?
+  status            String    @default("Active") // Active, Completed
+  urgency           String    @default("Normal") // Normal, Idea, Urgent
+  deadline          DateTime?
+  estimatedMinutes  Int?      @map("estimated_minutes")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  project  Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  timeLogs TimeLog[]
+  project       Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lmsAllocation LmsAllocation? @relation(fields: [lmsAllocationId], references: [id], onDelete: SetNull)
+  lmsTaskType   LmsWorkTask?   @relation(fields: [lmsTaskTypeId], references: [id], onDelete: SetNull)
+  lmsWorkEntry  LmsWorkEntry?
+  timeLogs      TimeLog[]
 
   @@index([projectId])
   @@index([projectId, status])
+  @@index([taskScope, status])
+  @@index([lmsAllocationId])
+  @@index([lmsTaskTypeId])
   @@index([createdAt])
   @@index([updatedAt])
   @@index([name])
@@ -379,6 +388,7 @@ model LmsAllocation {
 
   workEntries     LmsWorkEntry[]
   workRecurrences LmsWorkRecurrence[]
+  tasks           Task[]
 
   @@unique([syncKey])
   @@index([client])
@@ -398,6 +408,7 @@ model LmsWorkTask {
 
   entries     LmsWorkEntry[]
   recurrences LmsWorkRecurrence[]
+  tasks       Task[]
 
   @@unique([normalizedName])
   @@index([isActive, name])
@@ -408,25 +419,30 @@ model LmsWorkTask {
 model LmsWorkEntry {
   id                   String    @id @default(uuid())
   lmsAllocationId      String?   @map("lms_allocation_id")
-  taskTypeId           String    @map("task_type_id")
+  taskTypeId           String?   @map("task_type_id")
+  crmTaskId             String?   @unique @map("crm_task_id")
   workDate             String    @map("work_date")
   durationMinutes      Int       @map("duration_minutes")
   clientDomainSnapshot String    @map("client_domain_snapshot")
   taskNameSnapshot     String    @map("task_name_snapshot")
+  crmTaskNameSnapshot  String?   @map("crm_task_name_snapshot")
   employeeNameSnapshot String    @map("employee_name_snapshot")
+  origin               String    @default("MANUAL") // MANUAL, RECURRENCE, CRM_TASK
   sourceKey            String?   @map("source_key")
   exportedAt           DateTime? @map("exported_at")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
 
   lmsAllocation LmsAllocation? @relation(fields: [lmsAllocationId], references: [id], onDelete: SetNull)
-  taskType      LmsWorkTask    @relation(fields: [taskTypeId], references: [id], onDelete: NoAction)
+  taskType      LmsWorkTask?   @relation(fields: [taskTypeId], references: [id], onDelete: SetNull)
+  crmTask       Task?          @relation(fields: [crmTaskId], references: [id], onDelete: SetNull)
 
   @@unique([sourceKey, workDate])
   @@index([workDate])
   @@index([exportedAt, workDate])
   @@index([lmsAllocationId])
   @@index([taskTypeId])
+  @@index([origin, workDate])
   @@map("lms_work_entries")
 }
 

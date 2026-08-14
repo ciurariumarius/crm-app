@@ -35,7 +35,8 @@ function run() {
   assert.match(tasksPage, /md:hidden/)
 
   const workLog = read("components/lms-work-entries/lms-work-log-workspace.tsx")
-  assert.match(workLog, /hidden overflow-hidden rounded-2xl[^\n]+md:block/)
+  assert.match(workLog, /hidden (?:overflow-hidden|overflow-x-auto) rounded-2xl[^\n]+md:block/)
+  assert.match(workLog, /\[&_table\]:min-w-\[980px\]/)
   assert.match(workLog, /space-y-3 md:hidden/)
   assert.match(workLog, /xl:grid-cols-\[minmax\(0,29fr\)_minmax\(360px,21fr\)\]/)
   assert.match(workLog, /xl:col-span-2/)

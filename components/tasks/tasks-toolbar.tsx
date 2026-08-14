@@ -10,6 +10,7 @@ import {
   ChevronDown,
   SlidersHorizontal,
   Check,
+  Layers3,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FilterBarShell, FilterResultsRow } from "@/components/ui/filter-bar"
@@ -45,6 +46,13 @@ const PRIORITY_OPTIONS = [
   { label: "Idea", value: "Idea", icon: <Lightbulb className="h-3 w-3" />, activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
 ]
 
+const SCOPE_OPTIONS = [
+  { label: "All targets", value: "ALL" },
+  { label: "Freelance project", value: "FREELANCE" },
+  { label: "LMS", value: "LMS" },
+  { label: "No project", value: "GENERAL" },
+] as const
+
 function triggerClassName(isActive: boolean, extraClassName?: string) {
   return cn(
     "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all shadow-[var(--shadow-apple)]",
@@ -67,6 +75,7 @@ export function TasksToolbar({
   currentProject,
   currentTaskId,
   currentPartner,
+  currentScope,
   totalTasks,
 }: {
   projects: { id: string; name: string }[]
@@ -80,6 +89,7 @@ export function TasksToolbar({
   currentProject: string
   currentTaskId: string
   currentPartner: string
+  currentScope: string
   totalTasks: number
 }) {
   const router = useRouter()
@@ -97,6 +107,7 @@ export function TasksToolbar({
       const isDefaultProject = key === "projectId" && value === "all"
       const isDefaultTask = key === "taskId" && (value === "all" || !value)
       const isDefaultPartner = key === "partnerId" && value === "all"
+      const isDefaultScope = key === "scope" && value === "ALL"
 
       if (
         value === null ||
@@ -107,6 +118,7 @@ export function TasksToolbar({
         isDefaultProject ||
         isDefaultTask ||
         isDefaultPartner
+        || isDefaultScope
       ) {
         params.delete(key)
       } else {
@@ -130,6 +142,7 @@ export function TasksToolbar({
     projectId: null,
     taskId: null,
     partnerId: null,
+    scope: null,
   })
 
   const hasSearchTerm = Boolean(searchContext?.searchTerm.trim())
@@ -142,6 +155,7 @@ export function TasksToolbar({
   const selectedProject = projects.find((project) => project.id === currentProject)
   const selectedPartner = partners.find((partner) => partner.id === currentPartner)
   const selectedSort = SORT_OPTIONS.find((option) => option.value === currentSort)
+  const selectedScope = SCOPE_OPTIONS.find((option) => option.value === currentScope)
   const activeFilters: { key: string; label: string; href: string }[] = []
   if (currentStatus !== "Active") activeFilters.push({ key: "status", label: `Status: ${currentStatus}`, href: buildHref({ status: "Active" }) })
   if (currentUrgency !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${currentUrgency}`, href: buildHref({ urgency: "all" }) })
@@ -150,6 +164,7 @@ export function TasksToolbar({
   if (currentTaskId !== "all") activeFilters.push({ key: "taskId", label: "Task: Selected", href: buildHref({ taskId: "all" }) })
   if (currentProject !== "all" && selectedProject) activeFilters.push({ key: "projectId", label: `Project: ${selectedProject.name}`, href: buildHref({ projectId: "all" }) })
   if (currentPartner !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: `Partner: ${selectedPartner.name}`, href: buildHref({ partnerId: "all" }) })
+  if (currentScope !== "ALL" && selectedScope) activeFilters.push({ key: "scope", label: `Target: ${selectedScope.label}`, href: buildHref({ scope: "ALL" }) })
   if (currentSort !== "newest" && selectedSort) activeFilters.push({ key: "sort", label: `Sort: ${selectedSort.label}`, href: buildHref({ sort: "newest" }) })
 
   return (
@@ -190,6 +205,10 @@ export function TasksToolbar({
                   {option.label}
                 </Link>
               ))}
+            </div>
+
+            <div className="shrink-0 snap-start">
+              <ScopeCombobox currentScope={currentScope} onSelect={(value) => pushWithOverrides({ scope: value, projectId: null, partnerId: null })} />
             </div>
 
             <Link
@@ -275,6 +294,53 @@ export function TasksToolbar({
         </div>
       </FilterResultsRow>
     </div>
+  )
+}
+
+function ScopeCombobox({
+  currentScope,
+  onSelect,
+}: {
+  currentScope: string
+  onSelect: (value: string) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const selected = SCOPE_OPTIONS.find((option) => option.value === currentScope)
+  const isActive = currentScope !== "ALL"
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label="Filter by task target" className={triggerClassName(isActive, "min-w-[118px] justify-between")}>
+          <span className="inline-flex items-center gap-2">
+            <Layers3 className="h-3.5 w-3.5" />
+            {selected?.label || "All targets"}
+          </span>
+          <ChevronDown className="h-4 w-4 opacity-70" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[230px] p-0">
+        <Command className="rounded-xl">
+          <CommandList>
+            <CommandGroup>
+              {SCOPE_OPTIONS.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.label}
+                  onSelect={() => {
+                    onSelect(option.value)
+                    setOpen(false)
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", currentScope === option.value ? "opacity-100" : "opacity-0")} />
+                  {option.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }
 

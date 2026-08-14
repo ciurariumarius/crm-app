@@ -5,9 +5,11 @@ import { buildLmsWorkDurationShortcuts } from "@/lib/lms-work-entries/duration-o
 import {
   buildLmsWorkEntryWhere,
   normalizeLmsWorkDateFilter,
+  normalizeLmsWorkEntryOrigin,
   normalizeLmsWorkExportStatus,
+  normalizeLmsWorkOriginFilter,
 } from "@/lib/lms-work-entries/filters"
-import type { LmsWorkExportStatus } from "@/lib/lms-work-entries/filters"
+import type { LmsWorkExportStatus, LmsWorkOriginFilter } from "@/lib/lms-work-entries/filters"
 import {
   mergeLmsWorkOptionShortcuts,
   rankLmsWorkOptionsByFrequency,
@@ -52,12 +54,13 @@ export async function getLmsWorkComposerContextData(
     }),
     prisma.lmsWorkEntry.groupBy({
       by: ["taskTypeId"],
+      where: { origin: { not: "CRM_TASK" } },
       _count: { _all: true },
     }),
     lmsAllocationId
       ? prisma.lmsWorkEntry.groupBy({
           by: ["taskTypeId"],
-          where: { lmsAllocationId },
+          where: { lmsAllocationId, origin: { not: "CRM_TASK" } },
           _count: { _all: true },
         })
       : Promise.resolve([]),
@@ -156,6 +159,7 @@ export async function getLmsWorkLogPageData(args?: {
   clientId?: string | null
   taskId?: string | null
   workDate?: string | null
+  origin?: LmsWorkOriginFilter | null
   exportStatus?: LmsWorkExportStatus | null
   page?: number
   pageSize?: number
@@ -165,14 +169,15 @@ export async function getLmsWorkLogPageData(args?: {
   const clientId = args?.clientId?.trim() || null
   const taskId = args?.taskId?.trim() || null
   const workDate = normalizeLmsWorkDateFilter(args?.workDate, from, to)
+  const origin = normalizeLmsWorkOriginFilter(args?.origin)
   const exportStatus = normalizeLmsWorkExportStatus(args?.exportStatus)
   const pageSize = normalizeLmsWorkLogPageSize(args?.pageSize)
   const requestedPage = Math.max(1, Math.trunc(args?.page ?? 1))
-  const allMatchingWhere = buildLmsWorkEntryWhere({ from, to, workDate, clientId, taskId })
-  const where = buildLmsWorkEntryWhere({ from, to, workDate, clientId, taskId, exportStatus })
-  const dateFilterWhere = buildLmsWorkEntryWhere({ from, to, clientId, taskId, exportStatus })
-  const clientFilterWhere = buildLmsWorkEntryWhere({ from, to, workDate, taskId, exportStatus })
-  const taskFilterWhere = buildLmsWorkEntryWhere({ from, to, workDate, clientId, exportStatus })
+  const allMatchingWhere = buildLmsWorkEntryWhere({ from, to, workDate, clientId, taskId, origin })
+  const where = buildLmsWorkEntryWhere({ from, to, workDate, clientId, taskId, origin, exportStatus })
+  const dateFilterWhere = buildLmsWorkEntryWhere({ from, to, clientId, taskId, origin, exportStatus })
+  const clientFilterWhere = buildLmsWorkEntryWhere({ from, to, workDate, taskId, origin, exportStatus })
+  const taskFilterWhere = buildLmsWorkEntryWhere({ from, to, workDate, clientId, origin, exportStatus })
 
   const [
     clients,
@@ -209,17 +214,20 @@ export async function getLmsWorkLogPageData(args?: {
     }),
     prisma.lmsWorkEntry.groupBy({
       by: ["durationMinutes"],
+      where: { origin: { not: "CRM_TASK" } },
       _count: { _all: true },
     }),
     prisma.lmsWorkEntry.groupBy({
       by: ["lmsAllocationId"],
       where: {
         lmsAllocationId: { not: null },
+        origin: { not: "CRM_TASK" },
       },
       _count: { _all: true },
     }),
     prisma.lmsWorkEntry.groupBy({
       by: ["taskTypeId"],
+      where: { origin: { not: "CRM_TASK" } },
       _count: { _all: true },
     }),
     prisma.lmsWorkEntry.groupBy({
@@ -266,10 +274,9 @@ export async function getLmsWorkLogPageData(args?: {
   ).sort((a, b) => a.label.localeCompare(b.label, "ro"))
   const taskFilterOptions = Array.from(
     new Map(
-      taskFilterRows.map((row) => [
-        row.taskTypeId,
-        { id: row.taskTypeId, label: row.taskNameSnapshot },
-      ])
+      taskFilterRows.flatMap((row) => row.taskTypeId
+        ? [[row.taskTypeId, { id: row.taskTypeId, label: row.taskNameSnapshot }] as const]
+        : [])
     ).values()
   ).sort((a, b) => a.label.localeCompare(b.label, "ro"))
 
@@ -288,6 +295,9 @@ export async function getLmsWorkLogPageData(args?: {
       durationMinutes: true,
       clientDomainSnapshot: true,
       taskNameSnapshot: true,
+      origin: true,
+      crmTaskId: true,
+      crmTaskNameSnapshot: true,
       employeeNameSnapshot: true,
       exportedAt: true,
       createdAt: true,
@@ -317,6 +327,9 @@ export async function getLmsWorkLogPageData(args?: {
       durationMinutes: entry.durationMinutes,
       clientDomain: entry.clientDomainSnapshot,
       taskName: entry.taskNameSnapshot,
+      origin: normalizeLmsWorkEntryOrigin(entry.origin),
+      crmTaskId: entry.crmTaskId,
+      crmTaskName: entry.crmTaskNameSnapshot,
       employeeName: entry.employeeNameSnapshot,
       exportedAt: entry.exportedAt?.toISOString() ?? null,
       createdAt: entry.createdAt.toISOString(),
@@ -337,6 +350,7 @@ export async function getLmsWorkLogPageData(args?: {
     workDate,
     clientId,
     taskId,
+    origin,
     exportStatus,
   }
 }

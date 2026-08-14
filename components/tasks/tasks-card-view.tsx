@@ -6,7 +6,7 @@ import { format, isToday, isPast } from "date-fns"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { useDebounce } from "@/hooks/use-debounce"
-import { addTask, deleteTasks, updateTasksStatus, updateTask } from "@/lib/actions/tasks"
+import { addTask, deleteTasks, updateTasksStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
 import { Clock, Trash2, MoreVertical, Play, Pause, Square, Target, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle, Check, FolderSearch } from "lucide-react"
@@ -33,6 +33,9 @@ import type { Service, Site } from "@prisma/client"
 import type { TaskDialogProject } from "./global-create-task-dialog"
 import type { SearchPaginationState } from "@/types/search-pagination"
 import { sidePanelClass } from "@/lib/ui/side-panels"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
+
+const QUICK_CAPTURE_LMS_TARGET = "__lms__"
 
 type TimeLogSummary = {
     id?: string
@@ -72,6 +75,11 @@ type TaskCardViewTask = {
     estimatedMinutes?: number | null
     timeLogs?: TimeLogSummary[] | null
     project?: TaskProjectSummary | null
+    taskScope?: string | null
+    lmsAllocationId?: string | null
+    lmsTaskTypeId?: string | null
+    lmsAllocation?: { id?: string; client?: string | null } | null
+    lmsTaskType?: { id?: string; name?: string | null; defaultDurationMinutes?: number | null } | null
 }
 
 type SiteWithOptionalPartner = {
@@ -97,6 +105,7 @@ interface TasksCardViewProps {
         urgency: string
         overdue: boolean
         dueToday: boolean
+        scope?: string
         sort: string
         page: number
         perPage: number
@@ -114,6 +123,7 @@ export function TasksCardView({
     searchApiFilters,
 }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
+    const { requestCompletion } = useTaskCompletion()
     const router = useRouter()
     const searchParams = useSearchParams()
     const searchParamsString = searchParams.toString()
@@ -186,6 +196,13 @@ export function TasksCardView({
     }
 
     const handleBulkStatusUpdate = async (status: string) => {
+        const selectedTasks = tasks.filter((task) => selectedIds.includes(task.id))
+        if (selectedTasks.some((task) => task.taskScope === "LMS")) {
+            toast.error(status === "Completed"
+                ? "Complete LMS tasks individually so you can confirm project, category, date, and time."
+                : "Reopen LMS tasks individually to preserve their LMS work-entry history.")
+            return
+        }
         setIsBulkOperating(true)
         try {
             const result = await updateTasksStatus(selectedIds, status)
@@ -203,23 +220,18 @@ export function TasksCardView({
     }
 
     const handleComplete = async (taskId: string) => {
-        try {
-            const result = await updateTask(taskId, { status: 'Completed' })
-            if (result.success) {
-                toast.success("Task completed")
-            } else {
-                toast.error(result.error || "Failed to complete task")
-            }
-        } catch {
-            toast.error("Process failed")
-        }
+        const task = visibleTasks.find((entry) => entry.id === taskId) || tasks.find((entry) => entry.id === taskId)
+        if (!task) return
+        requestCompletion(task, { onCompleted: () => router.refresh() })
     }
 
     const renderTaskActionMenu = (task: TaskCardViewTask) => (
         <>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task); }} className="gap-2 text-sm font-medium cursor-pointer">
-                <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
-            </DropdownMenuItem>
+            {task.taskScope !== "LMS" && task.projectId ? (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setQuickLogTask(task); }} className="gap-2 text-sm font-medium cursor-pointer">
+                    <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
+                </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem className="gap-2 text-sm font-medium text-[var(--state-urgent)] focus:text-[var(--state-urgent)] focus:bg-[var(--state-danger-surface)] cursor-pointer" onClick={(e) => {
                 e.stopPropagation()
                 if (confirm("Delete this task?")) {
@@ -270,6 +282,7 @@ export function TasksCardView({
 
     React.useEffect(() => {
         if (!quickProjectId) return
+        if (quickProjectId === QUICK_CAPTURE_LMS_TARGET) return
         if (quickCaptureProjectMap.has(quickProjectId)) return
         setQuickProjectId("")
     }, [quickCaptureProjectMap, quickProjectId])
@@ -284,22 +297,23 @@ export function TasksCardView({
             return
         }
 
-        const selectedProject = quickProjectId ? quickCaptureProjectMap.get(quickProjectId) : null
-        if (quickProjectId && !selectedProject) {
+        const isLmsTask = quickProjectId === QUICK_CAPTURE_LMS_TARGET
+        const selectedProject = quickProjectId && !isLmsTask ? quickCaptureProjectMap.get(quickProjectId) : null
+        if (quickProjectId && !isLmsTask && !selectedProject) {
             toast.error("Selected project is no longer available")
             return
         }
 
         setIsCreatingQuickTask(true)
         try {
-            const result = await addTask(quickProjectId || undefined, title)
+            const result = await addTask(isLmsTask ? undefined : quickProjectId || undefined, title, isLmsTask ? { taskScope: "LMS" } : undefined)
             if (!result.success) {
                 toast.error(result.error || "Failed to create task")
                 return
             }
 
             setQuickTaskTitle("")
-            toast.success(result.data?.projectId ? "Task created" : "Global task created")
+            toast.success(isLmsTask ? "LMS task created" : result.data?.projectId ? "Task created" : "General task created")
             router.refresh()
         } catch {
             toast.error("Failed to create task")
@@ -343,6 +357,7 @@ export function TasksCardView({
         if (searchApiFilters?.dueToday) params.set("dueToday", "1")
         if (searchApiFilters?.partnerId) params.set("partnerId", searchApiFilters.partnerId)
         if (searchApiFilters?.projectId) params.set("projectId", searchApiFilters.projectId)
+        if (searchApiFilters?.scope && searchApiFilters.scope !== "ALL") params.set("scope", searchApiFilters.scope)
         if (searchApiFilters?.taskId) params.set("taskId", searchApiFilters.taskId)
 
         const cacheKey = params.toString()
@@ -413,6 +428,7 @@ export function TasksCardView({
         searchApiFilters?.taskId,
         searchApiFilters?.sort,
         searchApiFilters?.status,
+        searchApiFilters?.scope,
         searchApiFilters?.urgency,
         searchParamsString,
         searchContext,
@@ -433,6 +449,9 @@ export function TasksCardView({
                 task.project?.site?.partner?.name,
                 formatProjectName(task.project || {}),
                 (task.project?.services || []).map((service) => service.serviceName || "").join(" "),
+                task.taskScope,
+                task.lmsAllocation?.client,
+                task.lmsTaskType?.name,
             ]
                 .filter(Boolean)
                 .join(" ")
@@ -441,6 +460,17 @@ export function TasksCardView({
             return fields.includes(normalizedSearch)
         })
     }, [normalizedSearch, remoteTasks, searchSourceTasks])
+
+    React.useEffect(() => {
+        setSelectedTask((current) => {
+            if (!current) return current
+            // Prefer the latest server-rendered row after router.refresh(). Remote
+            // search results can remain cached briefly and still contain the old target.
+            return tasks.find((task) => task.id === current.id)
+                || searchSourceTasks.find((task) => task.id === current.id)
+                || current
+        })
+    }, [searchSourceTasks, tasks])
 
     const renderGridView = () => (
         <div className={cn("grid gap-3.5 sm:gap-4", colsClass)}>
@@ -483,7 +513,10 @@ export function TasksCardView({
                                 size="icon"
                                 disabled={isCreatingQuickTask}
                                 className="h-9 w-9 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)]"
-                                aria-label="Select project (optional)"
+                                aria-label="Select task target"
+                                title={quickProjectId === QUICK_CAPTURE_LMS_TARGET
+                                    ? "LMS"
+                                    : quickCaptureProjectMap.get(quickProjectId)?.label || "No project"}
                             >
                                 <FolderSearch className="h-4 w-4" />
                             </Button>
@@ -495,7 +528,7 @@ export function TasksCardView({
                                     <CommandEmpty>No project found.</CommandEmpty>
                                     <CommandGroup>
                                         <CommandItem
-                                            value="No project selected"
+                                            value="No project"
                                             onSelect={() => {
                                                 setQuickProjectId("")
                                                 setQuickProjectPickerOpen(false)
@@ -503,7 +536,18 @@ export function TasksCardView({
                                             className="text-sm"
                                         >
                                             <Check className={cn("mr-2 h-4 w-4", quickProjectId ? "opacity-0" : "opacity-100")} />
-                                            <span className="truncate">No project selected</span>
+                                            <span className="truncate">No project</span>
+                                        </CommandItem>
+                                        <CommandItem
+                                            value="LMS my job"
+                                            onSelect={() => {
+                                                setQuickProjectId(QUICK_CAPTURE_LMS_TARGET)
+                                                setQuickProjectPickerOpen(false)
+                                            }}
+                                            className="text-sm"
+                                        >
+                                            <Check className={cn("mr-2 h-4 w-4", quickProjectId === QUICK_CAPTURE_LMS_TARGET ? "opacity-100" : "opacity-0")} />
+                                            <span className="truncate">LMS</span>
                                         </CommandItem>
                                         {quickCaptureProjects.map((project) => (
                                             <CommandItem
@@ -612,7 +656,11 @@ export function TasksCardView({
                                 <h3 className={cn("text-base font-bold text-foreground/90 break-words whitespace-normal", task.status === "Completed" && "line-through opacity-50")}>
                                     {task.name}
                                 </h3>
-                                {task.project ? (
+                                {task.taskScope === "LMS" ? (
+                                    <p className="mt-1 text-xs font-semibold text-[var(--text-secondary)] break-words whitespace-normal leading-tight">
+                                        LMS · {task.lmsAllocation?.client || "Project not linked"} · {task.lmsTaskType?.name || "Category not linked"}
+                                    </p>
+                                ) : task.project ? (
                                     <p className="mt-1 text-xs font-semibold text-[var(--text-secondary)] break-words whitespace-normal leading-tight">
                                         {formatProjectName(task.project)}
                                     </p>
@@ -646,7 +694,12 @@ export function TasksCardView({
                                 </div>
 
                                 <div className="flex w-auto shrink-0 items-center justify-end gap-3.5 lg:w-48" onClick={e => e.stopPropagation()}>
-                                    <div className="flex flex-col items-end">
+                                    {task.taskScope === "LMS" ? (
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-sm font-bold text-[var(--primary)]">LMS work</span>
+                                            <span className="mt-0.5 text-xs font-medium text-[var(--text-muted)]">Recorded on completion</span>
+                                        </div>
+                                    ) : <div className="flex flex-col items-end">
                                         <div className="text-sm font-bold tracking-tighter flex items-baseline gap-1">
                                             <span className={activeHighlight}>{timeString}</span>
                                             {task.estimatedMinutes && (
@@ -654,8 +707,8 @@ export function TasksCardView({
                                             )}
                                         </div>
                                         <div className="text-xs font-medium text-muted-foreground mt-0.5">Spent / Est</div>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] p-1">
+                                    </div>}
+                                    {task.taskScope !== "LMS" ? <div className="flex items-center gap-1.5 rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] p-1">
                                         <button
                                             type="button"
                                             aria-label={isRunning ? "Pause timer" : isPaused ? "Resume timer" : `Start timer for ${task.name}`}
@@ -696,7 +749,7 @@ export function TasksCardView({
                                         )}
 
                                         {renderTaskActionMenu(task)}
-                                    </div>
+                                    </div> : null}
                                 </div>
                             </div>
                         </div>

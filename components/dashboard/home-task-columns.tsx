@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { ArrowRight, Check, FolderSearch } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { addTask, updateTask } from "@/lib/actions/tasks"
+import { addTask } from "@/lib/actions/tasks"
 import { getProjectById } from "@/lib/actions/projects"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
 import { TaskDetails, type TaskDetailsTask } from "@/components/tasks/task-details"
@@ -20,6 +20,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { sidePanelClass } from "@/lib/ui/side-panels"
 import type { ProjectWithDetails } from "@/types"
 import type { Service, Site } from "@prisma/client"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 
 type HomeTaskColumnsTask = TaskDetailsTask
 type HomeQuickCaptureProject = {
@@ -68,6 +69,7 @@ export function HomeTaskColumns({
     hourlyRate = 0,
 }: HomeTaskColumnsProps) {
     const router = useRouter()
+    const { requestCompletion } = useTaskCompletion()
     const [urgentState, setUrgentState] = React.useState<HomeTaskColumnsTask[]>(urgentTasks)
     const [overdueState, setOverdueState] = React.useState<HomeTaskColumnsTask[]>(overdueTasks)
     const [normalState, setNormalState] = React.useState<HomeTaskColumnsTask[]>(normalTasks)
@@ -176,14 +178,11 @@ export function HomeTaskColumns({
         [mergedById]
     )
 
-    const handleComplete = React.useCallback(async (taskId: string) => {
-        try {
-            const result = await updateTask(taskId, { status: "Completed" })
-            if (!result.success) {
-                toast.error(result.error || "Failed to update task")
-                return
-            }
-
+    const handleComplete = React.useCallback((taskId: string) => {
+        const task = mergedById.get(taskId)
+        if (!task) return
+        requestCompletion(task, {
+            onCompleted: () => {
             setUrgentState((prev) => prev.filter((task) => task.id !== taskId))
             setOverdueState((prev) => prev.filter((task) => task.id !== taskId))
             setNormalState((prev) => prev.filter((task) => task.id !== taskId))
@@ -191,11 +190,9 @@ export function HomeTaskColumns({
                 if (!prev || prev.id !== taskId) return prev
                 return { ...prev, status: "Completed" }
             })
-            toast.success("Task marked as completed")
-        } catch {
-            toast.error("Failed to update task")
-        }
-    }, [])
+            },
+        })
+    }, [mergedById, requestCompletion])
 
     const quickCaptureProjectMap = React.useMemo(() => {
         const map = new Map<string, HomeQuickCaptureProject>()

@@ -50,11 +50,13 @@ function run() {
         dueToday: "1",
         partnerId: "partner-2",
         q: "facebook",
+        scope: "lms",
     })
     assert.equal(normalizedTaskFilters.status, "Active")
     assert.equal(normalizedTaskFilters.urgency, "Urgent")
     assert.equal(normalizedTaskFilters.dueTodayOnly, true)
     assert.equal(normalizedTaskFilters.overdueOnly, false)
+    assert.equal(normalizedTaskFilters.scope, "LMS")
 
     const { todayStart, todayEnd } = getLocalDayBounds(new Date("2026-03-19T08:00:00.000Z"))
     const taskWhere = buildTaskWhereInput({
@@ -68,6 +70,9 @@ function run() {
     assert.match(taskWhereJson, /"status":\{"in":\["Active","Paused"\]\}/)
     assert.match(taskWhereJson, /"urgency":\{"in":\["Urgent","High"\]\}/)
     assert.match(taskWhereJson, /"partnerId":"partner-2"/)
+    assert.match(taskWhereJson, /"taskScope":"LMS"/)
+    assert.match(taskWhereJson, /"lmsAllocation":\{"client":\{"contains":"facebook"\}\}/)
+    assert.match(taskWhereJson, /"lmsTaskType":\{"name":\{"contains":"facebook"\}\}/)
     assert.ok(
         taskWhereJson.includes(
             `"deadline":{"not":null,"gte":"${todayStart.toISOString()}","lte":"${todayEnd.toISOString()}"}`

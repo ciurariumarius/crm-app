@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { Clock, CheckCircle2, Target, Plus, LayoutGrid, Sparkles, Trash2 } from "lucide-react"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
 import Link from "next/link"
-import { updateTask, deleteTasks } from "@/lib/actions/tasks"
+import { deleteTasks } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { TaskGridCard } from "@/components/tasks/task-grid-card"
@@ -15,11 +15,18 @@ import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { normalizeTaskUrgency } from "@/lib/status"
 import type { TaskDialogProject } from "@/components/tasks/global-create-task-dialog"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 
 type UpcomingTask = {
     id: string
     name?: string | null
     status?: string | null
+    taskScope?: string | null
+    estimatedMinutes?: number | null
+    lmsAllocationId?: string | null
+    lmsTaskTypeId?: string | null
+    lmsAllocation?: { id?: string; client?: string | null } | null
+    lmsTaskType?: { id?: string; name?: string | null; defaultDurationMinutes?: number | null } | null
     urgency?: string | null
     projectId?: string | null
     deadline?: string | Date | null
@@ -50,6 +57,7 @@ interface UpcomingTasksProps {
 
 export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
     const { openTask } = React.useContext(TaskSheetContext)
+    const { requestCompletion } = useTaskCompletion()
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
     const [quickLogTask, setQuickLogTask] = React.useState<QuickLogTask | null>(null)
     const [cols, setCols] = React.useState<3 | 4>(3)
@@ -81,22 +89,12 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
         }
     }, [optimisticTasks, filter])
 
-    const handleComplete = async (taskId: string) => {
-        // Optimistically remove
-        React.startTransition(() => {
-            setOptimisticTasks(taskId)
+    const handleComplete = (taskId: string) => {
+        const task = optimisticTasks.find((entry) => entry.id === taskId)
+        if (!task) return
+        requestCompletion(task, {
+            onCompleted: () => React.startTransition(() => setOptimisticTasks(taskId)),
         })
-
-        try {
-            const result = await updateTask(taskId, { status: 'Completed' })
-            if (result.success) {
-                toast.success("Task completed")
-            } else {
-                toast.error("Failed to complete task")
-            }
-        } catch {
-            toast.error("An error occurred")
-        }
     }
 
     const urgentTasks = optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency || "Normal") === "Urgent")
@@ -229,20 +227,22 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                         onComplete={handleComplete}
                                         renderMenu={(t) => (
                                             <>
-                                                <DropdownMenuItem
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        setQuickLogTask({
-                                                            id: t.id,
-                                                            name: t.name,
-                                                            projectId: t.projectId,
-                                                        })
-                                                    }}
-                                                    className="gap-2 text-sm font-medium cursor-pointer"
-                                                >
-                                                    <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
+                                                {t.taskScope !== "LMS" && t.projectId ? <>
+                                                    <DropdownMenuItem
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setQuickLogTask({
+                                                                id: t.id,
+                                                                name: t.name,
+                                                                projectId: t.projectId as string,
+                                                            })
+                                                        }}
+                                                        className="gap-2 text-sm font-medium cursor-pointer"
+                                                    >
+                                                        <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> Add Manual Time
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                </> : null}
                                                 <DropdownMenuItem
                                                     className="gap-2 text-sm font-medium text-[var(--state-urgent)] focus:text-[var(--state-urgent)] focus:bg-[var(--state-danger-surface)] cursor-pointer"
                                                     onClick={(e) => {

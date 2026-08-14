@@ -1,7 +1,11 @@
 import { detectLmsDatePresetId, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
 import { getBucharestDateOnly, getDefaultLmsWorkDate } from "@/lib/lms-work-entries/date"
 import { getLmsWorkComposerContextData, getLmsWorkLogPageData } from "@/lib/lms-work-entries/db"
-import { normalizeLmsWorkDateFilter, normalizeLmsWorkExportStatus } from "@/lib/lms-work-entries/filters"
+import {
+  normalizeLmsWorkDateFilter,
+  normalizeLmsWorkExportStatus,
+  normalizeLmsWorkOriginFilter,
+} from "@/lib/lms-work-entries/filters"
 import { normalizeLmsWorkLogPageSize } from "@/lib/lms-work-entries/pagination"
 import { LmsWorkLogWorkspace } from "@/components/lms-work-entries/lms-work-log-workspace"
 
@@ -17,6 +21,7 @@ export default async function LmsWorkLogPage({
     client?: string
     task?: string
     date?: string
+    origin?: string
     exportStatus?: string
     page?: string
     pageSize?: string
@@ -38,6 +43,7 @@ export default async function LmsWorkLogPage({
       clientId: params.client,
       taskId: params.task,
       workDate: normalizeLmsWorkDateFilter(params.date, from, to),
+      origin: normalizeLmsWorkOriginFilter(params.origin),
       exportStatus: normalizeLmsWorkExportStatus(params.exportStatus),
       page: requestedPage,
       pageSize,

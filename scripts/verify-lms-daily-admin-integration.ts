@@ -103,12 +103,17 @@ async function run() {
       (await prisma.lmsWorkEntry.findUniqueOrThrow({ where: { id: manualCommunication.id } })).sourceKey,
       `recurrence:${ruleDefinitions[2][0]}`
     )
+    assert.equal(
+      (await prisma.lmsWorkEntry.findUniqueOrThrow({ where: { id: manualCommunication.id } })).origin,
+      "RECURRENCE"
+    )
     const meetingEntry = await prisma.lmsWorkEntry.findFirstOrThrow({
       where: { sourceKey: `recurrence:${ruleDefinitions[1][0]}` },
     })
     assert.equal(meetingEntry.taskNameSnapshot, "Meeting / videocall intern ")
     assert.equal(meetingEntry.exportedAt, null)
     assert.equal(meetingEntry.employeeNameSnapshot, "Marius Ciurariu")
+    assert.equal(meetingEntry.origin, "RECURRENCE")
 
     const repeated = await automation.runLmsDailyAdminAutomation({
       now: new Date("2026-07-21T07:05:00.000Z"),

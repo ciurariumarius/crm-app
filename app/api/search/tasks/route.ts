@@ -60,6 +60,7 @@ export async function GET(request: Request) {
             urgency: searchParams.get("urgency"),
             overdue: searchParams.get("overdue"),
             dueToday: searchParams.get("dueToday"),
+            scope: searchParams.get("scope"),
         })
         const { todayStart, todayEnd } = getLocalDayBounds(new Date())
         const where = buildTaskWhereInput({
@@ -89,6 +90,12 @@ export async function GET(request: Request) {
                     },
                 },
                 timeLogs: true,
+                lmsAllocation: {
+                    select: { id: true, client: true },
+                },
+                lmsTaskType: {
+                    select: { id: true, name: true, isActive: true, defaultDurationMinutes: true },
+                },
             },
             orderBy: buildSort(sort),
         }

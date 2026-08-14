@@ -151,6 +151,7 @@ async function reconcileRule(
     db.lmsWorkEntry.findMany({
       where: {
         sourceKey: null,
+        origin: "MANUAL",
         lmsAllocationId: rule.lmsAllocationId,
         taskTypeId: rule.taskTypeId,
         clientDomainSnapshot: rule.clientSnapshot,
@@ -176,7 +177,10 @@ async function reconcileRule(
     if (manualEntryId) {
       adopted += 1
       if (!dryRun) {
-        await db.lmsWorkEntry.update({ where: { id: manualEntryId }, data: { sourceKey } })
+        await db.lmsWorkEntry.update({
+          where: { id: manualEntryId },
+          data: { sourceKey, origin: "RECURRENCE" },
+        })
       }
       continue
     }
@@ -193,6 +197,7 @@ async function reconcileRule(
           taskNameSnapshot: rule.taskSnapshot,
           employeeNameSnapshot: LMS_CRM_EMPLOYEE_NAME,
           sourceKey,
+          origin: "RECURRENCE",
         },
       })
     }
