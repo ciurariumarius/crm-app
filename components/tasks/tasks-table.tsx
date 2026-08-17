@@ -42,6 +42,7 @@ type TaskTableTask = TaskDetailsTask & {
     } | null
     timeLogs?: TaskTableTimeLog[] | null
     estimatedMinutes?: number | null
+    lmsWorkEntry?: { durationMinutes?: number | null } | null
     deadline?: string | Date | null
     updatedAt?: string | Date | null
 }
@@ -175,13 +176,11 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                     </div>
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)} className="cell-financial">
-                                    {task.taskScope === "LMS" ? (
-                                        <div className="flex items-center justify-end gap-2 text-xs font-semibold text-[var(--primary)]">
-                                            <Clock className="h-3 w-3" />
-                                            <span>On completion</span>
-                                        </div>
-                                    ) : (() => {
-                                        const logsDuration = task.timeLogs?.reduce((acc: number, log: TaskTableTimeLog) => acc + (log.durationSeconds || 0), 0) || 0
+                                    {(() => {
+                                        const sessionDuration = task.timeLogs?.reduce((acc: number, log: TaskTableTimeLog) => acc + (log.durationSeconds || 0), 0) || 0
+                                        const logsDuration = sessionDuration > 0
+                                            ? sessionDuration
+                                            : Math.max(0, task.lmsWorkEntry?.durationMinutes || 0) * 60
                                         const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
                                         const totalSeconds = logsDuration + currentTimerDuration
                                         const hasTimeLogs = totalSeconds > 0

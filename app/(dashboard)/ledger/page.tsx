@@ -57,7 +57,7 @@ export default async function LedgerPage({
         }),
     ])
 
-    const projectIds = timeByProject.map((entry) => entry.projectId)
+    const projectIds = timeByProject.flatMap((entry) => entry.projectId ? [entry.projectId] : [])
     const projectsForStats = await prisma.project.findMany({
         where: { id: { in: projectIds } },
         select: { id: true, site: { select: { partner: { select: { name: true } } } } },
@@ -67,6 +67,7 @@ export default async function LedgerPage({
     // Aggregate time by Partner
     const partnerStats: Record<string, number> = {}
     timeByProject.forEach((entry) => {
+        if (!entry.projectId) return
         const partnerName = partnerByProject.get(entry.projectId)
         if (!partnerName) return
         partnerStats[partnerName] = (partnerStats[partnerName] || 0) + (entry._sum.durationSeconds || 0)

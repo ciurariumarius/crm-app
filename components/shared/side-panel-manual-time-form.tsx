@@ -32,6 +32,9 @@ export function SidePanelManualTimeForm({
             <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
                 <Input
                     type="number"
+                    min={1}
+                    step={1}
+                    inputMode="numeric"
                     value={minutes}
                     disabled={disabled}
                     onChange={(event) => onMinutesChange(event.target.value)}

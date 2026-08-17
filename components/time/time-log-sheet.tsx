@@ -20,7 +20,7 @@ import { SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-pa
 
 type TimeLogSheetLog = {
     id: string
-    projectId?: string
+    projectId?: string | null
     taskId?: string | null
     description?: string | null
     startTime: string | Date

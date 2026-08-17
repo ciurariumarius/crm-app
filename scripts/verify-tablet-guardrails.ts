@@ -56,12 +56,6 @@ function run() {
   const domainsTable = read("components/vault/sites-table.tsx")
   assert.match(domainsTable, /md:min-w-\[940px\] xl:min-w-\[1240px\]/)
 
-  const notesWorkspace = read("components/notes/notes-workspace.tsx")
-  assert.match(notesWorkspace, /listCollapsed \? "md:grid-cols-1" : "md:grid-cols-\[minmax\(280px,360px\)_minmax\(0,1fr\)\]"/)
-  assert.match(notesWorkspace, /sidebarCollapsed \? null : `\$\{sidebarWidth\}px`/)
-  assert.match(notesWorkspace, /listCollapsed \? null : `\$\{listWidth\}px`/)
-  assert.match(notesWorkspace, /open=\{tabletListOpen\}/)
-  assert.match(notesWorkspace, /h-full min-h-0 md:hidden/)
 
   process.stdout.write("verify-tablet-guardrails: ok\n")
 }

@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { completeTask, getTaskLmsOptions, reopenTask } from "@/lib/actions/tasks"
+import { completeTask, getTaskCompletionReadiness, getTaskLmsOptions, reopenTask } from "@/lib/actions/tasks"
 import { getBucharestDateOnly, getDefaultLmsWorkDate, isLmsWorkWeekday } from "@/lib/lms-work-entries/date"
 import { cn } from "@/lib/utils"
 import {
@@ -25,6 +25,7 @@ import {
   validCompletionMinutes,
 } from "@/components/tasks/task-completion-defaults"
 import { AddLmsClientDialog } from "@/components/lms-work-entries/add-lms-client-dialog"
+import { formatTaskTrackedSeconds } from "@/lib/tasks/tracked-time"
 
 export type TaskCompletionTask = {
   id: string
@@ -115,6 +116,12 @@ function getResultError(result: unknown, fallback: string) {
 
 function resultSucceeded(result: unknown) {
   return Boolean(result && typeof result === "object" && "success" in result && (result as { success?: unknown }).success === true)
+}
+
+function getResultCode(result: unknown) {
+  return result && typeof result === "object" && "code" in result && typeof (result as { code?: unknown }).code === "string"
+    ? (result as { code: string }).code
+    : null
 }
 
 function CompletionCombobox({
@@ -211,6 +218,7 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
   const [lmsTaskTypeId, setLmsTaskTypeId] = React.useState("")
   const [workDate, setWorkDate] = React.useState("")
   const [durationMinutes, setDurationMinutes] = React.useState("")
+  const [usesTrackedTime, setUsesTrackedTime] = React.useState(false)
   const [formAttempted, setFormAttempted] = React.useState(false)
   const [addProjectOpen, setAddProjectOpen] = React.useState(false)
 
@@ -278,26 +286,70 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
       return
     }
 
-    const today = getDefaultLmsWorkDate(getBucharestDateOnly())
-    activeDialogTaskIdRef.current = task.id
-    setDialogTask(task)
-    setCompletionCallback(() => options?.onCompleted || null)
-    setLmsAllocationId(task.lmsAllocationId || task.lmsAllocation?.id || "")
-    setLmsTaskTypeId(task.lmsTaskTypeId || task.lmsTaskType?.id || "")
-    setWorkDate(today)
-    const initialDefault = resolveCompletionDefaultMinutes(task, lmsOptions.workTasks)
-    durationSourceRef.current = initialDefault.source
-    setDurationMinutes(initialDefault.minutes === null ? "" : String(initialDefault.minutes))
-    setFormAttempted(false)
-    void loadLmsOptions().then((optionsData) => {
-      if (activeDialogTaskIdRef.current !== task.id) return
-      const loadedDefault = resolveCompletionDefaultMinutes(task, optionsData.workTasks)
-      if (loadedDefault.minutes !== null && durationSourceRef.current === "empty") {
-        durationSourceRef.current = loadedDefault.source
-        setDurationMinutes((current) => current || String(loadedDefault.minutes))
+    void (async () => {
+      setPendingTaskId(task.id)
+      try {
+        const readiness = await getTaskCompletionReadiness(task.id)
+        if (!resultSucceeded(readiness)) {
+          toast.error(getResultError(readiness, "Failed to check task time"))
+          return
+        }
+        const readinessData = (readiness as {
+          data: {
+            trackedMinutes: number
+            lmsAllocationId: string | null
+            lmsTaskTypeId: string | null
+          }
+        }).data
+
+        if (readinessData.trackedMinutes > 0 && readinessData.lmsAllocationId && readinessData.lmsTaskTypeId) {
+          const result = await completeTask(task.id)
+          if (resultSucceeded(result)) {
+            toast.success("Task completed; existing time was recorded in LMS")
+            options?.onCompleted?.()
+            router.refresh()
+            return
+          }
+          if (getResultCode(result) !== "LMS_COMPLETION_DETAILS_REQUIRED") {
+            toast.error(getResultError(result, "Failed to complete task"))
+            return
+          }
+        }
+
+        const today = getDefaultLmsWorkDate(getBucharestDateOnly())
+        activeDialogTaskIdRef.current = task.id
+        setDialogTask(task)
+        setCompletionCallback(() => options?.onCompleted || null)
+        setLmsAllocationId(readinessData.lmsAllocationId || task.lmsAllocationId || task.lmsAllocation?.id || "")
+        setLmsTaskTypeId(readinessData.lmsTaskTypeId || task.lmsTaskTypeId || task.lmsTaskType?.id || "")
+        setWorkDate(today)
+
+        const hasTrackedTime = readinessData.trackedMinutes > 0
+        setUsesTrackedTime(hasTrackedTime)
+        if (hasTrackedTime) {
+          durationSourceRef.current = "manual"
+          setDurationMinutes(String(readinessData.trackedMinutes))
+        } else {
+          const initialDefault = resolveCompletionDefaultMinutes(task, lmsOptions.workTasks)
+          durationSourceRef.current = initialDefault.source
+          setDurationMinutes(initialDefault.minutes === null ? "" : String(initialDefault.minutes))
+        }
+        setFormAttempted(false)
+        void loadLmsOptions().then((optionsData) => {
+          if (activeDialogTaskIdRef.current !== task.id) return
+          const loadedDefault = resolveCompletionDefaultMinutes(task, optionsData.workTasks)
+          if (loadedDefault.minutes !== null && durationSourceRef.current === "empty") {
+            durationSourceRef.current = loadedDefault.source
+            setDurationMinutes((current) => current || String(loadedDefault.minutes))
+          }
+        })
+      } catch {
+        toast.error("Failed to complete task")
+      } finally {
+        setPendingTaskId(null)
       }
-    })
-  }, [completeWithoutLmsDialog, lmsOptions.workTasks, loadLmsOptions, pendingTaskId])
+    })()
+  }, [completeWithoutLmsDialog, lmsOptions.workTasks, loadLmsOptions, pendingTaskId, router])
 
   const requestReopen = React.useCallback(async (task: TaskCompletionTask, options?: CompletionRequestOptions) => {
     if (pendingTaskId === task.id) return false
@@ -400,6 +452,7 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
           activeDialogTaskIdRef.current = null
           setDialogTask(null)
           setCompletionCallback(null)
+          setUsesTrackedTime(false)
         }}
       >
         <DialogContent className="sm:max-w-xl">
@@ -409,7 +462,9 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
               Complete LMS task
             </DialogTitle>
             <DialogDescription>
-              Confirm where and how much time to record for “{dialogTask?.name || "Untitled task"}”. The task and LMS work entry are saved together.
+              {usesTrackedTime
+                ? `Confirm the LMS project and category for “${dialogTask?.name || "Untitled task"}”. Its existing time will be used.`
+                : `Confirm where and how much time to record for “${dialogTask?.name || "Untitled task"}”. The task and LMS work entry are saved together.`}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={submitLmsCompletion} className="space-y-5">
@@ -459,6 +514,14 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
                 />
                 {formAttempted && !lmsTaskTypeId ? <p className="text-xs font-medium text-[var(--state-urgent)]">Select a work category.</p> : null}
               </div>
+              {usesTrackedTime ? (
+                <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] bg-[var(--state-success-surface)] px-4 py-3 sm:col-span-2">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Existing time will be used</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    {formatTaskTrackedSeconds(parsedDuration * 60)} already recorded across this task&apos;s sessions.
+                  </p>
+                </div>
+              ) : <>
               <div className="space-y-2">
                 <Label htmlFor="task-completion-work-date" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Work date *</Label>
                 <Input
@@ -489,8 +552,9 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
                   placeholder={selectedWorkTask?.defaultDurationMinutes ? String(selectedWorkTask.defaultDurationMinutes) : "e.g. 60"}
                   className="h-11"
                 />
-                {formAttempted && !validDuration ? <p className="text-xs font-medium text-[var(--state-urgent)]">Enter 1–1440 whole minutes.</p> : null}
+                {formAttempted && !validDuration ? <p className="text-xs font-medium text-[var(--state-urgent)]">Enter a valid whole-minute total.</p> : null}
               </div>
+              </>}
             </div>
             {lmsOptionsError ? (
               <p className="rounded-xl border border-[color:color-mix(in_srgb,var(--state-urgent)_30%,var(--line-subtle))] bg-[var(--state-danger-surface)] px-3 py-2 text-sm text-[var(--state-urgent)]">

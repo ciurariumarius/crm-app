@@ -1,48 +1,36 @@
 "use client"
 
 import * as React from "react"
-import { format, formatDistanceToNow, isAfter, isToday, isYesterday, subDays } from "date-fns"
+import { formatDistanceToNow } from "date-fns"
 import {
-  Archive,
-  ArchiveRestore,
-  Check,
   ChevronLeft,
   FilePlus2,
   Folder,
-  FolderInput,
   FolderPlus,
   MoreHorizontal,
   NotebookPen,
-  PanelLeft,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Pencil,
-  Pin,
-  PinOff,
-  RotateCcw,
-  SlidersHorizontal,
   Trash2,
-  X,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
   createNote,
   createNoteFolder,
-  deleteNote,
   deleteNoteFolder,
+  getNoteDetail,
   permanentlyDeleteNote,
+  queryNoteList,
   renameNoteFolder,
-  restoreNote,
-  setNoteArchived,
-  setNotePinned,
-  updateNote,
+  saveNoteContent,
+  type NoteDetail,
   type NoteFolderRecord,
-  type NoteRecord,
+  type NoteListRow,
+  type NotesView,
 } from "@/lib/actions/notes"
-import { updateProject } from "@/lib/actions/projects"
-import { updateTask } from "@/lib/actions/tasks"
 import { AppPageHeader } from "@/components/layout/app-page-header"
+import { NotesSearchInput } from "@/components/notes/notes-search-input"
+import { RichTextEditor, type RichTextFolderOption } from "@/components/ui/rich-text-editor"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,9 +38,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,2015 +53,893 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { NotesSearchInput } from "@/components/notes/notes-search-input"
-import { NotesSidebarPane } from "@/components/notes/notes-sidebar-pane"
-import { NotesListPane } from "@/components/notes/notes-list-pane"
-import { NotesEditorPane } from "@/components/notes/notes-editor-pane"
 import {
-  useNotesWorkspacePreferences,
-} from "@/components/notes/use-notes-workspace-preferences"
+  ALL_NOTES_FOLDER_LABEL,
+  folderMentionHtml,
+  readFolderMentionId,
+  removeFolderMentions,
+} from "@/lib/notes/folder-mentions"
+import { hasMeaningfulRichTextContent } from "@/lib/notes/content"
+import { deriveNoteTitleFromContent, derivePreviewBodyFromContent } from "@/lib/notes/derived-note-text"
 import { cn } from "@/lib/utils"
-import {
-  DEFAULT_NOTE_PREVIEW,
-  DEFAULT_NOTE_TITLE,
-  deriveNoteTitleFromContent,
-  derivePreviewBodyFromContent,
-} from "@/lib/notes/derived-note-text"
-import {
-  clearProjectNoteDraftIfContent,
-  enqueueSerializedNoteSave,
-  isNoteDraftDirty,
-  resolveNoteEditorDraft,
-  resolveProjectNoteDraftContent,
-  shouldAcceptNoteEditorChange,
-  shouldDiscardNewNote,
-} from "@/lib/notes/workspace-state"
-import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
-import { normalizeRichTextContent } from "@/lib/notes/content"
-import type { NoteDrawingOwner } from "@/lib/notes/drawings"
+
+type ClientNoteRow = NoteListRow & {
+  localOnly?: boolean
+  hasLocalContent?: boolean
+}
+
+type ClientNoteDetail = NoteDetail & {
+  localOnly?: boolean
+}
 
 type NotesWorkspaceProps = {
-  initialNotes: NoteRecord[]
-  initialSelectedNoteId: string | null
-  initialView?: string
+  initialRows: NoteListRow[]
+  initialSelectedNote: NoteDetail | null
+  initialView: NotesView
   initialFolders: NoteFolderRecord[]
-  foldersEnabled?: boolean
-  storageUnavailable?: boolean
+  initialNextCursor: string | null
+  initialTotalCount: number
+  initialAllCount: number
+  requestedNoteId?: string | null
   startNewNote?: boolean
 }
 
-type RailKey = "all" | "pinned" | "archived" | "deleted" | `folder:${string}`
-
 type MobilePane = "folders" | "list" | "editor"
-type SaveState = "idle" | "saving" | "saved" | "error"
-
-type DateGroup = {
-  key: "pinned" | "today" | "yesterday" | "previous30" | "older"
-  label: string
-  notes: NoteRecord[]
+type SaveState = "idle" | "saving" | "saved" | "error" | "conflict"
+type NoteEditorSessionHandle = {
+  cancelPendingSaves: () => Promise<boolean>
+  flushPendingSaves: () => Promise<boolean>
 }
 
-const DEFAULT_RAIL_KEY: RailKey = "all"
-const NOTE_SURFACE_FONT = "[font-family:var(--font-geist-sans),sans-serif]"
+function rowFromDetail(note: NoteDetail): NoteListRow {
+  return {
+    id: note.id,
+    folderId: note.folderId,
+    title: note.title,
+    preview: note.contentText.slice(0, 180),
+    createdAt: note.createdAt,
+    updatedAt: note.updatedAt,
+  }
+}
 
-function folderRailKey(folderId: string): RailKey {
+function sortRows(rows: ClientNoteRow[]) {
+  return [...rows].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  )
+}
+
+function folderView(folderId: string): NotesView {
   return `folder:${folderId}`
 }
 
-function getFolderIdFromRailKey(rail: RailKey) {
-  if (!rail.startsWith("folder:")) return null
-  return rail.slice("folder:".length) || null
+function folderIdFromView(view: NotesView) {
+  return view.startsWith("folder:") ? view.slice("folder:".length) : null
 }
 
-function toContentText(content: string) {
-  return content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
-}
-
-function sortNotes(items: NoteRecord[]) {
-  return [...items].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-}
-
-function upsertNote(items: NoteRecord[], next: NoteRecord) {
-  const withoutCurrent = items.filter((item) => item.id !== next.id)
-  return sortNotes([next, ...withoutCurrent])
-}
-
-function sortFoldersForDisplay(items: NoteFolderRecord[]) {
-  return [...items].sort(
-    (a, b) =>
-      (a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1) ||
-      a.name.localeCompare(b.name)
-  )
-}
-
-function scoreSearchMatch(note: NoteRecord, needle: string) {
-  if (!needle) return 0
-  const title = getNoteDisplayTitle(note).toLowerCase()
-  const preview = getNotePreview(note).toLowerCase()
-  const label = (note.sourceLabel || "").toLowerCase()
-
-  let score = 0
-  if (title === needle) score += 120
-  else if (title.startsWith(needle)) score += 90
-  else if (title.includes(needle)) score += 70
-  if (preview.includes(needle)) score += 35
-  if (label.includes(needle)) score += 15
-  return score
-}
-
-function getNoteSourceType(note: NoteRecord | null | undefined) {
-  if (!note) return "note" as const
-  if (note.sourceType === "project" || note.id.startsWith("project:")) return "project" as const
-  if (note.sourceType === "task" || note.id.startsWith("task:")) return "task" as const
-  return "note" as const
-}
-
-function getNoteDisplayTitle(note: NoteRecord) {
-  if (getNoteSourceType(note) !== "note") return note.title?.trim() || DEFAULT_NOTE_TITLE
-  return deriveNoteTitleFromContent(note.content || note.contentText || "", note.title || DEFAULT_NOTE_TITLE)
-}
-
-function getNotePreview(note: NoteRecord) {
-  if (getNoteSourceType(note) !== "note") {
-    const compact = (note.contentText || "").replace(/\s+/g, " ").trim()
-    if (!compact) return DEFAULT_NOTE_PREVIEW
-    return compact.length <= 80 ? compact : `${compact.slice(0, 80)}...`
+function recoverDraft(note: ClientNoteDetail) {
+  if (typeof window === "undefined") return note.content
+  try {
+    const raw = window.localStorage.getItem(`notes.draft.${note.id}`)
+    if (!raw) return note.content
+    const parsed = JSON.parse(raw) as { content?: string; revision?: number }
+    return parsed.revision === note.contentRevision && typeof parsed.content === "string"
+      ? parsed.content
+      : note.content
+  } catch {
+    return note.content
   }
-  const body = derivePreviewBodyFromContent(note.content || note.contentText || "", DEFAULT_NOTE_PREVIEW)
-  return body.length <= 80 ? body : `${body.slice(0, 80)}...`
 }
 
-function normalizeNoteContentForEditor(content: string) {
-  const raw = (content || "").trim()
-  if (!raw) return ""
-  if (/<[a-z][\s\S]*>/i.test(raw)) return raw
-
-  const escapeHtml = (value: string) =>
-    value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&#39;")
-
-  return raw
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`)
-    .join("")
+function hasMeaningfulNoteContent(content: string) {
+  return hasMeaningfulRichTextContent(removeFolderMentions(content))
 }
 
-function hasMeaningfulContent(content: string) {
-  return toContentText(content).trim().length > 0
-}
-
-function getFilteredByRail(
-  notes: NoteRecord[],
-  rail: RailKey
-) {
-  if (rail === "all") {
-    return notes.filter(
-      (note) =>
-        getNoteSourceType(note) !== "note" || (!note.archived && !note.deletedAt)
-    )
-  }
-  if (rail === "pinned") {
-    return notes.filter(
-      (note) =>
-        getNoteSourceType(note) === "note" &&
-        !note.archived &&
-        !note.deletedAt &&
-        note.pinned
-    )
-  }
-  if (rail === "archived") {
-    return notes.filter(
-      (note) => getNoteSourceType(note) === "note" && note.archived && !note.deletedAt
-    )
-  }
-  if (rail === "deleted") {
-    return notes.filter(
-      (note) => getNoteSourceType(note) === "note" && Boolean(note.deletedAt)
-    )
-  }
-  const folderId = getFolderIdFromRailKey(rail)
-  if (!folderId) return []
-  return notes.filter(
-    (note) =>
-      getNoteSourceType(note) === "note" &&
-      !note.archived &&
-      !note.deletedAt &&
-      note.folderId === folderId
-  )
-}
-
-function groupNotesByDate(notes: NoteRecord[]) {
-  const now = new Date()
-  const thirtyDaysAgo = subDays(now, 30)
-  const groups: Record<DateGroup["key"], NoteRecord[]> = {
-    pinned: [],
-    today: [],
-    yesterday: [],
-    previous30: [],
-    older: [],
-  }
-
-  for (const note of notes) {
-    if (note.pinned && !note.deletedAt) {
-      groups.pinned.push(note)
-      continue
-    }
-    const updated = new Date(note.updatedAt)
-    if (isToday(updated)) {
-      groups.today.push(note)
-      continue
-    }
-    if (isYesterday(updated)) {
-      groups.yesterday.push(note)
-      continue
-    }
-    if (isAfter(updated, thirtyDaysAgo)) {
-      groups.previous30.push(note)
-      continue
-    }
-    groups.older.push(note)
-  }
-
-  return [
-    { key: "pinned", label: "Pinned", notes: groups.pinned },
-    { key: "today", label: "Today", notes: groups.today },
-    { key: "yesterday", label: "Yesterday", notes: groups.yesterday },
-    { key: "previous30", label: "Previous 30 Days", notes: groups.previous30 },
-    { key: "older", label: "Older", notes: groups.older },
-  ].filter((group) => group.notes.length > 0)
-}
-
-export function NotesWorkspace({
-  initialNotes,
-  initialSelectedNoteId,
-  initialView,
-  initialFolders,
-  foldersEnabled = true,
-  storageUnavailable = false,
-  startNewNote = false,
-}: NotesWorkspaceProps) {
-  const [notes, setNotes] = React.useState<NoteRecord[]>(() => sortNotes(initialNotes))
-  const [selectedNoteId, setSelectedNoteId] = React.useState<string | null>(initialSelectedNoteId)
-  const [activeRailKey, setActiveRailKey] = React.useState<RailKey>(() => {
-    const view = initialView || ""
-    if (
-      view === "all" ||
-      view === "pinned" ||
-      view === "archived" ||
-      view === "deleted" ||
-      view.startsWith("folder:")
-    ) {
-      return view as RailKey
-    }
-    return DEFAULT_RAIL_KEY
-  })
-  const [contentDraft, setContentDraft] = React.useState(() =>
-    normalizeNoteContentForEditor(
-      initialNotes.find((note) => note.id === initialSelectedNoteId)?.content || ""
-    )
-  )
-  const [emptyEditorDraft, setEmptyEditorDraft] = React.useState("")
-  const [search, setSearch] = React.useState("")
-  const [mobilePane, setMobilePane] = React.useState<MobilePane>(
-    startNewNote || initialSelectedNoteId ? "editor" : "folders"
-  )
-  const [tabletSidebarOpen, setTabletSidebarOpen] = React.useState(false)
-  const [tabletListOpen, setTabletListOpen] = React.useState(false)
-  const {
-    sidebarWidth,
-    setSidebarWidth,
-    listWidth,
-    setListWidth,
-    sidebarCollapsed,
-    setSidebarCollapsed,
-    listCollapsed,
-    setListCollapsed,
-    noteSort,
-    setNoteSort,
-  } = useNotesWorkspacePreferences()
+const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
+  note: ClientNoteDetail
+  folders: NoteFolderRecord[]
+  focusToken: number
+  onSaved: (note: NoteDetail) => void
+  onCreated: (note: NoteDetail) => void
+  onForkCreated: (note: NoteDetail) => void
+  onMeaningfulDraft: (noteId: string) => void
+  onBack: () => void
+  onDelete: () => void
+}>(function NoteEditorSession({
+  note,
+  folders,
+  focusToken,
+  onSaved,
+  onCreated,
+  onForkCreated,
+  onMeaningfulDraft,
+  onBack,
+  onDelete,
+}, ref) {
+  const [draft, setDraft] = React.useState(() => recoverDraft(note))
+  const [folderId, setFolderId] = React.useState<string | null>(note.folderId)
   const [saveState, setSaveState] = React.useState<SaveState>("idle")
-  const [rowMenuNoteId, setRowMenuNoteId] = React.useState<string | null>(null)
-  const [isCreating, setIsCreating] = React.useState(false)
-  const [pendingDeleteNote, setPendingDeleteNote] = React.useState<NoteRecord | null>(null)
-  const [deletePermanently, setDeletePermanently] = React.useState(false)
-  const [isDeletingNote, setIsDeletingNote] = React.useState(false)
-  const [editorFocusToken, setEditorFocusToken] = React.useState(0)
-  const [drawingRequestToken, setDrawingRequestToken] = React.useState<number | undefined>()
-  const [folders, setFolders] = React.useState<NoteFolderRecord[]>(() =>
-    sortFoldersForDisplay(initialFolders)
-  )
-  const [isAddingFolder, setIsAddingFolder] = React.useState(false)
-  const [newFolderName, setNewFolderName] = React.useState("")
-  const [isCreatingFolder, setIsCreatingFolder] = React.useState(false)
-  const [editingFolderId, setEditingFolderId] = React.useState<string | null>(null)
-  const [editingFolderName, setEditingFolderName] = React.useState("")
-  const [isRenamingFolder, setIsRenamingFolder] = React.useState(false)
-  const [pendingDeleteFolder, setPendingDeleteFolder] = React.useState<NoteFolderRecord | null>(null)
-  const [isDeletingFolder, setIsDeletingFolder] = React.useState(false)
-  const [draggedNoteId, setDraggedNoteId] = React.useState<string | null>(null)
-  const [dragOverFolderId, setDragOverFolderId] = React.useState<string | null>(null)
-  const [movingNoteId, setMovingNoteId] = React.useState<string | null>(null)
+  const [externalUpdateToken, setExternalUpdateToken] = React.useState(0)
+  const draftRef = React.useRef(draft)
+  const folderIdRef = React.useRef(folderId)
+  const revisionRef = React.useRef(note.contentRevision)
+  const persistedRef = React.useRef(!note.localOnly)
+  const dirtyRef = React.useRef(false)
+  const folderChipManagedRef = React.useRef(Boolean(readFolderMentionId(note.content)))
+  const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const recoveryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveQueueRef = React.useRef<Promise<boolean>>(Promise.resolve(true))
+  const meaningfulReportedRef = React.useRef(false)
+  const cancelledRef = React.useRef(false)
 
-  const searchRef = React.useRef<HTMLInputElement | null>(null)
-  const notesRef = React.useRef(notes)
-  const selectedNoteIdRef = React.useRef<string | null>(initialSelectedNoteId)
-  const contentDraftRef = React.useRef(contentDraft)
-  const noteDraftsRef = React.useRef<Map<string, string>>(new Map())
-  const noteDraftRevisionRef = React.useRef<Map<string, number>>(new Map())
-  const noteSavedRevisionRef = React.useRef<Map<string, number>>(new Map())
-  const newlyCreatedNoteIdsRef = React.useRef<Set<string>>(new Set())
-  const syncedSnapshotsRef = React.useRef<Map<string, { title: string; content: string }>>(
-    new Map()
-  )
-  const persistedNoteContentsRef = React.useRef<Map<string, string>>(
-    new Map(initialNotes.map((note) => [note.id, note.content || ""]))
-  )
-  const saveQueuesRef = React.useRef<Map<string, Promise<boolean>>>(new Map())
-  const editorNoteIdRef = React.useRef<string | null>(null)
-  const bootstrappedRef = React.useRef(false)
-  const saveTimeoutsRef = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-  const draftCreateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-  const draftCreateInFlightRef = React.useRef(false)
-  const startNewNoteHandledRef = React.useRef(false)
-  const draggedNoteIdRef = React.useRef<string | null>(null)
-  const dragPreviewRef = React.useRef<HTMLDivElement | null>(null)
-
-  const selectNoteId = React.useCallback((noteId: string | null) => {
-    selectedNoteIdRef.current = noteId
-    setSelectedNoteId(noteId)
-  }, [])
-
-  React.useEffect(() => {
-    notesRef.current = notes
-  }, [notes])
-
-  React.useEffect(() => {
-    selectedNoteIdRef.current = selectedNoteId
-  }, [selectedNoteId])
-
-  React.useEffect(() => {
-    const url = new URL(window.location.href)
-    url.searchParams.set("view", activeRailKey)
-    url.searchParams.delete("scope")
-    url.searchParams.delete("new")
-    if (selectedNoteId) url.searchParams.set("note", selectedNoteId)
-    else url.searchParams.delete("note")
-    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`)
-  }, [activeRailKey, selectedNoteId])
-
-  const beginPaneResize = React.useCallback(
-    (
-      event: React.PointerEvent<HTMLButtonElement>,
-      pane: "sidebar" | "list"
-    ) => {
-      event.preventDefault()
-      const startX = event.clientX
-      const initialWidth = pane === "sidebar" ? sidebarWidth : listWidth
-      const min = pane === "sidebar" ? 200 : 280
-      const max = pane === "sidebar" ? 320 : 440
-      const onMove = (moveEvent: PointerEvent) => {
-        const next = Math.min(max, Math.max(min, initialWidth + moveEvent.clientX - startX))
-        if (pane === "sidebar") setSidebarWidth(next)
-        else setListWidth(next)
-      }
-      const onUp = () => {
-        window.removeEventListener("pointermove", onMove)
-        window.removeEventListener("pointerup", onUp)
-        document.body.style.cursor = ""
-        document.body.style.userSelect = ""
-      }
-      document.body.style.cursor = "col-resize"
-      document.body.style.userSelect = "none"
-      window.addEventListener("pointermove", onMove)
-      window.addEventListener("pointerup", onUp)
-    },
-    [listWidth, setListWidth, setSidebarWidth, sidebarWidth]
-  )
-
-  const selectedNote = React.useMemo(
-    () => notes.find((item) => item.id === selectedNoteId) ?? null,
-    [notes, selectedNoteId]
-  )
-
-  const selectedNoteSourceType = React.useMemo(() => getNoteSourceType(selectedNote), [selectedNote])
-  const selectedNoteIsLinked = selectedNoteSourceType !== "note"
-  const selectedEditorDraft = React.useMemo(() => {
-    if (!selectedNote) return ""
-    return resolveNoteEditorDraft(
-      selectedNote.id,
-      editorNoteIdRef.current,
-      contentDraft,
-      noteDraftsRef.current.get(selectedNote.id),
-      normalizeNoteContentForEditor(selectedNote.content || "")
-    )
-  }, [contentDraft, selectedNote])
-
-  const defaultFolder = React.useMemo(
-    () => folders.find((folder) => folder.isDefault) ?? null,
+  const folderOptions = React.useMemo<RichTextFolderOption[]>(
+    () => [
+      { id: null, name: ALL_NOTES_FOLDER_LABEL },
+      ...folders.map((folder) => ({ id: folder.id, name: folder.name })),
+    ],
     [folders]
   )
 
-  const smartCollectionCounts = React.useMemo(() => {
-    const personalNotes = notes.filter((note) => getNoteSourceType(note) === "note")
-    return {
-      all: notes.filter((note) => getNoteSourceType(note) !== "note" || (!note.archived && !note.deletedAt)).length,
-      pinned: personalNotes.filter(
-        (note) => !note.archived && !note.deletedAt && note.pinned
-      ).length,
-      archived: personalNotes.filter((note) => note.archived && !note.deletedAt).length,
-      deleted: personalNotes.filter((note) => Boolean(note.deletedAt)).length,
-    }
-  }, [notes])
+  const performSave = React.useCallback(async () => {
+    if (cancelledRef.current) return false
+    const content = draftRef.current
+    if (!hasMeaningfulNoteContent(content) && !persistedRef.current) return true
+    setSaveState("saving")
 
-  const folderCounts = React.useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const folder of folders) counts.set(folder.id, 0)
-    for (const note of notes) {
-      if (
-        getNoteSourceType(note) !== "note" ||
-        note.archived ||
-        note.deletedAt ||
-        !note.folderId
-      ) continue
-      counts.set(note.folderId, (counts.get(note.folderId) || 0) + 1)
+    if (!persistedRef.current) {
+      const result = await createNote({
+        id: note.id,
+        content,
+        folderId: folderIdRef.current,
+      })
+      if (!result.success) {
+        setSaveState("error")
+        return false
+      }
+      persistedRef.current = true
+      revisionRef.current = result.data.contentRevision
+      dirtyRef.current = draftRef.current !== result.data.content
+      if (!dirtyRef.current) window.localStorage.removeItem(`notes.draft.${note.id}`)
+      setSaveState(dirtyRef.current ? "saving" : "saved")
+      onCreated(result.data)
+      return true
     }
-    return counts
-  }, [folders, notes])
+
+    if (!dirtyRef.current) return true
+    const result = await saveNoteContent({
+      noteId: note.id,
+      content,
+      expectedRevision: revisionRef.current,
+      folderId: folderIdRef.current,
+    })
+    if (!result.success) {
+      setSaveState("code" in result && result.code === "NOTE_CONTENT_CONFLICT" ? "conflict" : "error")
+      return false
+    }
+    revisionRef.current = result.data.contentRevision
+    dirtyRef.current = draftRef.current !== content
+    if (!dirtyRef.current) window.localStorage.removeItem(`notes.draft.${note.id}`)
+    setSaveState(dirtyRef.current ? "saving" : "saved")
+    onSaved(result.data)
+    return true
+  }, [note.id, onCreated, onSaved])
+
+  const enqueueSave = React.useCallback(() => {
+    const next = saveQueueRef.current.then(performSave, performSave)
+    saveQueueRef.current = next
+    return next
+  }, [performSave])
+
+  const scheduleSave = React.useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null
+      void enqueueSave()
+    }, 800)
+  }, [enqueueSave])
 
   React.useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (recoveryTimerRef.current) clearTimeout(recoveryTimerRef.current)
+      if (dirtyRef.current && !cancelledRef.current) void enqueueSave()
+    }
+  }, [enqueueSave])
+
+  React.useImperativeHandle(ref, () => ({
+    cancelPendingSaves: async () => {
+      cancelledRef.current = true
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (recoveryTimerRef.current) clearTimeout(recoveryTimerRef.current)
+      await saveQueueRef.current.catch(() => false)
+      return persistedRef.current
+    },
+    flushPendingSaves: async () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (dirtyRef.current) await enqueueSave()
+      return saveQueueRef.current.catch(() => false)
+    },
+  }), [enqueueSave])
+
+  const handleChange = React.useCallback((content: string) => {
+    draftRef.current = content
+    setDraft(content)
+    dirtyRef.current = true
     setSaveState("idle")
-    if (!selectedNote) {
-      editorNoteIdRef.current = null
-      setContentDraft("")
-      contentDraftRef.current = ""
+    if (!meaningfulReportedRef.current && hasMeaningfulNoteContent(content)) {
+      meaningfulReportedRef.current = true
+      onMeaningfulDraft(note.id)
+    }
+    if (folderChipManagedRef.current) {
+      const mentionedFolderId = readFolderMentionId(content)
+      if (mentionedFolderId !== folderIdRef.current) {
+        folderIdRef.current = mentionedFolderId
+        setFolderId(mentionedFolderId)
+      }
+    }
+    if (recoveryTimerRef.current) clearTimeout(recoveryTimerRef.current)
+    recoveryTimerRef.current = setTimeout(() => {
+      window.localStorage.setItem(
+        `notes.draft.${note.id}`,
+        JSON.stringify({ content: draftRef.current, revision: revisionRef.current, folderId: folderIdRef.current })
+      )
+    }, 250)
+    scheduleSave()
+  }, [note.id, onMeaningfulDraft, scheduleSave])
+
+  const flushFolderChange = React.useCallback((nextFolderId: string | null, content: string) => {
+    folderChipManagedRef.current = true
+    folderIdRef.current = nextFolderId
+    draftRef.current = content
+    dirtyRef.current = true
+    setFolderId(nextFolderId)
+    setDraft(content)
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    void enqueueSave()
+  }, [enqueueSave])
+
+  const assignFolder = React.useCallback((nextFolderId: string | null) => {
+    const folder = folders.find((item) => item.id === nextFolderId) ?? null
+    const contentWithoutMentions = removeFolderMentions(draftRef.current).trimStart()
+    const content = folder
+      ? `${contentWithoutMentions}<p>${folderMentionHtml(folder)}</p>`
+      : contentWithoutMentions
+    setExternalUpdateToken((token) => token + 1)
+    flushFolderChange(nextFolderId, content)
+  }, [folders, flushFolderChange])
+
+  const reloadServerVersion = React.useCallback(async () => {
+    const result = await getNoteDetail(note.id)
+    if (!result.success) {
+      toast.error(result.error)
       return
     }
+    draftRef.current = result.data.content
+    folderIdRef.current = result.data.folderId
+    revisionRef.current = result.data.contentRevision
+    dirtyRef.current = false
+    folderChipManagedRef.current = Boolean(readFolderMentionId(result.data.content))
+    setDraft(result.data.content)
+    setFolderId(result.data.folderId)
+    setExternalUpdateToken((token) => token + 1)
+    setSaveState("saved")
+    window.localStorage.removeItem(`notes.draft.${note.id}`)
+    onSaved(result.data)
+  }, [note.id, onSaved])
 
-    if (editorNoteIdRef.current === selectedNote.id) return
-    editorNoteIdRef.current = selectedNote.id
-    const normalizedContent = normalizeNoteContentForEditor(selectedNote.content || "")
-    const recoveredProjectDraft =
-      selectedNoteSourceType === "project"
-        ? resolveProjectNoteDraftContent(
-            window.sessionStorage,
-            selectedNote.sourceId || selectedNote.id.replace(/^project:/, ""),
-            normalizedContent
-          )
-        : null
-    const draftContent =
-      noteDraftsRef.current.get(selectedNote.id)
-      ?? (recoveredProjectDraft === null
-        ? normalizedContent
-        : normalizeNoteContentForEditor(recoveredProjectDraft))
-    if (!noteDraftRevisionRef.current.has(selectedNote.id)) {
-      noteDraftRevisionRef.current.set(selectedNote.id, recoveredProjectDraft === null ? 0 : 1)
-      noteSavedRevisionRef.current.set(selectedNote.id, 0)
-    }
-    noteDraftsRef.current.set(selectedNote.id, draftContent)
-    contentDraftRef.current = draftContent
-    setContentDraft(draftContent)
-    if (!syncedSnapshotsRef.current.has(selectedNote.id)) {
-      syncedSnapshotsRef.current.set(selectedNote.id, {
-        title:
-          selectedNoteSourceType === "note"
-            ? deriveNoteTitleFromContent(normalizedContent, selectedNote.title || DEFAULT_NOTE_TITLE)
-            : selectedNote.title,
-        content:
-          selectedNoteSourceType === "note"
-            ? normalizedContent
-            : selectedNote.content || "",
-      })
-    }
-    setEmptyEditorDraft("")
-  }, [selectedNote, selectedNoteSourceType])
-
-  const railFilteredNotes = React.useMemo(() => {
-    return getFilteredByRail(notes, activeRailKey)
-  }, [notes, activeRailKey])
-
-  const filteredNotes = React.useMemo(() => {
-    const needle = search.trim().toLowerCase()
-    const searchBase = needle
-      ? notes.filter((note) => getNoteSourceType(note) !== "note" || !note.deletedAt)
-      : railFilteredNotes
-    const visible = searchBase.filter((note) => {
-      if (!needle) return true
-      return (
-        getNoteDisplayTitle(note).toLowerCase().includes(needle) ||
-        getNotePreview(note).toLowerCase().includes(needle) ||
-        (note.sourceLabel || "").toLowerCase().includes(needle)
-      )
+  const keepAsNewNote = React.useCallback(async () => {
+    const result = await createNote({
+      id: crypto.randomUUID(),
+      content: draftRef.current,
+      folderId: folderIdRef.current,
     })
-
-    const sorted = [...visible].sort((a, b) => {
-      const scoreDiff = scoreSearchMatch(b, needle) - scoreSearchMatch(a, needle)
-      if (needle && scoreDiff !== 0) return scoreDiff
-      if (noteSort === "title") {
-        return getNoteDisplayTitle(a).localeCompare(getNoteDisplayTitle(b))
-      }
-      if (noteSort === "created") {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      }
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    })
-    return sorted
-  }, [noteSort, notes, railFilteredNotes, search])
-
-  const groupedNotes = React.useMemo(() => groupNotesByDate(filteredNotes), [filteredNotes])
-
-  const editorUploadContextId = React.useMemo(() => {
-    if (!selectedNote) return undefined
-    if (selectedNoteSourceType === "project") {
-      return selectedNote.sourceId || selectedNote.id.replace(/^project:/, "")
-    }
-    if (selectedNoteSourceType === "task") {
-      return selectedNote.sourceProjectId || selectedNote.sourceId || selectedNote.id.replace(/^task:/, "")
-    }
-    return selectedNote.id
-  }, [selectedNote, selectedNoteSourceType])
-
-  const persistNoteImmediately = React.useCallback(
-    async (noteId: string, contentValue: string, draftRevision: number) => {
-      const existingNote = notesRef.current.find((item) => item.id === noteId) ?? null
-      if (!existingNote) return false
-      const markDraftRevisionSaved = () => {
-        const savedRevision = noteSavedRevisionRef.current.get(noteId) ?? 0
-        noteSavedRevisionRef.current.set(noteId, Math.max(savedRevision, draftRevision))
-      }
-      const sourceType = getNoteSourceType(existingNote)
-      const normalizedTitle =
-        sourceType === "note"
-          ? deriveNoteTitleFromContent(contentValue, existingNote.title || DEFAULT_NOTE_TITLE)
-          : existingNote.title
-      const snapshot = syncedSnapshotsRef.current.get(noteId)
-      if (snapshot?.title === normalizedTitle && snapshot.content === contentValue) {
-        markDraftRevisionSaved()
-        return true
-      }
-      if (selectedNoteIdRef.current === noteId) setSaveState("saving")
-
-      if (sourceType === "project") {
-        const projectId = existingNote.sourceId || existingNote.id.replace(/^project:/, "")
-        const result = await updateProject(
-          projectId,
-          { description: contentValue },
-          {
-            expectedDescription:
-              syncedSnapshotsRef.current.get(noteId)?.content
-              ?? existingNote.content
-              ?? null,
-            notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION,
-          }
-        )
-        if (!result.success) {
-          if (selectedNoteIdRef.current === noteId) setSaveState("error")
-          toast.error(result.error || "Failed to save project note")
-          return false
-        }
-        clearProjectNoteDraftIfContent(window.sessionStorage, projectId, contentValue)
-        const nowIso = new Date().toISOString()
-        setNotes((current) =>
-          sortNotes(
-            current.map((item) =>
-              item.id === existingNote.id
-                ? {
-                    ...item,
-                    content: contentValue,
-                    contentText: toContentText(contentValue),
-                    updatedAt: nowIso,
-                  }
-                : item
-            )
-          )
-        )
-        syncedSnapshotsRef.current.set(existingNote.id, {
-          title: existingNote.title,
-          content: contentValue,
-        })
-        markDraftRevisionSaved()
-        if (selectedNoteIdRef.current === noteId) setSaveState("saved")
-        return true
-      }
-
-      if (sourceType === "task") {
-        const taskId = existingNote.sourceId || existingNote.id.replace(/^task:/, "")
-        const result = await updateTask(
-          taskId,
-          { description: contentValue },
-          { notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION }
-        )
-        if (!result.success) {
-          if (selectedNoteIdRef.current === noteId) setSaveState("error")
-          toast.error(result.error || "Failed to save task note")
-          return false
-        }
-        const nowIso = new Date().toISOString()
-        setNotes((current) =>
-          sortNotes(
-            current.map((item) =>
-              item.id === existingNote.id
-                ? {
-                    ...item,
-                    content: contentValue,
-                    contentText: toContentText(contentValue),
-                    updatedAt: nowIso,
-                  }
-                : item
-            )
-          )
-        )
-        syncedSnapshotsRef.current.set(existingNote.id, {
-          title: existingNote.title,
-          content: contentValue,
-        })
-        markDraftRevisionSaved()
-        if (selectedNoteIdRef.current === noteId) setSaveState("saved")
-        return true
-      }
-
-      if (storageUnavailable) {
-        if (selectedNoteIdRef.current === noteId) setSaveState("error")
-        toast.error("Notes storage is not ready yet")
-        return false
-      }
-
-      const result = await updateNote(
-        noteId,
-        { content: contentValue },
-        {
-          expectedContent:
-            persistedNoteContentsRef.current.get(noteId)
-            ?? existingNote.content
-            ?? "",
-          notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION,
-        }
-      )
-
-      if (!result.success || !result.data) {
-        if (selectedNoteIdRef.current === noteId) setSaveState("error")
-        toast.error(result.error || "Failed to save note")
-        return false
-      }
-
-      setNotes((current) => upsertNote(current, result.data as NoteRecord))
-      syncedSnapshotsRef.current.set(result.data.id, {
-        title: result.data.title,
-        content: result.data.content,
-      })
-      persistedNoteContentsRef.current.set(result.data.id, result.data.content)
-      markDraftRevisionSaved()
-      if (selectedNoteIdRef.current === noteId) setSaveState("saved")
-      return true
-    },
-    [storageUnavailable]
-  )
-
-  const queuePersistNote = React.useCallback(
-    (noteId: string, contentValue: string) => {
-      const draftRevision = noteDraftRevisionRef.current.get(noteId) ?? 0
-      const savedRevision = noteSavedRevisionRef.current.get(noteId) ?? 0
-      if (!isNoteDraftDirty(draftRevision, savedRevision)) return Promise.resolve(true)
-      return enqueueSerializedNoteSave(
-        saveQueuesRef.current,
-        noteId,
-        () => persistNoteImmediately(noteId, contentValue, draftRevision)
-      )
-    },
-    [persistNoteImmediately]
-  )
-
-  const discardBlankNewNote = React.useCallback(async (noteId: string, draft: string) => {
-    if (!shouldDiscardNewNote(newlyCreatedNoteIdsRef.current.has(noteId), draft)) {
-      return false
-    }
-
-    const pendingSave = saveQueuesRef.current.get(noteId)
-    if (pendingSave) await pendingSave.catch(() => false)
-    const result = await permanentlyDeleteNote(noteId)
     if (!result.success) {
-      toast.error(result.error || "Failed to discard blank note")
-      return false
+      toast.error(result.error)
+      return
     }
+    onForkCreated(result.data)
+  }, [onForkCreated])
 
-    newlyCreatedNoteIdsRef.current.delete(noteId)
-    noteDraftsRef.current.delete(noteId)
-    noteDraftRevisionRef.current.delete(noteId)
-    noteSavedRevisionRef.current.delete(noteId)
-    syncedSnapshotsRef.current.delete(noteId)
-    persistedNoteContentsRef.current.delete(noteId)
-    setNotes((current) => current.filter((note) => note.id !== noteId))
-    return true
+  const currentFolderName = folders.find((folder) => folder.id === folderId)?.name
+    ?? ALL_NOTES_FOLDER_LABEL
+
+  return (
+    <section className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]" aria-label="Note editor">
+      <div className="flex min-h-12 items-center gap-2 border-b border-[var(--line-subtle)] px-3 md:px-5">
+        <button type="button" onClick={onBack} className="inline-flex h-10 w-10 items-center justify-center rounded-full md:hidden" aria-label="Back to notes">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="inline-flex min-h-9 min-w-0 items-center gap-2 rounded-full px-3 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]">
+              <Folder className="h-4 w-4 shrink-0" />
+              <span className="truncate">{currentFolderName}</span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
+            <DropdownMenuItem onSelect={() => assignFolder(null)}>All Notes</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {folders.map((folder) => (
+              <DropdownMenuItem key={folder.id} onSelect={() => assignFolder(folder.id)}>
+                {folder.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <span className={cn(
+          "ml-auto text-xs font-medium",
+          saveState === "error" || saveState === "conflict" ? "text-[var(--state-urgent)]" : "text-[var(--text-muted)]"
+        )}>
+          {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Save failed" : saveState === "conflict" ? "Changed elsewhere" : ""}
+        </span>
+        {saveState === "error" ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => void enqueueSave()}>Retry</Button>
+        ) : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="ghost" size="icon" aria-label="Note actions"><MoreHorizontal className="h-4 w-4" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}><Trash2 className="h-4 w-4" />Delete permanently</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {saveState === "conflict" ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-subtle)] bg-[var(--state-danger-surface)] px-4 py-2 text-sm text-[var(--state-urgent)]">
+          <span className="mr-auto">This note changed in another view. Your draft is preserved.</span>
+          <Button type="button" variant="outline" size="sm" onClick={() => void reloadServerVersion()}>Reload server version</Button>
+          <Button type="button" size="sm" onClick={() => void keepAsNewNote()}>Keep as new note</Button>
+        </div>
+      ) : null}
+
+      <RichTextEditor
+        value={draft}
+        onChange={handleChange}
+        onBlur={() => { if (dirtyRef.current) void enqueueSave() }}
+        placeholder="Start writing… Type # to choose a folder"
+        variant="plain"
+        mode="document"
+        panelStyle="borderless"
+        documentLayout="left"
+        documentWidth="reading"
+        toolbarVisibility="focus"
+        toolbarPreset="minimal"
+        toolbarTone="quiet"
+        toolbarPinned
+        notesMode
+        notesAppearance="apple"
+        focusToken={focusToken}
+        showImageGallery={false}
+        folderOptions={folderOptions}
+        onFolderMentionChange={flushFolderChange}
+        externalUpdateToken={externalUpdateToken}
+        className="min-h-0 flex-1"
+        minHeightClassName="min-h-full"
+      />
+    </section>
+  )
+}))
+
+export function NotesWorkspace({
+  initialRows,
+  initialSelectedNote,
+  initialView,
+  initialFolders,
+  initialNextCursor,
+  initialTotalCount,
+  initialAllCount,
+  requestedNoteId = null,
+  startNewNote = false,
+}: NotesWorkspaceProps) {
+  const [rows, setRows] = React.useState<ClientNoteRow[]>(initialRows)
+  const [folders, setFolders] = React.useState(initialFolders)
+  const [view, setView] = React.useState<NotesView>(initialView)
+  const [search, setSearch] = React.useState("")
+  const [selectedId, setSelectedId] = React.useState<string | null>(initialSelectedNote?.id ?? null)
+  const [selectedNote, setSelectedNote] = React.useState<ClientNoteDetail | null>(initialSelectedNote)
+  const [nextCursor, setNextCursor] = React.useState(initialNextCursor)
+  const [totalCount, setTotalCount] = React.useState(initialTotalCount)
+  const [allCount, setAllCount] = React.useState(initialAllCount)
+  const [loadingList, setLoadingList] = React.useState(false)
+  const [loadingDetail, setLoadingDetail] = React.useState(false)
+  const [focusToken, setFocusToken] = React.useState(0)
+  const [editorSessionVersion, setEditorSessionVersion] = React.useState(0)
+  const [mobilePane, setMobilePane] = React.useState<MobilePane>(initialSelectedNote ? "editor" : "list")
+  const [folderDialog, setFolderDialog] = React.useState<{ mode: "create" | "rename"; folder?: NoteFolderRecord } | null>(null)
+  const [folderName, setFolderName] = React.useState("")
+  const [folderToDelete, setFolderToDelete] = React.useState<NoteFolderRecord | null>(null)
+  const [noteToDelete, setNoteToDelete] = React.useState<ClientNoteDetail | null>(null)
+  const detailCacheRef = React.useRef(new Map<string, NoteDetail>())
+  const rowsRef = React.useRef<ClientNoteRow[]>(initialRows)
+  const selectedIdRef = React.useRef<string | null>(initialSelectedNote?.id ?? null)
+  const selectedNoteRef = React.useRef<ClientNoteDetail | null>(initialSelectedNote)
+  const listRequestRef = React.useRef(0)
+  const detailRequestRef = React.useRef(0)
+  const initialQueryRef = React.useRef(true)
+  const startNewHandledRef = React.useRef(false)
+  const recoveredDraftHandledRef = React.useRef(false)
+  const loadMoreRef = React.useRef<HTMLDivElement | null>(null)
+  const editorSessionRef = React.useRef<NoteEditorSessionHandle | null>(null)
+
+  React.useEffect(() => {
+    if (initialSelectedNote) detailCacheRef.current.set(initialSelectedNote.id, initialSelectedNote)
+  }, [initialSelectedNote])
+
+  React.useEffect(() => {
+    selectedIdRef.current = selectedId
+  }, [selectedId])
+
+  React.useEffect(() => {
+    rowsRef.current = rows
+  }, [rows])
+
+  React.useEffect(() => {
+    selectedNoteRef.current = selectedNote
+  }, [selectedNote])
+
+  const cacheDetail = React.useCallback((note: NoteDetail) => {
+    const cache = detailCacheRef.current
+    cache.delete(note.id)
+    cache.set(note.id, note)
+    while (cache.size > 10) {
+      const oldest = cache.keys().next().value as string | undefined
+      if (!oldest) break
+      cache.delete(oldest)
+    }
   }, [])
 
-  const flushNote = React.useCallback(
-    (noteId: string, options?: { finalizeNewNote?: boolean }) => {
-      const saveTimeout = saveTimeoutsRef.current.get(noteId)
-      if (saveTimeout) {
-        clearTimeout(saveTimeout)
-        saveTimeoutsRef.current.delete(noteId)
-      }
-      const existingNote = notesRef.current.find((note) => note.id === noteId)
-      const draft =
-        noteDraftsRef.current.get(noteId)
-        ?? normalizeNoteContentForEditor(existingNote?.content || "")
-      noteDraftsRef.current.set(noteId, draft)
-      if (newlyCreatedNoteIdsRef.current.has(noteId)) {
-        if (shouldDiscardNewNote(true, draft)) {
-          return discardBlankNewNote(noteId, draft)
-        }
-        if (options?.finalizeNewNote) {
-          newlyCreatedNoteIdsRef.current.delete(noteId)
-        }
-      }
-      return queuePersistNote(noteId, draft)
-    },
-    [discardBlankNewNote, queuePersistNote]
-  )
-
-  const flushSelectedNote = React.useCallback(
-    (options?: { finalizeNewNote?: boolean }) => {
-      const noteId = selectedNoteIdRef.current
-      return noteId ? flushNote(noteId, options) : Promise.resolve(true)
-    },
-    [flushNote]
-  )
-
-  const handleContentDraftChange = React.useCallback((noteId: string, value: string) => {
-    if (!shouldAcceptNoteEditorChange(noteId, selectedNoteIdRef.current)) return
-    value = normalizeRichTextContent(value)
-    const previousDraft = noteDraftsRef.current.get(noteId) ?? contentDraftRef.current
-    noteDraftsRef.current.set(noteId, value)
-    if (previousDraft !== value) {
-      noteDraftRevisionRef.current.set(
-        noteId,
-        (noteDraftRevisionRef.current.get(noteId) ?? 0) + 1
-      )
+  const discardBlankLocalNote = React.useCallback((noteId: string | null) => {
+    if (!noteId) return
+    const row = rowsRef.current.find((item) => item.id === noteId)
+    if (!row?.localOnly || row.hasLocalContent) return
+    setRows((current) => current.filter((item) => item.id !== noteId))
+    setAllCount((count) => Math.max(0, count - 1))
+    if (row.folderId) {
+      setFolders((current) => current.map((folder) => folder.id === row.folderId ? { ...folder, count: Math.max(0, folder.count - 1) } : folder))
     }
-    contentDraftRef.current = value
-    setContentDraft(value)
+    window.localStorage.removeItem(`notes.draft.${noteId}`)
+    detailCacheRef.current.delete(noteId)
   }, [])
 
-  const handleCreateNote = React.useCallback(
-    async (prefill?: { content?: string }) => {
-      if (storageUnavailable) {
-        toast.error("Notes storage is not ready yet")
-        return null
-      }
-      const activeFolderId = getFolderIdFromRailKey(activeRailKey)
-      setIsCreating(true)
-      try {
-        const result = await createNote({
-          content: prefill?.content || "",
-          folderId: activeFolderId ?? undefined,
-        })
-        if (!result.success || !result.data) {
-          toast.error(result.error || "Failed to create note")
-          return null
-        }
-
-        setNotes((current) => upsertNote(current, result.data as NoteRecord))
-        const createdContent = normalizeNoteContentForEditor(result.data.content || "")
-        newlyCreatedNoteIdsRef.current.add(result.data.id)
-        noteDraftsRef.current.set(result.data.id, createdContent)
-        noteDraftRevisionRef.current.set(result.data.id, 0)
-        noteSavedRevisionRef.current.set(result.data.id, 0)
-        syncedSnapshotsRef.current.set(result.data.id, {
-          title: result.data.title,
-          content: createdContent,
-        })
-        persistedNoteContentsRef.current.set(result.data.id, result.data.content || "")
-        if (activeFolderId) {
-          const createdFolderId = result.data.folderId || activeFolderId
-          setActiveRailKey(folderRailKey(createdFolderId))
-        } else {
-          setActiveRailKey("all")
-        }
-        selectNoteId(result.data.id)
-        setEditorFocusToken((current) => current + 1)
-        return result.data.id
-      } finally {
-        setIsCreating(false)
-      }
-    },
-    [activeRailKey, selectNoteId, storageUnavailable]
-  )
+  const selectNote = React.useCallback(async (noteId: string) => {
+    if (selectedIdRef.current !== noteId) discardBlankLocalNote(selectedIdRef.current)
+    selectedIdRef.current = noteId
+    setSelectedId(noteId)
+    setMobilePane("editor")
+    setFocusToken((token) => token + 1)
+    const cached = detailCacheRef.current.get(noteId)
+    if (cached) {
+      setSelectedNote(cached)
+      return
+    }
+    const currentSelected = selectedNoteRef.current
+    const local = currentSelected?.id === noteId && currentSelected.localOnly ? currentSelected : null
+    if (local) return
+    const request = ++detailRequestRef.current
+    setLoadingDetail(true)
+    const result = await getNoteDetail(noteId)
+    if (request !== detailRequestRef.current) return
+    setLoadingDetail(false)
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+    cacheDetail(result.data)
+    setSelectedNote(result.data)
+  }, [cacheDetail, discardBlankLocalNote])
 
   const beginNewNote = React.useCallback(() => {
-    void flushSelectedNote({ finalizeNewNote: true })
-    setSearch("")
-    setEmptyEditorDraft("")
-    selectNoteId(null)
-    setSaveState("idle")
-    setEditorFocusToken((current) => current + 1)
-  }, [flushSelectedNote, selectNoteId])
+    discardBlankLocalNote(selectedId)
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
+    const selectedFolderId = folderIdFromView(view)
+    const detail: ClientNoteDetail = {
+      id,
+      folderId: selectedFolderId,
+      title: "New note",
+      preview: "",
+      content: "",
+      contentText: "",
+      contentRevision: 0,
+      hasChecklist: false,
+      hasAttachment: false,
+      createdAt: now,
+      updatedAt: now,
+      localOnly: true,
+    }
+    setRows((current) => [{ ...rowFromDetail(detail), localOnly: true }, ...current])
+    setAllCount((count) => count + 1)
+    if (selectedFolderId) {
+      setFolders((current) => current.map((folder) => folder.id === selectedFolderId ? { ...folder, count: folder.count + 1 } : folder))
+    }
+    selectedIdRef.current = id
+    selectedNoteRef.current = detail
+    setSelectedId(id)
+    setSelectedNote(detail)
+    setMobilePane("editor")
+    setFocusToken((token) => token + 1)
+  }, [discardBlankLocalNote, selectedId, view])
 
   React.useEffect(() => {
-    if (!startNewNote) {
-      startNewNoteHandledRef.current = false
-      return
+    if (recoveredDraftHandledRef.current || startNewNote || !requestedNoteId) return
+    recoveredDraftHandledRef.current = true
+    if (initialRows.some((row) => row.id === requestedNoteId)) return
+    try {
+      const raw = window.localStorage.getItem(`notes.draft.${requestedNoteId}`)
+      if (!raw) return
+      const recovered = JSON.parse(raw) as { content?: string; revision?: number; folderId?: string | null }
+      if (recovered.revision !== 0 || typeof recovered.content !== "string" || !hasMeaningfulNoteContent(recovered.content)) return
+      const folderId = folders.some((folder) => folder.id === recovered.folderId) ? recovered.folderId ?? null : null
+      const now = new Date().toISOString()
+      const detail: ClientNoteDetail = {
+        id: requestedNoteId,
+        folderId,
+        title: deriveNoteTitleFromContent(recovered.content),
+        preview: derivePreviewBodyFromContent(recovered.content, ""),
+        content: recovered.content,
+        contentText: recovered.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
+        contentRevision: 0,
+        hasChecklist: /data-type=["']taskList["']/i.test(recovered.content),
+        hasAttachment: /<img\b/i.test(recovered.content),
+        createdAt: now,
+        updatedAt: now,
+        localOnly: true,
+      }
+      selectedIdRef.current = requestedNoteId
+      selectedNoteRef.current = detail
+      setRows((current) => [{ ...rowFromDetail(detail), localOnly: true, hasLocalContent: true }, ...current])
+      setAllCount((count) => count + 1)
+      if (folderId) setFolders((current) => current.map((folder) => folder.id === folderId ? { ...folder, count: folder.count + 1 } : folder))
+      setSelectedId(requestedNoteId)
+      setSelectedNote(detail)
+      setMobilePane("editor")
+      setFocusToken((token) => token + 1)
+    } catch {
+      // Ignore malformed recovery data.
     }
-    if (startNewNoteHandledRef.current) return
+  }, [folders, initialRows, requestedNoteId, startNewNote])
 
-    startNewNoteHandledRef.current = true
-    setActiveRailKey(DEFAULT_RAIL_KEY)
+  React.useEffect(() => {
+    if (!startNewNote || startNewHandledRef.current) return
+    startNewHandledRef.current = true
     beginNewNote()
-    setMobilePane("editor")
   }, [beginNewNote, startNewNote])
 
-  const handleSelectNote = React.useCallback(
-    (noteId: string | null) => {
-      if (noteId === selectedNoteIdRef.current) return
-      void flushSelectedNote({ finalizeNewNote: true })
-      selectNoteId(noteId)
-    },
-    [flushSelectedNote, selectNoteId]
-  )
+  React.useEffect(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.set("view", view)
+    if (selectedId) url.searchParams.set("note", selectedId)
+    else url.searchParams.delete("note")
+    url.searchParams.delete("new")
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`)
+  }, [selectedId, view])
 
-  const handleSelectRail = React.useCallback(
-    (rail: RailKey) => {
-      void flushSelectedNote({ finalizeNewNote: true })
-      setActiveRailKey(rail)
-    },
-    [flushSelectedNote]
-  )
+  const replaceList = React.useCallback(async (nextView: NotesView, query: string) => {
+    const request = ++listRequestRef.current
+    setLoadingList(true)
+    const result = await queryNoteList({ view: nextView, q: query, pageSize: 50 })
+    if (request !== listRequestRef.current) return
+    setLoadingList(false)
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+    setRows(result.data.rows)
+    setNextCursor(result.data.nextCursor)
+    setTotalCount(result.data.totalCount)
+    if (!query && nextView === "all") setAllCount(result.data.totalCount)
+    const first = result.data.rows[0]
+    if (first && !result.data.rows.some((row) => row.id === selectedIdRef.current)) {
+      void selectNote(first.id)
+    } else if (!first) {
+      selectedIdRef.current = null
+      selectedNoteRef.current = null
+      setSelectedId(null)
+      setSelectedNote(null)
+      setMobilePane("list")
+    }
+  }, [selectNote])
 
   React.useEffect(() => {
-    if (!selectedNoteId) return
-    const existsInScope = filteredNotes.some((note) => note.id === selectedNoteId)
-    if (existsInScope) return
-    void flushSelectedNote({ finalizeNewNote: true })
-    selectNoteId(filteredNotes[0]?.id ?? null)
-  }, [filteredNotes, flushSelectedNote, selectNoteId, selectedNoteId])
-
-  const handleCreateFolder = React.useCallback(async () => {
-    const name = newFolderName.trim()
-    if (!name) {
-      toast.error("Folder name is required")
+    if (initialQueryRef.current) {
+      initialQueryRef.current = false
       return
     }
-    setIsCreatingFolder(true)
-    try {
-      const result = await createNoteFolder({ name })
-      if (!result.success || !result.data) {
-        toast.error(result.error || "Failed to create folder")
-        return
-      }
-      setFolders((current) => {
-        const exists = current.some((folder) => folder.id === result.data.id)
-        if (exists) return current
-        return sortFoldersForDisplay([...current, result.data])
-      })
-      setNewFolderName("")
-      setIsAddingFolder(false)
-      setActiveRailKey(folderRailKey(result.data.id))
-      toast.success("Folder created")
-    } finally {
-      setIsCreatingFolder(false)
-    }
-  }, [newFolderName])
+    const timer = setTimeout(() => void replaceList(view, search), 200)
+    return () => clearTimeout(timer)
+  }, [replaceList, search, view])
 
-  const startRenameFolder = React.useCallback((folder: NoteFolderRecord) => {
-    setEditingFolderId(folder.id)
-    setEditingFolderName(folder.name)
-  }, [])
-
-  const cancelRenameFolder = React.useCallback(() => {
-    setEditingFolderId(null)
-    setEditingFolderName("")
-  }, [])
-
-  const commitRenameFolder = React.useCallback(async () => {
-    if (!editingFolderId) return
-    const nextName = editingFolderName.trim()
-    if (!nextName) {
-      toast.error("Folder name is required")
+  const loadMore = React.useCallback(async () => {
+    if (!nextCursor || loadingList) return
+    setLoadingList(true)
+    const result = await queryNoteList({ view, q: search, cursor: nextCursor, pageSize: 50 })
+    setLoadingList(false)
+    if (!result.success) {
+      toast.error(result.error)
       return
     }
+    setRows((current) => {
+      const known = new Set(current.map((row) => row.id))
+      return [...current, ...result.data.rows.filter((row) => !known.has(row.id))]
+    })
+    setNextCursor(result.data.nextCursor)
+  }, [loadingList, nextCursor, search, view])
 
-    setIsRenamingFolder(true)
-    try {
-      const result = await renameNoteFolder(editingFolderId, { name: nextName })
-      if (!result.success || !result.data) {
-        toast.error(result.error || "Failed to rename folder")
+  React.useEffect(() => {
+    const target = loadMoreRef.current
+    if (!target || !nextCursor) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) void loadMore()
+    }, { rootMargin: "240px" })
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [loadMore, nextCursor])
+
+  const applySavedNote = React.useCallback((note: NoteDetail) => {
+    cacheDetail(note)
+    if (selectedIdRef.current === note.id) {
+      selectedNoteRef.current = note
+      setSelectedNote(note)
+    }
+    const previous = rowsRef.current.find((row) => row.id === note.id)
+    if (previous?.folderId !== note.folderId) {
+      setFolders((currentFolders) => currentFolders.map((folder) => {
+        if (folder.id === previous?.folderId) return { ...folder, count: Math.max(0, folder.count - 1) }
+        if (folder.id === note.folderId) return { ...folder, count: folder.count + 1 }
+        return folder
+      }))
+    }
+    setRows((current) => sortRows([{ ...rowFromDetail(note) }, ...current.filter((row) => row.id !== note.id)]))
+  }, [cacheDetail])
+
+  const createOrRenameFolder = React.useCallback(async () => {
+    if (!folderDialog || !folderName.trim()) return
+    if (folderDialog.mode === "rename" && selectedNote?.localOnly && selectedNote.folderId === folderDialog.folder?.id) {
+      toast.error("Write and save the new note before renaming its folder.")
+      return
+    }
+    if (folderDialog.mode === "rename" && selectedNote?.folderId === folderDialog.folder?.id) {
+      const flushed = await editorSessionRef.current?.flushPendingSaves()
+      if (flushed === false) {
+        toast.error("Save the current note before renaming its folder.")
         return
       }
-
-      setFolders((current) =>
-        sortFoldersForDisplay(
-          current.map((folder) => (folder.id === result.data.id ? result.data : folder))
-        )
-      )
-      setNotes((current) =>
-        current.map((note) =>
-          getNoteSourceType(note) === "note" && note.folderId === result.data.id
-            ? { ...note, folderName: result.data.name }
-            : note
-        )
-      )
-      setEditingFolderId(null)
-      setEditingFolderName("")
-      toast.success("Folder renamed")
-    } finally {
-      setIsRenamingFolder(false)
     }
-  }, [editingFolderId, editingFolderName])
+    const result = folderDialog.mode === "create"
+      ? await createNoteFolder({ name: folderName })
+      : await renameNoteFolder(folderDialog.folder!.id, { name: folderName })
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+    setFolders((current) => folderDialog.mode === "create"
+      ? [...current, result.data].sort((a, b) => a.name.localeCompare(b.name))
+      : current.map((folder) => folder.id === result.data.id ? result.data : folder))
+    if (folderDialog.mode === "rename") {
+      for (const [noteId, cached] of detailCacheRef.current) {
+        if (cached.folderId === result.data.id) detailCacheRef.current.delete(noteId)
+      }
+    }
+    setFolderDialog(null)
+    setFolderName("")
+    if (selectedNote?.folderId === result.data.id) {
+      const refreshed = await getNoteDetail(selectedNote.id)
+      if (refreshed.success) {
+        applySavedNote(refreshed.data)
+        setEditorSessionVersion((version) => version + 1)
+      }
+    }
+  }, [applySavedNote, folderDialog, folderName, selectedNote])
 
   const confirmDeleteFolder = React.useCallback(async () => {
-    if (!pendingDeleteFolder) return
-    setIsDeletingFolder(true)
-    try {
-      const result = await deleteNoteFolder(pendingDeleteFolder.id)
-      if (!result.success || !result.data) {
-        toast.error(result.error || "Failed to delete folder")
-        return
-      }
-
-      setFolders((current) => current.filter((folder) => folder.id !== pendingDeleteFolder.id))
-      setNotes((current) =>
-        current.map((note) =>
-          getNoteSourceType(note) === "note" && note.folderId === result.data.deletedFolderId
-            ? {
-                ...note,
-                folderId: result.data.defaultFolderId,
-                folderName: result.data.defaultFolderName,
-              }
-            : note
-        )
-      )
-      if (activeRailKey === folderRailKey(pendingDeleteFolder.id)) {
-        setActiveRailKey(folderRailKey(result.data.defaultFolderId))
-      }
-      setPendingDeleteFolder(null)
-      toast.success(`Folder deleted. Notes moved to ${result.data.defaultFolderName}.`)
-    } finally {
-      setIsDeletingFolder(false)
-    }
-  }, [activeRailKey, pendingDeleteFolder])
-
-  const handleAssignFolder = React.useCallback(
-    async (note: NoteRecord, folderId: string | null) => {
-      if (!foldersEnabled) return
-      if (getNoteSourceType(note) !== "note") return
-      if (note.folderId === folderId) return
-
-      if (note.id === selectedNoteId) {
-        const saved = await flushSelectedNote()
-        if (!saved) return
-      }
-
-      const previousFolderId = note.folderId ?? null
-      const previousFolderName = note.folderName ?? null
-      const nextFolderName =
-        folderId === null ? "Unfiled" : folders.find((folder) => folder.id === folderId)?.name || "Folder"
-
-      setNotes((current) =>
-        current.map((item) =>
-          item.id === note.id
-            ? {
-                ...item,
-                folderId,
-                folderName: nextFolderName,
-              }
-            : item
-        )
-      )
-
-      const result = await updateNote(note.id, { folderId })
-      if (!result.success || !result.data) {
-        setNotes((current) =>
-          current.map((item) =>
-            item.id === note.id
-              ? {
-                  ...item,
-                  folderId: previousFolderId,
-                  folderName: previousFolderName,
-                }
-              : item
-          )
-        )
-        toast.error(result.error || "Failed to move note")
-        return
-      }
-      setNotes((current) =>
-        sortNotes(
-          current.map((item) =>
-            item.id === note.id
-              ? {
-                  ...item,
-                  folderId: result.data.folderId,
-                  folderName: nextFolderName,
-                  updatedAt: result.data.updatedAt,
-                }
-              : item
-          )
-        )
-      )
-      toast.success(`Moved to ${nextFolderName}`)
-    },
-    [folders, foldersEnabled, flushSelectedNote, selectedNoteId]
-  )
-
-  const clearNoteDragState = React.useCallback(() => {
-    draggedNoteIdRef.current = null
-    if (dragPreviewRef.current) dragPreviewRef.current.textContent = ""
-    setDraggedNoteId(null)
-    setDragOverFolderId(null)
-  }, [])
-
-  const handleNoteDragStart = React.useCallback(
-    (event: React.DragEvent<HTMLDivElement>, note: NoteRecord) => {
-      if (
-        !foldersEnabled ||
-        storageUnavailable ||
-        movingNoteId === note.id ||
-        getNoteSourceType(note) !== "note"
-      ) {
-        event.preventDefault()
-        return
-      }
-
-      draggedNoteIdRef.current = note.id
-      setDraggedNoteId(note.id)
-      setDragOverFolderId(null)
-      event.dataTransfer.effectAllowed = "move"
-      event.dataTransfer.setData("text/plain", note.id)
-      event.dataTransfer.setData("application/x-pixelist-note", note.id)
-      const dragPreview = dragPreviewRef.current
-      if (dragPreview) {
-        dragPreview.textContent = getNoteDisplayTitle(note)
-        event.dataTransfer.setDragImage(dragPreview, 12, 18)
-      }
-    },
-    [foldersEnabled, movingNoteId, storageUnavailable]
-  )
-
-  const handleFolderDragOver = React.useCallback(
-    (event: React.DragEvent<HTMLDivElement>, folderId: string) => {
-      const noteId = draggedNoteIdRef.current
-      const note = noteId ? notes.find((item) => item.id === noteId) : null
-      if (!note || getNoteSourceType(note) !== "note" || note.folderId === folderId) {
-        event.dataTransfer.dropEffect = "none"
-        return
-      }
-
-      event.preventDefault()
-      event.dataTransfer.dropEffect = "move"
-      setDragOverFolderId(folderId)
-    },
-    [notes]
-  )
-
-  const handleFolderDragLeave = React.useCallback(
-    (event: React.DragEvent<HTMLDivElement>, folderId: string) => {
-      const nextTarget = event.relatedTarget
-      if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
-      setDragOverFolderId((current) => (current === folderId ? null : current))
-    },
-    []
-  )
-
-  const handleFolderDrop = React.useCallback(
-    (event: React.DragEvent<HTMLDivElement>, folder: NoteFolderRecord) => {
-      event.preventDefault()
-      const noteId =
-        draggedNoteIdRef.current ||
-        event.dataTransfer.getData("application/x-pixelist-note") ||
-        event.dataTransfer.getData("text/plain")
-      const note = notes.find((item) => item.id === noteId)
-      clearNoteDragState()
-
-      if (!note || getNoteSourceType(note) !== "note" || note.folderId === folder.id) return
-
-      setMovingNoteId(note.id)
-      void handleAssignFolder(note, folder.id).finally(() => {
-        setMovingNoteId((current) => (current === note.id ? null : current))
-      })
-    },
-    [clearNoteDragState, handleAssignFolder, notes]
-  )
-
-  React.useEffect(() => {
-    if (bootstrappedRef.current) return
-    bootstrappedRef.current = true
-    if (!selectedNoteId) {
-      const firstActive = notes.find((note) => !(getNoteSourceType(note) === "note" && note.archived)) ?? notes[0]
-      if (firstActive) selectNoteId(firstActive.id)
-    }
-  }, [notes, selectNoteId, selectedNoteId])
-
-  React.useEffect(() => {
-    if (!selectedNoteId) return
-    if (selectedNoteSourceType === "note" && storageUnavailable) return
-    const draftRevision = noteDraftRevisionRef.current.get(selectedNoteId) ?? 0
-    const savedRevision = noteSavedRevisionRef.current.get(selectedNoteId) ?? 0
-    if (!isNoteDraftDirty(draftRevision, savedRevision)) return
-    const normalizedTitle =
-      selectedNoteSourceType === "note"
-        ? deriveNoteTitleFromContent(contentDraft, selectedNote?.title || DEFAULT_NOTE_TITLE)
-        : selectedNote?.title || DEFAULT_NOTE_TITLE
-    const currentSnapshot = syncedSnapshotsRef.current.get(selectedNoteId)
-    if (
-      currentSnapshot?.title === normalizedTitle &&
-      currentSnapshot.content === contentDraft
-    ) {
+    if (!folderToDelete) return
+    if (selectedNote?.localOnly && selectedNote.folderId === folderToDelete.id) {
+      toast.error("Write and save the new note before deleting its folder.")
       return
     }
-
-    const saveTimeouts = saveTimeoutsRef.current
-    const existingTimeout = saveTimeouts.get(selectedNoteId)
-    if (existingTimeout) clearTimeout(existingTimeout)
-    const timeout = setTimeout(() => {
-      saveTimeouts.delete(selectedNoteId)
-      void queuePersistNote(selectedNoteId, contentDraft)
-    }, 700)
-    saveTimeouts.set(selectedNoteId, timeout)
-
-    return () => {
-      if (saveTimeouts.get(selectedNoteId) === timeout) {
-        clearTimeout(timeout)
-        saveTimeouts.delete(selectedNoteId)
-      }
-    }
-  }, [contentDraft, queuePersistNote, selectedNote?.title, selectedNoteId, selectedNoteSourceType, storageUnavailable])
-
-  React.useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
-        if (storageUnavailable) return
-        event.preventDefault()
-        beginNewNote()
-      }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
-        if (!selectedNoteId) return
-        event.preventDefault()
-        void flushSelectedNote()
-      }
-      if (!event.metaKey && !event.ctrlKey && event.key === "/") {
-        const target = event.target as HTMLElement | null
-        const isInputLike =
-          target?.tagName === "INPUT" ||
-          target?.tagName === "TEXTAREA" ||
-          target?.getAttribute("contenteditable") === "true"
-        if (isInputLike) return
-        event.preventDefault()
-        searchRef.current?.focus()
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [beginNewNote, flushSelectedNote, selectedNoteId, storageUnavailable])
-
-  React.useEffect(() => {
-    const flushBeforePageExit = () => {
-      void flushSelectedNote({ finalizeNewNote: true })
-    }
-    const flushWhenHidden = () => {
-      if (document.visibilityState === "hidden") {
-        void flushSelectedNote({ finalizeNewNote: true })
-      }
-    }
-    window.addEventListener("pagehide", flushBeforePageExit)
-    document.addEventListener("visibilitychange", flushWhenHidden)
-    return () => {
-      window.removeEventListener("pagehide", flushBeforePageExit)
-      document.removeEventListener("visibilitychange", flushWhenHidden)
-    }
-  }, [flushSelectedNote])
-
-  React.useEffect(() => {
-    const saveTimeouts = saveTimeoutsRef.current
-    return () => {
-      for (const timeout of saveTimeouts.values()) clearTimeout(timeout)
-      saveTimeouts.clear()
-      if (draftCreateTimeoutRef.current) clearTimeout(draftCreateTimeoutRef.current)
-    }
-  }, [])
-
-  React.useEffect(() => {
-    if (selectedNoteId) return
-    if (storageUnavailable) return
-    if (!hasMeaningfulContent(emptyEditorDraft)) return
-    if (draftCreateInFlightRef.current) return
-
-    if (draftCreateTimeoutRef.current) clearTimeout(draftCreateTimeoutRef.current)
-    draftCreateTimeoutRef.current = setTimeout(() => {
-      if (draftCreateInFlightRef.current) return
-      if (!hasMeaningfulContent(emptyEditorDraft)) return
-      draftCreateInFlightRef.current = true
-      void handleCreateNote({ content: emptyEditorDraft }).finally(() => {
-        draftCreateInFlightRef.current = false
-      })
-    }, 550)
-
-    return () => {
-      if (draftCreateTimeoutRef.current) clearTimeout(draftCreateTimeoutRef.current)
-    }
-  }, [emptyEditorDraft, handleCreateNote, selectedNoteId, storageUnavailable])
-
-  const handleArchiveToggle = React.useCallback(
-    async (note: NoteRecord) => {
-      if (getNoteSourceType(note) !== "note") return
-      const nextArchived = !note.archived
-      if (note.id === selectedNoteIdRef.current) {
-        const saved = await flushSelectedNote({ finalizeNewNote: nextArchived })
-        if (!saved) return
-      }
-      const result = await setNoteArchived(note.id, nextArchived)
-      if (!result.success || !result.data) {
-        toast.error(result.error || "Failed to update note")
+    if (selectedNote?.folderId === folderToDelete.id) {
+      const flushed = await editorSessionRef.current?.flushPendingSaves()
+      if (flushed === false) {
+        toast.error("Save the current note before deleting its folder.")
         return
       }
-
-      setNotes((current) => upsertNote(current, result.data as NoteRecord))
-      if (selectedNoteId === note.id && nextArchived) {
-        selectNoteId(filteredNotes.find((candidate) => candidate.id !== note.id)?.id ?? null)
-      }
-    },
-    [filteredNotes, flushSelectedNote, selectNoteId, selectedNoteId]
-  )
-
-  const handlePinToggle = React.useCallback(
-    async (note: NoteRecord) => {
-      if (getNoteSourceType(note) !== "note") return
-      if (note.id === selectedNoteIdRef.current) {
-        const saved = await flushSelectedNote()
-        if (!saved) return
-      }
-      const result = await setNotePinned(note.id, !note.pinned)
-      if (!result.success || !result.data) {
-        toast.error(result.error || "Failed to update note")
-        return
-      }
-      setNotes((current) => upsertNote(current, result.data as NoteRecord))
-    },
-    [flushSelectedNote]
-  )
-
-  const handleDelete = React.useCallback(
-    async (note: NoteRecord, permanent = false) => {
-      if (getNoteSourceType(note) !== "note") return
-      if (note.id === selectedNoteIdRef.current) {
-        const saved = await flushSelectedNote()
-        if (!saved) return
-      }
-      setDeletePermanently(permanent)
-      setPendingDeleteNote(note)
-    },
-    [flushSelectedNote]
-  )
-
-  const handleRestore = React.useCallback(async (note: NoteRecord) => {
-    if (getNoteSourceType(note) !== "note" || !note.deletedAt) return
-    const result = await restoreNote(note.id)
-    if (!result.success || !result.data) {
-      toast.error(result.error || "Failed to restore note")
+    }
+    const result = await deleteNoteFolder(folderToDelete.id)
+    if (!result.success) {
+      toast.error(result.error)
       return
     }
-    setNotes((current) => upsertNote(current, result.data as NoteRecord))
-    setActiveRailKey(result.data.archived ? "archived" : "all")
-    handleSelectNote(note.id)
-    toast.success("Note restored")
-  }, [handleSelectNote])
-
-  React.useEffect(() => {
-    const onWorkspaceKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null
-      const isEditing =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.getAttribute("contenteditable") === "true"
-
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "n") {
-        event.preventDefault()
-        setIsAddingFolder(true)
-        setMobilePane("folders")
-        return
-      }
-
-      if (!isEditing && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
-        const index = filteredNotes.findIndex((note) => note.id === selectedNoteId)
-        const delta = event.key === "ArrowDown" ? 1 : -1
-        const nextIndex = Math.min(filteredNotes.length - 1, Math.max(0, (index < 0 ? 0 : index) + delta))
-        const nextNote = filteredNotes[nextIndex]
-        if (nextNote) {
-          event.preventDefault()
-          handleSelectNote(nextNote.id)
-        }
-        return
-      }
-
-      if (!isEditing && event.key === "Delete" && selectedNote && getNoteSourceType(selectedNote) === "note") {
-        event.preventDefault()
-        void handleDelete(selectedNote, Boolean(selectedNote.deletedAt))
+    setFolders((current) => current.filter((folder) => folder.id !== folderToDelete.id))
+    for (const [noteId, cached] of detailCacheRef.current) {
+      if (cached.folderId === folderToDelete.id) detailCacheRef.current.delete(noteId)
+    }
+    setRows((current) => current.map((row) => row.folderId === folderToDelete.id ? { ...row, folderId: null } : row))
+    if (view === folderView(folderToDelete.id)) setView("all")
+    if (selectedNote?.folderId === folderToDelete.id) {
+      const refreshed = await getNoteDetail(selectedNote.id)
+      if (refreshed.success) {
+        applySavedNote(refreshed.data)
+        setEditorSessionVersion((version) => version + 1)
       }
     }
-    window.addEventListener("keydown", onWorkspaceKeyDown)
-    return () => window.removeEventListener("keydown", onWorkspaceKeyDown)
-  }, [filteredNotes, handleDelete, handleSelectNote, selectedNote, selectedNoteId])
+    setFolderToDelete(null)
+  }, [applySavedNote, folderToDelete, selectedNote, view])
 
-  const confirmDelete = React.useCallback(async () => {
-    if (!pendingDeleteNote) return
-
-    setIsDeletingNote(true)
-    try {
-      const result = deletePermanently
-        ? await permanentlyDeleteNote(pendingDeleteNote.id)
-        : await deleteNote(pendingDeleteNote.id)
+  const confirmDeleteNote = React.useCallback(async () => {
+    if (!noteToDelete) return
+    const persisted = await editorSessionRef.current?.cancelPendingSaves()
+      ?? !noteToDelete.localOnly
+    if (persisted) {
+      const result = await permanentlyDeleteNote(noteToDelete.id)
       if (!result.success) {
-        toast.error(result.error || "Failed to delete note")
+        toast.error(result.error)
         return
       }
-
-      if (deletePermanently) {
-        setNotes((current) => current.filter((item) => item.id !== pendingDeleteNote.id))
-      } else {
-        setNotes((current) =>
-          current.map((item) =>
-            item.id === pendingDeleteNote.id
-              ? {
-                  ...item,
-                  pinned: false,
-                  deletedAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                }
-              : item
-          )
-        )
-      }
-      if (selectedNoteId === pendingDeleteNote.id) {
-        selectNoteId(filteredNotes.find((candidate) => candidate.id !== pendingDeleteNote.id)?.id ?? null)
-      }
-      setPendingDeleteNote(null)
-      setDeletePermanently(false)
-      if (!deletePermanently) toast.success("Moved to Recently Deleted")
-    } finally {
-      setIsDeletingNote(false)
     }
-  }, [deletePermanently, filteredNotes, pendingDeleteNote, selectNoteId, selectedNoteId])
+    setRows((current) => current.filter((row) => row.id !== noteToDelete.id))
+    setAllCount((count) => Math.max(0, count - 1))
+    if (noteToDelete.folderId) {
+      setFolders((current) => current.map((folder) => folder.id === noteToDelete.folderId ? { ...folder, count: Math.max(0, folder.count - 1) } : folder))
+    }
+    detailCacheRef.current.delete(noteToDelete.id)
+    window.localStorage.removeItem(`notes.draft.${noteToDelete.id}`)
+    const next = rows.find((row) => row.id !== noteToDelete.id)
+    setNoteToDelete(null)
+    if (next) void selectNote(next.id)
+    else {
+      setSelectedId(null)
+      setSelectedNote(null)
+      setMobilePane("list")
+    }
+  }, [noteToDelete, rows, selectNote])
 
-  const searchQuery = search.trim()
+  const searchInput = <NotesSearchInput value={search} onChange={setSearch} variant="apple" />
+  const addButton = (
+    <Button type="button" onClick={beginNewNote} className="min-h-10 gap-2 rounded-[14px] px-4">
+      <FilePlus2 className="h-4 w-4" />
+      <span className="hidden sm:inline">New Note</span>
+    </Button>
+  )
 
-  const railButtonClass = (active: boolean) =>
-    cn(
-      "group grid h-9 w-full grid-cols-[minmax(0,1fr)_32px] items-center gap-2 rounded-lg border px-2.5 text-left text-xs font-medium transition-colors",
-      NOTE_SURFACE_FONT,
-      active
-        ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))] text-[var(--text-primary)]"
-        : "border-transparent text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_78%,transparent)] hover:text-[var(--text-primary)]"
-    )
+  const activeFolderId = folderIdFromView(view)
+  const visibleCount = search ? totalCount : view === "all" ? allCount : folders.find((folder) => folder.id === activeFolderId)?.count ?? totalCount
 
-  const railCountBadgeClass =
-    "inline-flex h-6 w-8 shrink-0 items-center justify-center justify-self-end rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_82%,transparent)] px-1 text-xs tabular-nums text-[var(--text-muted)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--line-subtle)_80%,transparent)]"
+  return (
+    <div className="space-y-4">
+      <AppPageHeader title="Notes" search={searchInput} primaryAction={addButton} />
 
-  const renderLeftRail = (isMobile = false, compact = false, allowCollapse = false) => (
-    <div className={cn(compact ? "flex shrink-0 flex-col" : "flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className={cn("flex min-h-full flex-col", compact ? cn("ui-scrollbar overflow-y-auto", isMobile ? "max-h-[44vh]" : "max-h-[min(44vh,420px)]") : "ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5")}>
-        {draggedNoteId ? <span role="status" aria-live="polite" className="sr-only">Dragging note. Drop it on a folder to move it.</span> : null}
-        <section className="order-2 mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Collections">
-          <div className="mb-1.5 flex h-8 items-center justify-between px-2">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Collections</h3>
+      <div className="grid h-[calc(100dvh-190px)] min-h-[560px] overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] md:grid-cols-[220px_minmax(280px,360px)_minmax(0,1fr)]">
+        <aside className={cn("min-h-0 flex-col border-r border-[var(--line-subtle)] bg-[var(--surface-low)]", mobilePane === "folders" ? "flex" : "hidden", "md:flex")}>
+          <div className="border-b border-[var(--line-subtle)] px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Notes</p>
           </div>
-          <div className="space-y-1">
-            {([
-              ["all", NotebookPen, "All Notes", smartCollectionCounts.all],
-              ["pinned", Pin, "Pinned", smartCollectionCounts.pinned],
-              ["archived", Archive, "Archived", smartCollectionCounts.archived],
-              ["deleted", Trash2, "Recently Deleted", smartCollectionCounts.deleted],
-            ] as const).map(([key, Icon, label, count]) => (
-              <button key={key} data-note-view type="button" onClick={() => handleSelectRail(key)} className={railButtonClass(activeRailKey === key)}>
-                <span className="inline-flex min-w-0 items-center gap-2"><Icon className="h-4 w-4 shrink-0" /><span className="truncate">{label}</span></span>
-                <span className={railCountBadgeClass}>{count}</span>
+          <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Note folders">
+            <button
+              type="button"
+              onClick={() => { setView("all"); setMobilePane("list") }}
+              className={cn("flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold", view === "all" ? "bg-[var(--surface-lowest)] text-[var(--primary)] shadow-sm" : "text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)]/70")}
+            >
+              <NotebookPen className="h-4 w-4" />
+              <span className="min-w-0 flex-1 truncate text-left">All Notes</span>
+              <span className="w-8 text-right tabular-nums text-[var(--text-muted)]">{allCount}</span>
+            </button>
+            <div className="mt-3 flex items-center px-3 pb-1 pt-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Folders</span>
+              <button
+                type="button"
+                onClick={() => { setFolderDialog({ mode: "create" }); setFolderName("") }}
+                className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--surface-lowest)]"
+                aria-label="Add folder"
+              >
+                <FolderPlus className="h-4 w-4" />
               </button>
+            </div>
+            {folders.map((folder) => (
+              <div key={folder.id} className={cn("group flex min-h-11 items-center rounded-xl", activeFolderId === folder.id ? "bg-[var(--surface-lowest)] shadow-sm" : "hover:bg-[var(--surface-lowest)]/70")}>
+                <button type="button" onClick={() => { setView(folderView(folder.id)); setMobilePane("list") }} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">
+                  <Folder className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate text-left">{folder.name}</span>
+                  <span className="w-8 text-right tabular-nums text-[var(--text-muted)]">{folder.count}</span>
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><button type="button" className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full opacity-70 hover:bg-[var(--surface-low)] md:opacity-0 md:group-hover:opacity-100" aria-label={`${folder.name} actions`}><MoreHorizontal className="h-4 w-4" /></button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => { setFolderDialog({ mode: "rename", folder }); setFolderName(folder.name) }}>Rename</DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onSelect={() => setFolderToDelete(folder)}>Delete folder</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             ))}
+            <Button type="button" variant="ghost" className="mt-2 w-full justify-start gap-3 rounded-xl" onClick={() => { setFolderDialog({ mode: "create" }); setFolderName("") }}>
+              <FolderPlus className="h-4 w-4" />Add Folder
+            </Button>
+          </nav>
+        </aside>
+
+        <section className={cn("min-h-0 flex-col border-r border-[var(--line-subtle)] bg-[var(--surface-lowest)]", mobilePane === "list" ? "flex" : "hidden", "md:flex")} aria-label="Notes list">
+          <div className="flex min-h-14 items-center gap-2 border-b border-[var(--line-subtle)] px-3">
+            <button type="button" onClick={() => setMobilePane("folders")} className="inline-flex h-10 w-10 items-center justify-center rounded-full md:hidden" aria-label="Show folders"><ChevronLeft className="h-5 w-5" /></button>
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-sm font-semibold text-[var(--text-primary)]">{search ? "Search" : activeFolderId ? folders.find((folder) => folder.id === activeFolderId)?.name : "All Notes"}</h2>
+              <p className="text-xs tabular-nums text-[var(--text-muted)]">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>
+            </div>
+            <Button type="button" variant="ghost" size="icon" onClick={beginNewNote} aria-label="New note"><FilePlus2 className="h-4 w-4" /></Button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            {rows.length ? rows.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                onClick={() => void selectNote(row.id)}
+                className={cn("mb-1 w-full rounded-[14px] px-3 py-3 text-left transition", selectedId === row.id ? "bg-[var(--state-info-surface)]" : "hover:bg-[var(--surface-low)]")}
+              >
+                <div className="flex items-start gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-[var(--text-primary)]">{row.title || "New note"}</span>
+                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{formatDistanceToNow(new Date(row.updatedAt), { addSuffix: false })}</span>
+                </div>
+                <p className="mt-1 line-clamp-2 min-h-9 text-[13px] leading-[18px] text-[var(--text-secondary)]">{row.preview || "Start writing…"}</p>
+                <p className="mt-1 truncate text-[11px] font-medium text-[var(--text-muted)]">{folders.find((folder) => folder.id === row.folderId)?.name ?? ALL_NOTES_FOLDER_LABEL}</p>
+              </button>
+            )) : (
+              <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">
+                <NotebookPen className="mb-3 h-8 w-8 text-[var(--text-muted)]" />
+                <p className="font-semibold text-[var(--text-primary)]">{search ? "No matching notes" : "No notes yet"}</p>
+                {!search ? <Button type="button" variant="ghost" className="mt-2" onClick={beginNewNote}>Create a note</Button> : null}
+              </div>
+            )}
+            <div ref={loadMoreRef} className="h-1" />
+            {loadingList ? <p className="py-3 text-center text-xs text-[var(--text-muted)]">Loading…</p> : null}
           </div>
         </section>
 
-        {foldersEnabled ? (
-          <section className="order-1 flex-1" aria-label="Folders">
-            <div className="mb-1.5 flex h-8 items-center justify-between px-2">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Folders</h3>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={() => { setIsAddingFolder((current) => !current); setNewFolderName("") }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" disabled={isCreatingFolder || storageUnavailable} aria-label="New folder">
-                  <FolderPlus className="h-4 w-4" />
-                </button>
-                {allowCollapse ? (
-                  <button type="button" onClick={() => setSidebarCollapsed(true)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Hide folders sidebar" aria-expanded={!sidebarCollapsed}>
-                    <PanelLeftClose className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
-              </div>
-            </div>
-            {isAddingFolder ? (
-              <div className="mb-1 flex h-10 items-center gap-1 rounded-xl border border-[var(--brand-cyan)] bg-[var(--surface-lowest)] px-1.5">
-                <Input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} onKeyDown={(event) => {
-                  if (event.key === "Enter") { event.preventDefault(); void handleCreateFolder() }
-                  if (event.key === "Escape") { event.preventDefault(); setNewFolderName(""); setIsAddingFolder(false) }
-                }} placeholder="Folder name" className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus-visible:ring-0" autoFocus />
-                <button type="button" onClick={() => void handleCreateFolder()} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--primary)]" disabled={isCreatingFolder} aria-label="Create folder"><Check className="h-3.5 w-3.5" /></button>
-                <button type="button" onClick={() => { setNewFolderName(""); setIsAddingFolder(false) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-secondary)]" disabled={isCreatingFolder} aria-label="Cancel new folder"><X className="h-3.5 w-3.5" /></button>
-              </div>
-            ) : null}
-            <div className="space-y-1">
-              {folders.map((folder) => {
-                const key = folderRailKey(folder.id)
-                const active = activeRailKey === key
-                const isEditing = editingFolderId === folder.id
-                const isDropTarget = dragOverFolderId === folder.id
-                const draggedNote = draggedNoteId ? notes.find((note) => note.id === draggedNoteId) : null
-                const canDrop = Boolean(draggedNote && getNoteSourceType(draggedNote) === "note" && draggedNote.folderId !== folder.id)
-                return (
-                  <div key={folder.id} data-note-folder-drop-id={folder.id} data-note-folder-drop-state={isDropTarget ? "target" : canDrop ? "eligible" : "idle"} onDragEnter={(event) => handleFolderDragOver(event, folder.id)} onDragOver={(event) => handleFolderDragOver(event, folder.id)} onDragLeave={(event) => handleFolderDragLeave(event, folder.id)} onDrop={(event) => handleFolderDrop(event, folder)} className={cn("group flex h-10 items-center gap-2 rounded-xl border px-2.5 transition-all", active ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))]" : "border-transparent hover:bg-[var(--surface-lowest)]", canDrop && "border-dashed border-[var(--brand-cyan)]", isDropTarget && "scale-[1.015] ring-2 ring-[var(--brand-cyan)]")}>
-                    {isEditing ? (
-                      <>
-                        <Folder className="h-4 w-4 shrink-0 text-[var(--primary)]" />
-                        <Input value={editingFolderName} onChange={(event) => setEditingFolderName(event.target.value)} onKeyDown={(event) => {
-                          if (event.key === "Enter") { event.preventDefault(); void commitRenameFolder() }
-                          if (event.key === "Escape") { event.preventDefault(); cancelRenameFolder() }
-                        }} className="h-8 min-w-0 flex-1 px-2 text-xs" autoFocus />
-                        <button type="button" onClick={() => void commitRenameFolder()} disabled={isRenamingFolder} aria-label="Save folder name"><Check className="h-4 w-4" /></button>
-                        <button type="button" onClick={cancelRenameFolder} disabled={isRenamingFolder} aria-label="Cancel renaming"><X className="h-4 w-4" /></button>
-                      </>
-                    ) : (
-                      <>
-                        <button type="button" data-note-view onClick={() => handleSelectRail(key)} className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left text-[13px] font-medium text-[var(--text-secondary)] focus-visible:outline-none">
-                          {isDropTarget ? <FolderInput className="h-4 w-4 shrink-0 text-[var(--primary)]" /> : <Folder className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />}
-                          <span className="truncate">{folder.name}</span>
-                        </button>
-                        <div className="relative h-7 w-8 shrink-0">
-                          <span className={cn(railCountBadgeClass, "absolute inset-0 transition-opacity", !draggedNoteId && "group-hover:opacity-0 group-focus-within:opacity-0")}>{folderCounts.get(folder.id) || 0}</span>
-                          {!draggedNoteId ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button type="button" className="absolute inset-0 inline-flex items-center justify-center rounded-lg text-[var(--text-muted)] opacity-0 hover:bg-[var(--surface-lowest)] group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100" aria-label={"Actions for " + folder.name}><MoreHorizontal className="h-4 w-4" /></button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => startRenameFolder(folder)}><Pencil className="h-4 w-4" />Rename</DropdownMenuItem>
-                                {!folder.isDefault ? <><DropdownMenuSeparator /><DropdownMenuItem variant="destructive" onSelect={() => setPendingDeleteFolder(folder)}><Trash2 className="h-4 w-4" />Delete Folder</DropdownMenuItem></> : null}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : null}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        ) : null}
-      </div>
-    </div>
-  )
-
-  const renderMiddleList = (isMobile = false, allowCollapse = false) => (
-    <div className={cn("flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className="flex min-h-14 items-center justify-between gap-2 border-b border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2">
-        <div className="flex min-w-0 items-center gap-1">
-          {allowCollapse && sidebarCollapsed ? (
-            <button type="button" onClick={() => setSidebarCollapsed(false)} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Show collections and folders" aria-expanded={!sidebarCollapsed}>
-              <PanelLeftOpen className="h-4 w-4" /> Folders
-            </button>
-          ) : null}
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{searchQuery ? "Search Results" : activeRailLabel}</p>
-            <p className="text-xs tabular-nums text-[var(--text-muted)]">{filteredNotes.length} {filteredNotes.length === 1 ? "note" : "notes"}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Sort notes">
-                <SlidersHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[180px]">
-              <DropdownMenuItem onSelect={() => setNoteSort("modified")}><Check className={cn("h-4 w-4", noteSort !== "modified" && "opacity-0")} />Date edited</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setNoteSort("created")}><Check className={cn("h-4 w-4", noteSort !== "created" && "opacity-0")} />Date created</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setNoteSort("title")}><Check className={cn("h-4 w-4", noteSort !== "title" && "opacity-0")} />Title</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {allowCollapse ? (
-            <button type="button" onClick={() => setListCollapsed(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Hide notes list" aria-expanded={!listCollapsed}>
-              <PanelLeftClose className="h-4 w-4" /> Hide list
-            </button>
-          ) : null}
-        </div>
-      </div>
-      <div data-notes-list className={cn("ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5")}>
-        {groupedNotes.length ? (
-          <div className="space-y-4">
-            {groupedNotes.map((group) => (
-              <div key={group.key}>
-                <p className="px-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{group.label}</p>
-                <div className="mt-1.5 space-y-1">
-                  {group.notes.map((note) => {
-                    const selected = note.id === selectedNoteId
-                    const sourceType = getNoteSourceType(note)
-                    const isLinked = sourceType !== "note"
-                    const sourceLabel = isLinked ? (sourceType === "project" ? "Project" : "Task") : (note.folderName || "Notes")
-                    return (
-                      <div
-                        key={note.id}
-                        data-note-drag-id={note.id}
-                        draggable={!isLinked && !note.deletedAt && foldersEnabled && !storageUnavailable && movingNoteId !== note.id}
-                        onDragStart={(event) => handleNoteDragStart(event, note)}
-                        onDragEnd={clearNoteDragState}
-                        onContextMenu={(event) => {
-                          if (isLinked) return
-                          event.preventDefault()
-                          handleSelectNote(note.id)
-                          setRowMenuNoteId(note.id)
-                        }}
-                        onClick={() => {
-                          handleSelectNote(note.id)
-                          if (isMobile) setMobilePane("editor")
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault()
-                            handleSelectNote(note.id)
-                            if (isMobile) setMobilePane("editor")
-                          }
-                        }}
-                        className={cn(
-                          "group rounded-[12px] border border-transparent px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]",
-                          !isLinked && !note.deletedAt && foldersEnabled && !storageUnavailable && "cursor-grab active:cursor-grabbing",
-                          selected ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))]" : "hover:bg-[var(--surface-low)]",
-                          draggedNoteId === note.id && "scale-[0.99] opacity-45",
-                          movingNoteId === note.id && "pointer-events-none opacity-55"
-                        )}
-                        aria-label={"Open " + getNoteDisplayTitle(note)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="line-clamp-1 text-sm font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{getNoteDisplayTitle(note)}</p>
-                            <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">{getNotePreview(note)}</p>
-                            <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
-                              <span className="truncate">{sourceLabel}{note.archived ? " · Archived" : ""}</span>
-                              <span className="shrink-0">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</span>
-                            </div>
-                          </div>
-                          {!isLinked ? (
-                            <DropdownMenu open={rowMenuNoteId === note.id} onOpenChange={(open) => setRowMenuNoteId(open ? note.id : null)}>
-                              <DropdownMenuTrigger asChild>
-                                <button type="button" onClick={(event) => event.stopPropagation()} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] opacity-0 hover:bg-[var(--surface-lowest)] group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100" aria-label={"Actions for " + getNoteDisplayTitle(note)}>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-                                {note.deletedAt ? (
-                                  <>
-                                    <DropdownMenuItem onSelect={() => void handleRestore(note)}><RotateCcw className="h-4 w-4" />Restore</DropdownMenuItem>
-                                    <DropdownMenuItem variant="destructive" onSelect={() => void handleDelete(note, true)}><Trash2 className="h-4 w-4" />Delete Permanently</DropdownMenuItem>
-                                  </>
-                                ) : (
-                                  <>
-                                    <DropdownMenuItem onSelect={() => void handlePinToggle(note)}>{note.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}{note.pinned ? "Unpin" : "Pin"}</DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => void handleArchiveToggle(note)}>{note.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}{note.archived ? "Unarchive" : "Archive"}</DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem variant="destructive" onSelect={() => void handleDelete(note)}><Trash2 className="h-4 w-4" />Move to Recently Deleted</DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : null}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-[var(--line-subtle)] bg-[var(--surface-low)] p-5 text-center">
-            <p className="text-sm font-medium text-[var(--text-primary)]">{searchQuery ? "No matching notes" : "No notes here"}</p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">{searchQuery ? "Try another keyword or clear search." : "Create a note or choose another collection."}</p>
-            {searchQuery ? <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setSearch("")}>Clear search</Button> : null}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-
-  const activeRailLabel = React.useMemo(() => {
-    if (activeRailKey === "all") return "All Notes"
-    if (activeRailKey === "pinned") return "Pinned"
-    if (activeRailKey === "archived") return "Archived"
-    if (activeRailKey === "deleted") return "Recently Deleted"
-    const folderId = getFolderIdFromRailKey(activeRailKey)
-    if (!folderId) return "Notes"
-    return folders.find((folder) => folder.id === folderId)?.name || "Folder"
-  }, [activeRailKey, folders])
-
-  const selectedDrawingOwner = React.useMemo<NoteDrawingOwner | null>(() => {
-    if (!selectedNote) return null
-    if (selectedNoteSourceType === "project") {
-      return { type: "project", id: selectedNote.sourceId || selectedNote.id.replace(/^project:/, "") }
-    }
-    if (selectedNoteSourceType === "task") {
-      return { type: "task", id: selectedNote.sourceId || selectedNote.id.replace(/^task:/, "") }
-    }
-    return { type: "note", id: selectedNote.id }
-  }, [selectedNote, selectedNoteSourceType])
-
-  const beginDrawingInBlankNote = React.useCallback(async () => {
-    const noteId = await handleCreateNote({ content: "" })
-    if (noteId) setDrawingRequestToken((current) => (current ?? 0) + 1)
-  }, [handleCreateNote])
-
-  const renderEditorPaneControls = () => (
-    <div className="flex shrink-0 items-center gap-1">
-      <div className="hidden items-center rounded-[10px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-0.5 xl:inline-flex" aria-label="Workspace panes">
-        <button type="button" onClick={() => setSidebarCollapsed((current) => !current)} className={cn("inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]", !sidebarCollapsed ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]")} aria-label={sidebarCollapsed ? "Show collections and folders" : "Hide collections and folders"} aria-pressed={!sidebarCollapsed}>
-          <Folder className="h-3.5 w-3.5" /> Folders
-        </button>
-        <button type="button" onClick={() => setListCollapsed((current) => !current)} className={cn("inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]", !listCollapsed ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]")} aria-label={listCollapsed ? "Show notes list" : "Hide notes list"} aria-pressed={!listCollapsed}>
-          <NotebookPen className="h-3.5 w-3.5" /> Notes
-        </button>
-      </div>
-      {listCollapsed ? (
-        <>
-          <Sheet open={tabletSidebarOpen} onOpenChange={setTabletSidebarOpen}>
-            <SheetTrigger asChild>
-              <button type="button" className="hidden h-8 items-center gap-2 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] md:inline-flex xl:hidden" aria-label="Open collections and folders" aria-expanded={tabletSidebarOpen}>
-                <Folder className="h-4 w-4" /> Folders
-              </button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] border-r border-[var(--line-subtle)] bg-[var(--surface-low)] p-0">
-              <SheetHeader className="border-b border-[var(--line-subtle)] px-4 py-3"><SheetTitle>Folders</SheetTitle></SheetHeader>
-              <div className="h-[calc(100dvh-60px)]">{renderLeftRail(false, false)}</div>
-            </SheetContent>
-          </Sheet>
-          <Sheet open={tabletListOpen} onOpenChange={setTabletListOpen}>
-            <SheetTrigger asChild>
-              <button type="button" className="hidden h-8 items-center gap-2 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] md:inline-flex xl:hidden" aria-label="Open notes list" aria-expanded={tabletListOpen}>
-                <PanelLeftOpen className="h-4 w-4" /> Notes
-              </button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[min(380px,92vw)] border-r border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-0">
-              <SheetHeader className="border-b border-[var(--line-subtle)] px-4 py-3"><SheetTitle>Notes</SheetTitle></SheetHeader>
-              <div className="h-[calc(100dvh-60px)]" onClickCapture={(event) => {
-                if ((event.target as HTMLElement).closest("[data-note-drag-id]")) setTabletListOpen(false)
-              }}>{renderMiddleList(false)}</div>
-            </SheetContent>
-          </Sheet>
-        </>
-      ) : null}
-    </div>
-  )
-
-  const renderEditor = (isMobile = false) => {
-    if (!selectedNote) {
-      return (
-        <div className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
-          <div className="flex h-12 items-center gap-2 border-b border-[var(--line-subtle)] px-5 text-xs text-[var(--text-muted)]">
-            {renderEditorPaneControls()}
-            <span>{activeRailLabel}</span>
-            <button type="button" onClick={() => void beginDrawingInBlankNote()} className="ml-auto hidden h-8 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] md:inline-flex" aria-label="Draw in a new note">
-              <Pencil className="h-4 w-4" /> Draw
-            </button>
-          </div>
-          <div className="ui-scrollbar flex-1 overflow-y-auto px-5 py-5 lg:px-8">
-            <RichTextEditor
-              value={emptyEditorDraft}
-              onChange={setEmptyEditorDraft}
-              placeholder="Start writing"
-              variant="plain"
-              mode="document"
-              notesMode
-              notesAppearance="apple"
-              focusToken={editorFocusToken}
-              documentLayout="left"
-              documentWidth="reading"
-              imageUploadFallback="error"
-              showImageGallery={false}
-              className="bg-transparent"
-              minHeightClassName="min-h-[60vh]"
+        <div className={cn("min-h-0 min-w-0", mobilePane === "editor" ? "block" : "hidden", "md:block")}>
+          {loadingDetail ? (
+            <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">Loading note…</div>
+          ) : selectedNote ? (
+            <NoteEditorSession
+              key={`${selectedNote.id}:${editorSessionVersion}`}
+              ref={editorSessionRef}
+              note={selectedNote}
+              folders={folders}
+              focusToken={focusToken}
+              onSaved={applySavedNote}
+              onCreated={applySavedNote}
+              onForkCreated={(note) => { applySavedNote(note); setAllCount((count) => count + 1); selectedIdRef.current = note.id; selectedNoteRef.current = note; setSelectedId(note.id); setSelectedNote(note); setFocusToken((token) => token + 1) }}
+              onMeaningfulDraft={(noteId) => setRows((current) => current.map((row) => row.id === noteId ? { ...row, hasLocalContent: true } : row))}
+              onBack={() => setMobilePane("list")}
+              onDelete={() => setNoteToDelete(selectedNote)}
             />
-          </div>
-        </div>
-      )
-    }
-
-    const isDeleted = Boolean(selectedNote.deletedAt)
-    return (
-      <div className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
-        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--line-subtle)] px-4 py-2 lg:px-6">
-          <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--text-muted)]">
-            {renderEditorPaneControls()}
-            <div className="min-w-0">
-            <span>
-              Edited {format(new Date(selectedNote.updatedAt), "d MMM yyyy, HH:mm")}
-            </span>
-            {saveState === "saving" ? <span className="ml-2 text-[var(--primary)]">Saving…</span> : null}
-            {saveState === "saved" ? <span className="ml-2 text-emerald-600">Saved</span> : null}
-            {saveState === "error" ? (
-              <button
-                type="button"
-                onClick={() => void flushSelectedNote()}
-                className="ml-2 font-semibold text-rose-600 underline-offset-2 hover:underline"
-              >
-                Save failed · Retry
-              </button>
-            ) : null}
-            {isDeleted ? <span className="ml-2 font-medium text-rose-600">Recently Deleted</span> : null}
-            </div>
-          </div>
-          {!selectedNoteIsLinked ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
-                  aria-label="Note actions"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[220px]">
-                {isDeleted ? (
-                  <>
-                    <DropdownMenuItem onSelect={() => void handleRestore(selectedNote)}>
-                      <RotateCcw className="h-4 w-4" />
-                      Restore
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onSelect={() => void handleDelete(selectedNote, true)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete Permanently
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <>
-                    <DropdownMenuItem onSelect={() => void handlePinToggle(selectedNote)}>
-                      {selectedNote.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-                      {selectedNote.pinned ? "Unpin" : "Pin"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => void handleArchiveToggle(selectedNote)}>
-                      {selectedNote.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                      {selectedNote.archived ? "Unarchive" : "Archive"}
-                    </DropdownMenuItem>
-                    {foldersEnabled ? (
-                      <>
-                        <DropdownMenuSeparator />
-                        {folders.map((folder) => (
-                          <DropdownMenuItem
-                            key={folder.id}
-                            onSelect={() => void handleAssignFolder(selectedNote, folder.id)}
-                          >
-                            <FolderInput className="h-4 w-4" />
-                            Move to {folder.name}
-                            {selectedNote.folderId === folder.id ? <Check className="ml-auto h-4 w-4" /> : null}
-                          </DropdownMenuItem>
-                        ))}
-                      </>
-                    ) : null}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onSelect={() => void handleDelete(selectedNote)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Move to Recently Deleted
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           ) : (
-            <span className="rounded-md bg-[var(--surface-low)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)]">
-              {selectedNoteSourceType === "project" ? "Project" : "Task"}
-              {selectedNote.sourceLabel ? ` · ${selectedNote.sourceLabel}` : ""}
-            </span>
+            <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+              <NotebookPen className="mb-4 h-10 w-10 text-[var(--text-muted)]" />
+              <p className="text-lg font-semibold text-[var(--text-primary)]">Select a note or start a new one</p>
+              <Button type="button" className="mt-4" onClick={beginNewNote}>New Note</Button>
+            </div>
           )}
         </div>
-        <div className={cn("ui-scrollbar ui-scrollbar-inset flex-1 min-h-0 overflow-y-auto", isMobile ? "px-3 pb-16 pt-3" : "px-6 py-4 lg:px-9")}>
-          <RichTextEditor
-            key={selectedNote.id}
-            value={selectedEditorDraft}
-            onChange={(value) => handleContentDraftChange(selectedNote.id, value)}
-            placeholder="Start writing"
-            variant="plain"
-            mode="document"
-            notesMode
-            notesAppearance="apple"
-            focusToken={editorFocusToken}
-            documentLayout="left"
-            uploadProjectId={editorUploadContextId}
-            documentWidth="reading"
-            imageUploadFallback="error"
-            showImageGallery={false}
-            drawingOwner={selectedDrawingOwner}
-            drawingRequestToken={drawingRequestToken}
-            onDrawingRequestHandled={() => setDrawingRequestToken(undefined)}
-            readOnly={isDeleted}
-            onBlur={() => void flushNote(selectedNote.id)}
-            className="bg-transparent"
-            minHeightClassName="min-h-[62vh]"
-          />
-        </div>
       </div>
-    )
-  }
 
-  return (
-    <div className={cn("flex h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))] min-h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))] flex-col gap-3 overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:min-h-[calc(100dvh-3.5rem)]", NOTE_SURFACE_FONT)}>
-      <div
-        ref={dragPreviewRef}
-        data-note-drag-preview
-        aria-hidden="true"
-        className="pointer-events-none fixed -top-[1000px] left-0 z-50 inline-flex h-9 w-max max-w-[240px] items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-[10px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 text-[13px] font-semibold text-[var(--text-primary)] shadow-[var(--shadow-apple)]"
-      />
-        <AppPageHeader
-          title="Notes"
-          search={
-            <NotesSearchInput
-              ref={searchRef}
-              value={search}
-              onChange={setSearch}
-              showShortcutHint
-              variant="apple"
-              density="compact"
-            />
-          }
-          primaryAction={
-            <Button
-              type="button"
-              className="!h-11 !w-auto !rounded-[12px] !bg-[var(--primary)] !px-5 !text-white hover:!bg-[var(--brand-primary-strong)]"
-              onClick={() => {
-                beginNewNote()
-                setMobilePane("editor")
-              }}
-              disabled={isCreating || storageUnavailable || activeRailKey === "deleted"}
-            >
-              <FilePlus2 className="h-4 w-4" />
-              New Note
-            </Button>
-          }
-        />
+      <Dialog open={Boolean(folderDialog)} onOpenChange={(open) => { if (!open) setFolderDialog(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{folderDialog?.mode === "rename" ? "Rename folder" : "New folder"}</DialogTitle></DialogHeader>
+          <Input value={folderName} onChange={(event) => setFolderName(event.target.value)} placeholder="Folder name" autoFocus onKeyDown={(event) => { if (event.key === "Enter") void createOrRenameFolder() }} />
+          <DialogFooter><Button type="button" onClick={() => void createOrRenameFolder()} disabled={!folderName.trim()}>{folderDialog?.mode === "rename" ? "Save" : "Create"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <main className="min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] xl:grid"
-        style={{
-          gridTemplateColumns: [
-            sidebarCollapsed ? null : `${sidebarWidth}px`,
-            sidebarCollapsed ? null : "5px",
-            listCollapsed ? null : `${listWidth}px`,
-            listCollapsed ? null : "5px",
-            "minmax(0, 1fr)",
-          ].filter(Boolean).join(" "),
-        }}
-      >
-        {!sidebarCollapsed ? (
-          <>
-            <NotesSidebarPane className="hidden xl:block">{renderLeftRail(false, false, true)}</NotesSidebarPane>
-            <button type="button" aria-label="Resize folders pane" className="hidden cursor-col-resize border-x border-[var(--line-subtle)] bg-[var(--surface-highest)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--surface-highest))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] xl:block" onPointerDown={(event) => beginPaneResize(event, "sidebar")} />
-          </>
-        ) : null}
-        {!listCollapsed ? (
-          <>
-            <NotesListPane className="hidden xl:block">{renderMiddleList(false, true)}</NotesListPane>
-            <button type="button" aria-label="Resize notes list" className="hidden cursor-col-resize border-x border-[var(--line-subtle)] bg-[var(--surface-highest)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--surface-highest))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] xl:block" onPointerDown={(event) => beginPaneResize(event, "list")} />
-          </>
-        ) : null}
-        <NotesEditorPane className="hidden xl:block">
-          {renderEditor(false)}
-        </NotesEditorPane>
-
-        <div className={cn("hidden h-full min-h-0 md:grid xl:hidden", listCollapsed ? "md:grid-cols-1" : "md:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]")}>
-          {!listCollapsed ? <NotesListPane className="border-r border-[var(--line-subtle)]">
-            <div className="flex h-10 items-center border-b border-[var(--line-subtle)] px-2">
-              <Sheet open={tabletSidebarOpen} onOpenChange={setTabletSidebarOpen}>
-                <SheetTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="h-8 text-[var(--text-secondary)]">
-                    <PanelLeft className="h-4 w-4" />
-                    Folders
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] border-r border-[var(--line-subtle)] bg-[var(--surface-low)] p-0">
-                  <SheetHeader className="border-b border-[var(--line-subtle)] px-4 py-3">
-                    <SheetTitle>Notes</SheetTitle>
-                  </SheetHeader>
-                  <div
-                    className="h-[calc(100dvh-60px)]"
-                    onClickCapture={(event) => {
-                      if ((event.target as HTMLElement).closest("[data-note-view]")) {
-                        setTabletSidebarOpen(false)
-                      }
-                    }}
-                  >
-                    {renderLeftRail(false, false)}
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-            <div className="h-[calc(100%-40px)]">{renderMiddleList(false, true)}</div>
-          </NotesListPane> : null}
-          <NotesEditorPane>{renderEditor(false)}</NotesEditorPane>
-        </div>
-
-        <div className="h-full min-h-0 md:hidden">
-          {mobilePane === "folders" ? (
-            <section className="h-full bg-[var(--surface-low)]">
-              <div className="flex h-11 items-center justify-between border-b border-[var(--line-subtle)] px-3">
-                <span className="text-[15px] font-semibold text-[var(--text-primary)]">Folders</span>
-                <span className="text-xs text-[var(--text-muted)]">{smartCollectionCounts.all} notes</span>
-              </div>
-              <div
-                className="h-[calc(100%-44px)]"
-                onClickCapture={(event) => {
-                  if ((event.target as HTMLElement).closest("[data-note-view]")) {
-                    setMobilePane("list")
-                  }
-                }}
-              >
-                {renderLeftRail(true, false)}
-              </div>
-            </section>
-          ) : null}
-          {mobilePane === "list" ? (
-            <section className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
-              <div className="flex h-11 shrink-0 items-center border-b border-[var(--line-subtle)] px-2">
-                <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[var(--primary)]" onClick={() => setMobilePane("folders")}>
-                  <ChevronLeft className="h-4 w-4" />
-                  Folders
-                </Button>
-              </div>
-              <div className="min-h-0 flex-1">{renderMiddleList(true)}</div>
-            </section>
-          ) : null}
-          {mobilePane === "editor" ? (
-            <section className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
-              <div className="flex h-11 shrink-0 items-center border-b border-[var(--line-subtle)] px-2">
-                <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[var(--primary)]" onClick={() => setMobilePane("list")}>
-                  <ChevronLeft className="h-4 w-4" />
-                  Notes
-                </Button>
-              </div>
-              <div className="min-h-0 flex-1">{renderEditor(true)}</div>
-            </section>
-          ) : null}
-        </div>
-      </main>
-
-
-
-      <AlertDialog
-        open={Boolean(pendingDeleteNote)}
-        onOpenChange={(open) => {
-          if (!open && !isDeletingNote) {
-            setPendingDeleteNote(null)
-            setDeletePermanently(false)
-          }
-        }}
-      >
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogMedia className="bg-rose-50 text-rose-600">
-              <Trash2 className="h-7 w-7" />
-            </AlertDialogMedia>
-            <AlertDialogTitle>
-              {deletePermanently ? "Permanently delete note?" : "Move note to Recently Deleted?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingDeleteNote
-                ? deletePermanently
-                  ? `"${getNoteDisplayTitle(pendingDeleteNote)}" cannot be recovered after this action.`
-                  : `"${getNoteDisplayTitle(pendingDeleteNote)}" can be restored for 30 days.`
-                : deletePermanently
-                  ? "This note cannot be recovered."
-                  : "This note can be restored for 30 days."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingNote}>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmDelete} disabled={isDeletingNote}>
-              {isDeletingNote
-                ? "Deleting..."
-                : deletePermanently
-                  ? "Delete Permanently"
-                  : "Move to Deleted"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+      <AlertDialog open={Boolean(folderToDelete)} onOpenChange={(open) => { if (!open) setFolderToDelete(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Delete folder?</AlertDialogTitle><AlertDialogDescription>Notes in this folder will move to All Notes. The notes will not be deleted.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => void confirmDeleteFolder()}>Delete folder</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={Boolean(pendingDeleteFolder)}
-        onOpenChange={(open) => {
-          if (!open && !isDeletingFolder) setPendingDeleteFolder(null)
-        }}
-      >
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogMedia className="bg-rose-50 text-rose-600">
-              <Trash2 className="h-7 w-7" />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Delete folder?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingDeleteFolder
-                ? `All notes from "${pendingDeleteFolder.name}" will be moved to "${defaultFolder?.name || "General"}".`
-                : "All notes from this folder will be moved to the default folder."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingFolder}>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmDeleteFolder} disabled={isDeletingFolder}>
-              {isDeletingFolder ? "Deleting..." : "Delete folder"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+      <AlertDialog open={Boolean(noteToDelete)} onOpenChange={(open) => { if (!open) setNoteToDelete(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Delete this note permanently?</AlertDialogTitle><AlertDialogDescription>This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => void confirmDeleteNote()}>Delete permanently</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

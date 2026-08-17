@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format, isBefore, isToday, startOfDay } from "date-fns"
-import { CalendarDays, CheckCheck, MoreVertical, Play } from "lucide-react"
+import { CheckCheck, MoreVertical, Play } from "lucide-react"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
+import { TaskActualTimeQuickEdit } from "@/components/tasks/task-actual-time-quick-edit"
 
 export const TASK_CARD_SHELL_CLASS =
     "relative flex min-h-[176px] w-full overflow-hidden rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-all duration-200 sm:aspect-[4/3] sm:min-h-[190px] xl:min-h-[205px]"
@@ -49,12 +50,15 @@ type TaskCardItem = {
     urgency?: string | null
     deadline?: string | Date | null
     createdAt?: string | Date | null
+    estimatedMinutes?: number | null
+    timeLogs?: Array<{ durationSeconds?: number | null }> | null
     project?: TaskCardProject | null
     taskScope?: string | null
     lmsAllocationId?: string | null
     lmsTaskTypeId?: string | null
     lmsAllocation?: { id?: string; client?: string | null } | null
     lmsTaskType?: { id?: string; name?: string | null } | null
+    lmsWorkEntry?: { id?: string; durationMinutes?: number | null } | null
 }
 
 const URGENT_BADGE_THEME_CLASS = "border border-[color:color-mix(in_srgb,var(--state-urgent)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_16%,transparent)] text-[var(--state-urgent)]"
@@ -89,13 +93,6 @@ function toDeadlineLabel(value: string | Date | null | undefined) {
     return isToday(parsed) ? "Due today" : `Due ${format(parsed, "dd MMM")}`
 }
 
-function toCreatedLabel(value: string | Date | null | undefined) {
-    if (!value) return ""
-    const parsed = new Date(value)
-    if (Number.isNaN(parsed.getTime())) return ""
-    return `Created ${format(parsed, "dd MMM yyyy")}`
-}
-
 export function TaskGridCard({
     task,
     onOpen,
@@ -128,11 +125,18 @@ export function TaskGridCard({
         ? task.lmsTaskType?.name || "Work category not linked"
         : [serviceLabels.join(" · ") || task.project?.name, recurringMonthLabel].filter(Boolean).join(" · ") || "No service details"
     const deadlineLabel = toDeadlineLabel(task.deadline)
-    const createdLabel = toCreatedLabel(task.createdAt)
     const isOverdue = task.status !== "Completed" && task.deadline
         ? isBefore(new Date(task.deadline), startOfDay(new Date()))
         : false
     const flag = getTaskFlag({ urgency: task.urgency || "Normal", status: task.status || "Active", isOverdue })
+    const sessionSeconds = task.timeLogs?.reduce(
+        (total, log) => total + Math.max(0, log.durationSeconds || 0),
+        0
+    ) || 0
+    const loggedSeconds = sessionSeconds > 0
+        ? sessionSeconds
+        : Math.max(0, task.lmsWorkEntry?.durationMinutes || 0) * 60
+    const displayedTrackedSeconds = loggedSeconds + (isActiveTimerThisTask ? timerState.elapsedSeconds : 0)
 
     return (
         <article
@@ -234,12 +238,12 @@ export function TaskGridCard({
                     </p>
                 </div>
                 <div className="mt-2 flex min-w-0 items-center justify-between gap-3">
-                    {createdLabel ? (
-                        <span className="inline-flex min-w-0 items-center gap-1 truncate text-xs font-medium text-[var(--text-muted)]">
-                            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                            {createdLabel}
-                        </span>
-                    ) : <span />}
+                    <TaskActualTimeQuickEdit
+                        taskId={task.id}
+                        taskName={task.name}
+                        totalSeconds={displayedTrackedSeconds}
+                        disabled={isActiveTimerThisTask}
+                    />
                     {deadlineLabel ? (
                         <span className={cn(
                             "inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",

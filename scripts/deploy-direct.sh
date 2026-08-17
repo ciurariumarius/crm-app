@@ -40,12 +40,10 @@ if [[ "${SKIP_LOCAL_CHECKS:-0}" != "1" ]]; then
   npm run test:unit
   npm run test:task-lms-integration
   npm run test:payments-integration
-  npm run test:note-drawings-integration
   npm run test:filters
   npm run test:lms-work
   npm run test:lms-daily-admin
   npm run test:data-queries
-  npm run test:notes-drag-drop
   npm run security:test-guardrails
   npm run verify:mobile
   npm run verify:tablet
@@ -227,6 +225,7 @@ npm ci
 npx prisma generate
 npm run data:preflight-single-owner
 npm run data:migrate-project-note-storage:dry
+npm run data:cleanup-removed-note-features
 npx prisma migrate deploy
 npx prisma generate
 npm run data:migrate-project-note-storage
@@ -263,21 +262,10 @@ curl --fail --silent --show-error --output /dev/null \
   --request POST \
   --header "Authorization: Bearer $cron_secret" \
   "http://127.0.0.1:3000/api/cron/lms-daily-admin-work?dryRun=1"
-curl --fail --silent --show-error --output /dev/null \
-  --request POST \
-  --header "Authorization: Bearer $cron_secret" \
-  "http://127.0.0.1:3000/api/cron/notes-retention?dryRun=1"
-
 mkdir -p "$HOME/diagnostics"
 chmod 700 "$HOME/diagnostics"
-touch "$HOME/diagnostics/notes-retention.log"
-chmod 600 "$HOME/diagnostics/notes-retention.log"
-cron_line="17 3 * * * cd $site_path && /usr/bin/env bash scripts/run-notes-retention-cron.sh >> $HOME/diagnostics/notes-retention.log 2>&1 # pixelist-notes-retention"
 current_crontab="$(crontab -l 2>/dev/null || true)"
-{
-  printf '%s\n' "$current_crontab" | grep -v 'pixelist-notes-retention' || true
-  printf '%s\n' "$cron_line"
-} | sed '/^[[:space:]]*$/d' | crontab -
+printf '%s\n' "$current_crontab" | grep -v 'pixelist-notes-retention' | sed '/^[[:space:]]*$/d' | crontab - || true
 
 if ! npx pm2 describe pm2-logrotate >/dev/null 2>&1; then
   npx pm2 install pm2-logrotate

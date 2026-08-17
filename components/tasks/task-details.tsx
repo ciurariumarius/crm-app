@@ -35,7 +35,7 @@ import { Calendar as CalendarIcon, Clock, Check, Loader2, X, Play, Pencil, Plus,
 import { updateTask, deleteTask, getTaskHistory } from "@/lib/actions/tasks"
 import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
 import { normalizeRichTextContent } from "@/lib/notes/content"
-import { logTime } from "@/lib/actions/time"
+import { addTaskTimeEntry } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
@@ -49,6 +49,8 @@ import { useRouter } from "next/navigation"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass, type SidePanelSize } from "@/lib/ui/side-panels"
 import { SidePanelChip, SidePanelDetailRow, SidePanelInfoCard, SidePanelSectionTitle, SidePanelTabs } from "@/components/ui/side-panel-primitives"
 import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
+import { TaskActualTimeQuickEdit } from "@/components/tasks/task-actual-time-quick-edit"
+import { TaskEstimatedTimeQuickEdit } from "@/components/tasks/task-estimated-time-quick-edit"
 import { TaskFreelanceProjectField, TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 import {
@@ -119,6 +121,7 @@ export type TaskDetailsTask = {
     lmsTaskTypeId?: string | null
     lmsAllocation?: { id?: string; client?: string | null } | null
     lmsTaskType?: { id?: string; name?: string | null; isActive?: boolean | null; defaultDurationMinutes?: number | null } | null
+    lmsWorkEntry?: { id?: string; durationMinutes?: number | null; workDate?: string | null; exportedAt?: string | Date | null } | null
     timeLogs?: TaskTimeLog[] | null
     project?: TaskDetailsProject | null
     [key: string]: unknown
@@ -221,6 +224,19 @@ export function TaskDetails({
     const awaitingTargetRefreshRef = React.useRef(false)
     const saveQueueRef = React.useRef<Promise<void>>(Promise.resolve())
     const pendingSaveCountRef = React.useRef(0)
+    const taskLoggedSeconds = React.useMemo(() => {
+        const sessionSeconds = task?.timeLogs?.reduce(
+            (total: number, log: TaskTimeLog) => total + Math.max(0, log.durationSeconds || 0),
+            0
+        ) || 0
+        if (sessionSeconds > 0) return sessionSeconds
+        return Math.max(0, task?.lmsWorkEntry?.durationMinutes || 0) * 60
+    }, [task?.lmsWorkEntry?.durationMinutes, task?.timeLogs])
+    const [displayTrackedSeconds, setDisplayTrackedSeconds] = React.useState(taskLoggedSeconds)
+
+    React.useEffect(() => {
+        setDisplayTrackedSeconds(taskLoggedSeconds)
+    }, [task?.id, taskLoggedSeconds])
 
     React.useEffect(() => {
         if (!task) {
@@ -323,6 +339,16 @@ export function TaskDetails({
         || urgency !== detailsBaselineRef.current.urgency
         || deadline?.getTime() !== detailsBaselineRef.current.deadlineTime
         || estimatedMinutes !== detailsBaselineRef.current.estimatedMinutes
+    const parsedQuickEstimatedMinutes = parseTaskEstimatedMinutesInput(estimatedMinutes)
+    const quickEstimatedMinutes = typeof parsedQuickEstimatedMinutes === "number"
+        ? parsedQuickEstimatedMinutes
+        : null
+    const handleQuickEstimatedTimeSaved = React.useCallback((nextMinutes: number | null) => {
+        const nextValue = nextMinutes == null ? "" : String(nextMinutes)
+        setEstimatedMinutes(nextValue)
+        detailsBaselineRef.current.estimatedMinutes = nextValue
+        setHasLoadedTaskHistory(false)
+    }, [])
     const bumpTargetRevision = React.useCallback(() => {
         targetRevisionRef.current += 1
     }, [])
@@ -559,7 +585,7 @@ export function TaskDetails({
     const isActiveTimerThisTask = timerState.taskId === task.id
     const isTaskRunning = isActiveTimerThisTask && timerState.isRunning
     const isTaskPaused = isActiveTimerThisTask && !timerState.isRunning
-    const loggedSeconds = task.timeLogs?.reduce((acc: number, log: TaskTimeLog) => acc + (log.durationSeconds || 0), 0) || 0
+    const loggedSeconds = displayTrackedSeconds
     const runningSeconds = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
     const totalTrackedSeconds = loggedSeconds + runningSeconds
     const timerDisplaySeconds = totalTrackedSeconds
@@ -705,11 +731,6 @@ export function TaskDetails({
             return
         }
 
-        if (!savedProjectId) {
-            toast.error("Task has no project")
-            return
-        }
-
         const minutes = Number.parseInt(manualMinutes, 10)
         if (!manualMinutes || Number.isNaN(minutes) || minutes <= 0) {
             toast.error("Please enter a valid number of minutes")
@@ -718,14 +739,10 @@ export function TaskDetails({
 
         setIsLoggingTime(true)
         try {
-            const now = new Date()
-            const response = await logTime({
-                projectId: savedProjectId,
+            const response = await addTaskTimeEntry({
                 taskId: task.id,
-                durationSeconds: minutes * 60,
+                minutes,
                 description: manualNotes || undefined,
-                startTime: new Date(now.getTime() - minutes * 60 * 1000),
-                endTime: now,
             })
 
             if (!response.success) {
@@ -734,6 +751,7 @@ export function TaskDetails({
             }
 
             toast.success("Time logged")
+            setDisplayTrackedSeconds((current) => current + minutes * 60)
             setManualMinutes("")
             setManualNotes("")
             setIsManualTimeOpen(false)
@@ -924,7 +942,28 @@ export function TaskDetails({
                                         <SidePanelDetailRow label="Target" value={taskScope === "LMS" ? "LMS" : taskScope === "FREELANCE" ? "Freelance" : "Not assigned"} />
                                         <SidePanelDetailRow label="Priority" value={urgency} />
                                         <SidePanelDetailRow label="Deadline" value={deadline ? format(deadline, "dd MMM yyyy") : "No deadline"} />
-                                        <SidePanelDetailRow label="Planned time" value={estimatedMinutes ? `${estimatedMinutes} min` : "Not set"} />
+                                        <SidePanelDetailRow
+                                            label="Tracked time"
+                                            value={(
+                                                <TaskActualTimeQuickEdit
+                                                    taskId={task.id}
+                                                    taskName={name}
+                                                    totalSeconds={loggedSeconds}
+                                                    onSaved={setDisplayTrackedSeconds}
+                                                />
+                                            )}
+                                        />
+                                        <SidePanelDetailRow
+                                            label="Planned time"
+                                            value={(
+                                                <TaskEstimatedTimeQuickEdit
+                                                    taskId={task.id}
+                                                    taskName={name}
+                                                    estimatedMinutes={quickEstimatedMinutes}
+                                                    onSaved={handleQuickEstimatedTimeSaved}
+                                                />
+                                            )}
+                                        />
                                     </div>
                                 ) : (
                                     <div className="space-y-5 rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 sm:p-5">
@@ -1126,16 +1165,25 @@ export function TaskDetails({
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <SidePanelSectionTitle title="Task time tracker" icon={<Clock className="h-3.5 w-3.5" />} />
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setIsManualTimeOpen((current) => !current)}
-                                    disabled={projectActionsBlocked || !savedProjectId}
-                                    className="h-8 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 ui-text-caption text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
-                                >
-                                    <Plus className="mr-1 h-3.5 w-3.5" />
-                                    Add Time
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <TaskActualTimeQuickEdit
+                                        taskId={task.id}
+                                        taskName={name}
+                                        totalSeconds={loggedSeconds}
+                                        onSaved={setDisplayTrackedSeconds}
+                                        disabled={projectActionsBlocked}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setIsManualTimeOpen((current) => !current)}
+                                        disabled={projectActionsBlocked}
+                                        className="h-8 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 ui-text-caption text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                                    >
+                                        <Plus className="mr-1 h-3.5 w-3.5" />
+                                        Add Time
+                                    </Button>
+                                </div>
                             </div>
                             <TimeTrackerWidget
                                 totalTrackedHours={loggedHours}
@@ -1158,7 +1206,7 @@ export function TaskDetails({
                                     onNotesChange={setManualNotes}
                                     onSave={handleManualLog}
                                     isSaving={isLoggingTime}
-                                    disabled={projectActionsBlocked || !savedProjectId}
+                                    disabled={projectActionsBlocked}
                                     className="premium-card rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-sm"
                                 />
                             )}
@@ -1178,13 +1226,57 @@ export function TaskDetails({
                             />
                         </div>
                     </section> : (
-                        <section className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4">
-                            <div className="flex items-start gap-3">
-                                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary)]" />
-                                <div>
-                                    <p className="text-sm font-semibold text-[var(--text-primary)]">LMS time is recorded on completion</p>
-                                    <p className="mt-1 text-xs text-[var(--text-secondary)]">Planned: {estimatedMinutes ? `${estimatedMinutes} minutes` : "not set"}</p>
+                        <section className="space-y-6">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between gap-3">
+                                    <SidePanelSectionTitle title="Task time" icon={<Clock className="h-3.5 w-3.5" />} />
+                                    <div className="flex items-center gap-2">
+                                        <TaskActualTimeQuickEdit
+                                            taskId={task.id}
+                                            taskName={name}
+                                            totalSeconds={loggedSeconds}
+                                            onSaved={setDisplayTrackedSeconds}
+                                            disabled={projectActionsBlocked}
+                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setIsManualTimeOpen((current) => !current)}
+                                            disabled={projectActionsBlocked}
+                                            className="h-8 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 ui-text-caption text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                                        >
+                                            <Plus className="mr-1 h-3.5 w-3.5" />
+                                            Add Time
+                                        </Button>
+                                    </div>
                                 </div>
+
+                                {isManualTimeOpen ? (
+                                    <SidePanelManualTimeForm
+                                        minutes={manualMinutes}
+                                        notes={manualNotes}
+                                        onMinutesChange={setManualMinutes}
+                                        onNotesChange={setManualNotes}
+                                        onSave={handleManualLog}
+                                        isSaving={isLoggingTime}
+                                        disabled={projectActionsBlocked}
+                                        saveLabel="Add session"
+                                        className="premium-card rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-sm"
+                                    />
+                                ) : null}
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <SidePanelSectionTitle title="Time history" icon={<Clock className="h-3.5 w-3.5" />} />
+                                    <div className="text-xs font-semibold text-[var(--text-muted)]">
+                                        {sortedTimeLogs.length} Sessions
+                                    </div>
+                                </div>
+                                <SidePanelTimeLogHistoryList
+                                    logs={sortedTimeLogs}
+                                    emptyMessage="No time sessions recorded for this task yet."
+                                />
                             </div>
                         </section>
                     )) : null}

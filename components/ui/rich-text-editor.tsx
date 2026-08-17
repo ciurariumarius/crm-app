@@ -24,7 +24,6 @@ import {
     ImagePlus,
     List,
     ListChecks,
-    PenTool,
     Table as TableIcon,
     Minus,
     Plus,
@@ -33,9 +32,6 @@ import {
 } from "lucide-react"
 import { Toggle } from "@/components/ui/toggle"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { NoteDrawingNode } from "@/components/notes/note-drawing-node"
-import { NoteDrawingSheet } from "@/components/notes/note-drawing-sheet"
-import type { NoteDrawingOwner, NoteDrawingRecord } from "@/lib/notes/drawings"
 import { cn } from "@/lib/utils"
 
 const MAX_UPLOAD_FILE_BYTES = 12 * 1024 * 1024
@@ -66,6 +62,47 @@ const ScreenshotImage = Node.create({
     },
 })
 
+const FolderMention = Node.create({
+    name: "folderMention",
+    group: "inline",
+    inline: true,
+    atom: true,
+    selectable: true,
+    addAttributes() {
+        return {
+            folderId: { default: null },
+            label: { default: "" },
+        }
+    },
+    parseHTML() {
+        return [{
+            tag: "span[data-note-folder-id]",
+            getAttrs: (element) => ({
+                folderId: (element as HTMLElement).dataset.noteFolderId || null,
+                label: (element as HTMLElement).dataset.noteFolderLabel || (element as HTMLElement).textContent?.replace(/^#/, "") || "",
+            }),
+        }]
+    },
+    renderHTML({ HTMLAttributes }) {
+        const label = String(HTMLAttributes.label || "Folder")
+        return [
+            "span",
+            mergeAttributes({
+                "data-note-folder-id": HTMLAttributes.folderId,
+                "data-note-folder-label": label,
+                "aria-label": `Folder ${label}`,
+                class: "inline-flex rounded-full bg-[var(--state-info-surface)] px-2 py-0.5 text-[0.88em] font-semibold text-[var(--info)]",
+            }),
+            `#${label}`,
+        ]
+    },
+})
+
+export type RichTextFolderOption = {
+    id: string | null
+    name: string
+}
+
 interface RichTextEditorProps {
     value: string
     onChange: (value: string) => void
@@ -92,11 +129,19 @@ interface RichTextEditorProps {
     imageUploadFallback?: "data-url" | "error"
     imageUploadsDisabled?: boolean
     showImageGallery?: boolean
-    drawingOwner?: NoteDrawingOwner | null
-    resolveDrawingOwner?: () => Promise<NoteDrawingOwner | null>
-    drawingRequestToken?: number
-    onDrawingRequestHandled?: () => void
+    folderOptions?: RichTextFolderOption[]
+    onFolderMentionChange?: (folderId: string | null, html: string) => void
+    externalUpdateToken?: number
     onBlur?: () => void
+}
+
+type FolderSuggestionState = {
+    from: number
+    to: number
+    query: string
+    selectedIndex: number
+    left: number
+    top: number
 }
 
 type UploadState = {
@@ -170,10 +215,9 @@ export function RichTextEditor({
     imageUploadFallback = "data-url",
     imageUploadsDisabled = false,
     showImageGallery = true,
-    drawingOwner = null,
-    resolveDrawingOwner,
-    drawingRequestToken,
-    onDrawingRequestHandled,
+    folderOptions = [],
+    onFolderMentionChange,
+    externalUpdateToken,
     onBlur,
 }: RichTextEditorProps) {
     const [isFocused, setIsFocused] = React.useState(false)
@@ -181,10 +225,7 @@ export function RichTextEditor({
     const [viewer, setViewer] = React.useState<ImageViewerState>(INITIAL_VIEWER_STATE)
     const [imageSources, setImageSources] = React.useState<string[]>([])
     const [codeCopyState, setCodeCopyState] = React.useState<"idle" | "copied" | "error">("idle")
-    const [drawingOpen, setDrawingOpen] = React.useState(false)
-    const [drawingOwnerDraft, setDrawingOwnerDraft] = React.useState<NoteDrawingOwner | null>(drawingOwner)
-    const [editingDrawingId, setEditingDrawingId] = React.useState<string | null>(null)
-    const [resolvingDrawingOwner, setResolvingDrawingOwner] = React.useState(false)
+    const [folderSuggestion, setFolderSuggestion] = React.useState<FolderSuggestionState | null>(null)
     const [keyboardInset, setKeyboardInset] = React.useState(0)
     const editorRef = React.useRef<TiptapEditor | null>(null)
     const editorViewportRef = React.useRef<HTMLDivElement | null>(null)
@@ -193,40 +234,8 @@ export function RichTextEditor({
     const [codeCopyAnchor, setCodeCopyAnchor] = React.useState<{ top: number; left: number } | null>(null)
     const [activeCodeBlockElement, setActiveCodeBlockElement] = React.useState<HTMLElement | null>(null)
     const lastFocusTokenRef = React.useRef<string | number | undefined>(undefined)
-    const lastDrawingRequestTokenRef = React.useRef<number | undefined>(undefined)
-
-    React.useEffect(() => {
-        setDrawingOwnerDraft(drawingOwner)
-    }, [drawingOwner])
-
-    const openDrawingForEdit = React.useCallback((drawingId: string) => {
-        setDrawingOwnerDraft(drawingOwner)
-        setEditingDrawingId(drawingId)
-        setDrawingOpen(true)
-    }, [drawingOwner])
-
-    const openNewDrawing = React.useCallback(async () => {
-        if (readOnly || resolvingDrawingOwner) return
-        setResolvingDrawingOwner(true)
-        try {
-            const owner = drawingOwner ?? await resolveDrawingOwner?.() ?? null
-            if (!owner) return
-            setDrawingOwnerDraft(owner)
-            setEditingDrawingId(null)
-            setDrawingOpen(true)
-        } finally {
-            setResolvingDrawingOwner(false)
-        }
-    }, [drawingOwner, readOnly, resolveDrawingOwner, resolvingDrawingOwner])
-
-    React.useEffect(() => {
-        if (drawingRequestToken === undefined || drawingRequestToken === lastDrawingRequestTokenRef.current) return
-        lastDrawingRequestTokenRef.current = drawingRequestToken
-        if (drawingOwner) {
-            void openNewDrawing()
-            onDrawingRequestHandled?.()
-        }
-    }, [drawingOwner, drawingRequestToken, onDrawingRequestHandled, openNewDrawing])
+    const lastExternalUpdateTokenRef = React.useRef<number | undefined>(externalUpdateToken)
+    const folderSuggestionRef = React.useRef<FolderSuggestionState | null>(null)
 
     const syncImageSources = React.useCallback((nextSources: string[]) => {
         setImageSources((current) => {
@@ -263,7 +272,8 @@ export function RichTextEditor({
                 attrs: { src, alt },
             })
             .run()
-    }, [])
+        if (showImageGallery) syncImageSources(extractImageSources(editor))
+    }, [showImageGallery, syncImageSources])
 
     const removeImageByIndex = React.useCallback((targetIndex: number) => {
         const editor = editorRef.current
@@ -546,6 +556,95 @@ export function RichTextEditor({
         setTimeout(() => setCodeCopyState("idle"), 1400)
     }, [activeCodeBlockElement, copyTextToClipboard])
 
+    const folderOptionsRef = React.useRef(folderOptions)
+    const onFolderMentionChangeRef = React.useRef(onFolderMentionChange)
+    folderOptionsRef.current = folderOptions
+    onFolderMentionChangeRef.current = onFolderMentionChange
+
+    const matchingFolderOptions = React.useCallback((query: string) => {
+        const needle = query.trim().toLocaleLowerCase()
+        return folderOptionsRef.current
+            .filter((option) => !needle || option.name.toLocaleLowerCase().includes(needle))
+            .slice(0, 8)
+    }, [])
+
+    const closeFolderSuggestion = React.useCallback(() => {
+        folderSuggestionRef.current = null
+        setFolderSuggestion(null)
+    }, [])
+
+    const refreshFolderSuggestion = React.useCallback((currentEditor: TiptapEditor) => {
+        if (!folderOptionsRef.current.length || !currentEditor.state.selection.empty) {
+            closeFolderSuggestion()
+            return
+        }
+        const { $from } = currentEditor.state.selection
+        const textBefore = $from.parent.textBetween(0, $from.parentOffset, "\n", "\n")
+        const match = textBefore.match(/(?:^|\s)#([^#\n]*)$/u)
+        if (!match) {
+            closeFolderSuggestion()
+            return
+        }
+        const query = match[1] || ""
+        if (!matchingFolderOptions(query).length) {
+            closeFolderSuggestion()
+            return
+        }
+        const from = $from.pos - query.length - 1
+        const coordinates = currentEditor.view.coordsAtPos($from.pos)
+        const next: FolderSuggestionState = {
+            from,
+            to: $from.pos,
+            query,
+            selectedIndex: Math.min(
+                folderSuggestionRef.current?.selectedIndex ?? 0,
+                Math.max(0, matchingFolderOptions(query).length - 1)
+            ),
+            left: Math.max(12, Math.min(coordinates.left, window.innerWidth - 280)),
+            top: Math.min(coordinates.bottom + 8, window.innerHeight - 280),
+        }
+        folderSuggestionRef.current = next
+        setFolderSuggestion(next)
+    }, [closeFolderSuggestion, matchingFolderOptions])
+
+    const applyFolderSuggestion = React.useCallback((optionIndex?: number) => {
+        const currentEditor = editorRef.current
+        const suggestion = folderSuggestionRef.current
+        if (!currentEditor || !suggestion) return false
+        const options = matchingFolderOptions(suggestion.query)
+        const option = options[optionIndex ?? suggestion.selectedIndex]
+        if (!option) return false
+
+        const transaction = currentEditor.state.tr
+        const existingMentions: Array<{ from: number; to: number }> = []
+        currentEditor.state.doc.descendants((node, position) => {
+            if (node.type.name === "folderMention") {
+                existingMentions.push({ from: position, to: position + node.nodeSize })
+            }
+            return true
+        })
+        for (const range of existingMentions.sort((a, b) => b.from - a.from)) {
+            transaction.delete(range.from, range.to)
+        }
+        const from = transaction.mapping.map(suggestion.from)
+        const to = transaction.mapping.map(suggestion.to)
+        transaction.delete(from, to)
+        if (option.id) {
+            const mention = currentEditor.schema.nodes.folderMention?.create({
+                folderId: option.id,
+                label: option.name,
+            })
+            if (mention) transaction.insert(from, [mention, currentEditor.schema.text(" ")])
+        }
+        currentEditor.view.dispatch(transaction)
+        currentEditor.view.focus()
+        closeFolderSuggestion()
+        const html = currentEditor.getHTML()
+        lastEditorHtmlRef.current = html
+        onFolderMentionChangeRef.current?.(option.id, html)
+        return true
+    }, [closeFolderSuggestion, matchingFolderOptions])
+
     const notesFirstLineClass = notesMode
         ? notesAppearance === "apple"
             ? "[&>*:first-child]:mt-0 [&>*:first-child]:mb-1 [&>*:first-child]:text-[1.45rem] [&>*:first-child]:font-semibold [&>*:first-child]:tracking-[-0.02em] [&>*:first-child]:leading-[1.2] [&>*:first-child]:text-[var(--text-primary)] md:[&>*:first-child]:text-[1.62rem]"
@@ -566,7 +665,7 @@ export function RichTextEditor({
             TableHeader,
             TableCell,
             ScreenshotImage,
-            NoteDrawingNode.configure({ onEditDrawing: openDrawingForEdit }),
+            FolderMention,
             Placeholder.configure({
                 placeholder: placeholder ?? "Start writing...",
                 emptyEditorClass:
@@ -595,6 +694,31 @@ export function RichTextEditor({
                 ),
             },
             handleKeyDown(_, event) {
+                const suggestion = folderSuggestionRef.current
+                if (suggestion) {
+                    const options = matchingFolderOptions(suggestion.query)
+                    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                        event.preventDefault()
+                        const direction = event.key === "ArrowDown" ? 1 : -1
+                        const next = {
+                            ...suggestion,
+                            selectedIndex:
+                                (suggestion.selectedIndex + direction + options.length) % options.length,
+                        }
+                        folderSuggestionRef.current = next
+                        setFolderSuggestion(next)
+                        return true
+                    }
+                    if (event.key === "Enter") {
+                        event.preventDefault()
+                        return applyFolderSuggestion()
+                    }
+                    if (event.key === "Escape") {
+                        event.preventDefault()
+                        closeFolderSuggestion()
+                        return true
+                    }
+                }
                 if (
                     event.key === "Enter" &&
                     !event.shiftKey &&
@@ -656,14 +780,10 @@ export function RichTextEditor({
             },
         },
         onUpdate: ({ editor: currentEditor }) => {
-            const html = stripAnchorTags(currentEditor.getHTML())
-            if (html !== currentEditor.getHTML()) {
-                currentEditor.commands.setContent(html, { emitUpdate: false })
-            }
+            const html = currentEditor.getHTML()
             lastEditorHtmlRef.current = html
-            syncImageSources(extractImageSources(currentEditor))
             onChange(html)
-            updateCodeCopyAnchor(currentEditor)
+            refreshFolderSuggestion(currentEditor)
         },
         onSelectionUpdate: ({ editor: currentEditor }) => {
             updateCodeCopyAnchor(currentEditor)
@@ -674,6 +794,7 @@ export function RichTextEditor({
         },
         onBlur: () => {
             setIsFocused(false)
+            closeFolderSuggestion()
             setCodeCopyAnchor(null)
             setActiveCodeBlockElement(null)
             onBlur?.()
@@ -684,10 +805,10 @@ export function RichTextEditor({
     React.useEffect(() => {
         editorRef.current = editor
         if (editor) {
-            syncImageSources(extractImageSources(editor))
+            if (showImageGallery) syncImageSources(extractImageSources(editor))
             updateCodeCopyAnchor(editor)
         }
-    }, [editor, syncImageSources, updateCodeCopyAnchor])
+    }, [editor, showImageGallery, syncImageSources, updateCodeCopyAnchor])
 
     React.useEffect(() => {
         if (!editor) return
@@ -711,12 +832,14 @@ export function RichTextEditor({
         if (!editor) return
         const sanitizedValue = stripAnchorTags(value)
         if (sanitizedValue === editor.getHTML()) return
-        if (sanitizedValue === lastEditorHtmlRef.current) return
-        if (editor.isFocused) return
+        const forceExternalUpdate = externalUpdateToken !== lastExternalUpdateTokenRef.current
+        if (!forceExternalUpdate && sanitizedValue === lastEditorHtmlRef.current) return
+        if (!forceExternalUpdate && editor.isFocused) return
 
         editor.commands.setContent(sanitizedValue, { emitUpdate: false })
         lastEditorHtmlRef.current = sanitizedValue
-    }, [value, editor])
+        lastExternalUpdateTokenRef.current = externalUpdateToken
+    }, [value, editor, externalUpdateToken])
 
     React.useEffect(() => {
         if (!viewer.open) return
@@ -1047,22 +1170,6 @@ export function RichTextEditor({
                         >
                             <ImagePlus className={compactIconClass} />
                         </button>
-                        {notesMode && (drawingOwner || resolveDrawingOwner) ? (
-                            <button
-                                type="button"
-                                onClick={() => void openNewDrawing()}
-                                disabled={resolvingDrawingOwner}
-                                className={cn(
-                                    "hidden items-center justify-center border border-transparent transition md:inline-flex",
-                                    compactControlClass,
-                                    notesControlClass
-                                )}
-                                aria-label="Draw"
-                                title="Draw"
-                            >
-                                <PenTool className={compactIconClass} />
-                            </button>
-                        ) : null}
                         {!isMinimalToolbar ? (
                             <>
                                 <div className="mx-1 h-4 w-px bg-border/50" />
@@ -1284,6 +1391,34 @@ export function RichTextEditor({
                 )}
             </div>
 
+            {folderSuggestion ? (
+                <div
+                    className="fixed z-[90] w-64 overflow-hidden rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-[var(--shadow-apple)]"
+                    style={{ left: folderSuggestion.left, top: folderSuggestion.top }}
+                    role="listbox"
+                    aria-label="Choose folder"
+                >
+                    {matchingFolderOptions(folderSuggestion.query).map((option, index) => (
+                        <button
+                            key={option.id ?? "all-notes"}
+                            type="button"
+                            role="option"
+                            aria-selected={index === folderSuggestion.selectedIndex}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => applyFolderSuggestion(index)}
+                            className={cn(
+                                "flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-medium",
+                                index === folderSuggestion.selectedIndex
+                                    ? "bg-[var(--state-info-surface)] text-[var(--info)]"
+                                    : "text-[var(--text-primary)] hover:bg-[var(--surface-low)]"
+                            )}
+                        >
+                            <span className="truncate">#{option.name}</span>
+                        </button>
+                    ))}
+                </div>
+            ) : null}
+
             <Dialog
                 open={viewer.open}
                 onOpenChange={(open) =>
@@ -1434,20 +1569,6 @@ export function RichTextEditor({
                     </div>
                 </DialogContent>
             </Dialog>
-            <NoteDrawingSheet
-                open={drawingOpen}
-                onOpenChange={setDrawingOpen}
-                owner={drawingOwnerDraft}
-                drawingId={editingDrawingId}
-                onSaved={(drawing: NoteDrawingRecord) => {
-                    if (!editingDrawingId && editor) {
-                        editor.chain().focus().insertContent({
-                            type: "noteDrawing",
-                            attrs: { drawingId: drawing.id },
-                        }).run()
-                    }
-                }}
-            />
         </>
     )
 }

@@ -17,9 +17,7 @@
     "test:lms-daily-admin": "tsx scripts/verify-lms-daily-admin-integration.ts",
     "test:task-lms-integration": "vitest run --config vitest.task-lms.config.ts",
     "test:payments-integration": "vitest run --config vitest.payments.config.ts",
-    "test:note-drawings-integration": "vitest run --config vitest.note-drawings.config.ts",
     "test:data-queries": "tsx scripts/verify-data-query-optimizations.ts",
-    "test:notes-drag-drop": "tsx scripts/verify-notes-drag-drop.ts",
     "verify:mobile": "tsx scripts/verify-mobile-guardrails.ts",
     "verify:tablet": "node --import tsx scripts/verify-tablet-guardrails.ts",
     "verify:design": "tsx scripts/verify-design-system.ts",
@@ -35,6 +33,7 @@
     "data:preflight-single-owner": "tsx scripts/preflight-single-owner.ts",
     "data:migrate-project-note-storage": "tsx scripts/migrate-project-note-storage.ts",
     "data:migrate-project-note-storage:dry": "tsx scripts/migrate-project-note-storage.ts --dry-run",
+    "data:cleanup-removed-note-features": "tsx scripts/cleanup-removed-note-features.ts",
     "data:backfill-project-names": "node scripts/backfill-project-names.js"
   },
   "dependencies": {
@@ -66,7 +65,6 @@
     "next-themes": "^0.4.6",
     "otpauth": "^9.5.0",
     "papaparse": "^5.5.3",
-    "perfect-freehand": "^1.2.2",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",

@@ -125,6 +125,9 @@ export default async function TasksPage({
                 lmsTaskType: {
                     select: { id: true, name: true, isActive: true, defaultDurationMinutes: true },
                 },
+                lmsWorkEntry: {
+                    select: { id: true, durationMinutes: true, workDate: true, exportedAt: true },
+                },
             },
             orderBy: buildSort(sort),
             ...(shouldPaginate ? { skip: (page - 1) * perPage, take: perPage } : {}),

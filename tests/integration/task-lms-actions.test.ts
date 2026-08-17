@@ -415,6 +415,44 @@ describe("Task to LMS work-entry transactions", () => {
     })
   })
 
+  it("keeps multiple task-time sessions and completes LMS from their total", async () => {
+    const [allocation, workTask, task] = await Promise.all([
+      createAllocation("sessions.example"),
+      createWorkTask("Session category"),
+      createLmsTask("Multi-session task"),
+    ])
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { lmsAllocationId: allocation.id, lmsTaskTypeId: workTask.id },
+    })
+
+    const first = await timeActions.addTaskTimeEntry({ taskId: task.id, minutes: 60 })
+    const second = await timeActions.addTaskTimeEntry({ taskId: task.id, minutes: 40 })
+    expect(first.success).toBe(true)
+    expect(second.success).toBe(true)
+    expect(await prisma.timeLog.count({ where: { taskId: task.id } })).toBe(2)
+
+    const readiness = await taskActions.getTaskCompletionReadiness(task.id)
+    expect(readiness).toMatchObject({ success: true, data: { trackedMinutes: 100 } })
+
+    const completed = await taskActions.completeTask(task.id)
+    expect(completed.success).toBe(true)
+    expect(await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).toMatchObject({ status: "Completed" })
+    expect(await prisma.lmsWorkEntry.findUniqueOrThrow({ where: { crmTaskId: task.id } })).toMatchObject({
+      durationMinutes: 100,
+      lmsAllocationId: allocation.id,
+      taskTypeId: workTask.id,
+    })
+
+    const edited = await timeActions.setTaskTimeTotal({ taskId: task.id, totalMinutes: 90 })
+    expect(edited.success).toBe(true)
+    const logs = await prisma.timeLog.findMany({ where: { taskId: task.id } })
+    expect(logs.reduce((total, log) => total + (log.durationSeconds || 0), 0)).toBe(90 * 60)
+    expect(await prisma.lmsWorkEntry.findUniqueOrThrow({ where: { crmTaskId: task.id } })).toMatchObject({
+      durationMinutes: 90,
+    })
+  })
+
   it("handles concurrent completion without duplicate work rows", async () => {
     const [allocation, workTask, task] = await Promise.all([
       createAllocation("concurrent.example"),

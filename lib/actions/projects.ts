@@ -16,7 +16,6 @@ import { formatProjectName } from "@/lib/utils"
 import { z } from "zod"
 import { format } from "date-fns"
 import { logger } from "@/lib/logger"
-import { removeDrawingPreview } from "@/lib/notes/drawings.server"
 import { normalizeRichTextContent } from "@/lib/notes/content"
 import { normalizePaymentMethod } from "@/lib/payments/methods"
 import { resolveRecurringRolloverFee } from "@/lib/projects/recurring-fee"
@@ -742,17 +741,7 @@ export async function deleteProject(projectId: string) {
             })
             return { success: false, error: "Project not found" }
         }
-        const drawingPreviews = await prisma.noteDrawing.findMany({
-            where: {
-                OR: [
-                    { projectId: project.id },
-                    { task: { projectId: project.id } },
-                ],
-            },
-            select: { previewPath: true },
-        })
         await prisma.project.delete({ where: { id: project.id } })
-        await Promise.all(drawingPreviews.map(({ previewPath }) => removeDrawingPreview(previewPath)))
         await logSessionAuditEvent(session, {
             action: "PROJECT_DELETED",
             details: `projectId=${project.id}`,
@@ -808,22 +797,11 @@ export async function deleteProjects(projectIds: string[]) {
         const validatedProjectIds = ProjectIdsSchema.parse(projectIds)
         if (validatedProjectIds.length === 0) return { success: true }
 
-        const drawingPreviews = await prisma.noteDrawing.findMany({
-            where: {
-                OR: [
-                    { projectId: { in: validatedProjectIds } },
-                    { task: { projectId: { in: validatedProjectIds } } },
-                ],
-            },
-            select: { previewPath: true },
-        })
-
         const deleted = await prisma.project.deleteMany({
             where: {
                 id: { in: validatedProjectIds },
             }
         })
-        await Promise.all(drawingPreviews.map(({ previewPath }) => removeDrawingPreview(previewPath)))
 
         await logSessionAuditEvent(session, {
             action: "PROJECTS_BULK_DELETED",

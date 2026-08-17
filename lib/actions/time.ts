@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client"
 import { requireAuth } from "@/lib/auth"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
+import { buildTaskTimeTotalPlan, MAX_TASK_TRACKED_MINUTES } from "@/lib/tasks/tracked-time"
 import { z } from "zod"
 
 function revalidateTimePaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
@@ -51,6 +52,23 @@ const UpdateTimeLogInputSchema = z.object({
     durationSeconds: z.number().int().min(0).max(86400 * 365).optional(),
     source: z.enum(["MANUAL", "TIMER"]).optional(),
 })
+
+const AddTaskTimeEntrySchema = z.object({
+    taskId: TaskIdSchema,
+    minutes: z.number().int().min(1).max(MAX_TASK_TRACKED_MINUTES),
+    description: z.string().trim().max(2000).optional(),
+})
+
+const SetTaskTimeTotalSchema = z.object({
+    taskId: TaskIdSchema,
+    totalMinutes: z.number().int().min(0).max(MAX_TASK_TRACKED_MINUTES),
+})
+
+function revalidateTaskTimePaths(projectId?: string | null) {
+    revalidateTimePaths(projectId || undefined)
+    revalidatePath("/lms-analysis/work-log")
+    revalidatePath("/lms-analysis/data")
+}
 
 export async function logTime(data: {
     projectId: string
@@ -104,7 +122,7 @@ export async function logTime(data: {
             action: "TIME_LOG_CREATED",
             details: `timeLogId=${log.id}; projectId=${validated.projectId}`,
         })
-        revalidateTimePaths(validated.projectId, log.project.site.partnerId, log.project.siteId)
+        revalidateTimePaths(validated.projectId, log.project?.site.partnerId, log.project?.siteId)
         return { success: true }
     } catch (error) {
         console.error("Log time failed:", error)
@@ -112,11 +130,256 @@ export async function logTime(data: {
     }
 }
 
+export async function addTaskTimeEntry(data: {
+    taskId: string
+    minutes: number
+    description?: string
+}) {
+    try {
+        const session = await requireAuth()
+        const validated = AddTaskTimeEntrySchema.parse(data)
+        const now = new Date()
+        const result = await prisma.$transaction(async (tx) => {
+            const task = await tx.task.findUnique({
+                where: { id: validated.taskId },
+                select: {
+                    id: true,
+                    projectId: true,
+                    taskScope: true,
+                    status: true,
+                    lmsWorkEntry: {
+                        select: {
+                            id: true,
+                            durationMinutes: true,
+                            workDate: true,
+                            exportedAt: true,
+                        },
+                    },
+                    timeLogs: {
+                        where: { durationSeconds: { not: null } },
+                        select: { durationSeconds: true },
+                    },
+                },
+            })
+            if (!task) throw new ActionError("TASK_NOT_FOUND", "Task not found")
+            if (task.taskScope === "LMS" && task.lmsWorkEntry?.exportedAt) {
+                throw new ActionError(
+                    "LMS_TASK_TIME_EXPORTED",
+                    "This task's LMS time was already exported and can no longer be changed"
+                )
+            }
+
+            let previousSeconds = task.timeLogs.reduce(
+                (total, entry) => total + Math.max(0, entry.durationSeconds || 0),
+                0
+            )
+            if (previousSeconds === 0 && task.lmsWorkEntry?.durationMinutes) {
+                const legacySeconds = task.lmsWorkEntry.durationMinutes * 60
+                const legacyDate = new Date(`${task.lmsWorkEntry.workDate}T12:00:00.000Z`)
+                await tx.timeLog.create({
+                    data: {
+                        projectId: task.projectId,
+                        taskId: task.id,
+                        description: "Existing LMS task time",
+                        startTime: new Date(legacyDate.getTime() - legacySeconds * 1000),
+                        endTime: legacyDate,
+                        durationSeconds: legacySeconds,
+                        source: "MANUAL",
+                    },
+                })
+                previousSeconds = legacySeconds
+            }
+
+            const durationSeconds = validated.minutes * 60
+            const log = await tx.timeLog.create({
+                data: {
+                    projectId: task.projectId,
+                    taskId: task.id,
+                    description: validated.description || undefined,
+                    startTime: new Date(now.getTime() - durationSeconds * 1000),
+                    endTime: now,
+                    durationSeconds,
+                    source: "MANUAL",
+                },
+                select: { id: true },
+            })
+
+            const totalMinutes = Math.max(1, Math.round((previousSeconds + durationSeconds) / 60))
+            if (task.taskScope === "LMS" && totalMinutes > 1440) {
+                throw new ActionError(
+                    "LMS_TASK_TIME_LIMIT",
+                    "LMS task time cannot exceed 1440 minutes"
+                )
+            }
+            if (task.taskScope === "LMS" && task.lmsWorkEntry) {
+                await tx.lmsWorkEntry.update({
+                    where: { id: task.lmsWorkEntry.id },
+                    data: { durationMinutes: totalMinutes },
+                })
+            }
+
+            return { task, logId: log.id, totalMinutes }
+        })
+
+        await logSessionAuditEvent(session, {
+            action: "TASK_TIME_ENTRY_CREATED",
+            details: `taskId=${result.task.id}; timeLogId=${result.logId}; minutes=${validated.minutes}; totalMinutes=${result.totalMinutes}`,
+        })
+        revalidateTaskTimePaths(result.task.projectId)
+        return { success: true as const, data: { totalMinutes: result.totalMinutes } }
+    } catch (error) {
+        console.error("Add task time entry failed:", error)
+        return {
+            success: false as const,
+            error: getActionErrorMessage(error, "Failed to add task time"),
+            ...(error instanceof ActionError ? { code: error.code } : {}),
+        }
+    }
+}
+
+export async function setTaskTimeTotal(data: { taskId: string; totalMinutes: number }) {
+    try {
+        const session = await requireAuth()
+        const validated = SetTaskTimeTotalSchema.parse(data)
+        const result = await prisma.$transaction(async (tx) => {
+            const task = await tx.task.findUnique({
+                where: { id: validated.taskId },
+                select: {
+                    id: true,
+                    projectId: true,
+                    taskScope: true,
+                    status: true,
+                    lmsWorkEntry: {
+                        select: {
+                            id: true,
+                            durationMinutes: true,
+                            workDate: true,
+                            exportedAt: true,
+                        },
+                    },
+                    timeLogs: {
+                        orderBy: [{ startTime: "desc" }, { createdAt: "desc" }],
+                        select: {
+                            id: true,
+                            durationSeconds: true,
+                            endTime: true,
+                            isPaused: true,
+                        },
+                    },
+                },
+            })
+            if (!task) throw new ActionError("TASK_NOT_FOUND", "Task not found")
+            if (task.timeLogs.some((log) => !log.endTime || log.isPaused)) {
+                throw new ActionError(
+                    "TASK_TIME_ACTIVE_TIMER",
+                    "Stop the task timer before editing its total time"
+                )
+            }
+            if (task.taskScope === "LMS" && task.lmsWorkEntry?.exportedAt) {
+                throw new ActionError(
+                    "LMS_TASK_TIME_EXPORTED",
+                    "This task's LMS time was already exported and can no longer be changed"
+                )
+            }
+            if (
+                task.taskScope === "LMS"
+                && task.status === "Completed"
+                && task.lmsWorkEntry
+                && validated.totalMinutes === 0
+            ) {
+                throw new ActionError(
+                    "LMS_COMPLETED_TASK_TIME_REQUIRED",
+                    "Reopen the LMS task before removing all of its time"
+                )
+            }
+            if (task.taskScope === "LMS" && validated.totalMinutes > 1440) {
+                throw new ActionError(
+                    "LMS_TASK_TIME_LIMIT",
+                    "LMS task time cannot exceed 1440 minutes"
+                )
+            }
+
+            let reconciliationLogs = task.timeLogs
+            if (reconciliationLogs.length === 0 && task.lmsWorkEntry?.durationMinutes) {
+                const legacySeconds = task.lmsWorkEntry.durationMinutes * 60
+                const legacyDate = new Date(`${task.lmsWorkEntry.workDate}T12:00:00.000Z`)
+                const legacyLog = await tx.timeLog.create({
+                    data: {
+                        projectId: task.projectId,
+                        taskId: task.id,
+                        description: "Existing LMS task time",
+                        startTime: new Date(legacyDate.getTime() - legacySeconds * 1000),
+                        endTime: legacyDate,
+                        durationSeconds: legacySeconds,
+                        source: "MANUAL",
+                    },
+                    select: { id: true, durationSeconds: true, endTime: true, isPaused: true },
+                })
+                reconciliationLogs = [legacyLog]
+            }
+
+            const plan = buildTaskTimeTotalPlan(reconciliationLogs, validated.totalMinutes * 60)
+            if (plan.deleteIds.length > 0) {
+                await tx.timeLog.deleteMany({ where: { id: { in: plan.deleteIds } } })
+            }
+            for (const update of plan.updates) {
+                const original = reconciliationLogs.find((log) => log.id === update.id)
+                await tx.timeLog.update({
+                    where: { id: update.id },
+                    data: {
+                        durationSeconds: update.durationSeconds,
+                        ...(original?.endTime
+                            ? { startTime: new Date(original.endTime.getTime() - update.durationSeconds * 1000) }
+                            : {}),
+                    },
+                })
+            }
+            if (plan.createSeconds > 0) {
+                const now = new Date()
+                await tx.timeLog.create({
+                    data: {
+                        projectId: task.projectId,
+                        taskId: task.id,
+                        description: "Total time adjustment",
+                        startTime: new Date(now.getTime() - plan.createSeconds * 1000),
+                        endTime: now,
+                        durationSeconds: plan.createSeconds,
+                        source: "MANUAL",
+                    },
+                })
+            }
+
+            if (task.taskScope === "LMS" && task.lmsWorkEntry && validated.totalMinutes > 0) {
+                await tx.lmsWorkEntry.update({
+                    where: { id: task.lmsWorkEntry.id },
+                    data: { durationMinutes: validated.totalMinutes },
+                })
+            }
+
+            return { task, plan }
+        })
+
+        await logSessionAuditEvent(session, {
+            action: "TASK_TIME_TOTAL_CHANGED",
+            details: `taskId=${result.task.id}; totalMinutes=${validated.totalMinutes}; createdSeconds=${result.plan.createSeconds}; updated=${result.plan.updates.length}; deleted=${result.plan.deleteIds.length}`,
+        })
+        revalidateTaskTimePaths(result.task.projectId)
+        return { success: true as const, data: { totalMinutes: validated.totalMinutes } }
+    } catch (error) {
+        console.error("Set task time total failed:", error)
+        return {
+            success: false as const,
+            error: getActionErrorMessage(error, "Failed to update total task time"),
+            ...(error instanceof ActionError ? { code: error.code } : {}),
+        }
+    }
+}
+
 export async function getTimeLogs(filters?: { projectId?: string, partnerId?: string, q?: string, take?: number, skip?: number }) {
     try {
         await requireAuth()
         const validatedFilters = TimeLogFiltersSchema.parse(filters)
-        const where: Prisma.TimeLogWhereInput = {}
+        const where: Prisma.TimeLogWhereInput = { projectId: { not: null } }
 
         if (validatedFilters?.q) {
             where.description = { contains: validatedFilters.q }
@@ -237,7 +500,7 @@ export async function updateTimeLog(logId: string, data: {
             details: `timeLogId=${log.id}; projectId=${log.projectId}`,
         })
         revalidatePath("/time")
-        revalidatePath(`/projects/${log.projectId}`)
+        if (log.projectId) revalidatePath(`/projects/${log.projectId}`)
         revalidatePath("/")
         return { success: true }
     } catch (error) {
@@ -268,7 +531,7 @@ export async function deleteTimeLog(logId: string) {
             details: `timeLogId=${log.id}; projectId=${log.projectId}`,
         })
         revalidatePath("/time")
-        revalidatePath(`/projects/${log.projectId}`)
+        if (log.projectId) revalidatePath(`/projects/${log.projectId}`)
         revalidatePath("/")
         return { success: true }
     } catch (error) {

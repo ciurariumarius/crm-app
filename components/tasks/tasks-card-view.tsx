@@ -76,6 +76,7 @@ type TaskCardViewTask = {
     lmsTaskTypeId?: string | null
     lmsAllocation?: { id?: string; client?: string | null } | null
     lmsTaskType?: { id?: string; name?: string | null; defaultDurationMinutes?: number | null } | null
+    lmsWorkEntry?: { id?: string; durationMinutes?: number | null } | null
 }
 
 type SiteWithOptionalPartner = {
@@ -489,7 +490,10 @@ export function TasksCardView({
 
             <div className="flex flex-col gap-3">
                 {visibleTasks.map((task) => {
-                    const logsDuration = task.timeLogs?.reduce((acc: number, log: TimeLogSummary) => acc + (log.durationSeconds || 0), 0) || 0
+                    const sessionDuration = task.timeLogs?.reduce((acc: number, log: TimeLogSummary) => acc + (log.durationSeconds || 0), 0) || 0
+                    const logsDuration = sessionDuration > 0
+                        ? sessionDuration
+                        : Math.max(0, task.lmsWorkEntry?.durationMinutes || 0) * 60
                     const isActiveTimerThisTask = timerState.taskId === task.id
                     const isRunning = isActiveTimerThisTask && timerState.isRunning
                     const isPaused = isActiveTimerThisTask && !timerState.isRunning

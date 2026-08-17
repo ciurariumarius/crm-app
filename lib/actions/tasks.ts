@@ -24,8 +24,8 @@ import {
     NOTES_CLIENT_REFRESH_REQUIRED,
 } from "@/lib/notes/write-protocol"
 import { MAX_TASK_ESTIMATED_MINUTES } from "@/lib/tasks/estimated-time"
+import { getBucharestDateOnly, getDefaultLmsWorkDate } from "@/lib/lms-work-entries/date"
 import { z } from "zod"
-import { removeDrawingPreview } from "@/lib/notes/drawings.server"
 import { normalizeRichTextContent } from "@/lib/notes/content"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
@@ -57,6 +57,11 @@ const taskContextSelect = {
     status: true,
     urgency: true,
     deadline: true,
+    timeLogs: {
+        where: { durationSeconds: { not: null } },
+        orderBy: [{ startTime: "desc" as const }, { createdAt: "desc" as const }],
+        select: { durationSeconds: true, startTime: true },
+    },
     project: {
         select: {
             siteId: true,
@@ -68,6 +73,46 @@ const taskContextSelect = {
         },
     },
 } satisfies Prisma.TaskSelect
+
+export async function getTaskCompletionReadiness(taskId: string) {
+    try {
+        await requireAuth()
+        const validatedTaskId = TaskIdSchema.parse(taskId)
+        const task = await prisma.task.findUnique({
+            where: { id: validatedTaskId },
+            select: {
+                id: true,
+                taskScope: true,
+                projectId: true,
+                status: true,
+                lmsAllocationId: true,
+                lmsTaskTypeId: true,
+                timeLogs: {
+                    where: { durationSeconds: { not: null } },
+                    select: { durationSeconds: true },
+                },
+            },
+        })
+        if (!task) throw new ActionError("TASK_NOT_FOUND", "Task not found")
+
+        const trackedSeconds = task.timeLogs.reduce(
+            (total, log) => total + Math.max(0, log.durationSeconds || 0),
+            0
+        )
+        return {
+            success: true as const,
+            data: {
+                status: task.status,
+                taskScope: normalizeStoredTaskScope(task.taskScope, task.projectId),
+                trackedMinutes: trackedSeconds > 0 ? Math.max(1, Math.round(trackedSeconds / 60)) : 0,
+                lmsAllocationId: task.lmsAllocationId,
+                lmsTaskTypeId: task.lmsTaskTypeId,
+            },
+        }
+    } catch (error) {
+        return taskActionFailure(error, "Failed to check task time")
+    }
+}
 
 function taskActionFailure(error: unknown, fallback: string) {
     return {
@@ -371,17 +416,34 @@ export async function completeTask(
                 }
             }
 
-            if (!validatedCompletion) {
+            const trackedSeconds = task.timeLogs.reduce(
+                (total, log) => total + Math.max(0, log.durationSeconds || 0),
+                0
+            )
+            const trackedMinutes = trackedSeconds > 0
+                ? Math.max(1, Math.round(trackedSeconds / 60))
+                : 0
+            const completionAllocationId = task.lmsAllocationId || validatedCompletion?.lmsAllocationId
+            const completionTaskTypeId = task.lmsTaskTypeId || validatedCompletion?.lmsTaskTypeId
+
+            if (!trackedMinutes && !validatedCompletion) {
                 throw new ActionError(
                     "LMS_COMPLETION_DETAILS_REQUIRED",
                     "Select the LMS project, task type, work date, and duration before completing this task"
                 )
             }
 
+            if (!completionAllocationId || !completionTaskTypeId) {
+                throw new ActionError(
+                    "LMS_COMPLETION_DETAILS_REQUIRED",
+                    "Select the LMS project and task type before completing this task"
+                )
+            }
+
             const { allocation, taskType } = await resolveLmsTaskMapping(
                 tx,
-                validatedCompletion.lmsAllocationId,
-                validatedCompletion.lmsTaskTypeId
+                completionAllocationId,
+                completionTaskTypeId
             )
             if (!allocation || !taskType) {
                 throw new ActionError(
@@ -405,8 +467,10 @@ export async function completeTask(
                     lmsAllocationId: allocation.id,
                     taskTypeId: taskType.id,
                     crmTaskId: task.id,
-                    workDate: validatedCompletion.workDate,
-                    durationMinutes: validatedCompletion.durationMinutes,
+                    workDate: trackedMinutes && task.timeLogs[0]?.startTime
+                        ? getDefaultLmsWorkDate(getBucharestDateOnly(task.timeLogs[0].startTime))
+                        : validatedCompletion!.workDate,
+                    durationMinutes: trackedMinutes || validatedCompletion!.durationMinutes,
                     clientDomainSnapshot: allocation.client,
                     taskNameSnapshot: taskType.name,
                     crmTaskNameSnapshot: task.name,
@@ -773,6 +837,12 @@ export async function updateTask(taskId: string, data: {
                     "Stop the task timer before changing its project or target"
                 )
             }
+            if (projectTargetChanged) {
+                await tx.timeLog.updateMany({
+                    where: { taskId: existingTask.id },
+                    data: { projectId: nextTarget.projectId },
+                })
+            }
             const task = await tx.task.findUniqueOrThrow({
                 where: { id: existingTask.id },
                 include: { project: { include: { site: true } } },
@@ -835,12 +905,7 @@ export async function deleteTask(taskId: string, projectId?: string | null) {
             })
             return { success: false, error: "Task not found" }
         }
-        const drawingPreviews = await prisma.noteDrawing.findMany({
-            where: { taskId: task.id },
-            select: { previewPath: true },
-        })
         await prisma.task.delete({ where: { id: task.id } })
-        await Promise.all(drawingPreviews.map(({ previewPath }) => removeDrawingPreview(previewPath)))
         await logSessionAuditEvent(session, {
             action: "TASK_DELETED",
             details: `taskId=${task.id}; projectId=${task.projectId || "none"}`,
@@ -858,14 +923,9 @@ export async function deleteTasks(taskIds: string[]) {
         const session = await requireAuth()
         const validatedTaskIds = TaskIdsSchema.parse(taskIds)
         if (validatedTaskIds.length === 0) return { success: true as const }
-        const drawingPreviews = await prisma.noteDrawing.findMany({
-            where: { taskId: { in: validatedTaskIds } },
-            select: { previewPath: true },
-        })
         const deleted = await prisma.task.deleteMany({
             where: { id: { in: validatedTaskIds } }
         })
-        await Promise.all(drawingPreviews.map(({ previewPath }) => removeDrawingPreview(previewPath)))
         await logSessionAuditEvent(session, {
             action: "TASKS_BULK_DELETED",
             details: `requested=${validatedTaskIds.length}; deleted=${deleted.count}`,

@@ -5,6 +5,8 @@ import Link from "next/link"
 import { format } from "date-fns"
 import {
     AlertCircle,
+    ArrowRight,
+    CalendarRange,
     Check,
     CheckCircle,
     Clock3,
@@ -41,7 +43,7 @@ import { SidePanelNotesSection } from "@/components/shared/side-panel-notes-sect
 import { SidePanelTimeLogHistoryList } from "@/components/shared/side-panel-time-log-history-list"
 import { TimeLogSheet } from "@/components/time/time-log-sheet"
 import { TimeTrackerWidget } from "@/components/shared/time-tracker-widget"
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ProjectWithDetails } from "@/types"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
@@ -51,6 +53,12 @@ import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/l
 import { ProjectHistoryLogSections, type ProjectPaymentHistoryEntry, type ProjectStatusHistoryEntry } from "@/components/projects/project-history-log-sections"
 import { ProjectSheetInfoSection } from "@/components/projects/project-sheet-info-section"
 import { CloseProjectDialog } from "@/components/projects/close-project-dialog"
+import { RecurringProjectMonthPicker } from "@/components/projects/recurring-project-month-picker"
+import {
+    formatMonthKeyLabel,
+    getDefaultRecurringMonth,
+    getMinimumRecurringMonth,
+} from "@/lib/projects/recurring-month"
 import {
     markProjectNoteDraftSaved,
     recordProjectNoteDraft,
@@ -205,7 +213,9 @@ export function ProjectSheetContent({
     const [isCloseProjectDialogOpen, setIsCloseProjectDialogOpen] = React.useState(false)
     const [isSubmittingCloseProject, setIsSubmittingCloseProject] = React.useState(false)
     const [isReopenRecurringDialogOpen, setIsReopenRecurringDialogOpen] = React.useState(false)
-    const [reopenMonth, setReopenMonth] = React.useState(() => format(new Date(), "yyyy-MM"))
+    const [reopenMonth, setReopenMonth] = React.useState(() =>
+        getDefaultRecurringMonth(initialProject.createdAt)
+    )
     const [isReopeningRecurring, setIsReopeningRecurring] = React.useState(false)
 
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
@@ -612,7 +622,7 @@ export function ProjectSheetContent({
             && isRecurringProject
             && (project.status === "Closed" || project.status === "Completed")
         ) {
-            setReopenMonth(format(new Date(), "yyyy-MM"))
+            setReopenMonth(getDefaultRecurringMonth(project.createdAt))
             setIsReopenRecurringDialogOpen(true)
             return
         }
@@ -905,6 +915,8 @@ export function ProjectSheetContent({
         }
     }, [hourlyRate, project.currentFee, totalTrackedSeconds])
     const isRecurringProject = project.services?.some((service) => service.isRecurring) ?? false
+    const minimumReopenMonth = getMinimumRecurringMonth(project.createdAt)
+    const reopenMonthLabel = formatMonthKeyLabel(reopenMonth)
     const activeProjectTasks = (project.tasks || []).filter((task) => task.status !== "Completed")
     const persistedServiceIds = (project.services || []).map((service) => service.id).sort()
     const normalizedDraftServiceIds = [...draftServiceIds].sort()
@@ -1731,35 +1743,54 @@ export function ProjectSheetContent({
                 <Dialog open={isReopenRecurringDialogOpen} onOpenChange={(open) => {
                     if (!isReopeningRecurring) setIsReopenRecurringDialogOpen(open)
                 }}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Open recurring project</DialogTitle>
+                    <DialogContent className="overflow-hidden gap-0 p-0 sm:max-w-[520px]">
+                        <DialogHeader className="border-b border-[var(--line-subtle)] px-5 py-5 pr-16 text-left sm:px-6 sm:py-6 sm:pr-16">
+                            <div className="flex items-start gap-3.5">
+                                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] border border-[color:color-mix(in_srgb,var(--brand-primary)_24%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-primary)_11%,var(--surface-lowest))] text-[var(--brand-primary)]">
+                                    <CalendarRange className="h-5 w-5" />
+                                </span>
+                                <div className="min-w-0 pt-0.5">
+                                    <DialogTitle className="text-xl tracking-[-0.02em]">Open recurring project</DialogTitle>
+                                    <DialogDescription className="mt-2 leading-5 text-[var(--text-secondary)]">
+                                        <span className="font-semibold text-[var(--text-primary)]">
+                                            {format(new Date(project.createdAt), "MMMM yyyy")}
+                                        </span>{" "}
+                                        stays unchanged. Select the next month you want to work on.
+                                    </DialogDescription>
+                                </div>
+                            </div>
                         </DialogHeader>
-                        <div className="space-y-4 py-2">
-                            <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                                The existing {format(new Date(project.createdAt), "MMMM yyyy")} project stays unchanged. Choose the month to work on.
-                            </p>
-                            <label className="block text-sm font-semibold text-[var(--text-primary)]">
-                                Month
-                                <Input
-                                    type="month"
-                                    value={reopenMonth}
-                                    min={format(new Date(new Date(project.createdAt).getFullYear(), new Date(project.createdAt).getMonth() + 1, 1), "yyyy-MM")}
-                                    onChange={(event) => setReopenMonth(event.target.value)}
-                                    className="mt-2 w-full"
-                                    autoFocus
-                                />
-                            </label>
+
+                        <div className="px-4 py-4 sm:px-6 sm:py-5">
+                            <RecurringProjectMonthPicker
+                                value={reopenMonth}
+                                minimumMonth={minimumReopenMonth}
+                                onChange={setReopenMonth}
+                                disabled={isReopeningRecurring}
+                            />
                         </div>
-                        <div className="flex justify-end gap-2">
-                            <Button type="button" variant="outline" onClick={() => setIsReopenRecurringDialogOpen(false)} disabled={isReopeningRecurring}>
+
+                        <DialogFooter className="border-t border-[var(--line-subtle)] bg-[var(--surface-low)] px-4 py-4 sm:px-6">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsReopenRecurringDialogOpen(false)}
+                                disabled={isReopeningRecurring}
+                                className="h-11 rounded-xl sm:min-w-24"
+                            >
                                 Cancel
                             </Button>
-                            <Button type="button" onClick={() => void handleReopenRecurring()} disabled={isReopeningRecurring || !reopenMonth}>
+                            <Button
+                                type="button"
+                                onClick={() => void handleReopenRecurring()}
+                                disabled={isReopeningRecurring || !reopenMonth}
+                                className="h-11 rounded-xl sm:min-w-44"
+                            >
                                 {isReopeningRecurring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Open month
+                                Open {reopenMonthLabel}
+                                {!isReopeningRecurring ? <ArrowRight className="ml-1 h-4 w-4" /> : null}
                             </Button>
-                        </div>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>
