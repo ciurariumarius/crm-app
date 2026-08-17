@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { Banknote, Clock3, WalletCards } from "lucide-react"
+import { Banknote, WalletCards } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
 import { getLmsOwnerCapacitySummary } from "@/lib/lms-tasks/db"
@@ -20,6 +20,7 @@ import { HomeHeaderActions } from "@/components/dashboard/home-header-actions"
 import { HomeTaskColumns } from "@/components/dashboard/home-task-columns"
 import { StatCard } from "@/components/ui/app-surface"
 import { Progress } from "@/components/ui/progress"
+import { LmsIcon } from "@/components/lms/lms-icon"
 
 export const dynamic = "force-dynamic"
 
@@ -112,7 +113,7 @@ function LmsCapacityCard({
             <StatCard className="min-h-[144px] transition-[border-color,transform,box-shadow] group-hover:-translate-y-0.5 group-hover:border-[color:color-mix(in_srgb,var(--line-subtle)_62%,var(--text-muted)_38%)]">
                 <div className="flex items-start justify-between gap-3">
                     <p className="ui-overline">{label}</p>
-                    <Clock3 className="h-5 w-5 text-[var(--text-muted)]" />
+                    <LmsIcon className="h-5 w-5" />
                 </div>
 
                 <div className="mt-5 flex items-end justify-between gap-3">

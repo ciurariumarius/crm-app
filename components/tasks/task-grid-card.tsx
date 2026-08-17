@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { TaskActualTimeQuickEdit } from "@/components/tasks/task-actual-time-quick-edit"
+import { LmsIcon } from "@/components/lms/lms-icon"
 
 export const TASK_CARD_SHELL_CLASS =
     "relative flex min-h-[176px] w-full overflow-hidden rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-all duration-200 sm:aspect-[4/3] sm:min-h-[190px] xl:min-h-[205px]"
@@ -164,7 +165,8 @@ export function TaskGridCard({
             {isRunning ? <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-[20px] bg-[var(--primary)] animate-pulse" /> : null}
 
             <div className="flex items-start justify-between gap-3">
-                <span className="inline-flex h-6 min-w-0 max-w-[45%] items-center rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]">
+                <span className="inline-flex h-6 min-w-0 max-w-[45%] items-center gap-1.5 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]">
+                    {isLmsTask ? <LmsIcon className="h-4 w-4" /> : null}
                     <span className="truncate">{scopeLabel}</span>
                 </span>
 

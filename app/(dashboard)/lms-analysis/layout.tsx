@@ -4,6 +4,7 @@ import { Upload } from "lucide-react"
 import { AppPageHeader } from "@/components/layout/app-page-header"
 import { Button } from "@/components/ui/button"
 import { LmsTasksProvider } from "@/components/lms-tasks/lms-tasks-provider"
+import { LmsIcon } from "@/components/lms/lms-icon"
 
 export default function LmsAnalysisLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function LmsAnalysisLayout({ children }: { children: ReactNode })
       <div className="space-y-6">
         <AppPageHeader
           title="LMS Analysis"
+          titleIcon={<LmsIcon className="h-8 w-8" />}
           subtitle="Work logs, task distribution and project capacity."
           primaryAction={
             <Button asChild variant="outline" size="sm" className="h-9 gap-2">

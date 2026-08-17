@@ -23,6 +23,7 @@ import { Calendar as CalendarIcon, Clock, Users, Globe, Target } from "lucide-re
 import { TaskDetails, type TaskDetailsTask } from "./task-details"
 import { useTimer } from "@/components/providers/timer-provider"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
+import { LmsIcon } from "@/components/lms/lms-icon"
 
 type TaskTableTimeLog = {
     durationSeconds?: number | null
@@ -120,7 +121,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                     <div className="flex flex-col gap-1 max-w-[200px]">
                                         {task.taskScope === "LMS" ? <>
                                             <div className="flex items-center gap-2 text-xs font-semibold text-[var(--primary)]">
-                                                <Users className="h-3 w-3 shrink-0 opacity-70" />
+                                                <LmsIcon className="h-4 w-4" />
                                                 <span className="truncate">LMS · {task.lmsAllocation?.client || "Project not linked"}</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground/60">

@@ -50,6 +50,7 @@ import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelClass, sidePanelDialogContentC
 import { SidePanelChip, SidePanelDetailRow, SidePanelInfoCard, SidePanelSectionTitle, SidePanelTabs } from "@/components/ui/side-panel-primitives"
 import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
 import { TaskActualTimeQuickEdit } from "@/components/tasks/task-actual-time-quick-edit"
+import { LmsIcon } from "@/components/lms/lms-icon"
 import { TaskEstimatedTimeQuickEdit } from "@/components/tasks/task-estimated-time-quick-edit"
 import { TaskFreelanceProjectField, TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
@@ -805,6 +806,7 @@ export function TaskDetails({
                     </div>
                     <div className="space-y-2 pr-28">
                         <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                            {taskScope === "LMS" ? <LmsIcon className="h-5 w-5" /> : null}
                             <span>{taskScope === "LMS" ? "LMS task" : taskScope === "FREELANCE" ? "Freelance task" : "Legacy task"}</span>
                             <span aria-hidden="true">•</span>
                             <span className="truncate normal-case tracking-normal">

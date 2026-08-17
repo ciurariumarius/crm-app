@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { ArrowRight, CheckCircle2, Circle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { LmsIcon } from "@/components/lms/lms-icon"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 import {
     completeHomeOpenTaskState,
@@ -98,8 +99,9 @@ export function HomeTaskColumns({ tasks, totalOpenTasks }: HomeTaskColumnsProps)
                                     <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                                         {task.name || "Untitled task"}
                                     </p>
-                                    <p className="ui-text-caption mt-1 truncate text-[var(--text-muted)]">
-                                        {getTaskContext(task)}
+                                    <p className="ui-text-caption mt-1 flex min-w-0 items-center gap-1.5 text-[var(--text-muted)]">
+                                        {task.taskScope === "LMS" ? <LmsIcon className="h-4 w-4" /> : null}
+                                        <span className="truncate">{getTaskContext(task)}</span>
                                     </p>
                                 </div>
                             </article>

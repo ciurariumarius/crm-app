@@ -31,6 +31,7 @@ import type { TaskDialogProject } from "./global-create-task-dialog"
 import type { SearchPaginationState } from "@/types/search-pagination"
 import { sidePanelClass } from "@/lib/ui/side-panels"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
+import { LmsIcon } from "@/components/lms/lms-icon"
 
 type TimeLogSummary = {
     id?: string
@@ -525,8 +526,9 @@ export function TasksCardView({
                                     {task.name}
                                 </h3>
                                 {task.taskScope === "LMS" ? (
-                                    <p className="mt-1 text-xs font-semibold text-[var(--text-secondary)] break-words whitespace-normal leading-tight">
-                                        LMS · {task.lmsAllocation?.client || "Project not linked"} · {task.lmsTaskType?.name || "Category not linked"}
+                                    <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] break-words whitespace-normal leading-tight">
+                                        <LmsIcon className="h-4 w-4" />
+                                        <span>{task.lmsAllocation?.client || "Project not linked"} · {task.lmsTaskType?.name || "Category not linked"}</span>
                                     </p>
                                 ) : task.project ? (
                                     <p className="mt-1 text-xs font-semibold text-[var(--text-secondary)] break-words whitespace-normal leading-tight">

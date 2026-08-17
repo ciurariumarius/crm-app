@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ThemeDropdownItems } from "@/components/theme/theme-dropdown-items"
+import { LmsIcon } from "@/components/lms/lms-icon"
 
 type NavItem = {
   name: string
@@ -300,7 +301,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
             <nav className="flex-1 space-y-5 px-3 py-5">
               <div className="space-y-1">{coreNav.map(renderMobileItem)}</div>
               <div className="h-px bg-[var(--line-subtle)]" />
-              {renderMobileGroup("LMS Analysis", LayoutGrid, showLmsAnalysisChildren, isLmsAnalysisActive, () => setLmsAnalysisOpen((prev) => !prev), lmsAnalysisNav)}
+              {renderMobileGroup("LMS Analysis", LmsIcon, showLmsAnalysisChildren, isLmsAnalysisActive, () => setLmsAnalysisOpen((prev) => !prev), lmsAnalysisNav)}
               {renderMobileGroup("Database", Database, showDatabaseChildren, isDatabaseActive, () => setDatabaseOpen((prev) => !prev), databaseNav)}
               {renderMobileGroup("PPC", BarChart3, showPpcChildren, isPpcActive, () => setPpcOpen((prev) => !prev), ppcNav)}
             </nav>
@@ -387,7 +388,7 @@ export function Sidebar({ user }: { user?: { name: string | null, username: stri
           <nav id="desktop-sidebar-nav" className="mt-4 flex-1 space-y-5">
             <div className="space-y-1">{coreNav.map(renderDesktopItem)}</div>
             <div className="mx-2 h-px bg-[var(--line-subtle)]" />
-            {renderDesktopGroup("LMS Analysis", LayoutGrid, showLmsAnalysisChildren, isLmsAnalysisActive, () => setLmsAnalysisOpen((prev) => !prev), lmsAnalysisNav)}
+            {renderDesktopGroup("LMS Analysis", LmsIcon, showLmsAnalysisChildren, isLmsAnalysisActive, () => setLmsAnalysisOpen((prev) => !prev), lmsAnalysisNav)}
             {renderDesktopGroup("Database", Database, showDatabaseChildren, isDatabaseActive, () => setDatabaseOpen((prev) => !prev), databaseNav)}
             {renderDesktopGroup("PPC", BarChart3, showPpcChildren, isPpcActive, () => setPpcOpen((prev) => !prev), ppcNav)}
           </nav>

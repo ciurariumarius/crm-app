@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 
 export type AppPageHeaderProps = {
   title: string
+  titleIcon?: React.ReactNode
   subtitle?: string
   description?: string
   eyebrow?: string
@@ -26,11 +27,13 @@ function duplicateNode(node: React.ReactNode) {
 
 function HeaderIdentity({
   title,
+  titleIcon,
   subtitle,
   eyebrow,
   includeMenu = false,
 }: {
   title: string
+  titleIcon?: React.ReactNode
   subtitle?: string
   eyebrow?: string
   includeMenu?: boolean
@@ -40,7 +43,10 @@ function HeaderIdentity({
       {includeMenu ? <MobileMenuTrigger /> : null}
       <div className="min-w-0 pt-0.5">
         {eyebrow ? <p className="ui-overline truncate">{eyebrow}</p> : null}
-        <h1 className="ui-text-title truncate text-[var(--text-primary)]">{title}</h1>
+        <div className="flex min-w-0 items-center gap-2.5">
+          {titleIcon ? <span className="shrink-0">{titleIcon}</span> : null}
+          <h1 className="ui-text-title truncate text-[var(--text-primary)]">{title}</h1>
+        </div>
         {subtitle ? (
           <p className="mt-1 max-w-2xl text-[13px] font-medium leading-5 text-[var(--text-secondary)] md:leading-6">
             {subtitle}
@@ -53,6 +59,7 @@ function HeaderIdentity({
 
 export function AppPageHeader({
   title,
+  titleIcon,
   subtitle,
   description,
   eyebrow,
@@ -83,7 +90,7 @@ export function AppPageHeader({
     >
       <div className="flex flex-col gap-3 md:hidden">
         <div className="flex items-center justify-between gap-3">
-          <HeaderIdentity title={title} subtitle={resolvedSubtitle} eyebrow={eyebrow} includeMenu />
+          <HeaderIdentity title={title} titleIcon={titleIcon} subtitle={resolvedSubtitle} eyebrow={eyebrow} includeMenu />
           {resolvedMobileAction ? <div className="shrink-0">{resolvedMobileAction}</div> : null}
         </div>
         {resolvedMobileSearch}
@@ -99,7 +106,7 @@ export function AppPageHeader({
       {controls ? (
         <div className="hidden items-center gap-x-4 gap-y-3 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(280px,640px)_auto] xl:grid-cols-[minmax(150px,auto)_minmax(320px,1.8fr)_auto_auto_auto]">
           <div className="md:col-start-1 md:row-start-1 xl:col-start-1">
-            <HeaderIdentity title={title} subtitle={resolvedSubtitle} eyebrow={eyebrow} />
+            <HeaderIdentity title={title} titleIcon={titleIcon} subtitle={resolvedSubtitle} eyebrow={eyebrow} />
           </div>
           <div className="min-w-0 md:col-start-1 md:row-start-2 xl:col-start-3 xl:row-start-1">
             {controls}
@@ -127,7 +134,7 @@ export function AppPageHeader({
         </div>
       ) : (
         <div className="hidden items-center gap-4 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(280px,640px)_minmax(160px,1fr)] xl:grid-cols-[minmax(240px,1fr)_minmax(360px,640px)_minmax(240px,1fr)]">
-          <HeaderIdentity title={title} subtitle={resolvedSubtitle} eyebrow={eyebrow} />
+          <HeaderIdentity title={title} titleIcon={titleIcon} subtitle={resolvedSubtitle} eyebrow={eyebrow} />
           {resolvedTabletSearch ? <div className="w-full justify-self-center">{resolvedTabletSearch}</div> : <div />}
           <div className="flex min-w-0 items-center justify-end gap-2.5">
             {secondaryActions}

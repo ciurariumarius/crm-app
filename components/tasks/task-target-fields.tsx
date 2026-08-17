@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { BriefcaseBusiness, Check, ChevronsUpDown, GraduationCap, Plus } from "lucide-react"
+import { BriefcaseBusiness, Check, ChevronsUpDown, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 import { AddLmsClientDialog } from "@/components/lms-work-entries/add-lms-client-dialog"
+import { LmsIcon } from "@/components/lms/lms-icon"
 
 export const TASK_SCOPE_VALUES = ["GENERAL", "FREELANCE", "LMS"] as const
 export type TaskScopeValue = (typeof TASK_SCOPE_VALUES)[number]
@@ -36,7 +37,7 @@ const TARGET_OPTIONS: Array<{
     value: "LMS",
     label: "LMS",
     description: "My job",
-    icon: GraduationCap,
+    icon: LmsIcon,
   },
 ]
 
