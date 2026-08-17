@@ -61,7 +61,7 @@ import {
   readFolderMentionId,
   removeFolderMentions,
 } from "@/lib/notes/folder-mentions"
-import { hasMeaningfulRichTextContent } from "@/lib/notes/content"
+import { hasMeaningfulRichTextContent, hasNoteContentStateChanged } from "@/lib/notes/content"
 import { deriveNoteTitleFromContent, derivePreviewBodyFromContent } from "@/lib/notes/derived-note-text"
 import { cn } from "@/lib/utils"
 
@@ -163,6 +163,8 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
   const [externalUpdateToken, setExternalUpdateToken] = React.useState(0)
   const draftRef = React.useRef(draft)
   const folderIdRef = React.useRef(folderId)
+  const savedContentRef = React.useRef(note.content)
+  const savedFolderIdRef = React.useRef(note.folderId)
   const revisionRef = React.useRef(note.contentRevision)
   const persistedRef = React.useRef(!note.localOnly)
   const dirtyRef = React.useRef(false)
@@ -199,7 +201,14 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
       }
       persistedRef.current = true
       revisionRef.current = result.data.contentRevision
-      dirtyRef.current = draftRef.current !== result.data.content
+      savedContentRef.current = result.data.content
+      savedFolderIdRef.current = result.data.folderId
+      dirtyRef.current = hasNoteContentStateChanged({
+        savedContent: result.data.content,
+        nextContent: draftRef.current,
+        savedFolderId: result.data.folderId,
+        nextFolderId: folderIdRef.current,
+      })
       if (!dirtyRef.current) window.localStorage.removeItem(`notes.draft.${note.id}`)
       setSaveState(dirtyRef.current ? "saving" : "saved")
       onCreated(result.data)
@@ -218,7 +227,14 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
       return false
     }
     revisionRef.current = result.data.contentRevision
-    dirtyRef.current = draftRef.current !== content
+    savedContentRef.current = result.data.content
+    savedFolderIdRef.current = result.data.folderId
+    dirtyRef.current = hasNoteContentStateChanged({
+      savedContent: result.data.content,
+      nextContent: draftRef.current,
+      savedFolderId: result.data.folderId,
+      nextFolderId: folderIdRef.current,
+    })
     if (!dirtyRef.current) window.localStorage.removeItem(`notes.draft.${note.id}`)
     setSaveState(dirtyRef.current ? "saving" : "saved")
     onSaved(result.data)
@@ -263,9 +279,15 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
   }), [enqueueSave])
 
   const handleChange = React.useCallback((content: string) => {
+    if (content === draftRef.current) return
     draftRef.current = content
     setDraft(content)
-    dirtyRef.current = true
+    dirtyRef.current = hasNoteContentStateChanged({
+      savedContent: savedContentRef.current,
+      nextContent: content,
+      savedFolderId: savedFolderIdRef.current,
+      nextFolderId: folderIdRef.current,
+    })
     setSaveState("idle")
     if (!meaningfulReportedRef.current && hasMeaningfulNoteContent(content)) {
       meaningfulReportedRef.current = true
@@ -277,6 +299,12 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
         folderIdRef.current = mentionedFolderId
         setFolderId(mentionedFolderId)
       }
+    }
+    if (!dirtyRef.current) {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (recoveryTimerRef.current) clearTimeout(recoveryTimerRef.current)
+      window.localStorage.removeItem(`notes.draft.${note.id}`)
+      return
     }
     if (recoveryTimerRef.current) clearTimeout(recoveryTimerRef.current)
     recoveryTimerRef.current = setTimeout(() => {
@@ -318,6 +346,8 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
     draftRef.current = result.data.content
     folderIdRef.current = result.data.folderId
     revisionRef.current = result.data.contentRevision
+    savedContentRef.current = result.data.content
+    savedFolderIdRef.current = result.data.folderId
     dirtyRef.current = false
     folderChipManagedRef.current = Boolean(readFolderMentionId(result.data.content))
     setDraft(result.data.content)
@@ -376,14 +406,18 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
         {saveState === "error" ? (
           <Button type="button" variant="ghost" size="sm" onClick={() => void enqueueSave()}>Retry</Button>
         ) : null}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label="Note actions"><MoreHorizontal className="h-4 w-4" /></Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem variant="destructive" onSelect={onDelete}><Trash2 className="h-4 w-4" />Delete permanently</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onDelete}
+          className="shrink-0 gap-1.5 text-[var(--state-urgent)] hover:bg-[var(--state-danger-surface)] hover:text-[var(--state-urgent)]"
+          aria-label="Delete note"
+          title="Delete note"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </Button>
       </div>
 
       {saveState === "conflict" ? (

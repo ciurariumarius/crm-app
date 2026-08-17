@@ -15,3 +15,13 @@ export function hasMeaningfulRichTextContent(value: string | null | undefined) {
 export function normalizeRichTextContent(value: string | null | undefined) {
   return hasMeaningfulRichTextContent(value) ? value || "" : ""
 }
+
+export function hasNoteContentStateChanged(input: {
+  savedContent: string
+  nextContent: string
+  savedFolderId: string | null
+  nextFolderId: string | null
+}) {
+  return input.savedContent !== input.nextContent
+    || input.savedFolderId !== input.nextFolderId
+}

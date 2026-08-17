@@ -15,7 +15,11 @@ import {
   hasCurrentNotesWriteProtocol,
   NOTES_WRITE_PROTOCOL_VERSION,
 } from "@/lib/notes/write-protocol"
-import { hasMeaningfulRichTextContent, normalizeRichTextContent } from "@/lib/notes/content"
+import {
+  hasMeaningfulRichTextContent,
+  hasNoteContentStateChanged,
+  normalizeRichTextContent,
+} from "@/lib/notes/content"
 
 const notes = [
   { id: "note-1", sourceType: "note" as const, archived: false, deletedAt: null },
@@ -36,6 +40,29 @@ describe("Notes workspace state", () => {
     expect(normalizeRichTextContent("<p></p>")).toBe("")
     expect(normalizeRichTextContent(null)).toBe("")
     expect(normalizeRichTextContent("<p>Write this</p>")).toBe("<p>Write this</p>")
+  })
+
+  it("does not mark an opened but untouched note as changed", () => {
+    expect(hasNoteContentStateChanged({
+      savedContent: "<p>Same note</p>",
+      nextContent: "<p>Same note</p>",
+      savedFolderId: null,
+      nextFolderId: null,
+    })).toBe(false)
+
+    expect(hasNoteContentStateChanged({
+      savedContent: "<p>Same note</p>",
+      nextContent: "<p>Edited note</p>",
+      savedFolderId: null,
+      nextFolderId: null,
+    })).toBe(true)
+
+    expect(hasNoteContentStateChanged({
+      savedContent: "<p>Same note</p>",
+      nextContent: "<p>Same note</p>",
+      savedFolderId: null,
+      nextFolderId: "folder-1",
+    })).toBe(true)
   })
 
   it("rejects every stale Notes write protocol", () => {

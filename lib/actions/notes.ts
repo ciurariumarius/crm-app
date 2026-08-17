@@ -20,6 +20,7 @@ import {
   removeFolderMentions,
   replaceFolderMentionLabel,
 } from "@/lib/notes/folder-mentions"
+import { hasNoteContentStateChanged } from "@/lib/notes/content"
 
 export type {
   NoteDetail,
@@ -170,6 +171,37 @@ export async function saveNoteContent(input: {
       : undefined
     const resolvedFolderId = folderWasProvided ? await resolveFolder(folderId) : undefined
     if (folderId && !resolvedFolderId) return { success: false as const, error: "Folder not found" }
+
+    const existing = await prisma.note.findUnique({
+      where: { id: noteId },
+      select: {
+        id: true,
+        content: true,
+        contentRevision: true,
+        folderId: true,
+      },
+    })
+    if (!existing) return { success: false as const, error: "Note not found" }
+    if (existing.contentRevision !== expectedRevision) {
+      return {
+        success: false as const,
+        code: NOTE_CONTENT_CONFLICT,
+        error: "This note changed in another view. Your draft is still available.",
+      }
+    }
+
+    const nextFolderId = folderWasProvided ? resolvedFolderId ?? null : existing.folderId
+    if (!hasNoteContentStateChanged({
+      savedContent: existing.content,
+      nextContent: content,
+      savedFolderId: existing.folderId,
+      nextFolderId,
+    })) {
+      const detail = await getPersonalNoteDetail(noteId)
+      return detail
+        ? { success: true as const, data: detail }
+        : { success: false as const, error: "Note not found" }
+    }
 
     const updated = await prisma.note.updateMany({
       where: { id: noteId, contentRevision: expectedRevision },
