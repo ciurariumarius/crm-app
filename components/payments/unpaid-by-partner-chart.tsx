@@ -49,12 +49,14 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
 
             setItems((prev) => prev.filter((partner) => partner.id !== partnerId))
             if (expandedId === partnerId) setExpandedId(null)
-            toast.success(`Marked ${result.count} project${result.count === 1 ? "" : "s"} as paid`, {
-                description: "Undo here, or use Revert to unpaid later in Transaction History.",
-                duration: Infinity,
+            const settlementToastId = toast.success(`Marked ${result.count} project${result.count === 1 ? "" : "s"} as paid`, {
+                description: "You can undo briefly, or revert individual payments from the payment log.",
+                duration: 12000,
+                closeButton: true,
                 action: settledPartner && result.auditLogId ? {
-                    label: "Undo mark all paid",
+                    label: "Undo",
                     onClick: async () => {
+                        toast.dismiss(settlementToastId)
                         const undoResult = await voidSettlement(result.auditLogId)
                         if (!undoResult.success) {
                             toast.error(undoResult.error || "Failed to revert settlement")

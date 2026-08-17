@@ -1,282 +1,154 @@
+import { Banknote, ChevronDown, History } from "lucide-react"
 import { getPaymentLogs } from "@/lib/actions/payment-actions"
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
 import { AppPageHeader } from "@/components/layout/app-page-header"
 import { PaymentsTable } from "@/components/payments/payments-table"
+import { PaymentBalancesTable, type PaymentBalanceRow } from "@/components/payments/payment-balances-table"
 import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
-import { PaymentsFiltersClient } from "@/components/payments/payments-filters-client"
 import { PaymentsAddPaymentAction } from "@/components/payments/payments-add-payment-action"
 import { PaymentsSearchInput } from "@/components/payments/payments-search-input"
-import { ChevronLeft, ChevronRight, Banknote, Users, History } from "lucide-react"
-import Link from "next/link"
-import { buttonLinkClassName } from "@/components/ui/button-link"
-import { formatCurrency, formatProjectName, serialize, cn } from "@/lib/utils"
+import { HomeRevenueDistributionChart, type RevenueSourceProject } from "@/components/dashboard/home-revenue-distribution-chart"
+import { formatCurrency, formatProjectName, serialize } from "@/lib/utils"
 import { StatCard } from "@/components/ui/app-surface"
+import { mergePaymentMethods } from "@/lib/payments/methods"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 const PAGE_SIZE = 50
 
-type UnpaidBalanceSplit = {
-    total: number
-    recurring: number
-    oneTime: number
-}
+type UnpaidBalanceSplit = { total: number; recurring: number; oneTime: number }
+function createUnpaidBalanceSplit(): UnpaidBalanceSplit { return { total: 0, recurring: 0, oneTime: 0 } }
+function addUnpaidAmount(bucket: UnpaidBalanceSplit, amount: number, isRecurring: boolean) { bucket.total += amount; if (isRecurring) bucket.recurring += amount; else bucket.oneTime += amount }
+function validDate(value?: string) { if (!value) return null; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.getTime()) ? null : date }
 
-function createUnpaidBalanceSplit(): UnpaidBalanceSplit {
-    return {
-        total: 0,
-        recurring: 0,
-        oneTime: 0,
-    }
-}
-
-function addUnpaidAmount(bucket: UnpaidBalanceSplit, amount: number, isRecurring: boolean) {
-    bucket.total += amount
-    if (isRecurring) {
-        bucket.recurring += amount
-        return
-    }
-    bucket.oneTime += amount
-}
-
-export default async function PaymentsPage({
-    searchParams,
-}: {
-    searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string; timeRange?: string }>
+export default async function PaymentsPage({ searchParams }: {
+    searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string; type?: string; balanceSort?: string; paidFrom?: string; paidTo?: string }>
 }) {
-    await requireAuth()
-    const { projectId, partnerId, q, timeRange, page: pageParam } = await searchParams
-    const page = Math.max(1, Number(pageParam) || 1)
+    const session = await requireAuth()
+    const params = await searchParams
+    const q = params.q?.trim() || ""
+    const projectId = params.projectId || "all"
+    const partnerId = params.partnerId || "all"
+    const type = params.type === "Recurring" || params.type === "OneTime" ? params.type : "All"
+    const balanceSort = ["amount_desc", "amount_asc", "paid_recent"].includes(params.balanceSort || "") ? params.balanceSort! : "paid_recent"
+    const paidFrom = params.paidFrom || ""
+    const paidTo = params.paidTo || ""
+    const requestedPage = Math.max(1, Number(params.page) || 1)
 
-    const [projects, partners, logsResult] = await Promise.all([
-        prisma.project.findMany({
-            include: { site: true, services: true }
-        }),
-        prisma.partner.findMany({
-            select: { id: true, name: true }
-        }),
-        getPaymentLogs({
-            projectId,
-            partnerId,
-            q,
-            timeRange,
-            take: PAGE_SIZE,
-            skip: (page - 1) * PAGE_SIZE,
-        })
+    const [projects, partners, logsResult, allServices, user] = await Promise.all([
+        prisma.project.findMany({ include: { site: { include: { partner: true } }, services: true } }),
+        prisma.partner.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+        getPaymentLogs({ take: 50, skip: 0 }),
+        prisma.service.findMany({ orderBy: { serviceName: "asc" } }),
+        prisma.user.findFirst({ where: { id: session.userId }, select: { hourlyRate: true } }),
     ])
-    const oneTimeServices = await prisma.service.findMany({
-        where: { isRecurring: false },
-        select: { id: true, serviceName: true },
-        orderBy: { serviceName: "asc" },
-    })
-    const paymentServiceOptions = oneTimeServices.map((service) => ({ id: service.id, name: service.serviceName }))
 
+    const oneTimeServices = allServices.filter((service) => !service.isRecurring)
+    const paymentServiceOptions = oneTimeServices.map((service) => ({ id: service.id, name: service.serviceName }))
     const logs = logsResult.success && logsResult.data ? logsResult.data : []
     const partnerNameById = new Map(partners.map((partner) => [partner.id, partner.name]))
-    const unpaidByPartnerMap = new Map<
-        string,
-        { id: string; name: string; totalUnpaid: number; unpaidProjects: { id: string; name: string; amount: number }[] }
-    >()
+    const unpaidByPartnerMap = new Map<string, { id: string; name: string; totalUnpaid: number; unpaidProjects: { id: string; name: string; amount: number }[] }>()
 
     for (const project of projects) {
         if (project.paymentStatus !== "Unpaid") continue
-        const partnerIdForProject = project.site?.partnerId
-        if (!partnerIdForProject) continue
-
-        const existing = unpaidByPartnerMap.get(partnerIdForProject) ?? {
-            id: partnerIdForProject,
-            name: partnerNameById.get(partnerIdForProject) || "Unknown partner",
-            totalUnpaid: 0,
-            unpaidProjects: [],
-        }
-
+        const partnerIdForProject = project.site.partnerId
+        const existing = unpaidByPartnerMap.get(partnerIdForProject) ?? { id: partnerIdForProject, name: partnerNameById.get(partnerIdForProject) || "Unknown partner", totalUnpaid: 0, unpaidProjects: [] }
         const amount = Number(project.currentFee || 0)
         existing.totalUnpaid += amount
-        existing.unpaidProjects.push({
-            id: project.id,
-            name: formatProjectName(project),
-            amount,
-        })
+        existing.unpaidProjects.push({ id: project.id, name: formatProjectName(project), amount })
         unpaidByPartnerMap.set(partnerIdForProject, existing)
     }
-
-    const unpaidByPartner = Array.from(unpaidByPartnerMap.values())
-        .map((entry) => ({
-            ...entry,
-            unpaidProjects: entry.unpaidProjects.sort((a, b) => b.amount - a.amount),
-        }))
-        .sort((a, b) => b.totalUnpaid - a.totalUnpaid)
+    const unpaidByPartner = Array.from(unpaidByPartnerMap.values()).map((entry) => ({ ...entry, unpaidProjects: entry.unpaidProjects.sort((a, b) => b.amount - a.amount) })).sort((a, b) => b.totalUnpaid - a.totalUnpaid)
 
     const now = new Date()
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const currentMonthUnpaid = createUnpaidBalanceSplit()
     const previousMonthsUnpaid = createUnpaidBalanceSplit()
-
     for (const project of projects) {
         if (project.paymentStatus !== "Unpaid") continue
-        const amount = Number(project.currentFee || 0)
-        const isRecurring = project.services.some((service) => service.isRecurring)
-        const targetBucket = project.createdAt >= currentMonthStart ? currentMonthUnpaid : previousMonthsUnpaid
-        addUnpaidAmount(targetBucket, amount, isRecurring)
+        addUnpaidAmount(project.createdAt >= currentMonthStart ? currentMonthUnpaid : previousMonthsUnpaid, Number(project.currentFee || 0), project.services.some((service) => service.isRecurring))
     }
-
-    const partnersWithDebt = unpaidByPartner.length
     const totalOutstanding = currentMonthUnpaid.total + previousMonthsUnpaid.total
 
+    const fromDate = validDate(paidFrom)
+    const toDate = validDate(paidTo)
+    if (toDate) toDate.setHours(23, 59, 59, 999)
+    const normalizedQ = q.toLocaleLowerCase("ro-RO")
+    const filteredBalances = projects.filter((project) => {
+        if (project.paymentStatus !== "Paid") return false
+        const recurring = project.services.some((service) => service.isRecurring)
+        const searchable = [formatProjectName(project), project.name, project.site.domainName, project.site.partner.name, project.paymentMethod, ...project.services.map((service) => service.serviceName)].filter(Boolean).join(" ").toLocaleLowerCase("ro-RO")
+        if (normalizedQ && !searchable.includes(normalizedQ)) return false
+        if (projectId !== "all" && project.id !== projectId) return false
+        if (partnerId !== "all" && project.site.partnerId !== partnerId) return false
+        if (type === "Recurring" && !recurring) return false
+        if (type === "OneTime" && recurring) return false
+        if ((fromDate || toDate) && !project.paidAt) return false
+        if (fromDate && project.paidAt && project.paidAt < fromDate) return false
+        if (toDate && project.paidAt && project.paidAt > toDate) return false
+        return true
+    })
+    filteredBalances.sort((left, right) => {
+        if (balanceSort === "amount_desc") return Number(right.currentFee || 0) - Number(left.currentFee || 0)
+        if (balanceSort === "amount_asc") return Number(left.currentFee || 0) - Number(right.currentFee || 0)
+        return (right.paidAt?.getTime() || right.updatedAt.getTime()) - (left.paidAt?.getTime() || left.updatedAt.getTime())
+    })
+    const totalBalances = filteredBalances.length
+    const totalPages = Math.max(1, Math.ceil(totalBalances / PAGE_SIZE))
+    const page = Math.min(requestedPage, totalPages)
+    const pageRows = filteredBalances.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    const balanceRows = serialize(pageRows.map((project): PaymentBalanceRow => ({
+        id: project.id,
+        label: formatProjectName(project),
+        domainName: project.site.domainName,
+        partnerId: project.site.partnerId,
+        partnerName: project.site.partner.name,
+        serviceLabel: project.services.map((service) => service.serviceName).join(", ") || "No service",
+        isRecurring: project.services.some((service) => service.isRecurring),
+        currentFee: Number(project.currentFee || 0),
+        paidAt: project.paidAt?.toISOString() || null,
+        paymentMethod: project.paymentMethod,
+    })))
+
+    const revenueSourceProjects = serialize(projects.filter((project) => Number(project.currentFee || 0) > 0).map((project) => ({
+        id: project.id,
+        currentFee: Number(project.currentFee || 0),
+        createdAt: project.createdAt.toISOString(),
+        revenueType: project.services.some((service) => service.isRecurring) ? "recurring" : "one-time",
+        label: formatProjectName(project),
+        site: { id: project.site.id, domainName: project.site.domainName, partner: { id: project.site.partner.id, name: project.site.partner.name } },
+        services: project.services.map((service) => ({ serviceName: service.serviceName, isRecurring: service.isRecurring })),
+    }))) as RevenueSourceProject[]
+
     const serializedProjects = serialize(projects)
-    const serializedLogs = serialize(logs)
-    const totalLogs = logsResult.success ? logsResult.total ?? logs.length : 0
-    const totalPages = Math.max(1, Math.ceil(totalLogs / PAGE_SIZE))
-    const prevPage = page > 1 ? page - 1 : null
-    const nextPage = page < totalPages ? page + 1 : null
-
-    const buildPageHref = (targetPage: number) => {
-        const next = new URLSearchParams()
-        if (projectId) next.set("projectId", projectId)
-        if (partnerId) next.set("partnerId", partnerId)
-        if (q) next.set("q", q)
-        if (timeRange) next.set("timeRange", timeRange)
-        next.set("page", String(targetPage))
-        return `/payments?${next.toString()}`
-    }
-
+    const paymentMethods = mergePaymentMethods(projects.map((project) => project.paymentMethod))
+    const paidProjectOptions = projects
+        .filter((project) => project.paymentStatus === "Paid")
+        .map((project) => ({ id: project.id, name: formatProjectName(project) }))
+        .sort((a, b) => a.name.localeCompare(b.name))
     return (
         <div className="flex flex-col gap-8 pb-10 sm:gap-10">
-                <AppPageHeader
-                    title="Payments"
-                    search={<PaymentsSearchInput />}
-                    mobileSearch={<PaymentsSearchInput />}
-                    primaryAction={<PaymentsAddPaymentAction partners={partners} services={paymentServiceOptions} />}
-                    mobilePrimaryAction={
-                        <PaymentsAddPaymentAction
-                            partners={partners}
-                            services={paymentServiceOptions}
-                            mobile
-                        />
-                    }
-                />
+            <AppPageHeader title="Payments" search={<PaymentsSearchInput />} mobileSearch={<PaymentsSearchInput />} primaryAction={<PaymentsAddPaymentAction partners={partners} services={paymentServiceOptions} paymentMethods={paymentMethods} />} mobilePrimaryAction={<PaymentsAddPaymentAction partners={partners} services={paymentServiceOptions} paymentMethods={paymentMethods} mobile />} />
 
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-12">
-                <StatCard className="md:col-span-2 xl:col-span-6">
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <p className="ui-overline">Total outstanding</p>
-                            <p className="mt-2 text-[32px] font-semibold leading-none tracking-tight text-[var(--state-urgent)] sm:text-[38px]">
-                                {formatCurrency(totalOutstanding)}
-                            </p>
-                        </div>
-                        <div className="ui-state-danger flex h-11 w-11 items-center justify-center rounded-[12px] border">
-                            <Banknote className="h-4.5 w-4.5" />
-                        </div>
-                    </div>
-                    <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Open balances across current and previous months.</p>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-3">
-                            <div className="flex items-center justify-between gap-3">
-                                <p className="text-xs font-semibold text-[var(--text-secondary)]">Current month</p>
-                                <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">{formatCurrency(currentMonthUnpaid.total)}</p>
-                            </div>
-                            <p className="mt-2 text-xs text-[var(--text-muted)]">Recurring {formatCurrency(currentMonthUnpaid.recurring)} · One-time {formatCurrency(currentMonthUnpaid.oneTime)}</p>
-                        </div>
-                        <div className="rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-3">
-                            <div className="flex items-center justify-between gap-3">
-                                <p className="text-xs font-semibold text-[var(--text-secondary)]">Previous months</p>
-                                <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">{formatCurrency(previousMonthsUnpaid.total)}</p>
-                            </div>
-                            <p className="mt-2 text-xs text-[var(--text-muted)]">Recurring {formatCurrency(previousMonthsUnpaid.recurring)} · One-time {formatCurrency(previousMonthsUnpaid.oneTime)}</p>
-                        </div>
-                    </div>
-                </StatCard>
+            <StatCard>
+                <div className="flex items-start justify-between gap-3"><div><p className="ui-overline">Total outstanding</p><p className="mt-2 text-[32px] font-semibold leading-none tracking-tight text-[var(--state-urgent)] sm:text-[38px]">{formatCurrency(totalOutstanding)}</p></div><div className="ui-state-danger flex h-11 w-11 items-center justify-center rounded-[12px] border"><Banknote className="h-4.5 w-4.5" /></div></div>
+                <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Open balances across current and previous months.</p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2"><BalanceSplit label="Current month" data={currentMonthUnpaid} /><BalanceSplit label="Previous months" data={previousMonthsUnpaid} /></div>
+            </StatCard>
 
-                <StatCard className="xl:col-span-3">
-                    <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline">Partners</p>
-                        <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]">
-                            <Users className="h-4.5 w-4.5" />
-                        </div>
-                    </div>
-                    <div className="mt-5">
-                        <p className="text-[32px] font-semibold leading-none tracking-tight text-[var(--text-primary)]">{partnersWithDebt}</p>
-                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Partners carrying unpaid project balances.</p>
-                    </div>
-                </StatCard>
+            <UnpaidByPartnerChart partners={unpaidByPartner} />
+            <HomeRevenueDistributionChart sourceProjects={revenueSourceProjects} allServices={serialize(allServices)} hourlyRate={Number(user?.hourlyRate || 0)} />
 
-                <StatCard className="xl:col-span-3">
-                    <div className="flex items-start justify-between gap-3">
-                        <p className="ui-overline">Events</p>
-                        <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]">
-                            <History className="h-4.5 w-4.5" />
-                        </div>
-                    </div>
-                    <div className="mt-5">
-                        <p className="text-[32px] font-semibold leading-none tracking-tight text-[var(--text-primary)]">{totalLogs}</p>
-                        <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Payment updates, manual entries and settlements.</p>
-                    </div>
-                </StatCard>
-            </section>
+            <PaymentBalancesTable rows={balanceRows} projects={paidProjectOptions} partners={partners} paymentMethods={paymentMethods} filters={{ projectId, partnerId, type, sort: balanceSort, paidFrom, paidTo }} pagination={{ page, totalPages, total: totalBalances, prevPage: page > 1 ? page - 1 : null, nextPage: page < totalPages ? page + 1 : null }} />
 
-            <div className="flex flex-col gap-8 sm:gap-10">
-                <UnpaidByPartnerChart partners={unpaidByPartner} />
-
-                <div className="flex flex-col gap-6">
-                    <div className="flex items-center justify-between px-2">
-                        <div className="flex flex-col">
-                            <h2 className="ui-text-title-sm text-[var(--text-primary)]">Transaction History</h2>
-                            <p className="ui-text-caption">
-                                Review payment changes and use Revert to unpaid on a partner settlement whenever you need to undo Mark all paid.
-                            </p>
-                        </div>
-                    </div>
-
-                <PaymentsFiltersClient
-                    partners={partners}
-                    projects={serializedProjects}
-                    totalLogs={totalLogs}
-                />
-
-                <div className="space-y-6">
-                    <PaymentsTable
-                        logs={serializedLogs}
-                        projects={serializedProjects}
-                    />
-
-                    {/* Pagination Footer */}
-                    <div className="flex items-center justify-between rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2 shadow-[var(--shadow-apple)] sm:px-4">
-                        <span className="inline-flex h-8 items-center rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-primary)]">
-                            {page}/{totalPages}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                            {prevPage ? (
-                                <Link
-                                    href={buildPageHref(prevPage)}
-                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] hover:text-blue-500" })}
-                                    aria-label="Previous page"
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Link>
-                            ) : (
-                                <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0" }), "opacity-40 cursor-not-allowed")} aria-hidden="true">
-                                    <ChevronLeft className="h-4 w-4" />
-                                </span>
-                            )}
-                            {nextPage ? (
-                                <Link
-                                    href={buildPageHref(nextPage)}
-                                    className={buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0 hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] hover:text-blue-500" })}
-                                    aria-label="Next page"
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Link>
-                            ) : (
-                                <span className={cn(buttonLinkClassName({ size: "md", variant: "subtle", emphasis: "strong", className: "h-8 w-8 p-0" }), "opacity-40 cursor-not-allowed")} aria-hidden="true">
-                                    <ChevronRight className="h-4 w-4" />
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    </div>
-                </div>
-            </div>
+            <details className="group rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 marker:hidden"><span className="flex items-center gap-2.5"><History className="h-4 w-4 text-[var(--text-muted)]" /><span className="text-sm font-bold text-[var(--text-primary)]">Transaction history</span><span className="text-xs font-semibold text-[var(--text-muted)]">Latest {logs.length}</span></span><ChevronDown className="h-4 w-4 text-[var(--text-muted)] transition-transform group-open:rotate-180" /></summary>
+                <div className="border-t border-[var(--line-subtle)] p-3 sm:p-5"><PaymentsTable logs={serialize(logs)} projects={serializedProjects} /></div>
+            </details>
         </div>
     )
+}
+
+function BalanceSplit({ label, data }: { label: string; data: UnpaidBalanceSplit }) {
+    return <div className="rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-3"><div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold text-[var(--text-secondary)]">{label}</p><p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">{formatCurrency(data.total)}</p></div><p className="mt-2 text-xs text-[var(--text-muted)]">Recurring {formatCurrency(data.recurring)} · One-time {formatCurrency(data.oneTime)}</p></div>
 }

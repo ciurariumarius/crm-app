@@ -24,6 +24,7 @@ import {
     ImagePlus,
     List,
     ListChecks,
+    PenTool,
     Table as TableIcon,
     Minus,
     Plus,
@@ -32,6 +33,9 @@ import {
 } from "lucide-react"
 import { Toggle } from "@/components/ui/toggle"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { NoteDrawingNode } from "@/components/notes/note-drawing-node"
+import { NoteDrawingSheet } from "@/components/notes/note-drawing-sheet"
+import type { NoteDrawingOwner, NoteDrawingRecord } from "@/lib/notes/drawings"
 import { cn } from "@/lib/utils"
 
 const MAX_UPLOAD_FILE_BYTES = 12 * 1024 * 1024
@@ -87,6 +91,11 @@ interface RichTextEditorProps {
     readOnly?: boolean
     imageUploadFallback?: "data-url" | "error"
     imageUploadsDisabled?: boolean
+    showImageGallery?: boolean
+    drawingOwner?: NoteDrawingOwner | null
+    resolveDrawingOwner?: () => Promise<NoteDrawingOwner | null>
+    drawingRequestToken?: number
+    onDrawingRequestHandled?: () => void
     onBlur?: () => void
 }
 
@@ -160,6 +169,11 @@ export function RichTextEditor({
     readOnly = false,
     imageUploadFallback = "data-url",
     imageUploadsDisabled = false,
+    showImageGallery = true,
+    drawingOwner = null,
+    resolveDrawingOwner,
+    drawingRequestToken,
+    onDrawingRequestHandled,
     onBlur,
 }: RichTextEditorProps) {
     const [isFocused, setIsFocused] = React.useState(false)
@@ -167,6 +181,11 @@ export function RichTextEditor({
     const [viewer, setViewer] = React.useState<ImageViewerState>(INITIAL_VIEWER_STATE)
     const [imageSources, setImageSources] = React.useState<string[]>([])
     const [codeCopyState, setCodeCopyState] = React.useState<"idle" | "copied" | "error">("idle")
+    const [drawingOpen, setDrawingOpen] = React.useState(false)
+    const [drawingOwnerDraft, setDrawingOwnerDraft] = React.useState<NoteDrawingOwner | null>(drawingOwner)
+    const [editingDrawingId, setEditingDrawingId] = React.useState<string | null>(null)
+    const [resolvingDrawingOwner, setResolvingDrawingOwner] = React.useState(false)
+    const [keyboardInset, setKeyboardInset] = React.useState(0)
     const editorRef = React.useRef<TiptapEditor | null>(null)
     const editorViewportRef = React.useRef<HTMLDivElement | null>(null)
     const imageInputRef = React.useRef<HTMLInputElement | null>(null)
@@ -174,6 +193,40 @@ export function RichTextEditor({
     const [codeCopyAnchor, setCodeCopyAnchor] = React.useState<{ top: number; left: number } | null>(null)
     const [activeCodeBlockElement, setActiveCodeBlockElement] = React.useState<HTMLElement | null>(null)
     const lastFocusTokenRef = React.useRef<string | number | undefined>(undefined)
+    const lastDrawingRequestTokenRef = React.useRef<number | undefined>(undefined)
+
+    React.useEffect(() => {
+        setDrawingOwnerDraft(drawingOwner)
+    }, [drawingOwner])
+
+    const openDrawingForEdit = React.useCallback((drawingId: string) => {
+        setDrawingOwnerDraft(drawingOwner)
+        setEditingDrawingId(drawingId)
+        setDrawingOpen(true)
+    }, [drawingOwner])
+
+    const openNewDrawing = React.useCallback(async () => {
+        if (readOnly || resolvingDrawingOwner) return
+        setResolvingDrawingOwner(true)
+        try {
+            const owner = drawingOwner ?? await resolveDrawingOwner?.() ?? null
+            if (!owner) return
+            setDrawingOwnerDraft(owner)
+            setEditingDrawingId(null)
+            setDrawingOpen(true)
+        } finally {
+            setResolvingDrawingOwner(false)
+        }
+    }, [drawingOwner, readOnly, resolveDrawingOwner, resolvingDrawingOwner])
+
+    React.useEffect(() => {
+        if (drawingRequestToken === undefined || drawingRequestToken === lastDrawingRequestTokenRef.current) return
+        lastDrawingRequestTokenRef.current = drawingRequestToken
+        if (drawingOwner) {
+            void openNewDrawing()
+            onDrawingRequestHandled?.()
+        }
+    }, [drawingOwner, drawingRequestToken, onDrawingRequestHandled, openNewDrawing])
 
     const syncImageSources = React.useCallback((nextSources: string[]) => {
         setImageSources((current) => {
@@ -513,6 +566,7 @@ export function RichTextEditor({
             TableHeader,
             TableCell,
             ScreenshotImage,
+            NoteDrawingNode.configure({ onEditDrawing: openDrawingForEdit }),
             Placeholder.configure({
                 placeholder: placeholder ?? "Start writing...",
                 emptyEditorClass:
@@ -523,10 +577,20 @@ export function RichTextEditor({
         content: stripAnchorTags(value),
         editorProps: {
             attributes: {
+                role: "textbox",
+                "aria-label": "Note content",
+                "aria-multiline": "true",
+                inputmode: "text",
+                autocorrect: "on",
+                autocapitalize: "sentences",
+                spellcheck: "true",
+                autocomplete: "off",
+                enterkeyhint: "enter",
                 class: cn(
                     "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-[var(--line-subtle)] [&_pre]:bg-[var(--surface-low)] [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_70%,transparent)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-xs [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-[var(--surface-low)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
                     "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li>label]:mt-1 [&_ul[data-type=taskList]_li>div]:min-w-0 [&_ul[data-type=taskList]_input]:accent-[var(--brand-primary)]",
                     mode === "document" && "min-h-full",
+                    notesMode && "text-[17px] leading-[1.65] [&_p]:my-[0.7em]",
                     notesFirstLineClass
                 ),
             },
@@ -697,6 +761,24 @@ export function RichTextEditor({
         })
         return () => window.cancelAnimationFrame(rafId)
     }, [editor, focusToken])
+
+    React.useEffect(() => {
+        if (typeof window === "undefined" || !window.visualViewport) return
+        const viewport = window.visualViewport
+        const updateInset = () => {
+            setKeyboardInset(
+                Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop))
+            )
+        }
+        updateInset()
+        viewport.addEventListener("resize", updateInset)
+        viewport.addEventListener("scroll", updateInset)
+        return () => {
+            viewport.removeEventListener("resize", updateInset)
+            viewport.removeEventListener("scroll", updateInset)
+        }
+    }, [])
+
     const handleEditorViewportMouseDown = React.useCallback(
         (event: React.MouseEvent<HTMLDivElement>) => {
             if (event.button !== 0) return
@@ -736,7 +818,7 @@ export function RichTextEditor({
 
     const currentViewerSrc = viewer.sources[viewer.index] || ""
     const resolvedToolbarPinned = notesMode ? false : toolbarPinned
-    const resolvedToolbarVisibility = notesMode ? "always" : toolbarVisibility
+    const resolvedToolbarVisibility = notesMode ? "focus" : toolbarVisibility
     const resolvedToolbarPreset = notesMode ? "minimal" : toolbarPreset
     const resolvedToolbarTone = notesMode ? "quiet" : toolbarTone
     const resolvedToolbarPlacement = notesMode ? "top-right" : toolbarPlacement
@@ -761,6 +843,7 @@ export function RichTextEditor({
     return (
         <>
             <div
+                style={{ "--editor-keyboard-inset": `${keyboardInset}px` } as React.CSSProperties}
                 className={cn(
                     "flex flex-col overflow-hidden rounded-xl transition-colors",
                     isTopRightToolbar && "relative",
@@ -783,14 +866,14 @@ export function RichTextEditor({
                     <div
                         onMouseDown={(event) => {
                             const target = event.target as HTMLElement
-                            if (target.closest("button")) return
+                            if (target.closest("input, select, textarea")) return
                             event.preventDefault()
                         }}
                         className={cn(
                             "flex items-center",
                             isTopRightToolbar &&
                                 (isAppleNotesAppearance
-                                    ? "fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-1.25rem)] -translate-x-1/2 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,var(--surface-low)_8%)] shadow-[var(--shadow-apple)] supports-[backdrop-filter]:backdrop-blur-xl md:absolute md:bottom-auto md:left-auto md:right-2.5 md:top-2.5 md:max-w-[calc(100%-1.25rem)] md:translate-x-0"
+                                    ? "fixed bottom-[calc(env(safe-area-inset-bottom)+var(--editor-keyboard-inset)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-1.25rem)] -translate-x-1/2 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,var(--surface-low)_8%)] shadow-[var(--shadow-apple)] supports-[backdrop-filter]:backdrop-blur-xl md:absolute md:bottom-auto md:left-auto md:right-2.5 md:top-2.5 md:max-w-[calc(100%-1.25rem)] md:translate-x-0"
                                     : "absolute right-2.5 top-2.5 z-30 max-w-[calc(100%-1.25rem)] rounded-full border border-[var(--line-subtle)]/70 bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[var(--shadow-apple)] supports-[backdrop-filter]:backdrop-blur-xl md:right-3 md:top-3"),
                             isCompactToolbar ? "gap-1 px-1.5 py-1 md:px-2" : "gap-1.5 p-1.5",
                             isToolbarPinned && !isTopRightToolbar && "sticky top-0 z-20 min-h-12 md:min-h-[52px]",
@@ -807,7 +890,7 @@ export function RichTextEditor({
                                 (isDocumentLeft
                                     ? cn(
                                         "mx-1 mt-1 mb-2 rounded-xl px-2 py-1.5 md:px-2.5 md:py-2 supports-[backdrop-filter]:backdrop-blur-xl",
-                                        isReadingWidth ? "w-[calc(100%-0.5rem)] max-w-[860px]" : "w-[calc(100%-0.5rem)]",
+                                        isReadingWidth ? "w-[calc(100%-0.5rem)] max-w-[760px]" : "w-[calc(100%-0.5rem)]",
                                         isQuietToolbar
                                             ? "border border-[var(--line-subtle)]/65 bg-[color:color-mix(in_srgb,var(--surface-lowest)_84%,var(--surface-low)_16%)] shadow-[var(--shadow-apple)]"
                                             : "border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_90%,var(--surface-low)_10%)] shadow-[var(--shadow-apple)]"
@@ -964,6 +1047,22 @@ export function RichTextEditor({
                         >
                             <ImagePlus className={compactIconClass} />
                         </button>
+                        {notesMode && (drawingOwner || resolveDrawingOwner) ? (
+                            <button
+                                type="button"
+                                onClick={() => void openNewDrawing()}
+                                disabled={resolvingDrawingOwner}
+                                className={cn(
+                                    "hidden items-center justify-center border border-transparent transition md:inline-flex",
+                                    compactControlClass,
+                                    notesControlClass
+                                )}
+                                aria-label="Draw"
+                                title="Draw"
+                            >
+                                <PenTool className={compactIconClass} />
+                            </button>
+                        ) : null}
                         {!isMinimalToolbar ? (
                             <>
                                 <div className="mx-1 h-4 w-px bg-border/50" />
@@ -1129,7 +1228,7 @@ export function RichTextEditor({
                         className={cn(
                             mode === "document" &&
                                 (isDocumentLeft
-                                    ? cn("h-full w-full px-3 pb-7", isReadingWidth && "max-w-[860px]", isTopRightToolbar && "pr-36 sm:pr-44")
+                                    ? cn("h-full w-full px-3 pb-7", isReadingWidth && "max-w-[760px]", isTopRightToolbar && "pr-36 sm:pr-44")
                                     : "mx-auto w-full max-w-4xl px-6 pb-8")
                         )}
                     >
@@ -1140,7 +1239,7 @@ export function RichTextEditor({
                     </div>
                 </div>
 
-                {imageSources.length > 0 && (
+                {showImageGallery && imageSources.length > 0 && (
                     <div
                         className={cn(
                             "border-t border-[var(--line-subtle)] bg-[var(--surface-low)]/70 px-4 py-3",
@@ -1153,7 +1252,7 @@ export function RichTextEditor({
                             className={cn(
                                 mode === "document" &&
                                     (isDocumentLeft
-                                        ? cn("w-full px-3", isReadingWidth && "max-w-[860px]")
+                                        ? cn("w-full px-3", isReadingWidth && "max-w-[760px]")
                                         : "mx-auto w-full max-w-4xl px-6")
                             )}
                         >
@@ -1335,6 +1434,20 @@ export function RichTextEditor({
                     </div>
                 </DialogContent>
             </Dialog>
+            <NoteDrawingSheet
+                open={drawingOpen}
+                onOpenChange={setDrawingOpen}
+                owner={drawingOwnerDraft}
+                drawingId={editingDrawingId}
+                onSaved={(drawing: NoteDrawingRecord) => {
+                    if (!editingDrawingId && editor) {
+                        editor.chain().focus().insertContent({
+                            type: "noteDrawing",
+                            attrs: { drawingId: drawing.id },
+                        }).run()
+                    }
+                }}
+            />
         </>
     )
 }

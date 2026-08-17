@@ -11,6 +11,7 @@ import {
     getPartnerAdHocPaymentDomain,
 } from "@/lib/payments/ad-hoc-payment"
 import { z } from "zod"
+import { normalizePaymentMethod } from "@/lib/payments/methods"
 
 const CreatePartnerSchema = z.object({
     name: z.string().trim().min(1, "Partner name is required"),
@@ -24,6 +25,7 @@ const AddAdHocPaymentSchema = z.object({
     serviceId: z.string().uuid().optional(),
     name: z.string().trim().min(1, "Name is required").optional(),
     amount: z.number().positive("Amount must be positive"),
+    paymentMethod: z.string().trim().min(1, "Payment method is required").max(64),
     description: z.string().max(2000).optional(),
 })
 
@@ -171,6 +173,7 @@ export async function addPartnerAdHocPayment(data: {
     serviceId?: string
     name?: string
     amount: number
+    paymentMethod: string
     description?: string
 }) {
     try {
@@ -296,6 +299,7 @@ export async function addPartnerAdHocPayment(data: {
                 paymentStatus: "Paid",
                 paidAt: paymentDate,
                 currentFee: validated.amount,
+                paymentMethod: normalizePaymentMethod(validated.paymentMethod),
                 services: {
                     connect: { id: service.id }
                 }
@@ -304,7 +308,7 @@ export async function addPartnerAdHocPayment(data: {
 
         await logSessionAuditEvent(session, {
             action: "PARTNER_AD_HOC_PAYMENT_ADDED",
-            details: `partnerId=${validated.partnerId}; projectId=${createdProject.id}; sourceProjectId=${sourceProjectId}; serviceId=${service.id}; serviceName=${service.serviceName}; amount=${validated.amount}`,
+            details: `partnerId=${validated.partnerId}; projectId=${createdProject.id}; sourceProjectId=${sourceProjectId}; serviceId=${service.id}; serviceName=${service.serviceName}; amount=${validated.amount}; paymentMethod=${normalizePaymentMethod(validated.paymentMethod)}`,
         })
 
         revalidatePath("/")

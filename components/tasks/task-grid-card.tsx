@@ -89,6 +89,13 @@ function toDeadlineLabel(value: string | Date | null | undefined) {
     return isToday(parsed) ? "Due today" : `Due ${format(parsed, "dd MMM")}`
 }
 
+function toCreatedLabel(value: string | Date | null | undefined) {
+    if (!value) return ""
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return ""
+    return `Created ${format(parsed, "dd MMM yyyy")}`
+}
+
 export function TaskGridCard({
     task,
     onOpen,
@@ -121,6 +128,7 @@ export function TaskGridCard({
         ? task.lmsTaskType?.name || "Work category not linked"
         : [serviceLabels.join(" · ") || task.project?.name, recurringMonthLabel].filter(Boolean).join(" · ") || "No service details"
     const deadlineLabel = toDeadlineLabel(task.deadline)
+    const createdLabel = toCreatedLabel(task.createdAt)
     const isOverdue = task.status !== "Completed" && task.deadline
         ? isBefore(new Date(task.deadline), startOfDay(new Date()))
         : false
@@ -220,16 +228,23 @@ export function TaskGridCard({
                 <p className="line-clamp-2 text-[15px] font-bold leading-5 tracking-[-0.01em] text-[var(--text-primary)]" title={projectLabel}>
                     {projectLabel}
                 </p>
-                <div className="mt-1.5 flex min-w-0 items-end justify-between gap-3">
+                <div className="mt-1.5 flex min-w-0 items-start justify-between gap-3">
                     <p className="line-clamp-2 min-w-0 text-[13px] font-medium leading-[1.15rem] text-[var(--text-secondary)]" title={categoryLabel}>
                         {categoryLabel}
                     </p>
+                </div>
+                <div className="mt-2 flex min-w-0 items-center justify-between gap-3">
+                    {createdLabel ? (
+                        <span className="inline-flex min-w-0 items-center gap-1 truncate text-xs font-medium text-[var(--text-muted)]">
+                            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                            {createdLabel}
+                        </span>
+                    ) : <span />}
                     {deadlineLabel ? (
                         <span className={cn(
                             "inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
                             isOverdue ? "text-[var(--state-overdue)]" : "text-[var(--text-muted)]"
                         )}>
-                            <CalendarDays className="h-3.5 w-3.5" />
                             {deadlineLabel}
                         </span>
                     ) : null}

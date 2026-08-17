@@ -16,6 +16,9 @@ import { formatProjectName } from "@/lib/utils"
 import { z } from "zod"
 import { format } from "date-fns"
 import { logger } from "@/lib/logger"
+import { removeDrawingPreview } from "@/lib/notes/drawings.server"
+import { normalizeRichTextContent } from "@/lib/notes/content"
+import { normalizePaymentMethod } from "@/lib/payments/methods"
 
 function revalidateProjectPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/projects")
@@ -52,6 +55,17 @@ const UpdateProjectSchema = z.object({
 const ProjectIdSchema = z.string().trim().min(1, "Invalid project id")
 const ProjectIdsSchema = z.array(ProjectIdSchema).max(200)
 const PaymentStatusSchema = z.enum(["Paid", "Unpaid"])
+const PaymentMethodSchema = z.string().trim().min(1, "Payment method is required").max(64)
+const SetProjectPaymentStateSchema = z.object({
+    projectId: z.string().uuid("Invalid project id"),
+    expectedStatus: PaymentStatusSchema,
+    nextStatus: PaymentStatusSchema,
+    amount: z.number().positive("Amount must be positive").optional(),
+    paymentMethod: PaymentMethodSchema.optional(),
+}).refine((data) => data.expectedStatus !== data.nextStatus, {
+    message: "Choose a different payment status",
+    path: ["nextStatus"],
+})
 
 function parseClosureDateInput(value: Date | string) {
     if (value instanceof Date) return value
@@ -129,6 +143,7 @@ export async function createProject(data: {
                 })
             }
 
+            const isRecurring = services.some((service) => service.isRecurring)
             const project = await tx.project.create({
                 data: {
                     siteId: validated.siteId,
@@ -137,6 +152,7 @@ export async function createProject(data: {
                         connect: uniqueServiceIds.map(id => ({ id }))
                     },
                     currentFee: validated.currentFee,
+                    recurringBaseFee: isRecurring ? validated.currentFee : null,
                     status: validated.status || "Active",
                     paymentStatus: validated.paymentStatus || "Unpaid",
                     paidAt: validated.paymentStatus === "Paid" ? new Date() : null,
@@ -220,6 +236,114 @@ export async function togglePaymentStatus(projectId: string, currentStatus: stri
     }
 }
 
+export async function setProjectPaymentState(input: {
+    projectId: string
+    expectedStatus: "Paid" | "Unpaid"
+    nextStatus: "Paid" | "Unpaid"
+    amount?: number
+    paymentMethod?: string
+}) {
+    try {
+        const session = await requireAuth()
+        const validated = SetProjectPaymentStateSchema.parse(input)
+        const paidAt = validated.nextStatus === "Paid" ? new Date() : null
+        const paymentMethod = validated.paymentMethod
+            ? normalizePaymentMethod(validated.paymentMethod)
+            : undefined
+
+        const result = await prisma.$transaction(async (tx) => {
+            const project = await tx.project.findUnique({
+                where: { id: validated.projectId },
+                select: {
+                    id: true,
+                    currentFee: true,
+                    paymentStatus: true,
+                    site: { select: { id: true, partnerId: true } },
+                },
+            })
+            if (!project) throw new ActionError("PROJECT_NOT_FOUND", "Project not found")
+            if (project.paymentStatus !== validated.expectedStatus) {
+                throw new ActionError("PAYMENT_STATE_CHANGED", "Payment status changed in another view. Refresh and try again.")
+            }
+
+            const amount = validated.nextStatus === "Paid" && validated.amount !== undefined
+                ? validated.amount
+                : Number(project.currentFee || 0)
+            const updated = await tx.project.updateMany({
+                where: { id: project.id, paymentStatus: validated.expectedStatus },
+                data: {
+                    paymentStatus: validated.nextStatus,
+                    paidAt,
+                    ...(validated.nextStatus === "Paid" && validated.amount !== undefined
+                        ? { currentFee: validated.amount }
+                        : {}),
+                    ...(validated.nextStatus === "Paid" && paymentMethod
+                        ? { paymentMethod }
+                        : {}),
+                },
+            })
+            if (updated.count !== 1) {
+                throw new ActionError("PAYMENT_STATE_CHANGED", "Payment status changed in another view. Refresh and try again.")
+            }
+            return { project, amount }
+        })
+
+        await logSessionAuditEvent(session, {
+            action: "PROJECT_PAYMENT_TOGGLED",
+            details: `projectId=${validated.projectId}; from=${validated.expectedStatus}; to=${validated.nextStatus}; amount=${result.amount}; paidAt=${paidAt?.toISOString() || "none"}; paymentMethod=${paymentMethod || "unchanged"}`,
+        })
+        revalidateProjectPaths(validated.projectId, result.project.site.partnerId, result.project.site.id)
+        revalidatePath("/payments")
+        revalidatePath("/ledger")
+        return {
+            success: true as const,
+            data: {
+                id: validated.projectId,
+                paymentStatus: validated.nextStatus,
+                currentFee: result.amount,
+                paidAt: paidAt?.toISOString() || null,
+                paymentMethod: paymentMethod || null,
+            },
+        }
+    } catch (error) {
+        return {
+            success: false as const,
+            error: getActionErrorMessage(error, "Failed to update payment status"),
+            code: error instanceof ActionError ? error.code : undefined,
+        }
+    }
+}
+
+export async function setProjectPaymentMethod(input: {
+    projectId: string
+    paymentMethod: string
+}) {
+    try {
+        const session = await requireAuth()
+        const projectId = z.string().uuid("Invalid project id").parse(input.projectId)
+        const paymentMethod = normalizePaymentMethod(PaymentMethodSchema.parse(input.paymentMethod))
+        const updated = await prisma.project.updateMany({
+            where: { id: projectId, paymentStatus: "Paid" },
+            data: { paymentMethod },
+        })
+        if (updated.count !== 1) {
+            return { success: false as const, error: "Paid project not found" }
+        }
+        await logSessionAuditEvent(session, {
+            action: "PROJECT_PAYMENT_METHOD_UPDATED",
+            details: `projectId=${projectId}; paymentMethod=${paymentMethod}`,
+        })
+        revalidatePath("/payments")
+        revalidatePath("/projects")
+        return { success: true as const, data: { paymentMethod } }
+    } catch (error) {
+        return {
+            success: false as const,
+            error: getActionErrorMessage(error, "Failed to update payment method"),
+        }
+    }
+}
+
 export async function updateProject(projectId: string, data: {
     name?: string
     description?: string | null
@@ -240,7 +364,7 @@ export async function updateProject(projectId: string, data: {
         const validatedProjectId = ProjectIdSchema.parse(projectId)
         const updateData: Record<string, unknown> = {}
         if (data.name !== undefined) updateData.name = data.name === "" ? null : data.name
-        if (data.description !== undefined) updateData.description = data.description
+        if (data.description !== undefined) updateData.description = normalizeRichTextContent(data.description)
         if (data.status !== undefined) updateData.status = data.status
         if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus
         if (data.paidAt !== undefined) updateData.paidAt = data.paidAt
@@ -329,7 +453,7 @@ export async function updateProject(projectId: string, data: {
             data.description !== undefined
             && options
             && Object.prototype.hasOwnProperty.call(options, "expectedDescription")
-            && (existingProject.description ?? null) !== (options.expectedDescription ?? null)
+            && normalizeRichTextContent(existingProject.description) !== normalizeRichTextContent(options.expectedDescription)
         ) {
             await logSessionAuditEvent(session, {
                 action: "PROJECT_NOTE_UPDATE_CONFLICT",
@@ -446,7 +570,17 @@ export async function deleteProject(projectId: string) {
             })
             return { success: false, error: "Project not found" }
         }
+        const drawingPreviews = await prisma.noteDrawing.findMany({
+            where: {
+                OR: [
+                    { projectId: project.id },
+                    { task: { projectId: project.id } },
+                ],
+            },
+            select: { previewPath: true },
+        })
         await prisma.project.delete({ where: { id: project.id } })
+        await Promise.all(drawingPreviews.map(({ previewPath }) => removeDrawingPreview(previewPath)))
         await logSessionAuditEvent(session, {
             action: "PROJECT_DELETED",
             details: `projectId=${project.id}`,
@@ -502,11 +636,22 @@ export async function deleteProjects(projectIds: string[]) {
         const validatedProjectIds = ProjectIdsSchema.parse(projectIds)
         if (validatedProjectIds.length === 0) return { success: true }
 
+        const drawingPreviews = await prisma.noteDrawing.findMany({
+            where: {
+                OR: [
+                    { projectId: { in: validatedProjectIds } },
+                    { task: { projectId: { in: validatedProjectIds } } },
+                ],
+            },
+            select: { previewPath: true },
+        })
+
         const deleted = await prisma.project.deleteMany({
             where: {
                 id: { in: validatedProjectIds },
             }
         })
+        await Promise.all(drawingPreviews.map(({ previewPath }) => removeDrawingPreview(previewPath)))
 
         await logSessionAuditEvent(session, {
             action: "PROJECTS_BULK_DELETED",

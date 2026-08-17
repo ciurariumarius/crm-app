@@ -31,9 +31,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, Loader2, X, Play, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, FileText, Info } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Check, Loader2, X, Play, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, FileText, Info, MoreHorizontal, Trash2 } from "lucide-react"
 import { updateTask, deleteTask, getTaskHistory } from "@/lib/actions/tasks"
 import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
+import { normalizeRichTextContent } from "@/lib/notes/content"
 import { logTime } from "@/lib/actions/time"
 import { toast } from "sonner"
 import { cn, formatProjectName } from "@/lib/utils"
@@ -45,8 +46,8 @@ import { SidePanelNotesSection } from "@/components/shared/side-panel-notes-sect
 import { SidePanelTimeLogHistoryList } from "@/components/shared/side-panel-time-log-history-list"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { useRouter } from "next/navigation"
-import { SIDE_PANEL_DIALOG_HEADER_CLASS, SIDE_PANEL_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass, type SidePanelSize } from "@/lib/ui/side-panels"
-import { SidePanelChip, SidePanelInfoCard, SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
+import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelClass, sidePanelDialogContentClass, type SidePanelSize } from "@/lib/ui/side-panels"
+import { SidePanelChip, SidePanelDetailRow, SidePanelInfoCard, SidePanelSectionTitle, SidePanelTabs } from "@/components/ui/side-panel-primitives"
 import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
 import { TaskFreelanceProjectField, TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
@@ -161,7 +162,7 @@ export function TaskDetails({
     onOpenChange,
     onOpenProject,
     onOpenSite,
-    panelSize = "default",
+    panelSize = "compact",
     panelStackLevel = 0,
 }: TaskDetailsProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
@@ -192,8 +193,14 @@ export function TaskDetails({
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [isNotesModalOpen, setIsNotesModalOpen] = React.useState(false)
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
+    const [activeTab, setActiveTab] = React.useState("overview")
+    const [isEditingDetails, setIsEditingDetails] = React.useState(false)
     const [taskHistory, setTaskHistory] = React.useState<TaskHistoryEntry[]>([])
     const [isLoadingTaskHistory, setIsLoadingTaskHistory] = React.useState(false)
+    const [hasLoadedTaskHistory, setHasLoadedTaskHistory] = React.useState(false)
+    const [notesSaveState, setNotesSaveState] = React.useState<"ready" | "typing" | "saving" | "error">("ready")
+    const lastSavedDescriptionRef = React.useRef(normalizeRichTextContent(task?.description))
+    const descriptionRef = React.useRef(normalizeRichTextContent(task?.description))
 
     // Sync form state with task
     const skipNextAutoSave = React.useRef(true)
@@ -205,6 +212,11 @@ export function TaskDetails({
         projectId: "",
         lmsAllocationId: "",
         lmsTaskTypeId: "",
+    })
+    const detailsBaselineRef = React.useRef({
+        urgency: "Normal",
+        deadlineTime: undefined as number | undefined,
+        estimatedMinutes: "",
     })
     const awaitingTargetRefreshRef = React.useRef(false)
     const saveQueueRef = React.useRef<Promise<void>>(Promise.resolve())
@@ -233,15 +245,28 @@ export function TaskDetails({
             savedTargetRevisionRef.current = 0
             awaitingTargetRefreshRef.current = false
             setName(task.name || "")
-            setDescription(task.description || "")
+            setDescription(normalizeRichTextContent(task.description))
             setStatus(normalizeTaskStatus(task.status))
             setUrgency(normalizeTaskUrgency(task.urgency))
             setDeadline(task.deadline ? new Date(task.deadline) : undefined)
             setEstimatedMinutes(task.estimatedMinutes == null ? "" : String(task.estimatedMinutes))
+            detailsBaselineRef.current = {
+                urgency: normalizeTaskUrgency(task.urgency),
+                deadlineTime: task.deadline ? new Date(task.deadline).getTime() : undefined,
+                estimatedMinutes: task.estimatedMinutes == null ? "" : String(task.estimatedMinutes),
+            }
             setIsManualTimeOpen(false)
             setManualMinutes("")
             setManualNotes("")
             setIsEditingTitle(false)
+            setIsEditingDetails(false)
+            setActiveTab("overview")
+            setTaskHistory([])
+            setHasLoadedTaskHistory(false)
+            const normalizedDescription = normalizeRichTextContent(task.description)
+            lastSavedDescriptionRef.current = normalizedDescription
+            descriptionRef.current = normalizedDescription
+            setNotesSaveState("ready")
             skipNextAutoSave.current = true
         } else {
             // Status changes are action-driven, not part of the debounced form save.
@@ -270,6 +295,7 @@ export function TaskDetails({
             const result = await getTaskHistory(task.id)
             if (result.success) {
                 setTaskHistory(result.data || [])
+                setHasLoadedTaskHistory(true)
             }
         } catch (error) {
             console.error("Failed to load task history", error)
@@ -279,9 +305,9 @@ export function TaskDetails({
     }, [task?.id])
 
     React.useEffect(() => {
-        if (!task?.id) return
+        if (activeTab !== "activity" || hasLoadedTaskHistory || !task?.id) return
         void fetchTaskHistory()
-    }, [task?.id, fetchTaskHistory])
+    }, [activeTab, fetchTaskHistory, hasLoadedTaskHistory, task?.id])
 
     const currentTarget = React.useMemo<TaskTargetSnapshot>(() => ({
         taskScope,
@@ -293,6 +319,10 @@ export function TaskDetails({
         || currentTarget.projectId !== savedTarget.projectId
         || currentTarget.lmsAllocationId !== savedTarget.lmsAllocationId
         || currentTarget.lmsTaskTypeId !== savedTarget.lmsTaskTypeId
+    const detailsDirty = targetDirty
+        || urgency !== detailsBaselineRef.current.urgency
+        || deadline?.getTime() !== detailsBaselineRef.current.deadlineTime
+        || estimatedMinutes !== detailsBaselineRef.current.estimatedMinutes
     const bumpTargetRevision = React.useCallback(() => {
         targetRevisionRef.current += 1
     }, [])
@@ -316,8 +346,6 @@ export function TaskDetails({
         const saveRevision = targetRevisionRef.current
         const targetSnapshot = currentTarget
         const updateSnapshot = {
-            name,
-            description,
             urgency,
             deadline,
             estimatedMinutes: parsedEstimatedMinutes,
@@ -334,11 +362,7 @@ export function TaskDetails({
             .catch(() => undefined)
             .then(async () => {
                 try {
-                    const result = await updateTask(
-                        taskId,
-                        updateSnapshot,
-                        { notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION }
-                    )
+                    const result = await updateTask(taskId, updateSnapshot)
 
                     if (!result.success) {
                         toast.error(result.error || "Failed to update task")
@@ -350,9 +374,15 @@ export function TaskDetails({
                         savedTargetRef.current = targetSnapshot
                         awaitingTargetRefreshRef.current = true
                         setSavedTarget(targetSnapshot)
+                        detailsBaselineRef.current = {
+                            urgency,
+                            deadlineTime: deadline?.getTime(),
+                            estimatedMinutes,
+                        }
                     }
                     toast.success("Task updated")
-                    void fetchTaskHistory()
+                    setHasLoadedTaskHistory(false)
+                    setIsEditingDetails(false)
 
                     // A stale save must never refresh an older target over a newer
                     // local edit. The newest queued save owns the eventual refresh.
@@ -371,41 +401,69 @@ export function TaskDetails({
 
         saveQueueRef.current = queuedSave.then(() => undefined, () => undefined)
         return queuedSave
-    }, [currentTarget, deadline, description, estimatedMinutes, fetchTaskHistory, lmsAllocationId, lmsTaskTypeId, name, projectId, router, task, taskScope, urgency])
+    }, [currentTarget, deadline, estimatedMinutes, lmsAllocationId, lmsTaskTypeId, projectId, router, task, taskScope, urgency])
 
-    // Auto-save logic
+    const persistTaskDescription = React.useCallback(async (nextDescription: string) => {
+        if (!task?.id || nextDescription === lastSavedDescriptionRef.current) return true
+        setNotesSaveState("saving")
+        try {
+            const result = await updateTask(
+                task.id,
+                { description: nextDescription },
+                { notesWriteProtocol: NOTES_WRITE_PROTOCOL_VERSION }
+            )
+            if (!result.success) {
+                setNotesSaveState("error")
+                toast.error(result.error || "Failed to update task notes")
+                return false
+            }
+            lastSavedDescriptionRef.current = nextDescription
+            setNotesSaveState("ready")
+            return true
+        } catch {
+            setNotesSaveState("error")
+            toast.error("Failed to update task notes")
+            return false
+        }
+    }, [task?.id])
+
+    const flushTaskNotesSave = React.useCallback(() => {
+        void persistTaskDescription(descriptionRef.current)
+    }, [persistTaskDescription])
+
+    const handleTaskDescriptionChange = React.useCallback((value: string) => {
+        const nextValue = normalizeRichTextContent(value)
+        descriptionRef.current = nextValue
+        setDescription(nextValue)
+    }, [])
+
     React.useEffect(() => {
-        if (!task) return
-
+        if (!task?.id) return
         if (skipNextAutoSave.current) {
             skipNextAutoSave.current = false
             return
         }
-
-        const normalizedTaskName = task.name || ""
-        const normalizedTaskDescription = task.description || ""
-        const normalizedTaskUrgency = normalizeTaskUrgency(task.urgency)
-        const normalizedTaskDeadline = task.deadline ? new Date(task.deadline).getTime() : undefined
-        const normalizedTaskEstimatedMinutes = task.estimatedMinutes ?? null
-        const parsedEstimatedMinutes = parseTaskEstimatedMinutesInput(estimatedMinutes)
-        const timer = setTimeout(() => {
-            if (
-                name !== normalizedTaskName ||
-                description !== normalizedTaskDescription ||
-                urgency !== normalizedTaskUrgency ||
-                deadline?.getTime() !== normalizedTaskDeadline ||
-                parsedEstimatedMinutes !== normalizedTaskEstimatedMinutes ||
-                targetDirty
-            ) {
-                if (
-                    parsedEstimatedMinutes !== undefined
-                    && (taskScope !== "FREELANCE" || projectId)
-                ) handleUpdate()
-            }
-        }, 400)
-
+        if (description === lastSavedDescriptionRef.current) {
+            setNotesSaveState("ready")
+            return
+        }
+        setNotesSaveState("typing")
+        const timer = setTimeout(() => void persistTaskDescription(description), 650)
         return () => clearTimeout(timer)
-    }, [deadline, description, estimatedMinutes, handleUpdate, name, projectId, task, taskScope, targetDirty, urgency])
+    }, [description, persistTaskDescription, task?.id])
+
+    React.useEffect(() => {
+        const flushWhenHidden = () => {
+            if (document.visibilityState === "hidden") flushTaskNotesSave()
+        }
+        window.addEventListener("pagehide", flushTaskNotesSave)
+        document.addEventListener("visibilitychange", flushWhenHidden)
+        return () => {
+            window.removeEventListener("pagehide", flushTaskNotesSave)
+            document.removeEventListener("visibilitychange", flushWhenHidden)
+            flushTaskNotesSave()
+        }
+    }, [flushTaskNotesSave])
 
     const handleStatusChange = React.useCallback(async (nextStatus: "Active" | "Completed") => {
         if (!task || nextStatus === status || pendingTaskId === task.id || loading) return
@@ -434,7 +492,7 @@ export function TaskDetails({
             requestCompletion(taskWithCurrentTarget, {
                 onCompleted: () => {
                     setStatus("Completed")
-                    void fetchTaskHistory()
+                    setHasLoadedTaskHistory(false)
                 },
             })
             return
@@ -442,13 +500,14 @@ export function TaskDetails({
         await requestReopen(taskWithCurrentTarget, {
             onCompleted: () => {
                 setStatus("Active")
-                void fetchTaskHistory()
+                setHasLoadedTaskHistory(false)
             },
         })
-    }, [fetchTaskHistory, handleUpdate, lmsAllocationId, lmsTaskTypeId, loading, pendingTaskId, projectId, requestCompletion, requestReopen, status, targetDirty, task, taskScope])
+    }, [handleUpdate, lmsAllocationId, lmsTaskTypeId, loading, pendingTaskId, projectId, requestCompletion, requestReopen, status, targetDirty, task, taskScope])
 
     const handleDelete = async () => {
         if (!task) return
+        if (!window.confirm("Delete this task permanently?")) return
         try {
             const result = await deleteTask(task.id, savedProjectId || null)
             if (result.success) {
@@ -462,17 +521,11 @@ export function TaskDetails({
         }
     }
 
-    const notesSaveState = React.useMemo(() => {
-        const isDirty = description !== (task?.description || "")
-        if (loading && isDirty) return "saving"
-        if (isDirty) return "typing"
-        return "ready"
-    }, [description, loading, task?.description])
-
     const appendTaskNotesTemplate = React.useCallback(() => {
         setDescription((current) => {
-            if (!current.trim()) return TASK_NOTES_TEMPLATE
-            return `${current}<p></p>${TASK_NOTES_TEMPLATE}`
+            const next = !current.trim() ? TASK_NOTES_TEMPLATE : `${current}<p></p>${TASK_NOTES_TEMPLATE}`
+            descriptionRef.current = next
+            return next
         })
     }, [])
 
@@ -582,12 +635,68 @@ export function TaskDetails({
         }
     }
 
-    const commitTitle = () => {
+    const commitTitle = async () => {
         if (!task) return
-        if ((name || "").trim() !== (task.name || "").trim()) {
-            void handleUpdate()
+        const nextName = name.trim()
+        const persistedName = (task.name || "").trim()
+        if (!nextName) {
+            setName(task.name || "")
+            setIsEditingTitle(false)
+            return
+        }
+        if (nextName !== persistedName) {
+            setLoading(true)
+            try {
+                const result = await updateTask(task.id, { name: nextName })
+                if (!result.success) {
+                    toast.error(result.error || "Failed to update task title")
+                    setName(task.name || "")
+                } else {
+                    setName(nextName)
+                    setHasLoadedTaskHistory(false)
+                    router.refresh()
+                }
+            } catch {
+                toast.error("Failed to update task title")
+                setName(task.name || "")
+            } finally {
+                setLoading(false)
+            }
         }
         setIsEditingTitle(false)
+    }
+
+    const cancelDetailsEdit = () => {
+        setUrgency(detailsBaselineRef.current.urgency)
+        setDeadline(detailsBaselineRef.current.deadlineTime ? new Date(detailsBaselineRef.current.deadlineTime) : undefined)
+        setEstimatedMinutes(detailsBaselineRef.current.estimatedMinutes)
+        setTaskScope(savedTarget.taskScope)
+        setProjectId(savedTarget.projectId)
+        setLmsAllocationId(savedTarget.lmsAllocationId)
+        setLmsTaskTypeId(savedTarget.lmsTaskTypeId)
+        targetRevisionRef.current = savedTargetRevisionRef.current
+        setIsEditingDetails(false)
+    }
+
+    const requestLeaveDetailsEdit = () => {
+        if (!isEditingDetails) return true
+        if (detailsDirty && !window.confirm("Discard unsaved task detail changes?")) return false
+        cancelDetailsEdit()
+        return true
+    }
+
+    const handleTabChange = (nextTab: string) => {
+        if (nextTab === activeTab) return true
+        if (!requestLeaveDetailsEdit()) return false
+        flushTaskNotesSave()
+        setActiveTab(nextTab)
+        return true
+    }
+
+    const handleSheetOpenChange = (nextOpen: boolean) => {
+        if (!nextOpen && !requestLeaveDetailsEdit()) return
+        if (!nextOpen) flushTaskNotesSave()
+        onOpenChange(nextOpen)
     }
 
     const handleManualLog = async () => {
@@ -637,27 +746,55 @@ export function TaskDetails({
     }
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet open={open} onOpenChange={handleSheetOpenChange}>
             <SheetContent
                 side="right"
-                className={cn(sidePanelClass(panelSize, panelStackLevel), "overflow-y-auto md:overflow-hidden")}
-                onOpenAutoFocus={(e) => e.preventDefault()}
+                className={cn(sidePanelClass(panelSize, panelStackLevel), "overflow-hidden")}
                 showCloseButton={false}
             >
-                <SheetHeader className={SIDE_PANEL_HEADER_CLASS}>
-                    <div className="absolute right-6 top-6 z-10">
+                <SheetHeader className="relative z-20 border-b border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 pb-4 pt-5 sm:px-8 sm:pt-7">
+                    <div className="absolute right-5 top-5 z-10 flex items-center gap-2 sm:right-8 sm:top-7">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-11 w-11 rounded-xl text-[var(--text-muted)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                    aria-label="More task actions"
+                                >
+                                    <MoreHorizontal className="h-5 w-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
+                                <DropdownMenuItem
+                                    onSelect={() => void handleDelete()}
+                                    className="cursor-pointer rounded-lg text-[var(--state-urgent)] focus:text-[var(--state-urgent)]"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete task
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-10 w-10 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
-                            onClick={() => onOpenChange(false)}
+                            className="h-11 w-11 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                            onClick={() => handleSheetOpenChange(false)}
+                            aria-label="Close task"
                         >
                             <X className="h-5 w-5" />
                         </Button>
                     </div>
-                    <div className="space-y-5 pr-16">
+                    <div className="space-y-2 pr-28">
+                        <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                            <span>{taskScope === "LMS" ? "LMS task" : taskScope === "FREELANCE" ? "Freelance task" : "Legacy task"}</span>
+                            <span aria-hidden="true">•</span>
+                            <span className="truncate normal-case tracking-normal">
+                                {taskScope === "LMS" ? selectedLmsAllocationName : taskScope === "FREELANCE" ? projectLabel : "No target"}
+                            </span>
+                        </div>
                         <SheetTitle className="group relative">
-                            <div className="space-y-6">
+                            <div className="space-y-2">
                                 <div className="relative">
                                     {isEditingTitle ? (
                                         <Textarea
@@ -669,6 +806,7 @@ export function TaskDetails({
                                                     commitTitle()
                                                 }
                                                 if (e.key === 'Escape') {
+                                                    e.stopPropagation()
                                                     setName(task.name || "")
                                                     setIsEditingTitle(false)
                                                 }
@@ -703,56 +841,94 @@ export function TaskDetails({
                                             </Button>
                                         </div>
                                     )}
-                                    {loading && <Loader2 className="absolute right-0 top-0 h-5 w-5 animate-spin text-primary" />}
+                                    {loading && <Loader2 className="absolute right-0 top-1 h-5 w-5 animate-spin text-primary" />}
                                 </div>
-                                {name !== task.name && (
-                                    <div className="text-xs font-semibold text-primary animate-pulse">
-                                        Unsaved Name Change
-                                    </div>
-                                )}
                             </div>
                         </SheetTitle>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    disabled={loading || isEditingDetails || pendingTaskId === task.id}
+                                    className={cn(
+                                        "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
+                                        status === "Active"
+                                            ? "border-[color:color-mix(in_srgb,var(--state-review)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)]"
+                                            : "border-[color:color-mix(in_srgb,var(--state-success)_25%,var(--line-subtle))] bg-[var(--state-success-surface)] text-[var(--state-success)]"
+                                    )}
+                                >
+                                    {status === "Active" ? <Play className="h-3.5 w-3.5 fill-current" /> : <Check className="h-3.5 w-3.5" />}
+                                    {status}
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-40 rounded-xl p-1.5">
+                                {(["Active", "Completed"] as const).map((statusOption) => (
+                                    <DropdownMenuItem
+                                        key={statusOption}
+                                        onSelect={() => void handleStatusChange(statusOption)}
+                                        className="cursor-pointer rounded-lg"
+                                    >
+                                        {statusOption}
+                                        {status === statusOption ? <Check className="ml-auto h-4 w-4" /> : null}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </SheetHeader>
 
-                <div className="px-8 pb-6 pt-0 md:flex-1 md:overflow-y-auto">
-                    <div className="space-y-8 pb-8">
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-3">
-                            <div className="flex items-center">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button
-                                            type="button"
-                                            disabled={loading || targetDirty || pendingTaskId === task.id}
-                                            className={cn(
-                                                "group/status relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
-                                                status === "Active"
-                                                    ? "border-[color:color-mix(in_srgb,var(--state-review)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)] hover:border-[var(--state-review)]"
-                                                    : "border-[color:color-mix(in_srgb,var(--brand-primary)_25%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--brand-primary)] hover:border-[var(--brand-primary)]"
-                                            )}
-                                        >
-                                            <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_22%,transparent)] transition-transform duration-300 group-hover/status:translate-y-0" />
-                                            {status === "Active" ? <Play className="relative z-10 h-3.5 w-3.5 fill-current" /> : <Check className="relative z-10 h-3.5 w-3.5" />}
-                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{status}</span>
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
-                                        {(["Active", "Completed"] as const).map((statusOption) => (
-                                            <DropdownMenuItem
-                                                key={statusOption}
-                                                onSelect={() => handleStatusChange(statusOption)}
-                                                disabled={loading || targetDirty || pendingTaskId === task.id}
-                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
-                                            >
-                                                <span className={cn("mr-2 h-2 w-2 rounded-full", statusOption === "Active" ? "bg-[var(--brand-primary)]" : "bg-[var(--state-success)]")} />
-                                                {statusOption}
-                                                {status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
+                <div className="z-10 overflow-x-auto border-b border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-2 sm:px-8">
+                    <SidePanelTabs
+                        ariaLabel="Task details"
+                        value={activeTab}
+                        onValueChange={handleTabChange}
+                        tabs={[
+                            { value: "overview", label: "Overview" },
+                            { value: "notes", label: "Notes" },
+                            { value: "time", label: "Time" },
+                            { value: "activity", label: "Activity" },
+                        ]}
+                    />
+                </div>
 
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-5 sm:px-8">
+                    <div
+                        role="tabpanel"
+                        id={`task-details-${activeTab}-panel`}
+                        aria-labelledby={`task-details-${activeTab}-tab`}
+                        tabIndex={0}
+                        className="space-y-6 pb-8 focus-visible:outline-none"
+                    >
+                        {activeTab === "overview" ? (
+                            <>
+                                <div className="flex items-center justify-between gap-4">
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Task details</h2>
+                                        <p className="mt-1 text-sm text-[var(--text-muted)]">The information needed to place and complete this task.</p>
+                                    </div>
+                                    {!isEditingDetails ? (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsEditingDetails(true)}
+                                            className="h-11 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4"
+                                        >
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            Edit details
+                                        </Button>
+                                    ) : null}
+                                </div>
+
+                                {!isEditingDetails ? (
+                                    <div className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[var(--shadow-apple)]">
+                                        <SidePanelDetailRow label="Target" value={taskScope === "LMS" ? "LMS" : taskScope === "FREELANCE" ? "Freelance" : "Not assigned"} />
+                                        <SidePanelDetailRow label="Priority" value={urgency} />
+                                        <SidePanelDetailRow label="Deadline" value={deadline ? format(deadline, "dd MMM yyyy") : "No deadline"} />
+                                        <SidePanelDetailRow label="Planned time" value={estimatedMinutes ? `${estimatedMinutes} min` : "Not set"} />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-5 rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 sm:p-5">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div className="flex items-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -831,7 +1007,7 @@ export function TaskDetails({
                             </div>
                         </div>
 
-                        <section className="space-y-2 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
+                        <section className="space-y-2 border-t border-[var(--line-subtle)] pt-5">
                             <div className="flex items-center justify-between gap-3">
                                 <SidePanelSectionTitle title="Planned time" icon={<Clock className="h-3.5 w-3.5" />} />
                                 <span className="text-xs font-medium text-[var(--text-muted)]">
@@ -865,7 +1041,7 @@ export function TaskDetails({
                             </p>
                         </section>
 
-                        <section className="space-y-3 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] p-4">
+                        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-5">
                             <div className="flex items-center justify-between gap-3">
                                 <SidePanelSectionTitle title="Task target" icon={<FolderOpen className="h-3.5 w-3.5" />} />
                                 <span className="text-xs font-medium text-[var(--text-muted)]">
@@ -913,12 +1089,7 @@ export function TaskDetails({
                                     compact
                                 />
                             ) : null}
-                            {targetDirty ? (
-                                <p className="inline-flex items-center gap-2 text-xs font-medium text-[var(--text-muted)]">
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    Saving task target… Project actions are paused until it finishes.
-                                </p>
-                            ) : null}
+                            {targetDirty ? <p className="text-xs font-medium text-[var(--text-muted)]">Unsaved target change</p> : null}
                             {taskScope === "GENERAL" ? (
                                 <p className="text-xs leading-5 text-[var(--state-urgent)]">This is a legacy no-project task. Choose Freelance or LMS; use your Personal freelance project for standalone work.</p>
                             ) : null}
@@ -928,23 +1099,30 @@ export function TaskDetails({
                                 <p className="text-xs leading-5 text-[var(--text-muted)]">Both LMS fields can be completed later. They become required when the task is marked completed.</p>
                             ) : null}
                         </section>
+                                    </div>
+                                )}
+                            </>
+                        ) : null}
 
-                        <SidePanelNotesSection
+                        {activeTab === "notes" ? <SidePanelNotesSection
                             title="Task notes"
                             icon={<FileText className="h-3.5 w-3.5" />}
                             statusLabel={notesSaveState === "typing" ? "Typing" : notesSaveState === "saving" ? "Saving" : "Ready"}
                             statusTone={notesSaveState === "saving" ? "blue" : notesSaveState === "typing" ? "amber" : "emerald"}
                             statusState={notesSaveState}
                             value={description}
-                            onChange={setDescription}
+                            onChange={handleTaskDescriptionChange}
+                            onBlur={flushTaskNotesSave}
                             uploadProjectId={savedProjectId || task.id}
                             imageUploadsDisabled={projectActionsBlocked}
                             onAddTemplate={appendTaskNotesTemplate}
                             onExpand={() => setIsNotesModalOpen(true)}
                             expandLabel="Open notes in full view"
-                        />
+                            className="border-t-0 pt-0"
+                            minHeightClassName="min-h-[calc(100dvh-310px)] sm:min-h-[520px]"
+                        /> : null}
 
-                    {taskScope !== "LMS" ? <section className="space-y-4">
+                    {activeTab === "time" ? (taskScope !== "LMS" ? <section className="space-y-6">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <SidePanelSectionTitle title="Task time tracker" icon={<Clock className="h-3.5 w-3.5" />} />
@@ -1000,42 +1178,36 @@ export function TaskDetails({
                             />
                         </div>
                     </section> : (
-                        <section className="rounded-2xl border border-dashed border-[color:color-mix(in_srgb,var(--primary)_34%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_10%,var(--surface-lowest))] px-4 py-4">
+                        <section className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 py-4">
                             <div className="flex items-start gap-3">
                                 <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary)]" />
                                 <div>
                                     <p className="text-sm font-semibold text-[var(--text-primary)]">LMS time is recorded on completion</p>
-                                    <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">The freelance timer and CRM manual-time history are intentionally hidden for LMS tasks. Existing manual LMS Record Work entries remain separate.</p>
+                                    <p className="mt-1 text-xs text-[var(--text-secondary)]">Planned: {estimatedMinutes ? `${estimatedMinutes} minutes` : "not set"}</p>
                                 </div>
                             </div>
                         </section>
-                    )}
+                    )) : null}
 
-                        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-3">
-                            <SidePanelSectionTitle title="Task info" icon={<Info className="h-3.5 w-3.5" />} />
+                        {activeTab === "overview" ? <section className="space-y-3 border-t border-[var(--line-subtle)] pt-5">
+                            <SidePanelSectionTitle title="Linked information" icon={<Info className="h-3.5 w-3.5" />} />
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 {taskScope === "LMS" ? (
                                     <>
                                         <SidePanelInfoCard
                                             title="LMS project"
                                             subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">{lmsAllocationId ? selectedLmsAllocationName : "Not linked"}</p>}
-                                        >
-                                            <p className="text-xs font-medium text-[var(--text-secondary)]">My job · independent from freelance projects</p>
-                                        </SidePanelInfoCard>
+                                        />
                                         <SidePanelInfoCard
                                             title="Work category"
                                             subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">{lmsTaskTypeId ? selectedLmsTaskTypeName : "Not linked"}</p>}
-                                        >
-                                            <p className="text-xs font-medium text-[var(--text-secondary)]">Used when the completion creates LMS work</p>
-                                        </SidePanelInfoCard>
+                                        />
                                     </>
                                 ) : taskScope === "GENERAL" ? (
                                     <SidePanelInfoCard
                                         title="Target"
                                         subtitle={<p className="text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">Target required</p>}
-                                    >
-                                        <p className="text-xs font-medium text-[var(--text-secondary)]">Move this legacy task to Freelance or LMS</p>
-                                    </SidePanelInfoCard>
+                                    />
                                 ) : <>
                                 <button
                                     type="button"
@@ -1107,20 +1279,43 @@ export function TaskDetails({
                                 </SidePanelInfoCard>
                                 </>}
                             </div>
-                        </section>
+                        </section> : null}
 
-                    <TaskHistorySection entries={taskHistoryEntries} isLoading={isLoadingTaskHistory} />
-
-
-                        <SidePanelMetaBar
-                            entityLabel="Task ID"
-                            entityId={task.id.split("-")[0]}
-                            onDelete={handleDelete}
-                            createdAt={formatBottomDate(createdTimestamp)}
-                            updatedAt={lastUpdatedTimestamp ? formatBottomDate(lastUpdatedTimestamp) : undefined}
-                        />
+                    {activeTab === "activity" ? (
+                        <div className="space-y-6">
+                            <TaskHistorySection entries={taskHistoryEntries} isLoading={isLoadingTaskHistory} />
+                            <div className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4">
+                                <SidePanelDetailRow label="Task ID" value={task.id.split("-")[0]} />
+                                <SidePanelDetailRow label="Created" value={formatBottomDate(createdTimestamp)} />
+                                <SidePanelDetailRow label="Updated" value={lastUpdatedTimestamp ? formatBottomDate(lastUpdatedTimestamp) : "—"} />
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             </div>
+
+                {activeTab === "overview" && isEditingDetails ? (
+                    <div className="flex items-center justify-end gap-3 border-t border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 sm:px-8">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={cancelDetailsEdit}
+                            disabled={loading}
+                            className="h-11 rounded-xl px-5"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => void handleUpdate()}
+                            disabled={loading || !detailsDirty || (taskScope === "FREELANCE" && !projectId)}
+                            className="h-11 rounded-xl px-5"
+                        >
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Save changes
+                        </Button>
+                    </div>
+                ) : null}
 
                 <Dialog open={isNotesModalOpen} onOpenChange={setIsNotesModalOpen}>
                     <DialogContent
@@ -1150,7 +1345,7 @@ export function TaskDetails({
                         <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-[var(--surface-lowest)] px-8 pb-8 pt-6">
                             <RichTextEditor
                                 value={description}
-                                onChange={setDescription}
+                                onChange={handleTaskDescriptionChange}
                                 placeholder=""
                                 variant="plain"
                                 mode="document"

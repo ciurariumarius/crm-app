@@ -2,6 +2,108 @@ import * as React from "react"
 import { AlertTriangle, Loader2, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+export type SidePanelTab = {
+    value: string
+    label: string
+    badge?: React.ReactNode
+}
+
+type SidePanelTabsProps = {
+    tabs: SidePanelTab[]
+    value: string
+    onValueChange: (value: string) => boolean | void
+    ariaLabel: string
+    className?: string
+}
+
+export function SidePanelTabs({ tabs, value, onValueChange, ariaLabel, className }: SidePanelTabsProps) {
+    const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([])
+
+    const focusTab = (index: number) => {
+        const normalizedIndex = (index + tabs.length) % tabs.length
+        const tab = tabs[normalizedIndex]
+        if (!tab) return
+        const accepted = onValueChange(tab.value)
+        if (accepted === false) return
+        requestAnimationFrame(() => tabRefs.current[normalizedIndex]?.focus())
+    }
+
+    return (
+        <div
+            role="tablist"
+            aria-label={ariaLabel}
+            className={cn(
+                "flex min-w-max items-center gap-1 rounded-[14px] bg-[var(--surface-low)] p-1",
+                className
+            )}
+        >
+            {tabs.map((tab, index) => {
+                const selected = value === tab.value
+                return (
+                    <button
+                        key={tab.value}
+                        ref={(node) => { tabRefs.current[index] = node }}
+                        type="button"
+                        role="tab"
+                        id={`${ariaLabel.replaceAll(" ", "-").toLowerCase()}-${tab.value}-tab`}
+                        aria-selected={selected}
+                        aria-controls={`${ariaLabel.replaceAll(" ", "-").toLowerCase()}-${tab.value}-panel`}
+                        tabIndex={selected ? 0 : -1}
+                        onClick={() => onValueChange(tab.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "ArrowRight") {
+                                event.preventDefault()
+                                focusTab(index + 1)
+                            } else if (event.key === "ArrowLeft") {
+                                event.preventDefault()
+                                focusTab(index - 1)
+                            } else if (event.key === "Home") {
+                                event.preventDefault()
+                                focusTab(0)
+                            } else if (event.key === "End") {
+                                event.preventDefault()
+                                focusTab(tabs.length - 1)
+                            }
+                        }}
+                        className={cn(
+                            "inline-flex h-10 items-center justify-center gap-2 rounded-[10px] px-3.5 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]",
+                            selected
+                                ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-sm"
+                                : "text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_58%,transparent)] hover:text-[var(--text-primary)]"
+                        )}
+                    >
+                        {tab.label}
+                        {tab.badge !== undefined ? (
+                            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--surface-low)] px-1.5 py-0.5 text-xs tabular-nums text-[var(--text-muted)]">
+                                {tab.badge}
+                            </span>
+                        ) : null}
+                    </button>
+                )
+            })}
+        </div>
+    )
+}
+
+type SidePanelDetailRowProps = {
+    label: string
+    value: React.ReactNode
+    action?: React.ReactNode
+    className?: string
+}
+
+export function SidePanelDetailRow({ label, value, action, className }: SidePanelDetailRowProps) {
+    return (
+        <div className={cn("flex min-h-14 items-center justify-between gap-4 border-b border-[var(--line-subtle)] py-3 last:border-b-0", className)}>
+            <span className="shrink-0 text-sm font-medium text-[var(--text-muted)]">{label}</span>
+            <div className="flex min-w-0 items-center justify-end gap-2 text-right text-sm font-semibold text-[var(--text-primary)]">
+                <span className="min-w-0 truncate">{value}</span>
+                {action}
+            </div>
+        </div>
+    )
+}
+
 type SidePanelSectionTitleProps = {
     title: string
     icon?: React.ReactNode

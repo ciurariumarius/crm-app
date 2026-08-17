@@ -39,6 +39,8 @@ if [[ "${SKIP_LOCAL_CHECKS:-0}" != "1" ]]; then
   npm run typecheck
   npm run test:unit
   npm run test:task-lms-integration
+  npm run test:payments-integration
+  npm run test:note-drawings-integration
   npm run test:filters
   npm run test:lms-work
   npm run test:lms-daily-admin

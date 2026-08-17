@@ -26,4 +26,33 @@ describe("design system contracts", () => {
     expect(source).toContain('data-slot="app-page-header"')
     expect(source.match(/<header/g)).toHaveLength(1)
   })
+
+  it("keeps task and project sidebars focused with accessible tabs", () => {
+    const primitives = read("components/ui/side-panel-primitives.tsx")
+    const taskSidebar = read("components/tasks/task-details.tsx")
+    const projectSidebar = read("components/projects/project-sheet-content.tsx")
+
+    expect(primitives).toContain('role="tablist"')
+    expect(primitives).toContain('role="tab"')
+    expect(primitives).toContain('event.key === "ArrowRight"')
+    expect(primitives).toContain('event.key === "ArrowLeft"')
+    expect(taskSidebar).toContain('{ value: "overview", label: "Overview" }')
+    expect(taskSidebar).toContain('{ value: "notes", label: "Notes" }')
+    expect(taskSidebar).toContain('{ value: "time", label: "Time" }')
+    expect(taskSidebar).toContain('{ value: "activity", label: "Activity" }')
+    expect(projectSidebar).toContain('{ value: "tasks", label: "Tasks"')
+    expect(projectSidebar).toContain('ariaLabel="Project details"')
+    expect(taskSidebar).not.toContain("<SidePanelMetaBar")
+    expect(projectSidebar).not.toContain("<SidePanelMetaBar")
+  })
+
+  it("separates task detail, title, and note save payloads", () => {
+    const taskSidebar = read("components/tasks/task-details.tsx")
+    expect(taskSidebar).toContain("const persistTaskDescription")
+    expect(taskSidebar).toContain("const commitTitle = async")
+    expect(taskSidebar).toContain("const updateSnapshot = {")
+    expect(taskSidebar).toMatch(/const updateSnapshot = \{\s*urgency,\s*deadline,/)
+    expect(taskSidebar).toContain("Discard unsaved task detail changes?")
+    expect(taskSidebar).not.toContain("Discard unsaved project detail changes?")
+  })
 })

@@ -882,11 +882,13 @@ export async function permanentlyDeleteNote(noteId: string) {
     const validatedNoteId = NoteIdSchema.parse(noteId)
     const note = await prisma.note.findUnique({
       where: { id: validatedNoteId },
-      select: { id: true },
+      select: { id: true, drawings: { select: { previewPath: true } } },
     })
     if (!note) return { success: false, error: "Note not found" }
 
     await prisma.note.delete({ where: { id: note.id } })
+    const { removeDrawingPreview } = await import("@/lib/notes/drawings.server")
+    await Promise.all(note.drawings.map(({ previewPath }) => removeDrawingPreview(previewPath)))
     await logSessionAuditEvent(session, {
       action: "NOTE_PERMANENTLY_DELETED",
       details: `noteId=${note.id}`,

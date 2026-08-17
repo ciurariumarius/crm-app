@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       action: dryRun ? "NOTES_RETENTION_DRY_RUN" : "NOTES_RETENTION_COMPLETED",
       success: true,
       ...requestContext,
-      details: `cutoff=${summary.cutoff}; candidates=${summary.candidateCount}; deleted=${summary.deletedCount}`,
+      details: `cutoff=${summary.cutoff}; candidates=${summary.candidateCount}; deleted=${summary.deletedCount}; drawingCandidates=${summary.orphanDrawingCandidateCount}; drawingsDeleted=${summary.deletedDrawingCount}`,
     })
     return apiOk({ success: true, ...summary })
   } catch (error) {

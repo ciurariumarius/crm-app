@@ -483,7 +483,7 @@ export function HomeTaskColumns({
             />
 
             <Sheet open={Boolean(selectedProject)} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("compact", 1))}>
+                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("default", 1))}>
                     {selectedProject ? (
                         <ProjectSheetContent
                             project={selectedProject}

@@ -88,7 +88,7 @@ export function ProjectSheetWrapper({ projects, allServices, hourlyRate = 0, chi
                 <SheetContent
                     side="right"
                     showCloseButton={false}
-                    className={sidePanelClass("wide", 0)}
+                    className={sidePanelClass("default", 0)}
                 >
                     <SheetTitle className="sr-only">Project details</SheetTitle>
                     {!selectedProject && !projectLoadError ? (

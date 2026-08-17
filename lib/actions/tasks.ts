@@ -25,6 +25,8 @@ import {
 } from "@/lib/notes/write-protocol"
 import { MAX_TASK_ESTIMATED_MINUTES } from "@/lib/tasks/estimated-time"
 import { z } from "zod"
+import { removeDrawingPreview } from "@/lib/notes/drawings.server"
+import { normalizeRichTextContent } from "@/lib/notes/content"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/tasks")
@@ -623,7 +625,9 @@ export async function updateTask(taskId: string, data: {
         } = validated
         const editableFields = {
             ...(validated.name !== undefined ? { name: validated.name } : {}),
-            ...(validated.description !== undefined ? { description: validated.description } : {}),
+            ...(validated.description !== undefined
+                ? { description: normalizeRichTextContent(validated.description) }
+                : {}),
             ...(validated.urgency !== undefined ? { urgency: validated.urgency } : {}),
             ...(validated.deadline !== undefined ? { deadline: validated.deadline } : {}),
             ...(validated.estimatedMinutes !== undefined
@@ -831,7 +835,12 @@ export async function deleteTask(taskId: string, projectId?: string | null) {
             })
             return { success: false, error: "Task not found" }
         }
+        const drawingPreviews = await prisma.noteDrawing.findMany({
+            where: { taskId: task.id },
+            select: { previewPath: true },
+        })
         await prisma.task.delete({ where: { id: task.id } })
+        await Promise.all(drawingPreviews.map(({ previewPath }) => removeDrawingPreview(previewPath)))
         await logSessionAuditEvent(session, {
             action: "TASK_DELETED",
             details: `taskId=${task.id}; projectId=${task.projectId || "none"}`,
@@ -849,9 +858,14 @@ export async function deleteTasks(taskIds: string[]) {
         const session = await requireAuth()
         const validatedTaskIds = TaskIdsSchema.parse(taskIds)
         if (validatedTaskIds.length === 0) return { success: true as const }
+        const drawingPreviews = await prisma.noteDrawing.findMany({
+            where: { taskId: { in: validatedTaskIds } },
+            select: { previewPath: true },
+        })
         const deleted = await prisma.task.deleteMany({
             where: { id: { in: validatedTaskIds } }
         })
+        await Promise.all(drawingPreviews.map(({ previewPath }) => removeDrawingPreview(previewPath)))
         await logSessionAuditEvent(session, {
             action: "TASKS_BULK_DELETED",
             details: `requested=${validatedTaskIds.length}; deleted=${deleted.count}`,

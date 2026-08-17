@@ -67,6 +67,7 @@ type TaskCardViewTask = {
     status?: string | null
     urgency?: string | null
     deadline?: string | Date | null
+    createdAt?: string | Date | null
     estimatedMinutes?: number | null
     timeLogs?: TimeLogSummary[] | null
     project?: TaskProjectSummary | null
@@ -434,7 +435,7 @@ export function TasksCardView({
                 onClick={() => setCreateTaskOpen(true)}
                 className={cn(
                     TASK_CARD_SHELL_CLASS,
-                    "group min-w-0 items-center justify-center text-[var(--text-muted)] outline-none hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] hover:text-[var(--primary)] hover:shadow-[var(--shadow-apple)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+                    "group min-w-0 items-center justify-center border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_24%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                 )}
             >
                 <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
@@ -734,7 +735,7 @@ export function TasksCardView({
 
             {/* Project Details Sheet */}
             <Sheet open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("compact", 1))}>
+                <SheetContent side="right" showCloseButton={false} className={cn("z-[80]", sidePanelClass("default", 1))}>
                     {selectedProject && (
                         <ProjectSheetContent
                             project={selectedProject}

@@ -24,7 +24,6 @@ type ProjectSheetInfoSectionProps = {
     externalSiteUrl: string | null
     services: SelectedService[]
     isEditingServices: boolean
-    onToggleEditServices: () => void
     onToggleService: (serviceId: string) => void
     recurringServices: ServiceOption[]
     oneTimeServices: ServiceOption[]
@@ -38,7 +37,6 @@ export function ProjectSheetInfoSection({
     externalSiteUrl,
     services,
     isEditingServices,
-    onToggleEditServices,
     onToggleService,
     recurringServices,
     oneTimeServices,
@@ -96,29 +94,29 @@ export function ProjectSheetInfoSection({
                 </SidePanelInfoCard>
             </div>
 
-            <div className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)]">
+            <div className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
                 <div className="flex items-center justify-between gap-3">
                     <SidePanelSectionTitle title="Project services" className="text-xs" />
-                    <button
-                        type="button"
-                        onClick={onToggleEditServices}
-                        className="rounded-full border border-[var(--line-subtle)] px-3.5 py-1.5 ui-text-caption font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)]"
-                    >
-                        + Add
-                    </button>
+                    {isEditingServices ? (
+                        <span className="text-xs font-medium text-[var(--text-muted)]">Select at least one</span>
+                    ) : null}
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                    {services.map((service) => (
+                    {services.map((service) => isEditingServices ? (
                         <button
                             key={service.id}
                             type="button"
                             onClick={() => onToggleService(service.id)}
-                            className="inline-flex items-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100/70"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-[8px] border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100/70"
                         >
                             {service.serviceName}
                             <X className="h-3.5 w-3.5" />
                         </button>
+                    ) : (
+                        <span key={service.id} className="inline-flex min-h-8 items-center rounded-[8px] border border-[var(--line-subtle)] bg-[var(--surface-low)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                            {service.serviceName}
+                        </span>
                     ))}
                 </div>
             </div>

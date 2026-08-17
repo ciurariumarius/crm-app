@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useSearchParams } from "next/navigation"
 import { format } from "date-fns"
-import { Banknote, Building2, CalendarDays, Check, Circle, Clock3, ListTodo, Plus, RefreshCcw } from "lucide-react"
+import { Building2, CalendarDays, Check, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDebounce } from "@/hooks/use-debounce"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
@@ -157,30 +157,14 @@ function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
     )
 }
 
-function ProjectMetaPill({
-    icon,
-    label,
-    value,
-    className,
-}: {
-    icon: React.ReactNode
-    label: string
-    value: React.ReactNode
-    className?: string
-}) {
-    return (
-        <div
-            title={typeof value === "string" ? `${label}: ${value}` : label}
-            aria-label={label}
-            className={cn(
-                "inline-flex h-8 max-w-full items-center gap-2 rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-secondary)] shadow-sm",
-                className
-            )}
-        >
-            <span className="shrink-0 text-[var(--text-muted)]">{icon}</span>
-            <span className="truncate">{value}</span>
-        </div>
-    )
+function getProjectCardTitle(project: BoardProject) {
+    const serviceLabel = project.serviceLabel.trim()
+    const fallback = project.name?.trim() || project.site.domainName || "Untitled project"
+    if (!project.isRecurring) return serviceLabel || fallback
+
+    const createdAt = new Date(project.createdAt)
+    if (Number.isNaN(createdAt.getTime())) return serviceLabel || fallback
+    return `${serviceLabel || fallback} - ${format(createdAt, "MMMM yyyy")}`
 }
 
 function EmptyProjectsState({
@@ -205,11 +189,11 @@ function EmptyProjectsState({
 
 function ProjectsGridSkeleton() {
     return (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:gap-6">
             {Array.from({ length: 6 }).map((_, index) => (
                 <div
                     key={`project-grid-skeleton-${index}`}
-                    className="rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)]"
+                    className="min-h-[176px] rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
                 >
                     <div className="animate-pulse space-y-3">
                         <div className="flex items-start gap-3">
@@ -528,8 +512,6 @@ export function ProjectsBoardRows({
 
     const monthlyProjects = sortProjects(filteredProjects.filter((project) => project.isRecurring))
     const oneTimeProjects = sortProjects(filteredProjects.filter((project) => !project.isRecurring))
-    const orderedProjects = [...oneTimeProjects, ...monthlyProjects]
-
     const totals = React.useMemo(() => {
         return filteredProjects.reduce<TotalsSummary>(
             (acc, project) => {
@@ -709,95 +691,68 @@ export function ProjectsBoardRows({
     }
 
     if (layout === "grid") {
-        return (
-            <>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {orderedProjects.map((project) => {
-                        const projectStatus = getDisplayStatus(project)
-                        const projectPayment = getDisplayPayment(project)
-                        const overAllocated = isTimeOverAllocated(project)
-                        const totalTasks = project._count?.tasks ?? project.tasks?.length ?? 0
-                        const progress = totalTasks > 0 ? (project.completedTasks / totalTasks) * 100 : 0
-                        const createdDate = formatDateTimeParts(project.createdAt)
+        const renderCardGroup = (title: string, entries: BoardProject[], recurring: boolean) => {
+            if (entries.length === 0) return null
+            return (
+                <section className="space-y-3.5" aria-label={title}>
+                    <div className="flex items-center gap-2 px-1">
+                        <span className={cn("h-2.5 w-2.5 rounded-full", recurring ? "bg-[var(--brand-primary)]" : "bg-[var(--state-success)]")} />
+                        <h2 className="text-[15px] font-bold tracking-tight text-[var(--text-primary)]">{title}</h2>
+                        <span className="text-xs font-semibold text-[var(--text-muted)]">{entries.length}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:gap-6">
+                        {entries.map((project) => {
+                            const projectStatus = getDisplayStatus(project)
+                            const projectPayment = getDisplayPayment(project)
+                            const cardTitle = getProjectCardTitle(project)
 
-                        return (
-                            <button
-                                key={project.id}
-                                type="button"
-                                onClick={() => openDetails(project)}
-                                className={cn(
-                                    "text-left rounded-2xl border border-border/60 bg-card p-4 premium-card transition-all hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]",
-                                    getProjectToneClass(projectStatus)
-                                )}
-                            >
-                                <div className="flex items-start gap-3">
-                                    <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <p className={cn("truncate text-[17px] font-bold tracking-tight", getProjectTitleClass(projectStatus))}>
-                                                    {project.site.domainName}
-                                                </p>
-                                                <p className={cn("mt-0.5 truncate text-sm", getProjectMetaClass(projectStatus))}>
-                                                    {project.serviceLabel}
-                                                </p>
-                                            </div>
-                                            <div className="flex shrink-0 flex-col items-end gap-1.5">
-                                                <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs" className="min-w-[78px]">
-                                                    {projectStatus}
-                                                </StatusChip>
-                                                <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs" className="min-w-[78px]">
-                                                    {projectPayment}
-                                                </StatusChip>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                            <StatusChip
-                                                tone={project.isRecurring ? "recurring" : "oneTime"}
-                                                size="xs"
-                                                className="min-w-[92px]"
-                                                icon={project.isRecurring ? <RefreshCcw className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5 fill-current" />}
-                                            >
-                                                {project.isRecurring ? "Recurring" : "One-Time"}
-                                            </StatusChip>
+                            return (
+                                <button
+                                    key={project.id}
+                                    type="button"
+                                    onClick={() => openDetails(project)}
+                                    className={cn(
+                                        "group flex min-h-[176px] min-w-0 flex-col rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] p-4 text-left shadow-[var(--shadow-apple)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_22%,var(--line-subtle))] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]",
+                                        getProjectToneClass(projectStatus)
+                                    )}
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
+                                        <div className="flex flex-wrap justify-end gap-1.5">
+                                            <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs">{projectStatus}</StatusChip>
+                                            <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs">{projectPayment}</StatusChip>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="mt-3 flex flex-wrap items-center gap-2">
-                                    <ProjectMetaPill
-                                        icon={<Banknote className="h-3.5 w-3.5" />}
-                                        label="Amount"
-                                        value={`${currencyFormatter.format(getDisplayAmount(project))} RON`}
-                                    />
-                                    <ProjectMetaPill
-                                        icon={<Clock3 className="h-3.5 w-3.5" />}
-                                        label="Time logged"
-                                        value={formatDuration(project.secondsLogged)}
-                                        className={cn(
-                                            overAllocated && "border-[color:color-mix(in_srgb,var(--state-urgent)_28%,var(--line-subtle))] bg-[var(--state-danger-surface)] text-[var(--state-urgent)]"
-                                        )}
-                                    />
-                                    <ProjectMetaPill
-                                        icon={<ListTodo className="h-3.5 w-3.5" />}
-                                        label="Tasks"
-                                        value={`${project.completedTasks}/${totalTasks} (${Math.round(progress)}%)`}
-                                    />
-                                    <ProjectMetaPill
-                                        icon={<Building2 className="h-3.5 w-3.5" />}
-                                        label="Partner"
-                                        value={project.site.partner.name}
-                                    />
-                                    <ProjectMetaPill
-                                        icon={<CalendarDays className="h-3.5 w-3.5" />}
-                                        label="Created"
-                                        value={createdDate.dateLabel}
-                                    />
-                                </div>
-                            </button>
-                        )
-                    })}
+                                    <div className="mt-4 min-w-0">
+                                        <h3 className={cn("line-clamp-2 text-[19px] font-bold leading-[1.18] tracking-[-0.02em] transition-colors group-hover:text-[var(--brand-primary)] sm:text-xl", getProjectTitleClass(projectStatus))}>
+                                            {cardTitle}
+                                        </h3>
+                                        <p className={cn("mt-3 line-clamp-1 text-[15px] font-bold", getProjectMetaClass(projectStatus))}>{project.site.domainName}</p>
+                                        <p className="mt-1 line-clamp-1 text-[13px] font-medium text-[var(--text-muted)]">{project.site.partner.name}</p>
+                                    </div>
+
+                                    <div className="mt-auto flex items-end justify-between gap-3 border-t border-[var(--line-subtle)] pt-4">
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">Amount</p>
+                                            <p className="mt-1 font-mono text-sm font-bold text-[var(--text-primary)]">{currencyFormatter.format(getDisplayAmount(project))} RON</p>
+                                        </div>
+                                        <span className="text-xs font-semibold text-[var(--text-muted)]">{project.isRecurring ? "Recurring" : "One-time"}</span>
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </section>
+            )
+        }
+
+        return (
+            <>
+                {filteredProjects.length === 0 ? <EmptyProjectsState title="No projects found" description="Try a different search or reset the active filters." /> : null}
+                <div className="space-y-8">
+                    {renderCardGroup("Recurring projects", monthlyProjects, true)}
+                    {renderCardGroup("One-time projects", oneTimeProjects, false)}
                 </div>
                 {closeProjectDialog}
             </>

@@ -15,6 +15,7 @@ import {
   hasCurrentNotesWriteProtocol,
   NOTES_WRITE_PROTOCOL_VERSION,
 } from "@/lib/notes/write-protocol"
+import { hasMeaningfulRichTextContent, normalizeRichTextContent } from "@/lib/notes/content"
 
 const notes = [
   { id: "note-1", sourceType: "note" as const, archived: false, deletedAt: null },
@@ -26,6 +27,17 @@ const notes = [
 ]
 
 describe("Notes workspace state", () => {
+  it("canonicalizes empty rich-text documents", () => {
+    expect(hasMeaningfulRichTextContent("<p></p>")).toBe(false)
+    expect(hasMeaningfulRichTextContent("<p>&nbsp;</p>")).toBe(false)
+    expect(hasMeaningfulRichTextContent("<p>Write this</p>")).toBe(true)
+    expect(hasMeaningfulRichTextContent('<img src="/preview.png" alt="">')).toBe(true)
+    expect(hasMeaningfulRichTextContent('<div data-note-drawing-id="drawing-1"></div>')).toBe(true)
+    expect(normalizeRichTextContent("<p></p>")).toBe("")
+    expect(normalizeRichTextContent(null)).toBe("")
+    expect(normalizeRichTextContent("<p>Write this</p>")).toBe("<p>Write this</p>")
+  })
+
   it("rejects every stale Notes write protocol", () => {
     expect(hasCurrentNotesWriteProtocol(NOTES_WRITE_PROTOCOL_VERSION)).toBe(true)
     expect(hasCurrentNotesWriteProtocol(undefined)).toBe(false)

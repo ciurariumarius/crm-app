@@ -4,6 +4,7 @@ import { cleanupExpiredRateLimits } from '@/lib/rate-limit'
 import { apiError, apiInternalError, apiMethodNotAllowed, apiOk } from '@/lib/api-response'
 import { matchesBearerOrHeaderSecret } from '@/lib/http-auth'
 import { formatProjectName } from '@/lib/utils'
+import { resolveRecurringRolloverFee } from '@/lib/projects/recurring-fee'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,6 +85,7 @@ async function rolloverProject(project: {
     siteId: string
     name: string | null
     currentFee: Prisma.Decimal | null
+    recurringBaseFee: Prisma.Decimal | null
     services: { id: string; serviceName: string; standardTasks: string; isRecurring: boolean }[]
     site: { domainName: string }
 }, today: Date) {
@@ -144,7 +146,7 @@ async function rolloverProject(project: {
         })
 
         const serviceIds = project.services.map((service) => service.id)
-        const currentFee = project.currentFee ? Number(project.currentFee) : 0
+        const currentFee = resolveRecurringRolloverFee(project.recurringBaseFee, project.currentFee)
         const newProjectName = formatProjectName({
             siteName: project.site.domainName,
             services: project.services,
@@ -170,6 +172,7 @@ async function rolloverProject(project: {
                     connect: serviceIds.map((id) => ({ id })),
                 },
                 currentFee,
+                recurringBaseFee: currentFee,
                 status: 'Active',
                 paymentStatus: 'Unpaid',
             },
@@ -228,6 +231,7 @@ export async function POST(request: Request) {
                 name: true,
                 createdAt: true,
                 currentFee: true,
+                recurringBaseFee: true,
                 site: { select: { domainName: true } },
                 services: {
                     select: {

@@ -41,6 +41,10 @@ function run() {
 
   const projectsRows = read("components/projects/projects-board-rows.tsx")
   assert.match(projectsRows, /md:min-w-\[1240px\] xl:min-w-\[1320px\]/)
+  assert.match(projectsRows, /sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4/)
+
+  const projectsHeader = read("components/projects/projects-header-controls.tsx")
+  assert.match(projectsHeader, /PopoverContent align="end" sideOffset=\{8\} className="w-\[540px\]/)
 
   const paymentsTable = read("components/payments/payments-table.tsx")
   assert.match(paymentsTable, /md:min-w-\[1040px\] xl:min-w-\[1200px\]/)
@@ -53,8 +57,10 @@ function run() {
   assert.match(domainsTable, /md:min-w-\[940px\] xl:min-w-\[1240px\]/)
 
   const notesWorkspace = read("components/notes/notes-workspace.tsx")
-  assert.match(notesWorkspace, /md:grid md:grid-cols-\[minmax\(280px,360px\)_minmax\(0,1fr\)\] xl:hidden/)
-  assert.match(notesWorkspace, /gridTemplateColumns: `\$\{sidebarWidth\}px 5px \$\{listWidth\}px 5px minmax\(520px, 1fr\)`/)
+  assert.match(notesWorkspace, /listCollapsed \? "md:grid-cols-1" : "md:grid-cols-\[minmax\(280px,360px\)_minmax\(0,1fr\)\]"/)
+  assert.match(notesWorkspace, /sidebarCollapsed \? null : `\$\{sidebarWidth\}px`/)
+  assert.match(notesWorkspace, /listCollapsed \? null : `\$\{listWidth\}px`/)
+  assert.match(notesWorkspace, /open=\{tabletListOpen\}/)
   assert.match(notesWorkspace, /h-full min-h-0 md:hidden/)
 
   process.stdout.write("verify-tablet-guardrails: ok\n")

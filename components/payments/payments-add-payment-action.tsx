@@ -20,10 +20,12 @@ const AddPartnerPaymentDialog = dynamic(
 export function PaymentsAddPaymentAction({
   partners,
   services,
+  paymentMethods = [],
   mobile = false,
 }: {
   partners: PartnerOption[]
   services: ServiceOption[]
+  paymentMethods?: string[]
   mobile?: boolean
 }) {
   const compactClassName = "!h-11 !w-auto !min-w-0 !rounded-[20px] !px-8 !gap-2 !text-white xl:!px-9"
@@ -33,6 +35,7 @@ export function PaymentsAddPaymentAction({
       <AddPartnerPaymentDialog
         partners={partners}
         services={services}
+        paymentMethods={paymentMethods}
         label="Add"
         showLabelOnMobile
         className={compactClassName}
@@ -44,6 +47,7 @@ export function PaymentsAddPaymentAction({
     <AddPartnerPaymentDialog
       partners={partners}
       services={services}
+      paymentMethods={paymentMethods}
       label="Add"
       showLabelOnMobile
       className={compactClassName}

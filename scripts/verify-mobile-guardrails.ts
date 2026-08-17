@@ -41,6 +41,7 @@ function run() {
 
   const crmTasksCards = read("components/tasks/tasks-card-view.tsx")
   assert.match(crmTasksCards, /data-slot="add-task-card"/)
+  assert.match(crmTasksCards, /bg-transparent/)
   assert.match(crmTasksCards, /grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4/)
   assert.doesNotMatch(crmTasksCards, /renderQuickComposer|QUICK_CAPTURE_LMS_TARGET/)
   assert.doesNotMatch(crmTasksCards, /Time \(min\)|quickEstimatedMinutes/)
@@ -55,6 +56,19 @@ function run() {
   const projectTasks = read("components/projects/project-tasks.tsx")
   assert.doesNotMatch(dashboardTasks, /Time \(min\)|quickEstimatedMinutes/)
   assert.doesNotMatch(projectTasks, /newTaskEstimatedMinutes|Planned time in minutes/)
+
+  const projectsHeader = read("components/projects/projects-header-controls.tsx")
+  assert.match(projectsHeader, /SheetContent side="bottom"/)
+  assert.match(projectsHeader, /ProjectsStatusControls/)
+
+  const projectCards = read("components/projects/projects-board-rows.tsx")
+  assert.match(projectCards, /sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4/)
+  assert.match(projectCards, /Recurring projects/)
+
+  const paymentBalances = read("components/payments/payment-balances-table.tsx")
+  assert.match(paymentBalances, /hidden overflow-x-auto[^"]+md:block/)
+  assert.match(paymentBalances, /grid gap-3 md:hidden/)
+  assert.match(paymentBalances, /SheetContent side="bottom"/)
 
   const tasksPagination = read("components/tasks/tasks-pagination-bar.tsx")
   assert.match(tasksPagination, /if \(!display\.shouldPaginate\) return null/)

@@ -31,6 +31,8 @@ export function ProjectsPaginationBar({
     const display = livePagination ?? fallback
     const isSearching = Boolean(searchContext?.isSearching && hasSearchTerm)
 
+    if (!display.shouldPaginate || display.totalPages <= 1) return null
+
     const buildHref = (overrides: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams.toString())
         for (const [key, value] of Object.entries(overrides)) {
@@ -49,7 +51,7 @@ export function ProjectsPaginationBar({
     }
 
     return (
-        <div className="rounded-[14px] border border-[var(--line-subtle)]/85 bg-[var(--surface-lowest)] px-2.5 py-2 shadow-[var(--shadow-apple)] sm:px-3">
+        <div className="mt-4 rounded-[14px] border border-[var(--line-subtle)]/85 bg-[var(--surface-lowest)] px-2.5 py-2 shadow-[var(--shadow-apple)] sm:mt-5 sm:px-3">
             <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                     <DropdownMenu>

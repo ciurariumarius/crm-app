@@ -19,6 +19,8 @@ import {
     X,
     FileText,
     ListTodo,
+    MoreHorizontal,
+    Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,7 +46,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ProjectWithDetails } from "@/types"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
 import { Service, Site } from "@prisma/client"
-import { SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
+import { SidePanelDetailRow, SidePanelSectionTitle, SidePanelTabs } from "@/components/ui/side-panel-primitives"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
 import { ProjectHistoryLogSections, type ProjectPaymentHistoryEntry, type ProjectStatusHistoryEntry } from "@/components/projects/project-history-log-sections"
 import { ProjectSheetInfoSection } from "@/components/projects/project-sheet-info-section"
@@ -55,6 +57,7 @@ import {
     resolveProjectNoteDraftContent,
 } from "@/lib/notes/workspace-state"
 import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
+import { normalizeRichTextContent } from "@/lib/notes/content"
 
 type UpdateProjectPayload = {
     name?: string
@@ -188,6 +191,9 @@ export function ProjectSheetContent({
     const [amountInput, setAmountInput] = React.useState("")
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
     const [isEditingServices, setIsEditingServices] = React.useState(false)
+    const [activeTab, setActiveTab] = React.useState("overview")
+    const [isEditingDetails, setIsEditingDetails] = React.useState(false)
+    const [draftServiceIds, setDraftServiceIds] = React.useState<string[]>([])
     const [description, setDescription] = React.useState(initialProject.description || "")
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
     const [isManualTimeOpen, setIsManualTimeOpen] = React.useState(false)
@@ -217,6 +223,8 @@ export function ProjectSheetContent({
     const [isLoadingHistory, setIsLoadingHistory] = React.useState(false)
     const [statusHistory, setStatusHistory] = React.useState<ProjectStatusHistoryEntry[]>([])
     const [isLoadingStatusHistory, setIsLoadingStatusHistory] = React.useState(false)
+    const [hasLoadedHistory, setHasLoadedHistory] = React.useState(false)
+    const activeSidebarProjectIdRef = React.useRef(initialProject.id)
 
     const router = useRouter()
     const {
@@ -229,6 +237,15 @@ export function ProjectSheetContent({
 
     React.useEffect(() => {
         setProject({ ...initialProject, status: normalizeProjectStatus(initialProject.status) } as ProjectWithDetails)
+        if (activeSidebarProjectIdRef.current !== initialProject.id) {
+            activeSidebarProjectIdRef.current = initialProject.id
+            setActiveTab("overview")
+            setIsEditingDetails(false)
+            setIsEditingServices(false)
+            setHasLoadedHistory(false)
+            setPaymentHistory([])
+            setStatusHistory([])
+        }
     }, [initialProject])
 
     React.useEffect(() => {
@@ -238,7 +255,7 @@ export function ProjectSheetContent({
     React.useEffect(() => {
         if (activeProjectIdRef.current === project.id) return
         activeProjectIdRef.current = project.id
-        const serverDescription = project.description || ""
+        const serverDescription = normalizeRichTextContent(project.description)
         const recoveredDraft = resolveProjectNoteDraftContent(
             window.sessionStorage,
             project.id,
@@ -284,6 +301,7 @@ export function ProjectSheetContent({
     )
 
     const handleDescriptionChange = React.useCallback((nextDescription: string) => {
+        nextDescription = normalizeRichTextContent(nextDescription)
         descriptionRef.current = nextDescription
         setDescription(nextDescription)
         recordProjectNoteDraft(
@@ -323,12 +341,13 @@ export function ProjectSheetContent({
     }, [project.id])
 
     React.useEffect(() => {
-        fetchPaymentHistory()
-    }, [fetchPaymentHistory])
-
-    React.useEffect(() => {
-        fetchStatusHistory()
-    }, [fetchStatusHistory])
+        if (activeTab !== "activity" || hasLoadedHistory) return
+        let cancelled = false
+        void Promise.all([fetchPaymentHistory(), fetchStatusHistory()]).then(() => {
+            if (!cancelled) setHasLoadedHistory(true)
+        })
+        return () => { cancelled = true }
+    }, [activeTab, fetchPaymentHistory, fetchStatusHistory, hasLoadedHistory])
 
     React.useEffect(() => {
         setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
@@ -349,47 +368,42 @@ export function ProjectSheetContent({
                     return false
                 }
 
-                let updatedProject: ProjectWithDetails = project
-
-                if (data.serviceIds) {
-                    const nextServices = allServices.filter((service) => data.serviceIds?.includes(service.id))
-                    updatedProject = { ...project, services: nextServices }
-                } else {
-                    const nextPaidAt =
-                        data.paidAt !== undefined
-                            ? data.paidAt
-                                ? toDate(data.paidAt)
-                                : null
-                            : project.paidAt
-
-                    updatedProject = {
-                        ...project,
-                        ...(data.name !== undefined ? { name: data.name } : {}),
-                        ...(data.description !== undefined ? { description: data.description } : {}),
-                        ...(data.status !== undefined ? { status: data.status } : {}),
-                        ...(data.paymentStatus !== undefined ? { paymentStatus: data.paymentStatus } : {}),
-                        ...(data.paidAt !== undefined ? { paidAt: nextPaidAt } : {}),
-                        ...(data.closedAt !== undefined
-                            ? { closedAt: data.closedAt ? toDate(data.closedAt) : null }
-                            : {}),
-                        ...(data.isHeavyRevenueMonth !== undefined
-                            ? { isHeavyRevenueMonth: data.isHeavyRevenueMonth }
-                            : {}),
-                        ...(data.createdAt !== undefined ? { createdAt: data.createdAt } : {}),
-                        ...(data.currentFee !== undefined ? { currentFee: data.currentFee } : {}),
-                        updatedAt: new Date(),
-                    } as ProjectWithDetails
-                }
+                const nextPaidAt =
+                    data.paidAt !== undefined
+                        ? data.paidAt
+                            ? toDate(data.paidAt)
+                            : null
+                        : project.paidAt
+                const updatedProject: ProjectWithDetails = {
+                    ...project,
+                    ...(data.name !== undefined ? { name: data.name } : {}),
+                    ...(data.description !== undefined ? { description: data.description } : {}),
+                    ...(data.status !== undefined ? { status: data.status } : {}),
+                    ...(data.paymentStatus !== undefined ? { paymentStatus: data.paymentStatus } : {}),
+                    ...(data.paidAt !== undefined ? { paidAt: nextPaidAt } : {}),
+                    ...(data.closedAt !== undefined
+                        ? { closedAt: data.closedAt ? toDate(data.closedAt) : null }
+                        : {}),
+                    ...(data.isHeavyRevenueMonth !== undefined
+                        ? { isHeavyRevenueMonth: data.isHeavyRevenueMonth }
+                        : {}),
+                    ...(data.createdAt !== undefined ? { createdAt: data.createdAt } : {}),
+                    ...(data.currentFee !== undefined ? { currentFee: data.currentFee } : {}),
+                    ...(data.serviceIds
+                        ? { services: allServices.filter((service) => data.serviceIds?.includes(service.id)) }
+                        : {}),
+                    updatedAt: new Date(),
+                } as ProjectWithDetails
 
                 setProject(updatedProject)
                 onUpdate?.(updatedProject)
 
                 // Refresh history if payment status changed
                 if (data.paymentStatus !== undefined) {
-                    fetchPaymentHistory()
+                    setHasLoadedHistory(false)
                 }
                 if (data.status !== undefined) {
-                    fetchStatusHistory()
+                    setHasLoadedHistory(false)
                 }
 
                 const isDescriptionOnlyUpdate =
@@ -407,7 +421,7 @@ export function ProjectSheetContent({
                 setUpdatingId(null)
             }
         },
-        [allServices, onUpdate, project, router, fetchPaymentHistory, fetchStatusHistory]
+        [allServices, onUpdate, project, router]
     )
 
     const isInitialMount = React.useRef(true)
@@ -497,8 +511,10 @@ export function ProjectSheetContent({
     }, [handleDescriptionChange])
 
     const toggleService = (serviceId: string) => {
-        const currentServices = project.services || []
-        const currentIds = currentServices.map((service) => service.id)
+        const currentIds = isEditingDetails
+            ? draftServiceIds
+            : (project.services || []).map((service) => service.id)
+        const currentServices = allServices.filter((service) => currentIds.includes(service.id))
 
         let nextIds: string[]
 
@@ -525,6 +541,10 @@ export function ProjectSheetContent({
             nextIds = [...currentIds, serviceId]
         }
 
+        if (isEditingDetails) {
+            setDraftServiceIds(nextIds)
+            return
+        }
         void handleUpdate({ serviceIds: nextIds })
     }
 
@@ -546,6 +566,7 @@ export function ProjectSheetContent({
     }
 
     const handleAmountBlur = () => {
+        if (isEditingDetails) return
         const rawValue = amountInput.trim()
         if (!rawValue) {
             if (project.currentFee !== null) {
@@ -703,6 +724,8 @@ export function ProjectSheetContent({
 
     const updateProjectPaymentStatus = (value: UpdateProjectPayload["paymentStatus"]) => {
         if (!value || value === project.paymentStatus) return
+        const actionLabel = value === "Paid" ? "mark this project as paid" : "revert this project to unpaid"
+        if (!window.confirm(`Are you sure you want to ${actionLabel}?`)) return
         void handleUpdate({
             paymentStatus: value,
             paidAt: value === "Paid" ? new Date() : null,
@@ -840,6 +863,67 @@ export function ProjectSheetContent({
             progressBarPercent: Math.max(0, Math.min(progressPercent, 100)),
         }
     }, [hourlyRate, project.currentFee, totalTrackedSeconds])
+    const isRecurringProject = project.services?.some((service) => service.isRecurring) ?? false
+    const activeProjectTasks = (project.tasks || []).filter((task) => task.status !== "Completed")
+    const persistedServiceIds = (project.services || []).map((service) => service.id).sort()
+    const normalizedDraftServiceIds = [...draftServiceIds].sort()
+    const parsedDraftAmount = amountInput.trim() ? Number.parseInt(amountInput, 10) : null
+    const detailsDirty = parsedDraftAmount !== (project.currentFee == null ? null : Number(project.currentFee))
+        || normalizedDraftServiceIds.join(",") !== persistedServiceIds.join(",")
+
+    const beginDetailsEdit = () => {
+        setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
+        setDraftServiceIds((project.services || []).map((service) => service.id))
+        setIsEditingServices(true)
+        setIsEditingDetails(true)
+    }
+
+    const cancelDetailsEdit = () => {
+        setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
+        setDraftServiceIds((project.services || []).map((service) => service.id))
+        setIsEditingServices(false)
+        setIsEditingDetails(false)
+    }
+
+    const saveDetailsEdit = async () => {
+        if (amountInput.trim() && (parsedDraftAmount === null || Number.isNaN(parsedDraftAmount) || parsedDraftAmount < 0)) {
+            toast.error("Enter a valid project amount")
+            return
+        }
+        if (draftServiceIds.length === 0) {
+            toast.error("Project must keep at least one service")
+            return
+        }
+        const success = await handleUpdate({
+            currentFee: parsedDraftAmount,
+            serviceIds: draftServiceIds,
+        })
+        if (success) {
+            setIsEditingServices(false)
+            setIsEditingDetails(false)
+        }
+    }
+
+    const requestLeaveDetailsEdit = () => {
+        if (!isEditingDetails) return true
+        if (detailsDirty && !window.confirm("Discard unsaved project detail changes?")) return false
+        cancelDetailsEdit()
+        return true
+    }
+
+    const handleTabChange = (nextTab: string) => {
+        if (nextTab === activeTab) return true
+        if (!requestLeaveDetailsEdit()) return false
+        flushDescriptionSave()
+        setActiveTab(nextTab)
+        return true
+    }
+
+    const handleClose = () => {
+        if (!requestLeaveDetailsEdit()) return
+        flushDescriptionSave()
+        onClose?.()
+    }
 
     const statusHistoryEntries = React.useMemo(() => {
         const hasCreatedEntry = statusHistory.some((entry) => entry.action === "PROJECT_CREATED")
@@ -895,12 +979,34 @@ export function ProjectSheetContent({
             onOpenSite={openTaskSiteFromTaskPanel}
         >
             <div className="relative flex h-full flex-col overflow-hidden bg-[var(--bg-surface)]">
-                <div className="absolute right-8 top-8 z-20 flex items-center gap-2">
+                <div className="absolute right-5 top-5 z-30 flex items-center gap-2 sm:right-8 sm:top-7">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-11 w-11 rounded-xl text-[var(--text-muted)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                aria-label="More project actions"
+                            >
+                                <MoreHorizontal className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
+                            <DropdownMenuItem
+                                onSelect={() => void handleDelete()}
+                                className="cursor-pointer rounded-lg text-[var(--state-urgent)] focus:text-[var(--state-urgent)]"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete project
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     {!standalone && onClose && (
                         <button
                             type="button"
-                            onClick={onClose}
-                            className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-sm transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                            onClick={handleClose}
+                            className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] shadow-sm transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
                             aria-label="Close project"
                         >
                             <X className="h-4 w-4" />
@@ -908,9 +1014,14 @@ export function ProjectSheetContent({
                     )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-8 pb-6 pt-10">
-                    <div className="mx-auto max-w-[980px] space-y-4 pb-6">
-                        <div className="space-y-3 pr-4 pt-1 pb-1">
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 sm:px-8">
+                    <div className="mx-auto max-w-[820px] space-y-6 pb-6">
+                        <div className="sticky top-0 z-20 -mx-5 border-b border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 pb-2 pt-5 sm:-mx-8 sm:px-8 sm:pt-7">
+                        <div className="space-y-2 pr-28 pb-4">
+                            <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                                <span>{isRecurringProject ? "Recurring project" : "One-time project"}</span>
+                                {isRecurringProject ? <><span aria-hidden="true">•</span><span>{format(new Date(project.createdAt), "MMMM yyyy")}</span></> : null}
+                            </div>
                             {isEditingTitle ? (
                                 <Textarea
                                     value={localName}
@@ -925,6 +1036,7 @@ export function ProjectSheetContent({
                                             commitTitle()
                                         }
                                         if (event.key === "Escape") {
+                                            event.stopPropagation()
                                             setLocalName(formatProjectName(project))
                                             setIsEditingTitle(false)
                                         }
@@ -962,52 +1074,80 @@ export function ProjectSheetContent({
                                     Updating...
                                 </div>
                             )}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        type="button"
+                                        disabled={isEditingDetails || updatingId === project.id}
+                                        className={cn(
+                                            "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
+                                            project.status === "Active" && "border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_14%,var(--surface-lowest))] text-[var(--brand-primary)]",
+                                            project.status === "Paused" && "border-[color:color-mix(in_srgb,var(--state-warning)_35%,transparent)] bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
+                                            project.status === "Completed" && "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[var(--state-success-surface)] text-[var(--state-success)]",
+                                            project.status === "Closed" && "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
+                                        )}
+                                    >
+                                        {project.status === "Active" ? <Play className="h-3.5 w-3.5 fill-current" /> : null}
+                                        {project.status === "Paused" ? <Pause className="h-3.5 w-3.5" /> : null}
+                                        {project.status === "Completed" ? <Check className="h-3.5 w-3.5" /> : null}
+                                        {project.status === "Closed" ? <Square className="h-3.5 w-3.5 fill-current" /> : null}
+                                        {project.status}
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-40 rounded-xl p-1.5">
+                                    {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
+                                        <DropdownMenuItem key={statusOption} onSelect={() => updateProjectStatus(statusOption)} className="cursor-pointer rounded-lg">
+                                            {statusOption}
+                                            {project.status === statusOption ? <Check className="ml-auto h-4 w-4" /> : null}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-3">
-                            <div className="flex items-center">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className={cn(
-                                                "group/status relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
-                                                project.status === "Active" && "border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_14%,var(--surface-lowest))] text-[var(--brand-primary)] shadow-[0_2px_10px_-4px_rgba(11,143,168,0.22)]",
-                                                project.status === "Paused" && "border-[color:color-mix(in_srgb,var(--state-warning)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-warning)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-warning)_84%,var(--text-primary))] shadow-[0_2px_10px_-4px_rgba(245,158,11,0.2)]",
-                                                project.status === "Completed" && "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-success)_84%,var(--text-primary))] shadow-[0_2px_10px_-4px_rgba(16,185,129,0.2)]",
-                                                project.status === "Closed" && "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_95%,var(--surface-low)_5%)] text-[var(--text-secondary)]"
-                                            )}
-                                        >
-                                            <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_20%,transparent)] transition-transform duration-300 group-hover/status:translate-y-0" />
-                                            {project.status === "Active" && <Play className="relative z-10 h-3.5 w-3.5 fill-current" />}
-                                            {project.status === "Paused" && <Pause className="relative z-10 h-3.5 w-3.5" />}
-                                            {project.status === "Completed" && <Check className="relative z-10 h-3.5 w-3.5" />}
-                                            {project.status === "Closed" && <Square className="relative z-10 h-3.5 w-3.5 fill-current" />}
-                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.status}</span>
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
-                                        {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
-                                            <DropdownMenuItem
-                                                key={statusOption}
-                                                onSelect={() => updateProjectStatus(statusOption)}
-                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
-                                            >
-                                                <span className={cn(
-                                                    "mr-2 h-2 w-2 rounded-full",
-                                                    statusOption === "Active" && "bg-[var(--brand-primary)]",
-                                                    statusOption === "Paused" && "bg-[var(--state-warning)]",
-                                                    statusOption === "Completed" && "bg-[var(--state-success)]",
-                                                    statusOption === "Closed" && "bg-[var(--text-muted)]"
-                                                )} />
-                                                {statusOption}
-                                                {project.status === statusOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
+                        <div className="overflow-x-auto pb-2">
+                            <SidePanelTabs
+                                ariaLabel="Project details"
+                                value={activeTab}
+                                onValueChange={handleTabChange}
+                                tabs={[
+                                    { value: "overview", label: "Overview" },
+                                    { value: "tasks", label: "Tasks", badge: project.tasks?.length || 0 },
+                                    { value: "notes", label: "Notes" },
+                                    { value: "time", label: "Time" },
+                                    { value: "activity", label: "Activity" },
+                                ]}
+                            />
+                        </div>
+                        </div>
 
+                        <div
+                            role="tabpanel"
+                            id={`project-details-${activeTab}-panel`}
+                            aria-labelledby={`project-details-${activeTab}-tab`}
+                            tabIndex={0}
+                            className="space-y-6 focus-visible:outline-none"
+                        >
+
+                        {activeTab === "overview" ? <>
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Project overview</h2>
+                                <p className="mt-1 text-sm text-[var(--text-muted)]">Client, payment, and delivery details in one place.</p>
+                            </div>
+                            {!isEditingDetails ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={beginDetailsEdit}
+                                    className="h-11 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4"
+                                >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit details
+                                </Button>
+                            ) : null}
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div className="flex items-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -1052,11 +1192,17 @@ export function ProjectSheetContent({
                                         value={amountInput}
                                         onChange={(event) => setAmountInput(event.target.value)}
                                         onBlur={handleAmountBlur}
+                                        readOnly={!isEditingDetails}
                                         className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-lg font-black tracking-[-0.02em] text-[var(--text-primary)] shadow-none focus-visible:ring-0 sm:text-xl md:text-2xl"
                                         placeholder="0"
                                     />
                                     <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-2 py-0.5 text-xs font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors group-hover/amount:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] group-hover/amount:text-[var(--brand-primary)] sm:ml-3 sm:px-2.5 sm:py-1 sm:text-xs">RON</span>
                                 </div>
+                                {isRecurringProject ? (
+                                    <p className="mt-1.5 text-center text-xs font-medium text-[var(--text-muted)]">
+                                        Applies to {format(new Date(project.createdAt), "MMMM yyyy")} only. Future months keep the recurring fee of {Number(project.recurringBaseFee ?? project.currentFee ?? 0).toLocaleString("ro-RO")} RON.
+                                    </p>
+                                ) : null}
                             </div>
                         </div>
 
@@ -1077,13 +1223,40 @@ export function ProjectSheetContent({
                                 </span>
                             </div>
                         )}
+                        <section className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <p className="text-sm font-semibold text-[var(--text-primary)]">Active tasks</p>
+                                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">{activeProjectTasks.length} ready to work</p>
+                                </div>
+                                <Button type="button" variant="ghost" onClick={() => setActiveTab("tasks")} className="h-10 rounded-xl px-3 text-sm font-semibold">
+                                    View all
+                                </Button>
+                            </div>
+                            {activeProjectTasks.length > 0 ? (
+                                <div className="mt-3 divide-y divide-[var(--line-subtle)] border-t border-[var(--line-subtle)]">
+                                    {activeProjectTasks.slice(0, 3).map((task) => (
+                                        <button
+                                            key={task.id}
+                                            type="button"
+                                            onClick={() => setActiveTab("tasks")}
+                                            className="flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left text-sm font-medium text-[var(--text-primary)] transition hover:text-[var(--primary)]"
+                                        >
+                                            <span className="truncate">{task.name || "Untitled task"}</span>
+                                            <span className="shrink-0 text-xs text-[var(--text-muted)]">Open</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </section>
+                        </> : null}
 
-                        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-3">
+                        {activeTab === "tasks" ? <section className="space-y-3">
                             <SidePanelSectionTitle title="Project tasks" icon={<ListTodo className="h-3.5 w-3.5" />} />
                             <ProjectTasks projectId={project.id} initialTasks={project.tasks || []} />
-                        </section>
+                        </section> : null}
 
-                        <SidePanelNotesSection
+                        {activeTab === "notes" ? <SidePanelNotesSection
                             title="Project notes"
                             icon={<FileText className="h-3.5 w-3.5" />}
                             statusLabel={
@@ -1132,9 +1305,11 @@ export function ProjectSheetContent({
                                     )}
                                 </Button>
                             }
-                        />
+                            className="border-t-0 pt-0"
+                            minHeightClassName="min-h-[calc(100dvh-330px)] sm:min-h-[520px]"
+                        /> : null}
 
-                        <section className="space-y-2 border-t border-[var(--line-subtle)] pt-3">
+                        {activeTab === "time" ? <section className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <SidePanelSectionTitle title="Hour Recommendation" icon={<Target className="h-3.5 w-3.5" />} />
                                 {budgetInsights.hasHourlyRate && budgetInsights.hasFee && (
@@ -1236,10 +1411,10 @@ export function ProjectSheetContent({
                                     </div>
                                 </div>
                             )}
-                        </section>
+                        </section> : null}
 
 
-                        <section className="space-y-2 border-t border-[var(--line-subtle)] pt-3">
+                        {activeTab === "time" ? <section className="space-y-2 border-t border-[var(--line-subtle)] pt-5">
                             <div className="flex items-center justify-between">
                                 <h2 className="ui-overline inline-flex items-center gap-2 text-[var(--text-secondary)]">
                                     <Clock3 className="h-3.5 w-3.5" />
@@ -1297,9 +1472,9 @@ export function ProjectSheetContent({
                                     setIsTimeLogSheetOpen(true)
                                 }}
                             />
-                        </section>
+                        </section> : null}
 
-                        <ProjectSheetInfoSection
+                        {activeTab === "overview" ? <ProjectSheetInfoSection
                             partnerName={project.site.partner.name}
                             domainName={project.site.domainName}
                             onOpenPartner={() => {
@@ -1308,12 +1483,13 @@ export function ProjectSheetContent({
                             }}
                             onOpenSitePanel={openSitePanel}
                             externalSiteUrl={externalSiteUrl}
-                            services={(project.services || []).map((service) => ({
+                            services={(isEditingDetails
+                                ? allServices.filter((service) => draftServiceIds.includes(service.id))
+                                : project.services || []).map((service) => ({
                                 id: service.id,
                                 serviceName: service.serviceName,
                             }))}
-                            isEditingServices={isEditingServices}
-                            onToggleEditServices={() => setIsEditingServices((current) => !current)}
+                            isEditingServices={isEditingDetails && isEditingServices}
                             onToggleService={toggleService}
                             recurringServices={recurringServices.map((service) => ({
                                 id: service.id,
@@ -1323,21 +1499,19 @@ export function ProjectSheetContent({
                                 id: service.id,
                                 serviceName: service.serviceName,
                             }))}
-                        />
+                        /> : null}
 
-                        <ProjectHistoryLogSections
+                        {activeTab === "activity" ? <ProjectHistoryLogSections
                             paymentHistory={paymentHistory}
                             isLoadingHistory={isLoadingHistory}
                             statusHistoryEntries={statusHistoryEntries}
                             isLoadingStatusHistory={isLoadingStatusHistory}
-                        />
+                        /> : null}
 
 
-                        <SidePanelMetaBar
-                            entityLabel="Project ID"
-                            entityId={project.id.split("-")[0]}
-                            onDelete={handleDelete}
-                            createdAt={
+                        {activeTab === "activity" ? <div className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4">
+                            <SidePanelDetailRow label="Project ID" value={project.id.split("-")[0]} />
+                            <SidePanelDetailRow label="Created" value={
                                 isEditingCreatedAt ? (
                                     <span className="inline-flex items-center gap-2">
                                         <Input
@@ -1378,11 +1552,24 @@ export function ProjectSheetContent({
                                         </button>
                                     </span>
                                 )
-                            }
-                            updatedAt={lastUpdatedTimestamp ? formatBottomDate(lastUpdatedTimestamp) : undefined}
-                        />
+                            } />
+                            <SidePanelDetailRow label="Updated" value={lastUpdatedTimestamp ? formatBottomDate(lastUpdatedTimestamp) : "—"} />
+                        </div> : null}
+                        </div>
                     </div>
                 </div>
+
+                {activeTab === "overview" && isEditingDetails ? (
+                    <div className="flex items-center justify-end gap-3 border-t border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 sm:px-8">
+                        <Button type="button" variant="outline" onClick={cancelDetailsEdit} disabled={updatingId === project.id} className="h-11 rounded-xl px-5">
+                            Cancel
+                        </Button>
+                        <Button type="button" onClick={() => void saveDetailsEdit()} disabled={updatingId === project.id || !detailsDirty} className="h-11 rounded-xl px-5">
+                            {updatingId === project.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Save changes
+                        </Button>
+                    </div>
+                ) : null}
 
                 <TimeLogSheet
                     log={selectedTimeLog}

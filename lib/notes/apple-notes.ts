@@ -48,7 +48,8 @@ export function deriveNoteContentFeatures(content: string) {
     hasChecklist:
       /data-type=["']taskList["']/i.test(content) ||
       /data-checked=["'](?:true|false)["']/i.test(content),
-    hasAttachment: /<img\b/i.test(content),
+    hasAttachment:
+      /<img\b/i.test(content) || /data-note-drawing-id=["'][0-9a-f-]{36}["']/i.test(content),
   }
 }
 

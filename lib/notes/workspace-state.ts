@@ -1,3 +1,5 @@
+import { hasMeaningfulRichTextContent } from "@/lib/notes/content"
+
 export type NotesWorkspaceScope = "view" | "all"
 
 export type WorkspaceScopedNote = {
@@ -46,14 +48,6 @@ function readProjectNoteDraftAtKey(storage: StorageLike, key: string) {
 
 function readProjectNoteDraft(storage: StorageLike, projectId: string) {
   return readProjectNoteDraftAtKey(storage, projectNoteDraftKey(projectId))
-}
-
-function hasMeaningfulProjectNoteContent(content: string) {
-  return content
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;|&#160;/gi, " ")
-    .replace(/\s+/g, "")
-    .length > 0
 }
 
 function writeProjectNoteDraftRecord(
@@ -118,7 +112,7 @@ export function resolveProjectNoteDraftContent(
     const legacyKey = projectNoteDraftKey(projectId, LEGACY_PROJECT_NOTE_DRAFT_PREFIX)
     const legacyDraft = readProjectNoteDraftAtKey(storage, legacyKey)
     storage.removeItem(legacyKey)
-    if (legacyDraft && hasMeaningfulProjectNoteContent(legacyDraft.content)) {
+    if (legacyDraft && hasMeaningfulRichTextContent(legacyDraft.content)) {
       draft = legacyDraft
       writeProjectNoteDraftRecord(storage, projectId, legacyDraft)
     }
@@ -136,8 +130,8 @@ export function resolveProjectNoteDraftContent(
     (knownContent) =>
       knownContent === serverContent
       || (
-        !hasMeaningfulProjectNoteContent(knownContent)
-        && !hasMeaningfulProjectNoteContent(serverContent)
+        !hasMeaningfulRichTextContent(knownContent)
+        && !hasMeaningfulRichTextContent(serverContent)
       )
   )
   return serverVersionIsKnown ? draft.content : null

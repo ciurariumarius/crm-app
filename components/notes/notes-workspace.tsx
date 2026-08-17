@@ -6,28 +6,24 @@ import {
   Archive,
   ArchiveRestore,
   Check,
-  ChevronDown,
   ChevronLeft,
-  ChevronUp,
   FilePlus2,
   Folder,
   FolderInput,
   FolderKanban,
   FolderPlus,
-  Grid2X2,
-  Hash,
-  List,
   ListTodo,
   MoreHorizontal,
   NotebookPen,
   PanelLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pencil,
   Pin,
   PinOff,
   Plus,
   RotateCcw,
   SlidersHorizontal,
-  Sparkles,
   Trash2,
   X,
 } from "lucide-react"
@@ -35,23 +31,17 @@ import { toast } from "sonner"
 import {
   createNote,
   createNoteFolder,
-  createNoteSmartFolder,
   deleteNote,
   deleteNoteFolder,
-  moveNoteFolder,
   permanentlyDeleteNote,
   renameNoteFolder,
   restoreNote,
   setNoteArchived,
   setNotePinned,
   updateNote,
-  queryNoteRecordPage,
   type NoteFolderRecord,
   type NoteRecord,
-  type NoteSmartFolderRecord,
-  type NoteTagRecord,
 } from "@/lib/actions/notes"
-import type { NotesQueryView } from "@/lib/notes/queries.server"
 import { updateProject } from "@/lib/actions/projects"
 import { updateTask } from "@/lib/actions/tasks"
 import { AppPageHeader } from "@/components/layout/app-page-header"
@@ -65,16 +55,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,7 +68,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { NotesSearchInput } from "@/components/notes/notes-search-input"
-import { NotesScopeSwitch } from "@/components/notes/notes-scope-switch"
 import { NotesSidebarPane } from "@/components/notes/notes-sidebar-pane"
 import { NotesListPane } from "@/components/notes/notes-list-pane"
 import { NotesEditorPane } from "@/components/notes/notes-editor-pane"
@@ -95,7 +75,6 @@ import {
   useNotesWorkspacePreferences,
 } from "@/components/notes/use-notes-workspace-preferences"
 import { cn } from "@/lib/utils"
-import { matchesNoteSmartFolder } from "@/lib/notes/apple-notes"
 import {
   DEFAULT_NOTE_PREVIEW,
   DEFAULT_NOTE_TITLE,
@@ -108,22 +87,19 @@ import {
   isNoteDraftDirty,
   resolveNoteEditorDraft,
   resolveProjectNoteDraftContent,
-  resolveNotesScope,
   shouldAcceptNoteEditorChange,
   shouldDiscardNewNote,
 } from "@/lib/notes/workspace-state"
 import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
+import { normalizeRichTextContent } from "@/lib/notes/content"
+import type { NoteDrawingOwner } from "@/lib/notes/drawings"
 
 type NotesWorkspaceProps = {
   initialNotes: NoteRecord[]
   initialSelectedNoteId: string | null
   initialView?: string
-  initialSearchScope?: SearchScope
   initialFolders: NoteFolderRecord[]
-  initialTags?: NoteTagRecord[]
-  initialSmartFolders?: NoteSmartFolderRecord[]
   foldersEnabled?: boolean
-  productivityFeaturesEnabled?: boolean
   storageUnavailable?: boolean
 }
 
@@ -135,20 +111,9 @@ type RailKey =
   | "projects"
   | "tasks"
   | `folder:${string}`
-  | `tag:${string}`
-  | `smart:${string}`
 
-type SearchScope = "view" | "all"
 type MobilePane = "folders" | "list" | "editor"
 type SaveState = "idle" | "saving" | "saved" | "error"
-
-type PersonalListPageState = {
-  key: string
-  noteIds: string[]
-  nextCursor: string | null
-  loadingMore: boolean
-  error: string | null
-}
 
 type DateGroup = {
   key: "pinned" | "today" | "yesterday" | "previous30" | "older"
@@ -207,20 +172,11 @@ function upsertNote(items: NoteRecord[], next: NoteRecord) {
 }
 
 function sortFoldersForDisplay(items: NoteFolderRecord[]) {
-  const byOrder = (a: NoteFolderRecord, b: NoteFolderRecord) =>
-    (a.sortOrder ?? 1000) - (b.sortOrder ?? 1000) ||
-    (a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1) ||
-    a.name.localeCompare(b.name)
-  const roots = items.filter((folder) => !folder.parentId).sort(byOrder)
-  const nested = new Map<string, NoteFolderRecord[]>()
-  for (const folder of items.filter((candidate) => Boolean(candidate.parentId))) {
-    const parentId = folder.parentId as string
-    nested.set(parentId, [...(nested.get(parentId) || []), folder])
-  }
-  return roots.flatMap((folder) => [
-    folder,
-    ...(nested.get(folder.id) || []).sort(byOrder),
-  ])
+  return [...items].sort(
+    (a, b) =>
+      (a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1) ||
+      a.name.localeCompare(b.name)
+  )
 }
 
 function scoreSearchMatch(note: NoteRecord, needle: string) {
@@ -283,70 +239,14 @@ function hasMeaningfulContent(content: string) {
   return toContentText(content).trim().length > 0
 }
 
-function extractFirstImageSrc(content: string) {
-  const match = content.match(/<img[^>]+src=["']([^"']+)["']/i)
-  const src = match?.[1]?.trim()
-  if (!src) return null
-  if (src.startsWith("/") || src.startsWith("data:image/") || src.startsWith("blob:")) {
-    return src
-  }
-  try {
-    const parsed = new URL(src)
-    return parsed.protocol === "https:" || parsed.protocol === "http:" ? src : null
-  } catch {
-    return null
-  }
-}
-
 function getFilteredByRail(
   notes: NoteRecord[],
-  rail: RailKey,
-  smartFolders: NoteSmartFolderRecord[] = []
+  rail: RailKey
 ) {
-  if (rail.startsWith("tag:")) {
-    const tagId = rail.slice("tag:".length)
-    return notes.filter(
-      (note) =>
-        getNoteSourceType(note) === "note" &&
-        !note.archived &&
-        !note.deletedAt &&
-        note.tags?.some((tag) => tag.id === tagId)
-    )
-  }
-  if (rail.startsWith("smart:")) {
-    const smartFolderId = rail.slice("smart:".length)
-    const smartFolder = smartFolders.find((folder) => folder.id === smartFolderId)
-    if (!smartFolder) return []
-    return notes.filter(
-      (note) =>
-        getNoteSourceType(note) === "note" &&
-        !note.archived &&
-        !note.deletedAt &&
-        matchesNoteSmartFolder(
-          {
-            pinned: note.pinned,
-            hasChecklist: Boolean(note.hasChecklist),
-            hasAttachment: Boolean(note.hasAttachment),
-            updatedAt: note.updatedAt,
-            tagIds: (note.tags || []).map((tag) => tag.id),
-          },
-          {
-            matchMode: smartFolder.matchMode,
-            requirePinned: smartFolder.requirePinned,
-            requireChecklist: smartFolder.requireChecklist,
-            requireAttachment: smartFolder.requireAttachment,
-            updatedWithinDays: smartFolder.updatedWithinDays as 1 | 7 | 30 | 90 | null,
-            tagIds: smartFolder.tags.map((tag) => tag.id),
-          }
-        )
-    )
-  }
   if (rail === "all") {
     return notes.filter(
       (note) =>
-        getNoteSourceType(note) === "note" &&
-        !note.archived &&
-        !note.deletedAt
+        getNoteSourceType(note) !== "note" || (!note.archived && !note.deletedAt)
     )
   }
   if (rail === "pinned") {
@@ -430,12 +330,8 @@ export function NotesWorkspace({
   initialNotes,
   initialSelectedNoteId,
   initialView,
-  initialSearchScope = "view",
   initialFolders,
-  initialTags = [],
-  initialSmartFolders = [],
   foldersEnabled = true,
-  productivityFeaturesEnabled = true,
   storageUnavailable = false,
 }: NotesWorkspaceProps) {
   const [notes, setNotes] = React.useState<NoteRecord[]>(() => sortNotes(initialNotes))
@@ -449,9 +345,7 @@ export function NotesWorkspace({
       view === "deleted" ||
       view === "projects" ||
       view === "tasks" ||
-      view.startsWith("folder:") ||
-      view.startsWith("tag:") ||
-      view.startsWith("smart:")
+      view.startsWith("folder:")
     ) {
       return view as RailKey
     }
@@ -468,45 +362,32 @@ export function NotesWorkspace({
     initialSelectedNoteId ? "editor" : "folders"
   )
   const [tabletSidebarOpen, setTabletSidebarOpen] = React.useState(false)
-  const [searchScope, setSearchScope] = React.useState<SearchScope>(initialSearchScope)
+  const [tabletListOpen, setTabletListOpen] = React.useState(false)
   const {
     sidebarWidth,
     setSidebarWidth,
     listWidth,
     setListWidth,
-    listMode,
-    setListMode,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    listCollapsed,
+    setListCollapsed,
     noteSort,
     setNoteSort,
   } = useNotesWorkspacePreferences()
   const [saveState, setSaveState] = React.useState<SaveState>("idle")
-  const [personalListPage, setPersonalListPage] =
-    React.useState<PersonalListPageState | null>(null)
-  const [isPersonalListLoading, setIsPersonalListLoading] = React.useState(false)
-  const [personalListReloadToken, setPersonalListReloadToken] = React.useState(0)
   const [rowMenuNoteId, setRowMenuNoteId] = React.useState<string | null>(null)
   const [isCreating, setIsCreating] = React.useState(false)
   const [pendingDeleteNote, setPendingDeleteNote] = React.useState<NoteRecord | null>(null)
   const [deletePermanently, setDeletePermanently] = React.useState(false)
   const [isDeletingNote, setIsDeletingNote] = React.useState(false)
   const [editorFocusToken, setEditorFocusToken] = React.useState(0)
+  const [drawingRequestToken, setDrawingRequestToken] = React.useState<number | undefined>()
   const [folders, setFolders] = React.useState<NoteFolderRecord[]>(() =>
     sortFoldersForDisplay(initialFolders)
   )
-  const [tags] = React.useState<NoteTagRecord[]>(initialTags)
-  const [smartFolders, setSmartFolders] = React.useState<NoteSmartFolderRecord[]>(initialSmartFolders)
-  const [isSmartFolderDialogOpen, setIsSmartFolderDialogOpen] = React.useState(false)
-  const [smartFolderName, setSmartFolderName] = React.useState("")
-  const [smartFolderMatchMode, setSmartFolderMatchMode] = React.useState<"all" | "any">("all")
-  const [smartFolderTagIds, setSmartFolderTagIds] = React.useState<string[]>([])
-  const [smartFolderPinned, setSmartFolderPinned] = React.useState(false)
-  const [smartFolderChecklist, setSmartFolderChecklist] = React.useState(false)
-  const [smartFolderAttachment, setSmartFolderAttachment] = React.useState(false)
-  const [smartFolderUpdatedDays, setSmartFolderUpdatedDays] = React.useState<string>("none")
-  const [isCreatingSmartFolder, setIsCreatingSmartFolder] = React.useState(false)
   const [isAddingFolder, setIsAddingFolder] = React.useState(false)
   const [newFolderName, setNewFolderName] = React.useState("")
-  const [newFolderParentId, setNewFolderParentId] = React.useState<string | null>(null)
   const [isCreatingFolder, setIsCreatingFolder] = React.useState(false)
   const [editingFolderId, setEditingFolderId] = React.useState<string | null>(null)
   const [editingFolderName, setEditingFolderName] = React.useState("")
@@ -539,7 +420,6 @@ export function NotesWorkspace({
   const draftCreateInFlightRef = React.useRef(false)
   const draggedNoteIdRef = React.useRef<string | null>(null)
   const dragPreviewRef = React.useRef<HTMLDivElement | null>(null)
-  const personalListRequestRef = React.useRef(0)
 
   const selectNoteId = React.useCallback((noteId: string | null) => {
     selectedNoteIdRef.current = noteId
@@ -557,12 +437,11 @@ export function NotesWorkspace({
   React.useEffect(() => {
     const url = new URL(window.location.href)
     url.searchParams.set("view", activeRailKey)
-    if (searchScope === "all") url.searchParams.set("scope", "all")
-    else url.searchParams.delete("scope")
+    url.searchParams.delete("scope")
     if (selectedNoteId) url.searchParams.set("note", selectedNoteId)
     else url.searchParams.delete("note")
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`)
-  }, [activeRailKey, searchScope, selectedNoteId])
+  }, [activeRailKey, selectedNoteId])
 
   const beginPaneResize = React.useCallback(
     (
@@ -619,7 +498,7 @@ export function NotesWorkspace({
   const smartCollectionCounts = React.useMemo(() => {
     const personalNotes = notes.filter((note) => getNoteSourceType(note) === "note")
     return {
-      all: personalNotes.filter((note) => !note.archived && !note.deletedAt).length,
+      all: notes.filter((note) => getNoteSourceType(note) !== "note" || (!note.archived && !note.deletedAt)).length,
       pinned: personalNotes.filter(
         (note) => !note.archived && !note.deletedAt && note.pinned
       ).length,
@@ -644,22 +523,6 @@ export function NotesWorkspace({
     }
     return counts
   }, [folders, notes])
-
-  const tagCounts = React.useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const tag of tags) counts.set(tag.id, 0)
-    for (const note of notes) {
-      if (
-        getNoteSourceType(note) !== "note" ||
-        note.archived ||
-        note.deletedAt
-      ) continue
-      for (const tag of note.tags || []) {
-        counts.set(tag.id, (counts.get(tag.id) || 0) + 1)
-      }
-    }
-    return counts
-  }, [notes, tags])
 
   React.useEffect(() => {
     setSaveState("idle")
@@ -709,184 +572,14 @@ export function NotesWorkspace({
   }, [selectedNote, selectedNoteSourceType])
 
   const railFilteredNotes = React.useMemo(() => {
-    return getFilteredByRail(notes, activeRailKey, smartFolders)
-  }, [notes, activeRailKey, smartFolders])
-
-  const personalQueryView = React.useMemo<NotesQueryView | null>(() => {
-    if (searchScope === "all") return "all"
-    if (activeRailKey === "projects" || activeRailKey === "tasks") return null
-    return activeRailKey as NotesQueryView
-  }, [activeRailKey, searchScope])
-
-  const personalQueryKey = React.useMemo(
-    () =>
-      personalQueryView
-        ? JSON.stringify([
-            personalQueryView,
-            search.trim(),
-            searchScope,
-            noteSort,
-          ])
-        : "",
-    [noteSort, personalQueryView, search, searchScope]
-  )
-
-  const mergePersonalRecords = React.useCallback((records: NoteRecord[]) => {
-    setNotes((current) => {
-      const byId = new Map(current.map((note) => [note.id, note]))
-      for (const record of records) {
-        byId.set(record.id, {
-          ...byId.get(record.id),
-          ...record,
-          sourceType: "note",
-        })
-      }
-      return sortNotes([...byId.values()])
-    })
-  }, [])
-
-  React.useEffect(() => {
-    if (!personalQueryView) {
-      setPersonalListPage(null)
-      setIsPersonalListLoading(false)
-      return
-    }
-
-    const requestId = personalListRequestRef.current + 1
-    personalListRequestRef.current = requestId
-    setIsPersonalListLoading(true)
-    const timeout = window.setTimeout(() => {
-      void queryNoteRecordPage({
-        view: personalQueryView,
-        q: search.trim(),
-        searchScope,
-        sort: noteSort,
-        pageSize: 100,
-      }).then((result) => {
-        if (personalListRequestRef.current !== requestId) return
-        setIsPersonalListLoading(false)
-        if (!result.success || !result.data) {
-          setPersonalListPage({
-            key: personalQueryKey,
-            noteIds: [],
-            nextCursor: null,
-            loadingMore: false,
-            error: result.error || "Failed to load notes",
-          })
-          return
-        }
-
-        mergePersonalRecords(result.data.notes)
-        const noteIds = result.data.notes.map((note) => note.id)
-        const currentSelectedId = selectedNoteIdRef.current
-        if (currentSelectedId && !search.trim() && !noteIds.includes(currentSelectedId)) {
-          const eligibleNotes =
-            searchScope === "all"
-              ? resolveNotesScope(notesRef.current, [], "all")
-              : getFilteredByRail(notesRef.current, activeRailKey, smartFolders)
-          if (eligibleNotes.some((note) => note.id === currentSelectedId)) {
-            noteIds.unshift(currentSelectedId)
-          }
-        }
-        setPersonalListPage({
-          key: personalQueryKey,
-          noteIds,
-          nextCursor: result.data.nextCursor,
-          loadingMore: false,
-          error: null,
-        })
-      })
-    }, 250)
-
-    return () => window.clearTimeout(timeout)
-  }, [
-    activeRailKey,
-    mergePersonalRecords,
-    noteSort,
-    personalQueryKey,
-    personalQueryView,
-    personalListReloadToken,
-    search,
-    searchScope,
-    smartFolders,
-  ])
-
-  const handleLoadMorePersonalNotes = React.useCallback(async () => {
-    if (
-      !personalQueryView ||
-      !personalListPage?.nextCursor ||
-      personalListPage.loadingMore ||
-      personalListPage.key !== personalQueryKey
-    ) {
-      return
-    }
-    const cursor = personalListPage.nextCursor
-    setPersonalListPage((current) =>
-      current?.key === personalQueryKey ? { ...current, loadingMore: true } : current
-    )
-    const result = await queryNoteRecordPage({
-      view: personalQueryView,
-      q: search.trim(),
-      searchScope,
-      sort: noteSort,
-      cursor,
-      pageSize: 100,
-    })
-    if (!result.success || !result.data) {
-      setPersonalListPage((current) =>
-        current?.key === personalQueryKey
-          ? {
-              ...current,
-              loadingMore: false,
-              error: result.error || "Failed to load more notes",
-            }
-          : current
-      )
-      return
-    }
-    mergePersonalRecords(result.data.notes)
-    setPersonalListPage((current) => {
-      if (!current || current.key !== personalQueryKey) return current
-      return {
-        ...current,
-        noteIds: [
-          ...current.noteIds,
-          ...result.data.notes
-            .map((note) => note.id)
-            .filter((id) => !current.noteIds.includes(id)),
-        ],
-        nextCursor: result.data.nextCursor,
-        loadingMore: false,
-        error: null,
-      }
-    })
-  }, [
-    mergePersonalRecords,
-    noteSort,
-    personalListPage,
-    personalQueryKey,
-    personalQueryView,
-    search,
-    searchScope,
-  ])
+    return getFilteredByRail(notes, activeRailKey)
+  }, [notes, activeRailKey])
 
   const filteredNotes = React.useMemo(() => {
     const needle = search.trim().toLowerCase()
-    const serverPageNotes =
-      personalListPage?.key === personalQueryKey && !personalListPage.error
-        ? personalListPage.noteIds.flatMap((id) => {
-            const note = notes.find((candidate) => candidate.id === id)
-            return note ? [note] : []
-          })
-        : null
-    const serverScopedNotes =
-      serverPageNotes === null
-        ? null
-        : searchScope === "all"
-          ? resolveNotesScope(serverPageNotes, [], "all")
-          : getFilteredByRail(serverPageNotes, activeRailKey, smartFolders)
-    const searchBase =
-      serverScopedNotes ?? resolveNotesScope(notes, railFilteredNotes, searchScope)
+    const searchBase = needle
+      ? notes.filter((note) => getNoteSourceType(note) !== "note" || !note.deletedAt)
+      : railFilteredNotes
     const visible = searchBase.filter((note) => {
       if (!needle) return true
       return (
@@ -908,17 +601,7 @@ export function NotesWorkspace({
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     })
     return sorted
-  }, [
-    activeRailKey,
-    noteSort,
-    notes,
-    personalListPage,
-    personalQueryKey,
-    railFilteredNotes,
-    search,
-    searchScope,
-    smartFolders,
-  ])
+  }, [noteSort, notes, railFilteredNotes, search])
 
   const groupedNotes = React.useMemo(() => groupNotesByDate(filteredNotes), [filteredNotes])
 
@@ -1103,14 +786,6 @@ export function NotesWorkspace({
     syncedSnapshotsRef.current.delete(noteId)
     persistedNoteContentsRef.current.delete(noteId)
     setNotes((current) => current.filter((note) => note.id !== noteId))
-    setPersonalListPage((current) =>
-      current
-        ? {
-            ...current,
-            noteIds: current.noteIds.filter((id) => id !== noteId),
-          }
-        : current
-    )
     return true
   }, [])
 
@@ -1149,6 +824,7 @@ export function NotesWorkspace({
 
   const handleContentDraftChange = React.useCallback((noteId: string, value: string) => {
     if (!shouldAcceptNoteEditorChange(noteId, selectedNoteIdRef.current)) return
+    value = normalizeRichTextContent(value)
     const previousDraft = noteDraftsRef.current.get(noteId) ?? contentDraftRef.current
     noteDraftsRef.current.set(noteId, value)
     if (previousDraft !== value) {
@@ -1190,17 +866,6 @@ export function NotesWorkspace({
           content: createdContent,
         })
         persistedNoteContentsRef.current.set(result.data.id, result.data.content || "")
-        setPersonalListPage((current) =>
-          current?.key === personalQueryKey
-            ? {
-                ...current,
-                noteIds: [
-                  result.data.id,
-                  ...current.noteIds.filter((id) => id !== result.data.id),
-                ],
-              }
-            : current
-        )
         if (activeFolderId) {
           const createdFolderId = result.data.folderId || activeFolderId
           setActiveRailKey(folderRailKey(createdFolderId))
@@ -1214,7 +879,7 @@ export function NotesWorkspace({
         setIsCreating(false)
       }
     },
-    [activeRailKey, personalQueryKey, selectNoteId, storageUnavailable]
+    [activeRailKey, selectNoteId, storageUnavailable]
   )
 
   const beginNewNote = React.useCallback(() => {
@@ -1222,7 +887,6 @@ export function NotesWorkspace({
     setSearch("")
     setEmptyEditorDraft("")
     selectNoteId(null)
-    setSearchScope("view")
     setSaveState("idle")
     setEditorFocusToken((current) => current + 1)
   }, [flushSelectedNote, selectNoteId])
@@ -1239,19 +903,9 @@ export function NotesWorkspace({
   const handleSelectRail = React.useCallback(
     (rail: RailKey) => {
       void flushSelectedNote({ finalizeNewNote: true })
-      setSearchScope("view")
       setActiveRailKey(rail)
     },
     [flushSelectedNote]
-  )
-
-  const handleSelectSearchScope = React.useCallback(
-    (scope: SearchScope) => {
-      if (scope === searchScope) return
-      void flushSelectedNote({ finalizeNewNote: true })
-      setSearchScope(scope)
-    },
-    [flushSelectedNote, searchScope]
   )
 
   React.useEffect(() => {
@@ -1270,7 +924,7 @@ export function NotesWorkspace({
     }
     setIsCreatingFolder(true)
     try {
-      const result = await createNoteFolder({ name, parentId: newFolderParentId })
+      const result = await createNoteFolder({ name })
       if (!result.success || !result.data) {
         toast.error(result.error || "Failed to create folder")
         return
@@ -1281,14 +935,13 @@ export function NotesWorkspace({
         return sortFoldersForDisplay([...current, result.data])
       })
       setNewFolderName("")
-      setNewFolderParentId(null)
       setIsAddingFolder(false)
       setActiveRailKey(folderRailKey(result.data.id))
       toast.success("Folder created")
     } finally {
       setIsCreatingFolder(false)
     }
-  }, [newFolderName, newFolderParentId])
+  }, [newFolderName])
 
   const startRenameFolder = React.useCallback((folder: NoteFolderRecord) => {
     setEditingFolderId(folder.id)
@@ -1335,48 +988,6 @@ export function NotesWorkspace({
       setIsRenamingFolder(false)
     }
   }, [editingFolderId, editingFolderName])
-
-  const reorderFolder = React.useCallback(
-    async (folder: NoteFolderRecord, direction: -1 | 1) => {
-      const siblings = folders
-        .filter((candidate) => (candidate.parentId ?? null) === (folder.parentId ?? null))
-        .sort(
-          (a, b) =>
-            (a.sortOrder ?? 1000) - (b.sortOrder ?? 1000) ||
-            a.name.localeCompare(b.name)
-        )
-      const index = siblings.findIndex((candidate) => candidate.id === folder.id)
-      const swapWith = siblings[index + direction]
-      if (index < 0 || !swapWith) return
-      const folderOrder = folder.sortOrder ?? (index + 1) * 1000
-      const swapOrder = swapWith.sortOrder ?? (index + direction + 1) * 1000
-
-      const [folderResult, swapResult] = await Promise.all([
-        moveNoteFolder(folder.id, {
-          parentId: folder.parentId ?? null,
-          sortOrder: swapOrder,
-        }),
-        moveNoteFolder(swapWith.id, {
-          parentId: swapWith.parentId ?? null,
-          sortOrder: folderOrder,
-        }),
-      ])
-      if (!folderResult.success || !folderResult.data || !swapResult.success || !swapResult.data) {
-        toast.error(folderResult.error || swapResult.error || "Failed to reorder folders")
-        return
-      }
-      setFolders((current) =>
-        sortFoldersForDisplay(
-          current.map((candidate) => {
-            if (candidate.id === folder.id) return folderResult.data
-            if (candidate.id === swapWith.id) return swapResult.data
-            return candidate
-          })
-        )
-      )
-    },
-    [folders]
-  )
 
   const confirmDeleteFolder = React.useCallback(async () => {
     if (!pendingDeleteFolder) return
@@ -1812,68 +1423,6 @@ export function NotesWorkspace({
     }
   }, [deletePermanently, filteredNotes, pendingDeleteNote, selectNoteId, selectedNoteId])
 
-  const handleCreateSmartFolder = React.useCallback(async () => {
-    const name = smartFolderName.trim()
-    if (!name) {
-      toast.error("Smart folder name is required")
-      return
-    }
-    const hasCriteria =
-      smartFolderTagIds.length > 0 ||
-      smartFolderPinned ||
-      smartFolderChecklist ||
-      smartFolderAttachment ||
-      smartFolderUpdatedDays !== "none"
-    if (!hasCriteria) {
-      toast.error("Choose at least one smart folder rule")
-      return
-    }
-
-    setIsCreatingSmartFolder(true)
-    try {
-      const result = await createNoteSmartFolder({
-        name,
-        matchMode: smartFolderMatchMode,
-        tagIds: smartFolderTagIds,
-        requirePinned: smartFolderPinned ? true : null,
-        requireChecklist: smartFolderChecklist ? true : null,
-        requireAttachment: smartFolderAttachment ? true : null,
-        updatedWithinDays:
-          smartFolderUpdatedDays === "none"
-            ? null
-            : Number(smartFolderUpdatedDays),
-      })
-      if (!result.success || !result.data) {
-        toast.error(result.error || "Failed to create smart folder")
-        return
-      }
-      setSmartFolders((current) =>
-        [...current, result.data].sort(
-          (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)
-        )
-      )
-      setActiveRailKey(`smart:${result.data.id}`)
-      setIsSmartFolderDialogOpen(false)
-      setSmartFolderName("")
-      setSmartFolderTagIds([])
-      setSmartFolderPinned(false)
-      setSmartFolderChecklist(false)
-      setSmartFolderAttachment(false)
-      setSmartFolderUpdatedDays("none")
-      toast.success("Smart folder created")
-    } finally {
-      setIsCreatingSmartFolder(false)
-    }
-  }, [
-    smartFolderAttachment,
-    smartFolderChecklist,
-    smartFolderMatchMode,
-    smartFolderName,
-    smartFolderPinned,
-    smartFolderTagIds,
-    smartFolderUpdatedDays,
-  ])
-
   const appendTemplate = React.useCallback(() => {
     const noteId = selectedNoteIdRef.current
     if (!noteId) return
@@ -1911,300 +1460,94 @@ export function NotesWorkspace({
   const railCountBadgeClass =
     "inline-flex h-6 w-8 shrink-0 items-center justify-center justify-self-end rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_82%,transparent)] px-1 text-xs tabular-nums text-[var(--text-muted)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--line-subtle)_80%,transparent)]"
 
-  const renderLeftRail = (isMobile = false, compact = false) => (
+  const renderLeftRail = (isMobile = false, compact = false, allowCollapse = false) => (
     <div className={cn(compact ? "flex shrink-0 flex-col" : "flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div
-        className={cn(
-          compact
-            ? cn("ui-scrollbar overflow-y-auto", isMobile ? "max-h-[44vh]" : "max-h-[min(44vh,420px)]")
-            : "ui-scrollbar flex-1 overflow-y-auto",
-          isMobile ? "p-3" : "p-2.5"
-        )}
-      >
-        {draggedNoteId ? (
-          <span role="status" aria-live="polite" className="sr-only">
-            Dragging note. Drop it on another folder to move it.
-          </span>
-        ) : null}
+      <div className={cn(compact ? cn("ui-scrollbar overflow-y-auto", isMobile ? "max-h-[44vh]" : "max-h-[min(44vh,420px)]") : "ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5")}>
+        {draggedNoteId ? <span role="status" aria-live="polite" className="sr-only">Dragging note. Drop it on a folder to move it.</span> : null}
+        <section aria-label="Collections">
+          <div className="mb-1.5 flex h-8 items-center justify-between px-2">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Collections</h3>
+            {allowCollapse ? (
+              <button type="button" onClick={() => setSidebarCollapsed(true)} className="inline-flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Hide collections and folders" aria-expanded={!sidebarCollapsed}>
+                <PanelLeftClose className="h-3.5 w-3.5" /> Hide
+              </button>
+            ) : null}
+          </div>
+          <div className="space-y-1">
+            {([
+              ["all", NotebookPen, "All Notes", smartCollectionCounts.all],
+              ["pinned", Pin, "Pinned", smartCollectionCounts.pinned],
+              ["projects", FolderKanban, "Project Notes", smartCollectionCounts.projects],
+              ["tasks", ListTodo, "Task Notes", smartCollectionCounts.tasks],
+              ["archived", Archive, "Archived", smartCollectionCounts.archived],
+              ["deleted", Trash2, "Recently Deleted", smartCollectionCounts.deleted],
+            ] as const).map(([key, Icon, label, count]) => (
+              <button key={key} data-note-view type="button" onClick={() => handleSelectRail(key)} className={railButtonClass(activeRailKey === key)}>
+                <span className="inline-flex min-w-0 items-center gap-2"><Icon className="h-4 w-4 shrink-0" /><span className="truncate">{label}</span></span>
+                <span className={railCountBadgeClass}>{count}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         {foldersEnabled ? (
-          <section
-            aria-labelledby={isMobile ? "mobile-note-folders" : "desktop-note-folders"}
-          >
-            <div
-              className={cn(
-                "mb-1.5 flex h-9 items-center justify-between rounded-xl px-2 transition-colors",
-                draggedNoteId && "border border-[var(--brand-cyan)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] text-[var(--primary)]"
-              )}
-            >
-              <h3
-                id={isMobile ? "mobile-note-folders" : "desktop-note-folders"}
-                className={cn(
-                  "inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em]",
-                  draggedNoteId ? "text-[var(--primary)]" : "text-[var(--text-muted)]"
-                )}
-              >
-                {draggedNoteId ? <FolderInput className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
-                <span className="truncate">Folders</span>
-              </h3>
-              {draggedNoteId ? (
-                <FolderInput className="h-4 w-4 shrink-0 text-[var(--primary)]" aria-label="Choose a destination folder" />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddingFolder((current) => !current)
-                    setNewFolderName("")
-                    setNewFolderParentId(null)
-                  }}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-[var(--text-secondary)] transition-colors hover:border-[var(--line-subtle)] hover:bg-[var(--surface-lowest)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
-                  disabled={isCreatingFolder || storageUnavailable}
-                  aria-label="New folder"
-                  title="New folder"
-                >
-                  <FolderPlus className="h-4 w-4" />
-                </button>
-              )}
+          <section className="mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Folders">
+            <div className="mb-1.5 flex h-8 items-center justify-between px-2">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Folders</h3>
+              <button type="button" onClick={() => { setIsAddingFolder((current) => !current); setNewFolderName("") }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" disabled={isCreatingFolder || storageUnavailable} aria-label="New folder">
+                <FolderPlus className="h-4 w-4" />
+              </button>
             </div>
-
             {isAddingFolder ? (
               <div className="mb-1 flex h-10 items-center gap-1 rounded-xl border border-[var(--brand-cyan)] bg-[var(--surface-lowest)] px-1.5">
-                <Input
-                  value={newFolderName}
-                  onChange={(event) => setNewFolderName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault()
-                      void handleCreateFolder()
-                    }
-                    if (event.key === "Escape") {
-                      event.preventDefault()
-                      setNewFolderName("")
-                      setNewFolderParentId(null)
-                      setIsAddingFolder(false)
-                    }
-                  }}
-                  placeholder={newFolderParentId ? "Subfolder name" : "Folder name"}
-                  className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus-visible:ring-0"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleCreateFolder()}
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--primary)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))]"
-                  disabled={isCreatingFolder || storageUnavailable}
-                  aria-label="Create folder"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewFolderName("")
-                    setNewFolderParentId(null)
-                    setIsAddingFolder(false)
-                  }}
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
-                  disabled={isCreatingFolder}
-                  aria-label="Cancel new folder"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                <Input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} onKeyDown={(event) => {
+                  if (event.key === "Enter") { event.preventDefault(); void handleCreateFolder() }
+                  if (event.key === "Escape") { event.preventDefault(); setNewFolderName(""); setIsAddingFolder(false) }
+                }} placeholder="Folder name" className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus-visible:ring-0" autoFocus />
+                <button type="button" onClick={() => void handleCreateFolder()} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--primary)]" disabled={isCreatingFolder} aria-label="Create folder"><Check className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => { setNewFolderName(""); setIsAddingFolder(false) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-secondary)]" disabled={isCreatingFolder} aria-label="Cancel new folder"><X className="h-3.5 w-3.5" /></button>
               </div>
             ) : null}
-
             <div className="space-y-1">
               {folders.map((folder) => {
                 const key = folderRailKey(folder.id)
-                const active = activeRailKey === key && searchScope === "view"
+                const active = activeRailKey === key
                 const isEditing = editingFolderId === folder.id
                 const isDropTarget = dragOverFolderId === folder.id
-                const draggedNote = draggedNoteId
-                  ? notes.find((note) => note.id === draggedNoteId)
-                  : null
-                const canAcceptDraggedNote = Boolean(
-                  draggedNote &&
-                    getNoteSourceType(draggedNote) === "note" &&
-                    draggedNote.folderId !== folder.id
-                )
-                const isCurrentFolder = Boolean(draggedNote && draggedNote.folderId === folder.id)
-                const dropState = !draggedNoteId
-                  ? "idle"
-                  : isDropTarget
-                    ? "target"
-                    : canAcceptDraggedNote
-                      ? "eligible"
-                      : "current"
+                const draggedNote = draggedNoteId ? notes.find((note) => note.id === draggedNoteId) : null
+                const canDrop = Boolean(draggedNote && getNoteSourceType(draggedNote) === "note" && draggedNote.folderId !== folder.id)
                 return (
-                  <div
-                    key={folder.id}
-                    data-note-folder-drop-id={folder.id}
-                    data-note-folder-drop-state={dropState}
-                    onDragEnter={(event) => handleFolderDragOver(event, folder.id)}
-                    onDragOver={(event) => handleFolderDragOver(event, folder.id)}
-                    onDragLeave={(event) => handleFolderDragLeave(event, folder.id)}
-                    onDrop={(event) => handleFolderDrop(event, folder)}
-                    className={cn(
-                      "group relative flex h-10 items-center gap-2 rounded-xl border px-2.5 transition-all",
-                      folder.parentId && "ml-4",
-                      !draggedNoteId && (
-                        active
-                          ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))]"
-                          : "border-transparent hover:bg-[var(--surface-lowest)]"
-                      ),
-                      draggedNoteId && canAcceptDraggedNote && !isDropTarget && "cursor-copy border-dashed border-[var(--brand-cyan)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_8%,var(--surface-lowest))] ring-1 ring-[color:color-mix(in_srgb,var(--brand-cyan)_24%,transparent)]",
-                      draggedNoteId && isCurrentFolder && "cursor-not-allowed border-[var(--line-subtle)] bg-[var(--surface-low)] opacity-65",
-                      isDropTarget && "z-10 scale-[1.015] cursor-copy border-[var(--primary)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_18%,var(--surface-lowest))] ring-2 ring-[color:color-mix(in_srgb,var(--brand-cyan)_34%,transparent)] shadow-[0_8px_18px_-12px_rgba(8,122,145,0.5)]"
-                    )}
-                  >
-                    {active && !draggedNoteId ? <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[var(--brand-cyan)]" aria-hidden="true" /> : null}
+                  <div key={folder.id} data-note-folder-drop-id={folder.id} data-note-folder-drop-state={isDropTarget ? "target" : canDrop ? "eligible" : "idle"} onDragEnter={(event) => handleFolderDragOver(event, folder.id)} onDragOver={(event) => handleFolderDragOver(event, folder.id)} onDragLeave={(event) => handleFolderDragLeave(event, folder.id)} onDrop={(event) => handleFolderDrop(event, folder)} className={cn("group flex h-10 items-center gap-2 rounded-xl border px-2.5 transition-all", active ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))]" : "border-transparent hover:bg-[var(--surface-lowest)]", canDrop && "border-dashed border-[var(--brand-cyan)]", isDropTarget && "scale-[1.015] ring-2 ring-[var(--brand-cyan)]")}>
                     {isEditing ? (
                       <>
                         <Folder className="h-4 w-4 shrink-0 text-[var(--primary)]" />
-                        <Input
-                          value={editingFolderName}
-                          onChange={(event) => setEditingFolderName(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault()
-                              void commitRenameFolder()
-                            }
-                            if (event.key === "Escape") {
-                              event.preventDefault()
-                              cancelRenameFolder()
-                            }
-                          }}
-                          className="h-8 min-w-0 flex-1 rounded-lg border-[var(--brand-cyan)] bg-[var(--surface-lowest)] px-2 text-xs shadow-none focus-visible:ring-[var(--brand-cyan)]"
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void commitRenameFolder()}
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--primary)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))]"
-                          disabled={isRenamingFolder}
-                          aria-label={`Save folder name ${folder.name}`}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelRenameFolder}
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
-                          disabled={isRenamingFolder}
-                          aria-label={`Cancel renaming ${folder.name}`}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+                        <Input value={editingFolderName} onChange={(event) => setEditingFolderName(event.target.value)} onKeyDown={(event) => {
+                          if (event.key === "Enter") { event.preventDefault(); void commitRenameFolder() }
+                          if (event.key === "Escape") { event.preventDefault(); cancelRenameFolder() }
+                        }} className="h-8 min-w-0 flex-1 px-2 text-xs" autoFocus />
+                        <button type="button" onClick={() => void commitRenameFolder()} disabled={isRenamingFolder} aria-label="Save folder name"><Check className="h-4 w-4" /></button>
+                        <button type="button" onClick={cancelRenameFolder} disabled={isRenamingFolder} aria-label="Cancel renaming"><X className="h-4 w-4" /></button>
                       </>
                     ) : (
                       <>
-                      <button
-                        type="button"
-                        data-note-view
-                        onClick={() => handleSelectRail(key)}
-                        className={cn(
-                          "flex min-w-0 flex-1 items-center gap-2 self-stretch text-left text-[13px] font-medium focus-visible:outline-none",
-                          active ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
-                        )}
-                      >
-                        {isDropTarget ? (
-                          <FolderInput className="h-4 w-4 shrink-0 text-[var(--primary)]" />
-                        ) : (
-                          <Folder
-                            className={cn(
-                              "h-4 w-4 shrink-0",
-                              active || (draggedNoteId && canAcceptDraggedNote) ? "text-[var(--primary)]" : "text-[var(--text-muted)]"
-                            )}
-                          />
-                        )}
-                        <span className="truncate">{folder.name}</span>
-                      </button>
-                      {draggedNoteId ? (
-                        <span
-                          className={cn(
-                            "inline-flex h-6 w-7 shrink-0 items-center justify-center rounded-full",
-                            isDropTarget && "bg-[var(--primary)] text-white shadow-sm",
-                            canAcceptDraggedNote && !isDropTarget && "border border-[var(--brand-cyan)] bg-[var(--surface-lowest)] text-[var(--primary)]",
-                            isCurrentFolder && "border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_80%,transparent)] text-[var(--text-muted)]"
-                          )}
-                          aria-label={isDropTarget ? "Drop here" : canAcceptDraggedNote ? "Move here" : "Current folder"}
-                        >
-                          {isDropTarget || canAcceptDraggedNote ? (
-                            <FolderInput className="h-3.5 w-3.5" />
-                          ) : (
-                            <Check className="h-3.5 w-3.5" />
-                          )}
-                        </span>
-                      ) : (
+                        <button type="button" data-note-view onClick={() => handleSelectRail(key)} className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left text-[13px] font-medium text-[var(--text-secondary)] focus-visible:outline-none">
+                          {isDropTarget ? <FolderInput className="h-4 w-4 shrink-0 text-[var(--primary)]" /> : <Folder className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />}
+                          <span className="truncate">{folder.name}</span>
+                        </button>
                         <div className="relative h-7 w-8 shrink-0">
-                          <span className={cn(railCountBadgeClass, "absolute right-0 top-1/2 -translate-y-1/2 transition-opacity group-hover:opacity-0 group-focus-within:opacity-0")}>
-                            {folderCounts.get(folder.id) || 0}
-                          </span>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                className="absolute inset-0 inline-flex items-center justify-center rounded-lg text-[var(--text-secondary)] opacity-0 transition-opacity hover:bg-[var(--surface-highest)] hover:text-[var(--text-primary)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_30%,transparent)] group-hover:opacity-100 data-[state=open]:bg-[var(--surface-highest)] data-[state=open]:opacity-100"
-                                aria-label={`Folder actions for ${folder.name}`}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className="min-w-[150px] rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-[var(--shadow-apple)]"
-                            >
-                              {!folder.parentId ? (
-                                <DropdownMenuItem
-                                  className="rounded-lg px-2.5 py-2 text-xs"
-                                  onSelect={() => {
-                                    setNewFolderParentId(folder.id)
-                                    setNewFolderName("")
-                                    setIsAddingFolder(true)
-                                  }}
-                                >
-                                  <FolderPlus className="h-3.5 w-3.5" />
-                                  New Subfolder
-                                </DropdownMenuItem>
-                              ) : null}
-                              <DropdownMenuItem
-                                className="rounded-lg px-2.5 py-2 text-xs"
-                                onSelect={() => startRenameFolder(folder)}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                Rename
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="rounded-lg px-2.5 py-2 text-xs"
-                                onSelect={() => void reorderFolder(folder, -1)}
-                              >
-                                <ChevronUp className="h-3.5 w-3.5" />
-                                Move Up
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="rounded-lg px-2.5 py-2 text-xs"
-                                onSelect={() => void reorderFolder(folder, 1)}
-                              >
-                                <ChevronDown className="h-3.5 w-3.5" />
-                                Move Down
-                              </DropdownMenuItem>
-                              {!folder.isDefault ? (
-                                <>
-                                  <DropdownMenuSeparator className="bg-[var(--line-subtle)]" />
-                                  <DropdownMenuItem
-                                    variant="destructive"
-                                    className="rounded-lg px-2.5 py-2 text-xs"
-                                    onSelect={() => setPendingDeleteFolder(folder)}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </>
-                              ) : null}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <span className={cn(railCountBadgeClass, "absolute inset-0 transition-opacity", !draggedNoteId && "group-hover:opacity-0 group-focus-within:opacity-0")}>{folderCounts.get(folder.id) || 0}</span>
+                          {!draggedNoteId ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button type="button" className="absolute inset-0 inline-flex items-center justify-center rounded-lg text-[var(--text-muted)] opacity-0 hover:bg-[var(--surface-lowest)] group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100" aria-label={"Actions for " + folder.name}><MoreHorizontal className="h-4 w-4" /></button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => startRenameFolder(folder)}><Pencil className="h-4 w-4" />Rename</DropdownMenuItem>
+                                {!folder.isDefault ? <><DropdownMenuSeparator /><DropdownMenuItem variant="destructive" onSelect={() => setPendingDeleteFolder(folder)}><Trash2 className="h-4 w-4" />Delete Folder</DropdownMenuItem></> : null}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : null}
                         </div>
-                      )}
                       </>
                     )}
                   </div>
@@ -2213,200 +1556,56 @@ export function NotesWorkspace({
             </div>
           </section>
         ) : null}
-
-        <section
-          aria-labelledby={isMobile ? "mobile-note-collections" : "desktop-note-collections"}
-          className="mt-3 border-t border-[var(--line-subtle)] pt-2.5"
-        >
-          <div className="mb-1.5 flex h-7 items-center px-2">
-            <h3
-              id={isMobile ? "mobile-note-collections" : "desktop-note-collections"}
-              className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
-            >
-              Collections
-            </h3>
-          </div>
-          <div className="space-y-1">
-            <button data-note-view type="button" onClick={() => handleSelectRail("all")} className={railButtonClass(activeRailKey === "all" && searchScope === "view")}>
-              <span className="inline-flex min-w-0 items-center gap-2"><NotebookPen className="h-4 w-4 shrink-0" /><span className="truncate">All Notes</span></span>
-              <span className={railCountBadgeClass}>{smartCollectionCounts.all}</span>
-            </button>
-            <button data-note-view type="button" onClick={() => handleSelectRail("pinned")} className={railButtonClass(activeRailKey === "pinned" && searchScope === "view")}>
-              <span className="inline-flex min-w-0 items-center gap-2"><Pin className="h-4 w-4 shrink-0" /><span className="truncate">Pinned</span></span>
-              <span className={railCountBadgeClass}>{smartCollectionCounts.pinned}</span>
-            </button>
-            <button data-note-view type="button" onClick={() => handleSelectRail("archived")} className={railButtonClass(activeRailKey === "archived" && searchScope === "view")}>
-              <span className="inline-flex min-w-0 items-center gap-2"><Archive className="h-4 w-4 shrink-0" /><span className="truncate">Archived</span></span>
-              <span className={railCountBadgeClass}>{smartCollectionCounts.archived}</span>
-            </button>
-            <button data-note-view type="button" onClick={() => handleSelectRail("deleted")} className={railButtonClass(activeRailKey === "deleted" && searchScope === "view")}>
-              <span className="inline-flex min-w-0 items-center gap-2"><Trash2 className="h-4 w-4 shrink-0" /><span className="truncate">Recently Deleted</span></span>
-              <span className={railCountBadgeClass}>{smartCollectionCounts.deleted}</span>
-            </button>
-          </div>
-        </section>
-
-        {productivityFeaturesEnabled ? (
-          <section className="mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Smart Folders and Tags">
-            <div className="mb-1.5 flex h-7 items-center justify-between px-2">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Smart Folders &amp; Tags
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsSmartFolderDialogOpen(true)}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
-                aria-label="New smart folder"
-                title="New smart folder"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="space-y-1">
-              {smartFolders.map((folder) => {
-                const key = `smart:${folder.id}` as RailKey
-                const count = notes.filter(
-                  (note) =>
-                    getNoteSourceType(note) === "note" &&
-                    !note.archived &&
-                    !note.deletedAt &&
-                    matchesNoteSmartFolder(
-                      {
-                        pinned: note.pinned,
-                        hasChecklist: Boolean(note.hasChecklist),
-                        hasAttachment: Boolean(note.hasAttachment),
-                        updatedAt: note.updatedAt,
-                        tagIds: (note.tags || []).map((tag) => tag.id),
-                      },
-                      {
-                        matchMode: folder.matchMode,
-                        requirePinned: folder.requirePinned,
-                        requireChecklist: folder.requireChecklist,
-                        requireAttachment: folder.requireAttachment,
-                        updatedWithinDays: folder.updatedWithinDays as 1 | 7 | 30 | 90 | null,
-                        tagIds: folder.tags.map((tag) => tag.id),
-                      }
-                    )
-                ).length
-                return (
-                  <button data-note-view key={folder.id} type="button" onClick={() => handleSelectRail(key)} className={railButtonClass(activeRailKey === key && searchScope === "view")}>
-                    <span className="inline-flex min-w-0 items-center gap-2"><Sparkles className="h-4 w-4 shrink-0" /><span className="truncate">{folder.name}</span></span>
-                    <span className={railCountBadgeClass}>{count}</span>
-                  </button>
-                )
-              })}
-              {tags.map((tag) => {
-                const key = `tag:${tag.id}` as RailKey
-                return (
-                  <button data-note-view key={tag.id} type="button" onClick={() => handleSelectRail(key)} className={railButtonClass(activeRailKey === key && searchScope === "view")}>
-                    <span className="inline-flex min-w-0 items-center gap-2"><Hash className="h-4 w-4 shrink-0" /><span className="truncate">{tag.name}</span></span>
-                    <span className={railCountBadgeClass}>{tagCounts.get(tag.id) || 0}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Linked Notes">
-          <div className="mb-1.5 flex h-7 items-center px-2">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-              Linked Notes
-            </h3>
-          </div>
-          <div className="space-y-1">
-            <button data-note-view type="button" onClick={() => handleSelectRail("projects")} className={railButtonClass(activeRailKey === "projects" && searchScope === "view")}>
-              <span className="inline-flex min-w-0 items-center gap-2"><FolderKanban className="h-4 w-4 shrink-0" /><span className="truncate">Project Notes</span></span>
-              <span className={railCountBadgeClass}>{smartCollectionCounts.projects}</span>
-            </button>
-            <button data-note-view type="button" onClick={() => handleSelectRail("tasks")} className={railButtonClass(activeRailKey === "tasks" && searchScope === "view")}>
-              <span className="inline-flex min-w-0 items-center gap-2"><ListTodo className="h-4 w-4 shrink-0" /><span className="truncate">Task Notes</span></span>
-              <span className={railCountBadgeClass}>{smartCollectionCounts.tasks}</span>
-            </button>
-          </div>
-        </section>
       </div>
     </div>
   )
 
-  const renderMiddleList = (isMobile = false) => (
+  const renderMiddleList = (isMobile = false, allowCollapse = false) => (
     <div className={cn("flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className="border-b border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 pb-3 pt-3">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
-              {searchQuery ? "Search Results" : effectiveListLabel}
-            </p>
-            <p className="text-xs tabular-nums text-[var(--text-muted)]">
-              {filteredNotes.length}
-              {personalListPage?.key === personalQueryKey && personalListPage.nextCursor ? "+" : ""}{" "}
-              {filteredNotes.length === 1 ? "note" : "notes"}
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setListMode((current) => (current === "list" ? "gallery" : "list"))}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
-              aria-label={listMode === "list" ? "Show gallery" : "Show list"}
-              title={listMode === "list" ? "Gallery view" : "List view"}
-            >
-              {listMode === "list" ? <Grid2X2 className="h-4 w-4" /> : <List className="h-4 w-4" />}
+      <div className="flex min-h-14 items-center justify-between gap-2 border-b border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2">
+        <div className="flex min-w-0 items-center gap-1">
+          {allowCollapse && sidebarCollapsed ? (
+            <button type="button" onClick={() => setSidebarCollapsed(false)} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Show collections and folders" aria-expanded={!sidebarCollapsed}>
+              <PanelLeftOpen className="h-4 w-4" /> Folders
             </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]"
-                  aria-label="Sort notes"
-                  title="Sort notes"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[180px]">
-                <DropdownMenuItem onSelect={() => setNoteSort("modified")}>
-                  <Check className={cn("h-4 w-4", noteSort !== "modified" && "opacity-0")} />
-                  Date edited
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setNoteSort("created")}>
-                  <Check className={cn("h-4 w-4", noteSort !== "created" && "opacity-0")} />
-                  Date created
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setNoteSort("title")}>
-                  <Check className={cn("h-4 w-4", noteSort !== "title" && "opacity-0")} />
-                  Title
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          ) : null}
+          <div className="min-w-0">
+            <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{searchQuery ? "Search Results" : activeRailLabel}</p>
+            <p className="text-xs tabular-nums text-[var(--text-muted)]">{filteredNotes.length} {filteredNotes.length === 1 ? "note" : "notes"}</p>
           </div>
         </div>
-        <NotesSearchInput
-          ref={searchRef}
-          value={search}
-          onChange={setSearch}
-          showShortcutHint={!isMobile}
-          variant="apple"
-          density="compact"
-        />
-        <NotesScopeSwitch value={searchScope} onChange={handleSelectSearchScope} />
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Sort notes">
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[180px]">
+              <DropdownMenuItem onSelect={() => setNoteSort("modified")}><Check className={cn("h-4 w-4", noteSort !== "modified" && "opacity-0")} />Date edited</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setNoteSort("created")}><Check className={cn("h-4 w-4", noteSort !== "created" && "opacity-0")} />Date created</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setNoteSort("title")}><Check className={cn("h-4 w-4", noteSort !== "title" && "opacity-0")} />Title</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {allowCollapse ? (
+            <button type="button" onClick={() => setListCollapsed(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Hide notes list" aria-expanded={!listCollapsed}>
+              <PanelLeftClose className="h-4 w-4" /> Hide list
+            </button>
+          ) : null}
+        </div>
       </div>
-      <div
-        data-notes-list
-        className={cn("ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5")}
-      >
+      <div data-notes-list className={cn("ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5")}>
         {groupedNotes.length ? (
-          <>
-            <div className="space-y-4">
-              {groupedNotes.map((group) => (
-                <div key={group.key}>
-                  <p className="px-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{group.label}</p>
-                  <div className={cn("mt-1.5", listMode === "gallery" ? "grid grid-cols-2 gap-2" : "space-y-1")}>
-                    {group.notes.map((note) => {
+          <div className="space-y-4">
+            {groupedNotes.map((group) => (
+              <div key={group.key}>
+                <p className="px-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{group.label}</p>
+                <div className="mt-1.5 space-y-1">
+                  {group.notes.map((note) => {
                     const selected = note.id === selectedNoteId
                     const sourceType = getNoteSourceType(note)
-                    const imageSrc = extractFirstImageSrc(note.content || "")
                     const isLinked = sourceType !== "note"
+                    const sourceLabel = isLinked ? (sourceType === "project" ? "Project" : "Task") : (note.folderName || "Notes")
                     return (
                       <div
                         key={note.id}
@@ -2434,160 +1633,60 @@ export function NotesWorkspace({
                           }
                         }}
                         className={cn(
-                          "group rounded-[10px] border border-transparent px-2.5 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]",
+                          "group rounded-[12px] border border-transparent px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]",
                           !isLinked && !note.deletedAt && foldersEnabled && !storageUnavailable && "cursor-grab active:cursor-grabbing",
-                          selected
-                            ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))]"
-                            : "hover:bg-[var(--surface-low)]",
+                          selected ? "border-[color:color-mix(in_srgb,var(--brand-cyan)_30%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-cyan)_11%,var(--surface-lowest))]" : "hover:bg-[var(--surface-low)]",
                           draggedNoteId === note.id && "scale-[0.99] opacity-45",
-                          movingNoteId === note.id && "pointer-events-none opacity-55",
-                          listMode === "gallery" && "min-h-[132px] p-3"
+                          movingNoteId === note.id && "pointer-events-none opacity-55"
                         )}
-                        aria-label={
-                          isLinked
-                            ? `Open ${getNoteDisplayTitle(note)}`
-                            : `${getNoteDisplayTitle(note)}. Drag to move to another folder.`
-                        }
+                        aria-label={"Open " + getNoteDisplayTitle(note)}
                       >
-                        <div className="flex items-start gap-2.5">
-                          {imageSrc ? (
-                            <div className={cn("mt-0.5 shrink-0 overflow-hidden rounded-lg bg-[var(--surface-highest)]", listMode === "gallery" ? "h-16 w-16" : "h-10 w-10")}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={imageSrc} alt="Note preview" className="h-full w-full object-cover" />
-                            </div>
-                          ) : null}
+                        <div className="flex items-start gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="line-clamp-1 text-sm font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{getNoteDisplayTitle(note)}</p>
-                            <p className="mt-0.5 line-clamp-1 text-xs text-[var(--text-secondary)]">{getNotePreview(note)}</p>
-                            <div className="mt-1.5 flex items-center justify-between gap-2">
-                              <p className="truncate text-xs text-[var(--text-muted)]">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</p>
-                              <div className="flex items-center gap-0.5">
-                                {!isLinked ? (
-                                  <DropdownMenu
-                                    open={rowMenuNoteId === note.id}
-                                    onOpenChange={(open) =>
-                                      setRowMenuNoteId(open ? note.id : null)
-                                    }
-                                  >
-                                    <DropdownMenuTrigger asChild>
-                                      <button
-                                        type="button"
-                                        onClick={(event) => event.stopPropagation()}
-                                        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-secondary)] opacity-0 hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_76%,transparent)] focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
-                                        aria-label={`Actions for ${getNoteDisplayTitle(note)}`}
-                                      >
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="end"
-                                      onClick={(event) => event.stopPropagation()}
-                                    >
-                                      {note.deletedAt ? (
-                                        <>
-                                          <DropdownMenuItem onSelect={() => void handleRestore(note)}>
-                                            <RotateCcw className="h-4 w-4" />
-                                            Restore
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            variant="destructive"
-                                            onSelect={() => void handleDelete(note, true)}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                            Delete Permanently
-                                          </DropdownMenuItem>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <DropdownMenuItem onSelect={() => void handlePinToggle(note)}>
-                                            {note.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-                                            {note.pinned ? "Unpin" : "Pin"}
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem onSelect={() => void handleArchiveToggle(note)}>
-                                            {note.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                                            {note.archived ? "Unarchive" : "Archive"}
-                                          </DropdownMenuItem>
-                                          <DropdownMenuSeparator />
-                                          <DropdownMenuItem
-                                            variant="destructive"
-                                            onSelect={() => void handleDelete(note)}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                            Move to Recently Deleted
-                                          </DropdownMenuItem>
-                                        </>
-                                      )}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                ) : (
-                                  <span className="rounded-md bg-[var(--surface-low)] px-1.5 py-0.5 text-xs text-[var(--text-secondary)]">
-                                    {sourceType === "project" ? "Project" : "Task"}
-                                  </span>
-                                )}
-                              </div>
+                            <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">{getNotePreview(note)}</p>
+                            <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+                              <span className="truncate">{sourceLabel}{note.archived ? " · Archived" : ""}</span>
+                              <span className="shrink-0">{formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}</span>
                             </div>
                           </div>
+                          {!isLinked ? (
+                            <DropdownMenu open={rowMenuNoteId === note.id} onOpenChange={(open) => setRowMenuNoteId(open ? note.id : null)}>
+                              <DropdownMenuTrigger asChild>
+                                <button type="button" onClick={(event) => event.stopPropagation()} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] opacity-0 hover:bg-[var(--surface-lowest)] group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100" aria-label={"Actions for " + getNoteDisplayTitle(note)}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+                                {note.deletedAt ? (
+                                  <>
+                                    <DropdownMenuItem onSelect={() => void handleRestore(note)}><RotateCcw className="h-4 w-4" />Restore</DropdownMenuItem>
+                                    <DropdownMenuItem variant="destructive" onSelect={() => void handleDelete(note, true)}><Trash2 className="h-4 w-4" />Delete Permanently</DropdownMenuItem>
+                                  </>
+                                ) : (
+                                  <>
+                                    <DropdownMenuItem onSelect={() => void handlePinToggle(note)}>{note.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}{note.pinned ? "Unpin" : "Pin"}</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => void handleArchiveToggle(note)}>{note.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}{note.archived ? "Unarchive" : "Archive"}</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem variant="destructive" onSelect={() => void handleDelete(note)}><Trash2 className="h-4 w-4" />Move to Recently Deleted</DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : null}
                         </div>
                       </div>
                     )
-                    })}
-                  </div>
+                  })}
                 </div>
-              ))}
-            </div>
-            {personalQueryView ? (
-              <div className="mt-4 flex flex-col items-center gap-2 px-2 pb-2">
-                {personalListPage?.error ? (
-                  <button
-                    type="button"
-                    onClick={() => setPersonalListReloadToken((current) => current + 1)}
-                    className="text-xs font-semibold text-rose-600 hover:underline"
-                  >
-                    Couldn&apos;t refresh notes · Retry
-                  </button>
-                ) : null}
-                {personalListPage?.key === personalQueryKey && personalListPage.nextCursor ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 rounded-[12px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
-                    onClick={() => void handleLoadMorePersonalNotes()}
-                    disabled={personalListPage.loadingMore}
-                  >
-                    {personalListPage.loadingMore ? "Loading…" : "Load more"}
-                  </Button>
-                ) : null}
-                {isPersonalListLoading ? (
-                  <span className="text-xs text-[var(--text-muted)]">Refreshing…</span>
-                ) : null}
               </div>
-            ) : null}
-          </>
+            ))}
+          </div>
         ) : (
           <div className="rounded-xl border border-dashed border-[var(--line-subtle)] bg-[var(--surface-low)] p-5 text-center">
-            <p className="text-sm font-medium text-[var(--text-primary)]">
-              {searchQuery ? `No results for "${searchQuery}"` : "No notes in this view"}
-            </p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
-              {searchQuery ? "Try another keyword or clear search." : "Create a note or switch collection."}
-            </p>
-            {searchQuery ? (
-              <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setSearch("")}>
-                Clear search
-              </Button>
-            ) : null}
-            {personalListPage?.error ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => setPersonalListReloadToken((current) => current + 1)}
-              >
-                Retry
-              </Button>
-            ) : null}
+            <p className="text-sm font-medium text-[var(--text-primary)]">{searchQuery ? "No matching notes" : "No notes here"}</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">{searchQuery ? "Try another keyword or clear search." : "Create a note or choose another collection."}</p>
+            {searchQuery ? <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setSearch("")}>Clear search</Button> : null}
           </div>
         )}
       </div>
@@ -2601,27 +1700,78 @@ export function NotesWorkspace({
     if (activeRailKey === "deleted") return "Recently Deleted"
     if (activeRailKey === "projects") return "Project Notes"
     if (activeRailKey === "tasks") return "Task Notes"
-    if (activeRailKey.startsWith("tag:")) {
-      const tagId = activeRailKey.slice("tag:".length)
-      return tags.find((tag) => tag.id === tagId)?.name || "Tag"
-    }
-    if (activeRailKey.startsWith("smart:")) {
-      const folderId = activeRailKey.slice("smart:".length)
-      return smartFolders.find((folder) => folder.id === folderId)?.name || "Smart Folder"
-    }
     const folderId = getFolderIdFromRailKey(activeRailKey)
     if (!folderId) return "Notes"
     return folders.find((folder) => folder.id === folderId)?.name || "Folder"
-  }, [activeRailKey, folders, smartFolders, tags])
+  }, [activeRailKey, folders])
 
-  const effectiveListLabel = searchScope === "all" ? "All Notes" : activeRailLabel
+  const selectedDrawingOwner = React.useMemo<NoteDrawingOwner | null>(() => {
+    if (!selectedNote) return null
+    if (selectedNoteSourceType === "project") {
+      return { type: "project", id: selectedNote.sourceId || selectedNote.id.replace(/^project:/, "") }
+    }
+    if (selectedNoteSourceType === "task") {
+      return { type: "task", id: selectedNote.sourceId || selectedNote.id.replace(/^task:/, "") }
+    }
+    return { type: "note", id: selectedNote.id }
+  }, [selectedNote, selectedNoteSourceType])
+
+  const beginDrawingInBlankNote = React.useCallback(async () => {
+    const noteId = await handleCreateNote({ content: "" })
+    if (noteId) setDrawingRequestToken((current) => (current ?? 0) + 1)
+  }, [handleCreateNote])
+
+  const renderEditorPaneControls = () => (
+    <div className="flex shrink-0 items-center gap-1">
+      <div className="hidden items-center rounded-[10px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-0.5 xl:inline-flex" aria-label="Workspace panes">
+        <button type="button" onClick={() => setSidebarCollapsed((current) => !current)} className={cn("inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]", !sidebarCollapsed ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]")} aria-label={sidebarCollapsed ? "Show collections and folders" : "Hide collections and folders"} aria-pressed={!sidebarCollapsed}>
+          <Folder className="h-3.5 w-3.5" /> Folders
+        </button>
+        <button type="button" onClick={() => setListCollapsed((current) => !current)} className={cn("inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]", !listCollapsed ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]")} aria-label={listCollapsed ? "Show notes list" : "Hide notes list"} aria-pressed={!listCollapsed}>
+          <NotebookPen className="h-3.5 w-3.5" /> Notes
+        </button>
+      </div>
+      {listCollapsed ? (
+        <>
+          <Sheet open={tabletSidebarOpen} onOpenChange={setTabletSidebarOpen}>
+            <SheetTrigger asChild>
+              <button type="button" className="hidden h-8 items-center gap-2 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] md:inline-flex xl:hidden" aria-label="Open collections and folders" aria-expanded={tabletSidebarOpen}>
+                <Folder className="h-4 w-4" /> Folders
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px] border-r border-[var(--line-subtle)] bg-[var(--surface-low)] p-0">
+              <SheetHeader className="border-b border-[var(--line-subtle)] px-4 py-3"><SheetTitle>Folders</SheetTitle></SheetHeader>
+              <div className="h-[calc(100dvh-60px)]">{renderLeftRail(false, false)}</div>
+            </SheetContent>
+          </Sheet>
+          <Sheet open={tabletListOpen} onOpenChange={setTabletListOpen}>
+            <SheetTrigger asChild>
+              <button type="button" className="hidden h-8 items-center gap-2 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] md:inline-flex xl:hidden" aria-label="Open notes list" aria-expanded={tabletListOpen}>
+                <PanelLeftOpen className="h-4 w-4" /> Notes
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[min(380px,92vw)] border-r border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-0">
+              <SheetHeader className="border-b border-[var(--line-subtle)] px-4 py-3"><SheetTitle>Notes</SheetTitle></SheetHeader>
+              <div className="h-[calc(100dvh-60px)]" onClickCapture={(event) => {
+                if ((event.target as HTMLElement).closest("[data-note-drag-id]")) setTabletListOpen(false)
+              }}>{renderMiddleList(false)}</div>
+            </SheetContent>
+          </Sheet>
+        </>
+      ) : null}
+    </div>
+  )
 
   const renderEditor = (isMobile = false) => {
     if (!selectedNote) {
       return (
         <div className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
-          <div className="flex h-12 items-center border-b border-[var(--line-subtle)] px-5 text-xs text-[var(--text-muted)]">
-            {effectiveListLabel}
+          <div className="flex h-12 items-center gap-2 border-b border-[var(--line-subtle)] px-5 text-xs text-[var(--text-muted)]">
+            {renderEditorPaneControls()}
+            <span>{activeRailLabel}</span>
+            <button type="button" onClick={() => void beginDrawingInBlankNote()} className="ml-auto hidden h-8 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] md:inline-flex" aria-label="Draw in a new note">
+              <Pencil className="h-4 w-4" /> Draw
+            </button>
           </div>
           <div className="ui-scrollbar flex-1 overflow-y-auto px-5 py-5 lg:px-8">
             <RichTextEditor
@@ -2636,6 +1786,7 @@ export function NotesWorkspace({
               documentLayout="left"
               documentWidth="reading"
               imageUploadFallback="error"
+              showImageGallery={false}
               className="bg-transparent"
               minHeightClassName="min-h-[60vh]"
             />
@@ -2648,7 +1799,9 @@ export function NotesWorkspace({
     return (
       <div className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]">
         <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--line-subtle)] px-4 py-2 lg:px-6">
-          <div className="min-w-0 text-xs text-[var(--text-muted)]">
+          <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--text-muted)]">
+            {renderEditorPaneControls()}
+            <div className="min-w-0">
             <span>
               Edited {format(new Date(selectedNote.updatedAt), "d MMM yyyy, HH:mm")}
             </span>
@@ -2664,6 +1817,7 @@ export function NotesWorkspace({
               </button>
             ) : null}
             {isDeleted ? <span className="ml-2 font-medium text-rose-600">Recently Deleted</span> : null}
+            </div>
           </div>
           {!selectedNoteIsLinked ? (
             <DropdownMenu>
@@ -2750,6 +1904,10 @@ export function NotesWorkspace({
             uploadProjectId={editorUploadContextId}
             documentWidth="reading"
             imageUploadFallback="error"
+            showImageGallery={false}
+            drawingOwner={selectedDrawingOwner}
+            drawingRequestToken={drawingRequestToken}
+            onDrawingRequestHandled={() => setDrawingRequestToken(undefined)}
             readOnly={isDeleted}
             onBlur={() => void flushNote(selectedNote.id)}
             toolbarActions={
@@ -2785,7 +1943,16 @@ export function NotesWorkspace({
       />
         <AppPageHeader
           title="Notes"
-          subtitle="Capture, organize and edit personal, project and task notes."
+          search={
+            <NotesSearchInput
+              ref={searchRef}
+              value={search}
+              onChange={setSearch}
+              showShortcutHint
+              variant="apple"
+              density="compact"
+            />
+          }
           primaryAction={
             <Button
               type="button"
@@ -2804,33 +1971,33 @@ export function NotesWorkspace({
 
       <main className="min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] xl:grid"
         style={{
-          gridTemplateColumns: `${sidebarWidth}px 5px ${listWidth}px 5px minmax(520px, 1fr)`,
+          gridTemplateColumns: [
+            sidebarCollapsed ? null : `${sidebarWidth}px`,
+            sidebarCollapsed ? null : "5px",
+            listCollapsed ? null : `${listWidth}px`,
+            listCollapsed ? null : "5px",
+            "minmax(0, 1fr)",
+          ].filter(Boolean).join(" "),
         }}
       >
-        <NotesSidebarPane className="hidden xl:block">
-          {renderLeftRail(false, false)}
-        </NotesSidebarPane>
-        <button
-          type="button"
-          aria-label="Resize folders pane"
-          className="hidden cursor-col-resize border-x border-[var(--line-subtle)] bg-[var(--surface-highest)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--surface-highest))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] xl:block"
-          onPointerDown={(event) => beginPaneResize(event, "sidebar")}
-        />
-        <NotesListPane className="hidden xl:block">
-          {renderMiddleList(false)}
-        </NotesListPane>
-        <button
-          type="button"
-          aria-label="Resize notes list"
-          className="hidden cursor-col-resize border-x border-[var(--line-subtle)] bg-[var(--surface-highest)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--surface-highest))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] xl:block"
-          onPointerDown={(event) => beginPaneResize(event, "list")}
-        />
+        {!sidebarCollapsed ? (
+          <>
+            <NotesSidebarPane className="hidden xl:block">{renderLeftRail(false, false, true)}</NotesSidebarPane>
+            <button type="button" aria-label="Resize folders pane" className="hidden cursor-col-resize border-x border-[var(--line-subtle)] bg-[var(--surface-highest)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--surface-highest))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] xl:block" onPointerDown={(event) => beginPaneResize(event, "sidebar")} />
+          </>
+        ) : null}
+        {!listCollapsed ? (
+          <>
+            <NotesListPane className="hidden xl:block">{renderMiddleList(false, true)}</NotesListPane>
+            <button type="button" aria-label="Resize notes list" className="hidden cursor-col-resize border-x border-[var(--line-subtle)] bg-[var(--surface-highest)] hover:bg-[color:color-mix(in_srgb,var(--brand-cyan)_28%,var(--surface-highest))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] xl:block" onPointerDown={(event) => beginPaneResize(event, "list")} />
+          </>
+        ) : null}
         <NotesEditorPane className="hidden xl:block">
           {renderEditor(false)}
         </NotesEditorPane>
 
-        <div className="hidden h-full min-h-0 md:grid md:grid-cols-[minmax(280px,360px)_minmax(0,1fr)] xl:hidden">
-          <NotesListPane className="border-r border-[var(--line-subtle)]">
+        <div className={cn("hidden h-full min-h-0 md:grid xl:hidden", listCollapsed ? "md:grid-cols-1" : "md:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]")}>
+          {!listCollapsed ? <NotesListPane className="border-r border-[var(--line-subtle)]">
             <div className="flex h-10 items-center border-b border-[var(--line-subtle)] px-2">
               <Sheet open={tabletSidebarOpen} onOpenChange={setTabletSidebarOpen}>
                 <SheetTrigger asChild>
@@ -2856,8 +2023,8 @@ export function NotesWorkspace({
                 </SheetContent>
               </Sheet>
             </div>
-            <div className="h-[calc(100%-40px)]">{renderMiddleList(false)}</div>
-          </NotesListPane>
+            <div className="h-[calc(100%-40px)]">{renderMiddleList(false, true)}</div>
+          </NotesListPane> : null}
           <NotesEditorPane>{renderEditor(false)}</NotesEditorPane>
         </div>
 
@@ -2906,107 +2073,6 @@ export function NotesWorkspace({
       </main>
 
 
-      <Dialog open={isSmartFolderDialogOpen} onOpenChange={setIsSmartFolderDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>New Smart Folder</DialogTitle>
-            <DialogDescription>
-              Automatically collect notes that match these rules.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              value={smartFolderName}
-              onChange={(event) => setSmartFolderName(event.target.value)}
-              placeholder="Smart folder name"
-              autoFocus
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Select
-                value={smartFolderMatchMode}
-                onValueChange={(value) => setSmartFolderMatchMode(value as "all" | "any")}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Match all rules</SelectItem>
-                  <SelectItem value="any">Match any rule</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={smartFolderUpdatedDays} onValueChange={setSmartFolderUpdatedDays}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Any edited date</SelectItem>
-                  <SelectItem value="1">Edited in 1 day</SelectItem>
-                  <SelectItem value="7">Edited in 7 days</SelectItem>
-                  <SelectItem value="30">Edited in 30 days</SelectItem>
-                  <SelectItem value="90">Edited in 90 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {[
-                ["Pinned", smartFolderPinned, setSmartFolderPinned],
-                ["Checklist", smartFolderChecklist, setSmartFolderChecklist],
-                ["Attachment", smartFolderAttachment, setSmartFolderAttachment],
-              ].map(([label, checked, setter]) => (
-                <label key={String(label)} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--line-subtle)] px-3 py-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(checked)}
-                    onChange={(event) => (setter as React.Dispatch<React.SetStateAction<boolean>>)(event.target.checked)}
-                    className="accent-[var(--brand-primary)]"
-                  />
-                  {String(label)}
-                </label>
-              ))}
-            </div>
-            {tags.length ? (
-              <div>
-                <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">Tags</p>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => {
-                    const selected = smartFolderTagIds.includes(tag.id)
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() =>
-                          setSmartFolderTagIds((current) =>
-                            selected
-                              ? current.filter((id) => id !== tag.id)
-                              : [...current, tag.id]
-                          )
-                        }
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs",
-                          selected
-                            ? "border-[var(--brand-cyan)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] text-[var(--primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
-                        )}
-                      >
-                        #{tag.name}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsSmartFolderDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="bg-[var(--primary)] text-white hover:bg-[var(--brand-primary-strong)]"
-              onClick={() => void handleCreateSmartFolder()}
-              disabled={isCreatingSmartFolder}
-            >
-              {isCreatingSmartFolder ? "Creating…" : "Create Smart Folder"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog
         open={Boolean(pendingDeleteNote)}

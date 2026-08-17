@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -27,6 +28,7 @@ import { SitesListView } from "@/components/vault/sites-list-view"
 import { SidePanelDangerZone, SidePanelLoadingState, SidePanelMetaBar, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelDialogContentClass } from "@/lib/ui/side-panels"
 import type { Site } from "@prisma/client"
+import { DEFAULT_PAYMENT_METHODS, normalizePaymentMethod } from "@/lib/payments/methods"
 
 interface PartnerSheetContentProps {
     partnerId: string
@@ -57,6 +59,8 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
     const [paymentName, setPaymentName] = useState("")
     const [paymentAmount, setPaymentAmount] = useState("")
     const [paymentDesc, setPaymentDesc] = useState("")
+    const [paymentMethod, setPaymentMethod] = useState<string>(DEFAULT_PAYMENT_METHODS[0])
+    const [customPaymentMethod, setCustomPaymentMethod] = useState("")
     const [isSubmittingPayment, setIsSubmittingPayment] = useState(false)
 
     // Edit Partner State
@@ -116,12 +120,20 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
             toast.error("Please provide a valid positive amount")
             return
         }
+        const resolvedPaymentMethod = paymentMethod === "__custom__"
+            ? normalizePaymentMethod(customPaymentMethod)
+            : paymentMethod
+        if (!resolvedPaymentMethod) {
+            toast.error("Please choose or add a payment method")
+            return
+        }
 
         setIsSubmittingPayment(true)
         const result = await addPartnerAdHocPayment({
             partnerId,
             name: paymentName.trim(),
             amount: amountNum,
+            paymentMethod: resolvedPaymentMethod,
             description: paymentDesc.trim() || undefined
         })
         setIsSubmittingPayment(false)
@@ -132,6 +144,8 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
             setPaymentName("")
             setPaymentAmount("")
             setPaymentDesc("")
+            setPaymentMethod(DEFAULT_PAYMENT_METHODS[0])
+            setCustomPaymentMethod("")
             // Refresh partner data
             const refreshed = await getPartnerById(partnerId)
             if (refreshed.success && refreshed.partner) {
@@ -286,6 +300,17 @@ export function PartnerSheetContent({ partnerId, onClose }: PartnerSheetContentP
                                             onChange={(e) => setPaymentAmount(e.target.value)}
                                             required
                                         />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="partner-payment-method">Payment method</Label>
+                                        <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                                            <SelectTrigger id="partner-payment-method" className="w-full"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                {DEFAULT_PAYMENT_METHODS.map((method) => <SelectItem key={method} value={method}>{method}</SelectItem>)}
+                                                <SelectItem value="__custom__">Add another method…</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {paymentMethod === "__custom__" ? <Input value={customPaymentMethod} onChange={(event) => setCustomPaymentMethod(event.target.value)} maxLength={64} placeholder="Method name" autoFocus /> : null}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="desc">Description (Optional)</Label>

@@ -1,14 +1,13 @@
 import prisma from "@/lib/prisma"
 import { CreateProjectButton } from "@/components/projects/create-project-button"
 import { AppPageHeader } from "@/components/layout/app-page-header"
-import { formatProjectName } from "@/lib/utils"
 import { requireAuth } from "@/lib/auth"
 import { ProjectSheetWrapper } from "@/components/projects/project-sheet-wrapper"
 import { ProjectsBoardRows } from "@/components/projects/projects-board-rows"
-import { ProjectsFiltersToolbar } from "@/components/projects/projects-filters-toolbar"
 import { ProjectsSearchInput } from "@/components/projects/projects-search-input"
 import { ProjectsSearchProvider } from "@/components/projects/projects-search-context"
 import { ProjectsPaginationBar } from "@/components/projects/projects-pagination-bar"
+import { ProjectsActiveFilterChips, ProjectsFilterControl, ProjectsStatusControls } from "@/components/projects/projects-header-controls"
 import { buildProjectWhereInput, normalizeProjectFilters } from "@/lib/filters/project-filters"
 import { getProjectSummaryPage, type ProjectSummarySort } from "@/lib/projects/summary"
 
@@ -74,7 +73,6 @@ export default async function ProjectsPage({
         from?: string
         to?: string
         sort?: string
-        view?: string
         perPage?: string
         page?: string
     }>
@@ -105,8 +103,6 @@ export default async function ProjectsPage({
     const sort = SORT_VALUES.has(sortRaw as (typeof sortOptions)[number]["value"]) ? sortRaw : DEFAULT_SORT
     const perPageRaw = Number(params.perPage)
     const perPage = PAGE_SIZE_VALUES.has(perPageRaw) ? perPageRaw : DEFAULT_PAGE_SIZE
-    const viewRaw = params.view
-    const layout: "grid" | "list" = viewRaw === "grid" ? "grid" : "list"
     const requestedPage = Math.max(1, Number(params.page) || 1)
 
     const projectWhere = buildProjectWhereInput({
@@ -143,8 +139,6 @@ export default async function ProjectsPage({
     const partnersList = partnersFullRaw.map((partner) => ({ id: partner.id, name: partner.name }))
     const boardSort = resolveBoardSort(sort)
     const selectedProject = projectId ? projects.find((project) => project.id === projectId) : null
-    const selectedProjectLabel = selectedProject ? formatProjectName(selectedProject) : undefined
-
     const projectsForClient = JSON.parse(JSON.stringify(projects))
     const partnersForClient = JSON.parse(JSON.stringify(partnersFullRaw))
     const servicesForClient = JSON.parse(JSON.stringify(servicesRaw))
@@ -160,6 +154,21 @@ export default async function ProjectsPage({
         select: { hourlyRate: true }
     })
 
+    const headerFilterProps = {
+        partners: partnersList,
+        currentStatus: queryStatus,
+        currentPayment: payment,
+        currentRecurring: recurring,
+        currentPeriod: period,
+        currentFrom: fromParam || "",
+        currentTo: toParam || "",
+        currentSort: sort,
+        currentProjectId: projectId || "all",
+        currentProjectLabel: selectedProject ? selectedProject.site.domainName || selectedProject.name || "Selected project" : undefined,
+        currentPartnerId: partnerId || "all",
+        totalProjects,
+    }
+
     return (
         <ProjectSheetWrapper
             projects={projectsForClient}
@@ -168,11 +177,13 @@ export default async function ProjectsPage({
         >
             <ProjectsSearchProvider initialSearch={q || ""}>
                 <div className="space-y-5 sm:space-y-6">
-                    <div className="flex flex-col gap-3.5 sm:gap-4">
-                            <AppPageHeader
+                    <AppPageHeader
                                 title="Projects"
                                 search={<ProjectsSearchInput />}
                                 mobileSearch={<ProjectsSearchInput />}
+                                controls={<ProjectsStatusControls currentStatus={queryStatus} />}
+                                secondaryActions={<ProjectsFilterControl {...headerFilterProps} />}
+                                footer={<ProjectsActiveFilterChips {...headerFilterProps} />}
                                 mobilePrimaryAction={(
                                     <CreateProjectButton
                                         variant="full"
@@ -194,26 +205,10 @@ export default async function ProjectsPage({
                                     />
                                 )}
                             />
-                        <ProjectsFiltersToolbar
-                            partners={partnersList}
-                            currentStatus={queryStatus}
-                            currentPayment={payment}
-                            currentRecurring={recurring}
-                            currentPeriod={period}
-                            currentFrom={fromParam || ""}
-                            currentTo={toParam || ""}
-                            currentSort={sort}
-                            currentView={layout}
-                            currentProjectId={projectId || "all"}
-                            currentProjectLabel={selectedProjectLabel}
-                            currentPartnerId={partnerId || "all"}
-                            totalProjects={totalProjects}
-                        />
-                    </div>
 
                 <ProjectsBoardRows
                     projects={projectsForClient}
-                    layout={layout}
+                    layout="grid"
                     partners={partnersForClient}
                     services={servicesForClient}
                     hourlyRate={user?.hourlyRate ? Number(user.hourlyRate) : 0}
@@ -234,23 +229,21 @@ export default async function ProjectsPage({
                     }}
                 />
 
-                <div className="mt-4 sm:mt-5">
-                    <ProjectsPaginationBar
-                        fallback={{
-                            total: totalProjects,
-                            page,
-                            perPage,
-                            totalPages,
-                            pageStart,
-                            pageEnd,
-                            shouldPaginate,
-                            prevPage,
-                            nextPage,
-                        }}
-                        pageSizeOptions={PAGE_SIZE_OPTIONS}
-                        defaultPageSize={DEFAULT_PAGE_SIZE}
-                    />
-                </div>
+                <ProjectsPaginationBar
+                    fallback={{
+                        total: totalProjects,
+                        page,
+                        perPage,
+                        totalPages,
+                        pageStart,
+                        pageEnd,
+                        shouldPaginate,
+                        prevPage,
+                        nextPage,
+                    }}
+                    pageSizeOptions={PAGE_SIZE_OPTIONS}
+                    defaultPageSize={DEFAULT_PAGE_SIZE}
+                />
                 </div>
             </ProjectsSearchProvider>
         </ProjectSheetWrapper>
