@@ -19,6 +19,7 @@ import { logger } from "@/lib/logger"
 import { removeDrawingPreview } from "@/lib/notes/drawings.server"
 import { normalizeRichTextContent } from "@/lib/notes/content"
 import { normalizePaymentMethod } from "@/lib/payments/methods"
+import { resolveRecurringRolloverFee } from "@/lib/projects/recurring-fee"
 
 function revalidateProjectPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/projects")
@@ -65,6 +66,12 @@ const SetProjectPaymentStateSchema = z.object({
 }).refine((data) => data.expectedStatus !== data.nextStatus, {
     message: "Choose a different payment status",
     path: ["nextStatus"],
+})
+
+const ReopenRecurringProjectSchema = z.object({
+    projectId: z.string().uuid("Invalid project id"),
+    targetYear: z.number().int().min(2000).max(2100),
+    targetMonth: z.number().int().min(1).max(12),
 })
 
 function parseClosureDateInput(value: Date | string) {
@@ -202,6 +209,171 @@ export async function createProject(data: {
     } catch (error: unknown) {
         console.error("Create project failed:", error)
         return { success: false, error: getActionErrorMessage(error, "Failed to create project") }
+    }
+}
+
+export async function reopenRecurringProject(input: {
+    projectId: string
+    targetYear: number
+    targetMonth: number
+}) {
+    try {
+        const session = await requireAuth()
+        const validated = ReopenRecurringProjectSchema.parse(input)
+        const targetDate = new Date(validated.targetYear, validated.targetMonth - 1, 1, 12, 0, 0, 0)
+        const targetEnd = new Date(validated.targetYear, validated.targetMonth, 1, 12, 0, 0, 0)
+
+        const result = await prisma.$transaction(async (tx) => {
+            const source = await tx.project.findUnique({
+                where: { id: validated.projectId },
+                include: {
+                    site: { select: { id: true, partnerId: true, domainName: true } },
+                    services: {
+                        select: {
+                            id: true,
+                            serviceName: true,
+                            standardTasks: true,
+                            isRecurring: true,
+                        },
+                    },
+                },
+            })
+            if (!source) throw new ActionError("PROJECT_NOT_FOUND", "Project not found")
+            if (!source.services.some((service) => service.isRecurring)) {
+                throw new ActionError("PROJECT_NOT_RECURRING", "Only recurring projects can be opened for another month")
+            }
+            if (source.status !== "Closed" && source.status !== "Completed") {
+                throw new ActionError("PROJECT_NOT_CLOSED", "Complete or close the current month before opening another month")
+            }
+
+            const sourceMonth = source.createdAt.getFullYear() * 12 + source.createdAt.getMonth()
+            const targetMonth = validated.targetYear * 12 + validated.targetMonth - 1
+            if (targetMonth <= sourceMonth) {
+                throw new ActionError("INVALID_TARGET_MONTH", "Choose a month after the source project month")
+            }
+
+            const markerWhere = {
+                sourceProjectId_targetYear_targetMonth: {
+                    sourceProjectId: source.id,
+                    targetYear: validated.targetYear,
+                    targetMonth: validated.targetMonth,
+                },
+            }
+            const marker = await tx.projectRollover.findUnique({ where: markerWhere })
+            if (marker?.newProjectId) {
+                const existingTarget = await tx.project.update({
+                    where: { id: marker.newProjectId },
+                    data: {
+                        status: "Active",
+                        closedAt: null,
+                        closedMonthKey: null,
+                        isHeavyRevenueMonth: false,
+                    },
+                    select: { id: true, siteId: true },
+                })
+                return { id: existingTarget.id, siteId: existingTarget.siteId, partnerId: source.site.partnerId, created: false }
+            }
+
+            const serviceIds = source.services.map((service) => service.id).sort()
+            const sameMonthCandidates = await tx.project.findMany({
+                where: {
+                    siteId: source.siteId,
+                    createdAt: { gte: targetDate, lt: targetEnd },
+                    services: { some: { id: { in: serviceIds } } },
+                },
+                select: { id: true, siteId: true, services: { select: { id: true } } },
+            })
+            const existingTarget = sameMonthCandidates.find((candidate) => {
+                const candidateServiceIds = candidate.services.map((service) => service.id).sort()
+                return candidateServiceIds.length === serviceIds.length
+                    && candidateServiceIds.every((id, index) => id === serviceIds[index])
+            })
+
+            if (existingTarget) {
+                await tx.project.update({
+                    where: { id: existingTarget.id },
+                    data: {
+                        status: "Active",
+                        closedAt: null,
+                        closedMonthKey: null,
+                        isHeavyRevenueMonth: false,
+                    },
+                })
+                await tx.projectRollover.upsert({
+                    where: markerWhere,
+                    create: {
+                        sourceProjectId: source.id,
+                        targetYear: validated.targetYear,
+                        targetMonth: validated.targetMonth,
+                        newProjectId: existingTarget.id,
+                    },
+                    update: { newProjectId: existingTarget.id },
+                })
+                return { id: existingTarget.id, siteId: existingTarget.siteId, partnerId: source.site.partnerId, created: false }
+            }
+
+            const uniqueTasks = Array.from(new Set(source.services.flatMap((service) => {
+                try {
+                    const parsed = JSON.parse(service.standardTasks)
+                    return Array.isArray(parsed) ? parsed.map(String) : []
+                } catch {
+                    return []
+                }
+            }).map((taskName) => taskName.trim()).filter(Boolean)))
+            const fee = resolveRecurringRolloverFee(source.recurringBaseFee, source.currentFee)
+            const created = await tx.project.create({
+                data: {
+                    siteId: source.siteId,
+                    name: formatProjectName({
+                        siteName: source.site.domainName,
+                        services: source.services,
+                        createdAt: targetDate,
+                    }),
+                    services: { connect: serviceIds.map((id) => ({ id })) },
+                    currentFee: fee,
+                    recurringBaseFee: fee,
+                    status: "Active",
+                    paymentStatus: "Unpaid",
+                    createdAt: targetDate,
+                },
+                select: { id: true, siteId: true },
+            })
+            if (uniqueTasks.length) {
+                await tx.task.createMany({
+                    data: uniqueTasks.map((name) => ({
+                        projectId: created.id,
+                        taskScope: "FREELANCE",
+                        name,
+                        status: "Active",
+                    })),
+                })
+            }
+            await tx.projectRollover.upsert({
+                where: markerWhere,
+                create: {
+                    sourceProjectId: source.id,
+                    targetYear: validated.targetYear,
+                    targetMonth: validated.targetMonth,
+                    newProjectId: created.id,
+                },
+                update: { newProjectId: created.id },
+            })
+            return { id: created.id, siteId: created.siteId, partnerId: source.site.partnerId, created: true }
+        })
+
+        await logSessionAuditEvent(session, {
+            action: "PROJECT_RECURRING_REOPENED",
+            details: `sourceProjectId=${validated.projectId}; targetProjectId=${result.id}; targetYear=${validated.targetYear}; targetMonth=${validated.targetMonth}; created=${result.created}`,
+        })
+        revalidateProjectPaths(result.id, result.partnerId, result.siteId)
+        revalidateProjectPaths(validated.projectId)
+        return { success: true as const, data: { projectId: result.id, created: result.created } }
+    } catch (error) {
+        return {
+            success: false as const,
+            error: getActionErrorMessage(error, "Failed to open recurring project"),
+            code: error instanceof ActionError ? error.code : undefined,
+        }
     }
 }
 

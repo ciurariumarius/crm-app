@@ -2,14 +2,9 @@ import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
 import { NotesWorkspace } from "@/components/notes/notes-workspace"
 import type { NoteFolderRecord, NoteRecord } from "@/lib/actions/notes"
-import { hasMeaningfulRichTextContent } from "@/lib/notes/content"
 
 export const dynamic = "force-dynamic"
 const DEFAULT_NOTES_FOLDER_NAME = "General"
-
-function toContentText(content: string) {
-  return content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
-}
 
 function sortUnifiedNotes(items: NoteRecord[]) {
   return [...items].sort((a, b) => {
@@ -21,47 +16,18 @@ function sortUnifiedNotes(items: NoteRecord[]) {
 export default async function NotesPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ note?: string; view?: string }>
+  searchParams?: Promise<{ note?: string; view?: string; new?: string }>
 }) {
   await requireAuth()
   const params = (await searchParams) || {}
-  const [notes, foldersRawInitial, projectNotesRaw, taskNotesRaw] = await Promise.all([
+  const startNewNote = params.new === "1"
+  const [notes, foldersRawInitial] = await Promise.all([
     prisma.note.findMany({
       include: { tags: { include: { tag: true } } },
       orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
     }),
     prisma.noteFolder.findMany({
       orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
-    }),
-    prisma.project.findMany({
-      where: { description: { not: null } },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        createdAt: true,
-        updatedAt: true,
-        site: { select: { domainName: true } },
-      },
-      orderBy: { updatedAt: "desc" },
-    }),
-    prisma.task.findMany({
-      where: { description: { not: null } },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        createdAt: true,
-        updatedAt: true,
-        project: {
-          select: {
-            id: true,
-            name: true,
-            site: { select: { domainName: true } },
-          },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
     }),
   ])
 
@@ -110,64 +76,23 @@ export default async function NotesPage({
     sourceType: "note",
   }))
 
-  const projectNotes: NoteRecord[] = projectNotesRaw
-    .filter((project) => hasMeaningfulRichTextContent(project.description))
-    .map((project) => {
-      const content = project.description || ""
-      const domainName = project.site.domainName.trim() || "Unknown domain"
-      return {
-        id: `project:${project.id}`,
-        title: project.name?.trim() || domainName,
-        content,
-        contentText: toContentText(content),
-        archived: false,
-        pinned: false,
-        createdAt: project.createdAt.toISOString(),
-        updatedAt: project.updatedAt.toISOString(),
-        sourceType: "project",
-        sourceId: project.id,
-        sourceLabel: domainName,
-      }
-    })
-
-  const taskNotes: NoteRecord[] = taskNotesRaw
-    .filter((task) => hasMeaningfulRichTextContent(task.description))
-    .map((task) => {
-      const content = task.description?.trim() || ""
-      const domainName = task.project?.site.domainName?.trim() || "LMS"
-      return {
-        id: `task:${task.id}`,
-        title: task.name.trim() || "Task",
-        content,
-        contentText: toContentText(content),
-        archived: false,
-        pinned: false,
-        createdAt: task.createdAt.toISOString(),
-        updatedAt: task.updatedAt.toISOString(),
-        sourceType: "task",
-        sourceId: task.id,
-        sourceProjectId: task.project?.id,
-        sourceLabel: domainName,
-      }
-    })
-
-  const initialNotes = sortUnifiedNotes([...personalNotes, ...projectNotes, ...taskNotes])
+  const initialNotes = sortUnifiedNotes(personalNotes)
   const requestedNoteId = params.note || null
   const requestedNote = requestedNoteId ? initialNotes.find((note) => note.id === requestedNoteId) : null
-  const initialSelectedNoteId = requestedNote?.id ?? initialNotes.find((note) => !note.archived && !note.deletedAt)?.id ?? initialNotes[0]?.id ?? null
+  const initialSelectedNoteId = startNewNote
+    ? null
+    : requestedNote?.id ?? initialNotes.find((note) => !note.archived && !note.deletedAt)?.id ?? initialNotes[0]?.id ?? null
   const requestedView = params.view || ""
-  const allowedView = ["all", "pinned", "archived", "deleted", "projects", "tasks"].includes(requestedView) || requestedView.startsWith("folder:")
-  const initialView = allowedView
-    ? requestedView
-    : requestedNote?.sourceType === "project"
-      ? "projects"
-      : requestedNote?.sourceType === "task"
-        ? "tasks"
-        : requestedNote?.deletedAt
-          ? "deleted"
-          : requestedNote?.archived
-            ? "archived"
-            : "all"
+  const allowedView = ["all", "pinned", "archived", "deleted"].includes(requestedView) || requestedView.startsWith("folder:")
+  const initialView = startNewNote
+    ? "all"
+    : allowedView
+      ? requestedView
+      : requestedNote?.deletedAt
+        ? "deleted"
+        : requestedNote?.archived
+          ? "archived"
+          : "all"
 
   return (
     <NotesWorkspace
@@ -175,6 +100,7 @@ export default async function NotesPage({
       initialSelectedNoteId={initialSelectedNoteId}
       initialView={initialView}
       initialFolders={folders}
+      startNewNote={startNewNote}
     />
   )
 }

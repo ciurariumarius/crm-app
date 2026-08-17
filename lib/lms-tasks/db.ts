@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto"
 import prisma from "@/lib/prisma"
 import { buildLmsAllocationSyncKey } from "@/lib/lms-tasks/client-key"
+import { addDaysToIso } from "@/lib/lms-tasks/date-utils"
+import {
+  buildLmsOwnerCapacitySummary,
+  getLmsOwnerSummaryRanges,
+  type LmsOwnerCapacitySummary,
+} from "@/lib/lms-tasks/owner-summary"
+import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
+import { getBucharestDateOnly } from "@/lib/lms-work-entries/date"
 import type {
   ClientAllocation,
   LmsModuleData,
@@ -63,6 +71,53 @@ export function buildTaskSyncKey(record: TaskLog) {
 
 export function buildAllocationSyncKey(record: ClientAllocation) {
   return buildLmsAllocationSyncKey(record.client) ?? "client:unknown client"
+}
+
+export async function getLmsOwnerCapacitySummary(
+  asOf: string = getBucharestDateOnly()
+): Promise<LmsOwnerCapacitySummary> {
+  const ranges = getLmsOwnerSummaryRanges(asOf)
+  const endExclusive = isoDateToUtcDate(addDaysToIso(asOf, 1))
+  const monthStart = isoDateToUtcDate(ranges.month.from)
+  const quarterStart = isoDateToUtcDate(ranges.quarter.from)
+
+  if (!endExclusive || !monthStart || !quarterStart) {
+    throw new Error("Unable to resolve LMS owner summary date range")
+  }
+
+  const ownerWhere = { executant: LMS_CRM_EMPLOYEE_NAME }
+  const [monthAggregate, quarterAggregate, latestTask] = await Promise.all([
+    prisma.lmsTaskLog.aggregate({
+      where: {
+        ...ownerWhere,
+        taskDate: { gte: monthStart, lt: endExclusive },
+      },
+      _sum: { durationMinutes: true },
+    }),
+    prisma.lmsTaskLog.aggregate({
+      where: {
+        ...ownerWhere,
+        taskDate: { gte: quarterStart, lt: endExclusive },
+      },
+      _sum: { durationMinutes: true },
+    }),
+    prisma.lmsTaskLog.findFirst({
+      where: {
+        ...ownerWhere,
+        taskDate: { lt: endExclusive },
+      },
+      orderBy: { taskDate: "desc" },
+      select: { taskDate: true },
+    }),
+  ])
+
+  return buildLmsOwnerCapacitySummary({
+    employeeName: LMS_CRM_EMPLOYEE_NAME,
+    asOf,
+    latestTaskDate: utcDateToIsoDate(latestTask?.taskDate ?? null),
+    monthLoggedMinutes: Number(monthAggregate._sum.durationMinutes ?? 0),
+    quarterLoggedMinutes: Number(quarterAggregate._sum.durationMinutes ?? 0),
+  })
 }
 
 export async function getLmsModuleData(): Promise<LmsModuleData> {

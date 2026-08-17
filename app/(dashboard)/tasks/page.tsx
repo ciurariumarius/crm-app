@@ -221,7 +221,7 @@ export default async function TasksPage({
     )
 
     return (
-        <TasksSearchProvider initialSearch={q || ""}>
+        <TasksSearchProvider initialSearch={q || ""} initialStatusRefined={Boolean(params.status)}>
             <div className="flex flex-col gap-3.5 sm:gap-4">
                 <AppPageHeader
                     title="Tasks"

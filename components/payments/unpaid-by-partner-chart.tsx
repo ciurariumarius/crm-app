@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { settlePartnerDebt, settleProject, voidSettlement } from "@/lib/actions/settlement"
+import { settlePartnerDebt, settleProject } from "@/lib/actions/settlement"
 import { formatCurrency, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -38,7 +38,6 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
     }, [partners])
 
     const handleMarkAllPaid = async (partnerId: string) => {
-        const settledPartner = items.find((partner) => partner.id === partnerId)
         setSettlingId(partnerId)
         try {
             const result = await settlePartnerDebt(partnerId)
@@ -49,26 +48,9 @@ export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
 
             setItems((prev) => prev.filter((partner) => partner.id !== partnerId))
             if (expandedId === partnerId) setExpandedId(null)
-            const settlementToastId = toast.success(`Marked ${result.count} project${result.count === 1 ? "" : "s"} as paid`, {
-                description: "You can undo briefly, or revert individual payments from the payment log.",
-                duration: 12000,
-                closeButton: true,
-                action: settledPartner && result.auditLogId ? {
-                    label: "Undo",
-                    onClick: async () => {
-                        toast.dismiss(settlementToastId)
-                        const undoResult = await voidSettlement(result.auditLogId)
-                        if (!undoResult.success) {
-                            toast.error(undoResult.error || "Failed to revert settlement")
-                            return
-                        }
-                        setItems((current) => current.some((partner) => partner.id === settledPartner.id)
-                            ? current
-                            : [...current, settledPartner].sort((a, b) => b.totalUnpaid - a.totalUnpaid))
-                        toast.success(`Reverted ${undoResult.count} project${undoResult.count === 1 ? "" : "s"} to unpaid`)
-                        router.refresh()
-                    },
-                } : undefined,
+            toast.success(`Marked ${result.count} project${result.count === 1 ? "" : "s"} as paid`, {
+                description: "You can revert individual payments from Payments received.",
+                duration: 4500,
             })
             router.refresh()
         } catch {

@@ -53,6 +53,13 @@ function run() {
   assert.doesNotMatch(createTaskDialog, /LMS stays separate|Available for Freelance and LMS|Client work|My job/)
 
   const dashboardTasks = read("components/dashboard/home-task-columns.tsx")
+  const dashboardActions = read("components/dashboard/home-header-actions.tsx")
+  const dashboardPage = read("app/(dashboard)/page.tsx")
+  assert.match(dashboardActions, /grid grid-cols-2 gap-2 md:grid-cols-4/)
+  assert.match(dashboardActions, /href="\/notes\?new=1"/)
+  assert.match(dashboardPage, /grid grid-cols-1 gap-2\.5 sm:grid-cols-2[^\n]+xl:grid-cols-4/)
+  assert.match(dashboardTasks, /min-h-16/)
+  assert.match(dashboardTasks, /Mark .* complete/)
   const projectTasks = read("components/projects/project-tasks.tsx")
   assert.doesNotMatch(dashboardTasks, /Time \(min\)|quickEstimatedMinutes/)
   assert.doesNotMatch(projectTasks, /newTaskEstimatedMinutes|Planned time in minutes/)

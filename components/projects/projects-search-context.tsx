@@ -12,21 +12,26 @@ type ProjectsSearchContextValue = {
     setIsSearching: React.Dispatch<React.SetStateAction<boolean>>
     searchPagination: SearchPaginationState | null
     setSearchPagination: React.Dispatch<React.SetStateAction<SearchPaginationState | null>>
+    statusRefined: boolean
+    setStatusRefined: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const ProjectsSearchContext = React.createContext<ProjectsSearchContextValue | null>(null)
 
 export function ProjectsSearchProvider({
     initialSearch = "",
+    initialStatusRefined = false,
     children,
 }: {
     initialSearch?: string
+    initialStatusRefined?: boolean
     children: React.ReactNode
 }) {
     const [searchTerm, setSearchTerm] = React.useState(initialSearch)
     const [searchResultCount, setSearchResultCount] = React.useState<number | null>(null)
     const [isSearching, setIsSearching] = React.useState(false)
     const [searchPagination, setSearchPagination] = React.useState<SearchPaginationState | null>(null)
+    const [statusRefined, setStatusRefined] = React.useState(initialStatusRefined)
 
     const value = React.useMemo(
         () => ({
@@ -38,8 +43,10 @@ export function ProjectsSearchProvider({
             setIsSearching,
             searchPagination,
             setSearchPagination,
+            statusRefined,
+            setStatusRefined,
         }),
-        [isSearching, searchPagination, searchResultCount, searchTerm]
+        [isSearching, searchPagination, searchResultCount, searchTerm, statusRefined]
     )
 
     return <ProjectsSearchContext.Provider value={value}>{children}</ProjectsSearchContext.Provider>

@@ -58,7 +58,9 @@ async function run() {
 
   const collectionsSectionIndex = source.indexOf('aria-label="Collections"')
   const foldersSectionIndex = source.indexOf('aria-label="Folders"')
-  assert.ok(collectionsSectionIndex >= 0 && foldersSectionIndex > collectionsSectionIndex)
+  assert.ok(collectionsSectionIndex >= 0 && foldersSectionIndex >= 0)
+  assert.match(source, /className="order-1 flex-1" aria-label="Folders"/)
+  assert.match(source, /className="order-2 [^"]*" aria-label="Collections"/)
 
   assert.match(source, /sidebarCollapsed \? null : `\$\{sidebarWidth\}px`/)
   assert.match(source, /listCollapsed \? null : `\$\{listWidth\}px`/)
@@ -89,8 +91,10 @@ async function run() {
   assert.doesNotMatch(source, /#(?:fff0ad|fff3bd|ffd84d|b38300|8a6700|9a7000)/i)
   assert.doesNotMatch(editorSource, /(?:amber-|#b38300|#fff0ad)/i)
   assert.match(source, /Recently Deleted/)
-  assert.match(source, /Project Notes/)
-  assert.match(source, /Task Notes/)
+  assert.doesNotMatch(source, /Project Notes/)
+  assert.doesNotMatch(source, /Task Notes/)
+  assert.doesNotMatch(notesPageSource, /prisma\.project\.findMany|prisma\.task\.findMany/)
+  assert.doesNotMatch(source, /aria-label="Add template"/)
   assert.match(source, /mobilePane === "folders"/)
   assert.match(source, /mobilePane === "list"/)
   assert.match(source, /mobilePane === "editor"/)

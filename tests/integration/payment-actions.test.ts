@@ -212,4 +212,72 @@ describe("partner payment transactions", () => {
     expect(stored.paymentStatus).toBe("Paid")
     expect(Number(stored.currentFee)).toBe(250)
   })
+
+  it("opens a closed recurring project in a later month without changing its history", async () => {
+    const partner = await createPartner(`Recurring partner ${randomUUID()}`)
+    const site = await prisma.site.create({
+      data: {
+        id: randomUUID(),
+        partnerId: partner.id,
+        name: "Optik Tataru",
+        domainName: "optiktataru.ro",
+      },
+    })
+    const service = await prisma.service.create({
+      data: {
+        id: randomUUID(),
+        serviceName: "PPC - Facebook Ads",
+        isRecurring: true,
+        standardTasks: JSON.stringify(["Review campaigns", "Prepare report"]),
+      },
+    })
+    const source = await prisma.project.create({
+      data: {
+        id: randomUUID(),
+        siteId: site.id,
+        name: "optiktataru.ro - PPC - Facebook Ads - April 2026",
+        status: "Closed",
+        paymentStatus: "Paid",
+        currentFee: 325,
+        recurringBaseFee: 450,
+        createdAt: new Date(2026, 3, 1, 12),
+        closedAt: new Date(2026, 3, 30, 12),
+        closedMonthKey: "2026-04",
+        services: { connect: { id: service.id } },
+      },
+    })
+
+    const first = await projectActions.reopenRecurringProject({
+      projectId: source.id,
+      targetYear: 2026,
+      targetMonth: 8,
+    })
+    expect(first).toMatchObject({ success: true, data: { created: true } })
+    if (!first.success) throw new Error(first.error)
+
+    const target = await prisma.project.findUniqueOrThrow({
+      where: { id: first.data.projectId },
+      include: { tasks: true },
+    })
+    expect(target.name).toMatch(/August 2026$/)
+    expect(target.status).toBe("Active")
+    expect(target.paymentStatus).toBe("Unpaid")
+    expect(Number(target.currentFee)).toBe(450)
+    expect(target.createdAt.getFullYear()).toBe(2026)
+    expect(target.createdAt.getMonth()).toBe(7)
+    expect(target.tasks.map((task) => task.name).sort()).toEqual(["Prepare report", "Review campaigns"])
+
+    const unchangedSource = await prisma.project.findUniqueOrThrow({ where: { id: source.id } })
+    expect(unchangedSource.status).toBe("Closed")
+    expect(unchangedSource.closedMonthKey).toBe("2026-04")
+    expect(unchangedSource.paymentStatus).toBe("Paid")
+
+    const retry = await projectActions.reopenRecurringProject({
+      projectId: source.id,
+      targetYear: 2026,
+      targetMonth: 8,
+    })
+    expect(retry).toEqual({ success: true, data: { projectId: target.id, created: false } })
+    expect(await prisma.project.count({ where: { siteId: site.id } })).toBe(2)
+  })
 })

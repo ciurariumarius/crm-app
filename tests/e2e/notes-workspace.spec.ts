@@ -69,3 +69,26 @@ test("Notes stays entry-focused and overflow-free at every breakpoint", async ({
     }
   }
 })
+
+test("new-note deep link focuses a blank editor without persisting an empty note", async ({ page }) => {
+  await authenticate(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  const notesPostRequests: string[] = []
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/notes") {
+      notesPostRequests.push(request.url())
+    }
+  })
+
+  await page.goto("/notes?new=1")
+
+  const editor = page.getByRole("textbox", { name: "Note content" })
+  await expect(editor).toBeVisible()
+  await expect(editor).toBeFocused()
+  await expect(editor).toHaveText("")
+  await expect(page).toHaveURL((url) => url.pathname === "/notes" && !url.searchParams.has("new"))
+
+  await page.waitForTimeout(700)
+  expect(notesPostRequests).toEqual([])
+})

@@ -29,7 +29,7 @@ import { ProjectTasks } from "@/components/projects/project-tasks"
 import { TaskSheetWrapper } from "@/components/tasks/task-sheet-wrapper"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus } from "@/lib/status"
-import { updateProject, deleteProject } from "@/lib/actions/projects"
+import { updateProject, deleteProject, reopenRecurringProject } from "@/lib/actions/projects"
 import { logTime } from "@/lib/actions/time"
 import { getProjectPaymentHistory, getProjectStatusHistory } from "@/lib/actions/payment-actions"
 import { toast } from "sonner"
@@ -204,6 +204,9 @@ export function ProjectSheetContent({
     const [manualNotes, setManualNotes] = React.useState("")
     const [isCloseProjectDialogOpen, setIsCloseProjectDialogOpen] = React.useState(false)
     const [isSubmittingCloseProject, setIsSubmittingCloseProject] = React.useState(false)
+    const [isReopenRecurringDialogOpen, setIsReopenRecurringDialogOpen] = React.useState(false)
+    const [reopenMonth, setReopenMonth] = React.useState(() => format(new Date(), "yyyy-MM"))
+    const [isReopeningRecurring, setIsReopeningRecurring] = React.useState(false)
 
     const [isLoggingTime, setIsLoggingTime] = React.useState(false)
     const [selectedTimeLog, setSelectedTimeLog] = React.useState<ProjectTimeLogWithTask | null>(null)
@@ -604,7 +607,45 @@ export function ProjectSheetContent({
             setIsCloseProjectDialogOpen(true)
             return
         }
+        if (
+            value === "Active"
+            && isRecurringProject
+            && (project.status === "Closed" || project.status === "Completed")
+        ) {
+            setReopenMonth(format(new Date(), "yyyy-MM"))
+            setIsReopenRecurringDialogOpen(true)
+            return
+        }
         void handleUpdate({ status: value })
+    }
+
+    const handleReopenRecurring = async () => {
+        const match = reopenMonth.match(/^(\d{4})-(\d{2})$/)
+        if (!match) {
+            toast.error("Choose a valid month")
+            return
+        }
+        setIsReopeningRecurring(true)
+        try {
+            const result = await reopenRecurringProject({
+                projectId: project.id,
+                targetYear: Number(match[1]),
+                targetMonth: Number(match[2]),
+            })
+            if (!result.success || !result.data) {
+                toast.error(result.error || "Failed to open recurring project")
+                return
+            }
+            setIsReopenRecurringDialogOpen(false)
+            toast.success(result.data.created ? "Monthly project created" : "Monthly project reopened")
+            if (!standalone) onClose?.()
+            router.push(standalone
+                ? `/projects/${result.data.projectId}`
+                : `/projects?status=Active&projectId=${result.data.projectId}`)
+            router.refresh()
+        } finally {
+            setIsReopeningRecurring(false)
+        }
     }
 
     const handleCloseProjectConfirm = React.useCallback(
@@ -1097,7 +1138,11 @@ export function ProjectSheetContent({
                                 <DropdownMenuContent align="start" className="w-40 rounded-xl p-1.5">
                                     {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
                                         <DropdownMenuItem key={statusOption} onSelect={() => updateProjectStatus(statusOption)} className="cursor-pointer rounded-lg">
-                                            {statusOption}
+                                            {statusOption === "Active"
+                                                && isRecurringProject
+                                                && (project.status === "Closed" || project.status === "Completed")
+                                                ? "Open another month…"
+                                                : statusOption}
                                             {project.status === statusOption ? <Check className="ml-auto h-4 w-4" /> : null}
                                         </DropdownMenuItem>
                                     ))}
@@ -1682,6 +1727,41 @@ export function ProjectSheetContent({
                     initialClosedOn={toDateInputValue(project.closedAt)}
                     initialIsHeavyRevenueMonth={Boolean(project.isHeavyRevenueMonth)}
                 />
+
+                <Dialog open={isReopenRecurringDialogOpen} onOpenChange={(open) => {
+                    if (!isReopeningRecurring) setIsReopenRecurringDialogOpen(open)
+                }}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Open recurring project</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-2">
+                            <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                                The existing {format(new Date(project.createdAt), "MMMM yyyy")} project stays unchanged. Choose the month to work on.
+                            </p>
+                            <label className="block text-sm font-semibold text-[var(--text-primary)]">
+                                Month
+                                <Input
+                                    type="month"
+                                    value={reopenMonth}
+                                    min={format(new Date(new Date(project.createdAt).getFullYear(), new Date(project.createdAt).getMonth() + 1, 1), "yyyy-MM")}
+                                    onChange={(event) => setReopenMonth(event.target.value)}
+                                    className="mt-2 w-full"
+                                    autoFocus
+                                />
+                            </label>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsReopenRecurringDialogOpen(false)} disabled={isReopeningRecurring}>
+                                Cancel
+                            </Button>
+                            <Button type="button" onClick={() => void handleReopenRecurring()} disabled={isReopeningRecurring || !reopenMonth}>
+                                {isReopeningRecurring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Open month
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </TaskSheetWrapper>
     )

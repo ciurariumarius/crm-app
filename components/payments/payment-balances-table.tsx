@@ -139,7 +139,7 @@ export function PaymentBalancesTable({ rows, projects, partners, paymentMethods,
     return (
         <section className="space-y-3" aria-labelledby="payment-log-title">
             <div className="flex items-center justify-between gap-3 px-1">
-                <div><h2 id="payment-log-title" className="ui-text-title-sm text-[var(--text-primary)]">Payment log</h2><p className="ui-text-caption mt-1">Paid projects, newest payment first.</p></div>
+                <div><h2 id="payment-log-title" className="ui-text-title-sm text-[var(--text-primary)]">Payments received</h2><p className="ui-text-caption mt-1">One record per paid project, newest payment first.</p></div>
                 <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
                     <SheetTrigger asChild><Button type="button" variant="outline" size="sm" className="md:hidden"><SlidersHorizontal className="h-4 w-4" />Filters{chips.length ? <span className="rounded-full bg-[var(--brand-primary)] px-1.5 text-xs text-white">{chips.length}</span> : null}</Button></SheetTrigger>
                     <SheetContent side="bottom" className="max-h-[88dvh] overflow-y-auto rounded-t-[24px] p-0"><SheetHeader className="p-5 pb-2"><SheetTitle>Payment filters</SheetTitle><SheetDescription>Filter paid projects.</SheetDescription></SheetHeader><div className="p-5 pt-3">{controls}</div></SheetContent>

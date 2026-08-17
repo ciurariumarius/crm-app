@@ -84,6 +84,7 @@ export type TasksHeaderFilterProps = {
 function useTasksHref() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const searchContext = useTasksSearchContext()
 
   return React.useCallback((overrides: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -93,8 +94,9 @@ function useTasksHref() {
     params.delete("cols")
 
     Object.entries(overrides).forEach(([key, value]) => {
+      const hasSearch = Boolean(searchContext?.searchTerm.trim() || searchParams.get("q"))
       const isDefault =
-        (key === "status" && value === "Active") ||
+        (key === "status" && value === "Active" && !hasSearch) ||
         (key === "urgency" && value === "all") ||
         (key === "sort" && value === "newest") ||
         (key === "projectId" && value === "all") ||
@@ -109,7 +111,7 @@ function useTasksHref() {
     params.delete("page")
     const query = params.toString()
     return query ? `${pathname}?${query}` : pathname
-  }, [pathname, searchParams])
+  }, [pathname, searchContext?.searchTerm, searchParams])
 }
 
 function getActiveFilters(
@@ -136,6 +138,10 @@ function getActiveFilters(
 
 export function TasksStatusControls({ currentStatus }: { currentStatus: string }) {
   const buildHref = useTasksHref()
+  const searchContext = useTasksSearchContext()
+  const displayedStatus = searchContext?.searchTerm.trim() && !searchContext.statusRefined
+    ? "All"
+    : currentStatus
 
   return (
     <nav className="inline-flex h-9 min-w-0 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1" aria-label="Task status">
@@ -143,10 +149,11 @@ export function TasksStatusControls({ currentStatus }: { currentStatus: string }
         <Link
           key={option.value}
           href={buildHref({ status: option.value })}
-          aria-current={currentStatus === option.value ? "page" : undefined}
+          onClick={() => searchContext?.setStatusRefined(true)}
+          aria-current={displayedStatus === option.value ? "page" : undefined}
           className={cn(
             "inline-flex h-7 items-center rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.035em] transition-colors sm:px-3",
-            currentStatus === option.value
+            displayedStatus === option.value
               ? "bg-[var(--brand-primary)] text-white shadow-sm"
               : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           )}

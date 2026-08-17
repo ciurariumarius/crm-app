@@ -1,9 +1,7 @@
-import { Banknote, ChevronDown, History } from "lucide-react"
-import { getPaymentLogs } from "@/lib/actions/payment-actions"
+import { Banknote } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { requireAuth } from "@/lib/auth"
 import { AppPageHeader } from "@/components/layout/app-page-header"
-import { PaymentsTable } from "@/components/payments/payments-table"
 import { PaymentBalancesTable, type PaymentBalanceRow } from "@/components/payments/payment-balances-table"
 import { UnpaidByPartnerChart } from "@/components/payments/unpaid-by-partner-chart"
 import { PaymentsAddPaymentAction } from "@/components/payments/payments-add-payment-action"
@@ -35,17 +33,15 @@ export default async function PaymentsPage({ searchParams }: {
     const paidTo = params.paidTo || ""
     const requestedPage = Math.max(1, Number(params.page) || 1)
 
-    const [projects, partners, logsResult, allServices, user] = await Promise.all([
+    const [projects, partners, allServices, user] = await Promise.all([
         prisma.project.findMany({ include: { site: { include: { partner: true } }, services: true } }),
         prisma.partner.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-        getPaymentLogs({ take: 50, skip: 0 }),
         prisma.service.findMany({ orderBy: { serviceName: "asc" } }),
         prisma.user.findFirst({ where: { id: session.userId }, select: { hourlyRate: true } }),
     ])
 
     const oneTimeServices = allServices.filter((service) => !service.isRecurring)
     const paymentServiceOptions = oneTimeServices.map((service) => ({ id: service.id, name: service.serviceName }))
-    const logs = logsResult.success && logsResult.data ? logsResult.data : []
     const partnerNameById = new Map(partners.map((partner) => [partner.id, partner.name]))
     const unpaidByPartnerMap = new Map<string, { id: string; name: string; totalUnpaid: number; unpaidProjects: { id: string; name: string; amount: number }[] }>()
 
@@ -120,7 +116,6 @@ export default async function PaymentsPage({ searchParams }: {
         services: project.services.map((service) => ({ serviceName: service.serviceName, isRecurring: service.isRecurring })),
     }))) as RevenueSourceProject[]
 
-    const serializedProjects = serialize(projects)
     const paymentMethods = mergePaymentMethods(projects.map((project) => project.paymentMethod))
     const paidProjectOptions = projects
         .filter((project) => project.paymentStatus === "Paid")
@@ -130,21 +125,20 @@ export default async function PaymentsPage({ searchParams }: {
         <div className="flex flex-col gap-8 pb-10 sm:gap-10">
             <AppPageHeader title="Payments" search={<PaymentsSearchInput />} mobileSearch={<PaymentsSearchInput />} primaryAction={<PaymentsAddPaymentAction partners={partners} services={paymentServiceOptions} paymentMethods={paymentMethods} />} mobilePrimaryAction={<PaymentsAddPaymentAction partners={partners} services={paymentServiceOptions} paymentMethods={paymentMethods} mobile />} />
 
-            <StatCard>
-                <div className="flex items-start justify-between gap-3"><div><p className="ui-overline">Total outstanding</p><p className="mt-2 text-[32px] font-semibold leading-none tracking-tight text-[var(--state-urgent)] sm:text-[38px]">{formatCurrency(totalOutstanding)}</p></div><div className="ui-state-danger flex h-11 w-11 items-center justify-center rounded-[12px] border"><Banknote className="h-4.5 w-4.5" /></div></div>
-                <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Open balances across current and previous months.</p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2"><BalanceSplit label="Current month" data={currentMonthUnpaid} /><BalanceSplit label="Previous months" data={previousMonthsUnpaid} /></div>
-            </StatCard>
+            <section id="outstanding" className="scroll-mt-6">
+                <StatCard>
+                    <div className="flex items-start justify-between gap-3"><div><p className="ui-overline">Total outstanding</p><p className="mt-2 text-[32px] font-semibold leading-none tracking-tight text-[var(--state-urgent)] sm:text-[38px]">{formatCurrency(totalOutstanding)}</p></div><div className="ui-state-danger flex h-11 w-11 items-center justify-center rounded-[12px] border"><Banknote className="h-4.5 w-4.5" /></div></div>
+                    <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Open balances across current and previous months.</p>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2"><BalanceSplit label="Current month" data={currentMonthUnpaid} /><BalanceSplit label="Previous months" data={previousMonthsUnpaid} /></div>
+                </StatCard>
+            </section>
 
             <UnpaidByPartnerChart partners={unpaidByPartner} />
-            <HomeRevenueDistributionChart sourceProjects={revenueSourceProjects} allServices={serialize(allServices)} hourlyRate={Number(user?.hourlyRate || 0)} />
+            <section id="revenue-analysis" className="scroll-mt-6">
+                <HomeRevenueDistributionChart sourceProjects={revenueSourceProjects} allServices={serialize(allServices)} hourlyRate={Number(user?.hourlyRate || 0)} />
+            </section>
 
             <PaymentBalancesTable rows={balanceRows} projects={paidProjectOptions} partners={partners} paymentMethods={paymentMethods} filters={{ projectId, partnerId, type, sort: balanceSort, paidFrom, paidTo }} pagination={{ page, totalPages, total: totalBalances, prevPage: page > 1 ? page - 1 : null, nextPage: page < totalPages ? page + 1 : null }} />
-
-            <details className="group rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)]">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 marker:hidden"><span className="flex items-center gap-2.5"><History className="h-4 w-4 text-[var(--text-muted)]" /><span className="text-sm font-bold text-[var(--text-primary)]">Transaction history</span><span className="text-xs font-semibold text-[var(--text-muted)]">Latest {logs.length}</span></span><ChevronDown className="h-4 w-4 text-[var(--text-muted)] transition-transform group-open:rotate-180" /></summary>
-                <div className="border-t border-[var(--line-subtle)] p-3 sm:p-5"><PaymentsTable logs={serialize(logs)} projects={serializedProjects} /></div>
-            </details>
         </div>
     )
 }

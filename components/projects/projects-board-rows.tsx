@@ -406,7 +406,10 @@ export function ProjectsBoardRows({
         params.set("limit", "1000")
         params.set("page", String(effectivePage))
         params.set("perPage", String(effectivePerPage))
-        if (searchApiFilters?.status) params.set("status", searchApiFilters.status)
+        params.set(
+            "status",
+            searchContext.statusRefined ? (searchApiFilters?.status || "Active") : "All"
+        )
         if (searchApiFilters?.payment) params.set("payment", searchApiFilters.payment)
         if (searchApiFilters?.recurring) params.set("recurring", searchApiFilters.recurring)
         if (searchApiFilters?.sort) params.set("sort", searchApiFilters.sort)

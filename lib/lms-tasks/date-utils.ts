@@ -1,3 +1,8 @@
+import {
+  getRomanianLegalHolidayDates,
+  getRomanianOrthodoxEaster,
+} from "@/lib/lms-work-entries/romanian-holidays"
+
 const EXCEL_EPOCH_UTC_MS = Date.UTC(1899, 11, 30)
 
 function pad2(value: number) {
@@ -79,52 +84,11 @@ export function parseDateLikeToIso(value: unknown) {
 }
 
 export function getOrthodoxEasterSundayUtc(year: number) {
-  const a = year % 4
-  const b = year % 7
-  const c = year % 19
-  const d = (19 * c + 15) % 30
-  const e = (2 * a + 4 * b - d + 34) % 7
-  const month = Math.floor((d + e + 114) / 31)
-  const day = ((d + e + 114) % 31) + 1
-
-  // Date above is in the Julian calendar. Convert to Gregorian.
-  const deltaDays = Math.floor(year / 100) - Math.floor(year / 400) - 2
-  const julianUtc = Date.UTC(year, month - 1, day)
-  return new Date(julianUtc + deltaDays * 24 * 60 * 60 * 1000)
+  return getRomanianOrthodoxEaster(year)
 }
-
-function addDaysUtc(date: Date, deltaDays: number) {
-  return new Date(date.getTime() + deltaDays * 24 * 60 * 60 * 1000)
-}
-
-const FIXED_ROMANIAN_HOLIDAYS = [
-  [1, 1],
-  [1, 2],
-  [1, 24],
-  [5, 1],
-  [6, 1],
-  [8, 15],
-  [11, 30],
-  [12, 1],
-  [12, 25],
-  [12, 26],
-] as const
 
 export function getRomanianHolidaysForYear(year: number) {
-  const holidays = new Set<string>()
-
-  for (const [month, day] of FIXED_ROMANIAN_HOLIDAYS) {
-    holidays.add(toIsoDateFromParts(year, month - 1, day))
-  }
-
-  const easterSunday = getOrthodoxEasterSundayUtc(year)
-  holidays.add(toIsoDate(addDaysUtc(easterSunday, -2))) // Good Friday
-  holidays.add(toIsoDate(easterSunday)) // Easter Sunday
-  holidays.add(toIsoDate(addDaysUtc(easterSunday, 1))) // Easter Monday
-  holidays.add(toIsoDate(addDaysUtc(easterSunday, 49))) // Pentecost Sunday
-  holidays.add(toIsoDate(addDaysUtc(easterSunday, 50))) // Pentecost Monday
-
-  return holidays
+  return getRomanianLegalHolidayDates(year)
 }
 
 export function countWorkingDaysInRange(startIso: string, endIso: string) {

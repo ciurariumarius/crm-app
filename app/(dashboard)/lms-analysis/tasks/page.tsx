@@ -13,8 +13,9 @@ import { DurationValue } from "@/components/lms-tasks/duration-value"
 import { filterTasksByRange, formatHours, getExecutantOptions, isInternalClient } from "@/lib/lms-tasks/analytics"
 import { normalizeClientKey, normalizeExecutantKey } from "@/lib/lms-tasks/parsers"
 import { detectLmsDatePresetId, type LmsDatePreset, getLmsDatePresets, resolveLmsDatePreset } from "@/lib/lms-tasks/date-presets"
-import { countWorkingDaysInRange } from "@/lib/lms-tasks/date-utils"
+import { buildLmsOwnerPeriodSummary } from "@/lib/lms-tasks/owner-summary"
 import { isLmsMobileOptimizedEnabled } from "@/lib/lms-tasks/feature-flags"
+import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
 import { ArrowDown, ArrowUp, ArrowUpDown, Building2, CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, ListTodo, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -22,8 +23,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from "@/components/ui/calendar"
 import type { DateRange } from "react-day-picker"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
-
-const DEFAULT_EMPLOYEE_NAME = "Marius Ciurariu"
 
 type EmployeeRow = {
   name: string
@@ -204,7 +203,7 @@ export default function LmsAnalysisTasksPage() {
     [tasksInDateRange, data.allocations]
   )
   const defaultEmployeeOption = React.useMemo(() => {
-    const target = normalizeExecutantKey(DEFAULT_EMPLOYEE_NAME)
+    const target = normalizeExecutantKey(LMS_CRM_EMPLOYEE_NAME)
     return executantOptions.find((name) => normalizeExecutantKey(name) === target) ?? null
   }, [executantOptions])
   const selectedEmployee = selectedEmployeeParam || defaultEmployeeOption || "all"
@@ -252,8 +251,12 @@ export default function LmsAnalysisTasksPage() {
     () => filteredTasks.reduce((sum, task) => sum + task.durationMinutes, 0),
     [filteredTasks]
   )
-  const workingDays = React.useMemo(() => countWorkingDaysInRange(start, end), [end, start])
-  const workingCapacityMinutes = React.useMemo(() => Math.max(0, workingDays) * 8 * 60, [workingDays])
+  const workingPeriod = React.useMemo(
+    () => buildLmsOwnerPeriodSummary({ from: start, to: end, loggedMinutes: 0 }),
+    [end, start]
+  )
+  const workingDays = workingPeriod.capacityMinutes / (8 * 60)
+  const workingCapacityMinutes = workingPeriod.capacityMinutes
   const totalTasks = filteredTasks.length
   const internalTaskCount = React.useMemo(
     () => filteredTasks.filter((task) => isInternalClient(task.client)).length,

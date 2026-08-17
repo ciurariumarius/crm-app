@@ -175,7 +175,7 @@ export default async function ProjectsPage({
             allServices={servicesForClient}
             hourlyRate={user?.hourlyRate ? Number(user.hourlyRate) : 0}
         >
-            <ProjectsSearchProvider initialSearch={q || ""}>
+            <ProjectsSearchProvider initialSearch={q || ""} initialStatusRefined={Boolean(params.status)}>
                 <div className="space-y-5 sm:space-y-6">
                     <AppPageHeader
                                 title="Projects"

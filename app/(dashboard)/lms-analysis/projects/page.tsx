@@ -33,8 +33,8 @@ import { detectLmsDatePresetId, getLmsDatePresets } from "@/lib/lms-tasks/date-p
 import { FilterBarGroup, FilterBarRow, FilterBarShell, FilterResultsRow } from "@/components/ui/filter-bar"
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Search, Users, Waves, Workflow, X } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
 
-const DEFAULT_EMPLOYEE_NAME = "Marius Ciurariu"
 const PROJECTS_PAGE_SIZE_OPTIONS = [25, 50, 100, 250] as const
 
 type ProjectWorkVolumeStatus = "No Work" | "Low" | "Good" | "High" | "Extra"
@@ -246,13 +246,13 @@ export default function LmsAnalysisProjectsPage() {
   )
 
   const defaultEmployeeOption = React.useMemo(() => {
-    const normalizedTarget = normalizeExecutantKey(DEFAULT_EMPLOYEE_NAME)
+    const normalizedTarget = normalizeExecutantKey(LMS_CRM_EMPLOYEE_NAME)
     return executantOptions.find((option) => normalizeExecutantKey(option) === normalizedTarget) ?? null
   }, [executantOptions])
 
   const selectedEmployee = React.useMemo(() => {
     if (employeeParam) return employeeParam
-    return defaultEmployeeOption ?? DEFAULT_EMPLOYEE_NAME
+    return defaultEmployeeOption ?? LMS_CRM_EMPLOYEE_NAME
   }, [defaultEmployeeOption, employeeParam])
 
   const [search, setSearch] = React.useState("")

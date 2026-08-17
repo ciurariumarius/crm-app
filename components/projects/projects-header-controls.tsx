@@ -75,13 +75,15 @@ export type ProjectsHeaderFilterProps = {
 function useProjectsHref() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const searchContext = useProjectsSearchContext()
 
   return React.useCallback((overrides: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString())
     params.delete("view")
     for (const [key, value] of Object.entries(overrides)) {
+      const hasSearch = Boolean(searchContext?.searchTerm.trim() || searchParams.get("q"))
       const isDefault =
-        (key === "status" && value === "Active") ||
+        (key === "status" && value === "Active" && !hasSearch) ||
         (key === "payment" && value === "All") ||
         (key === "recurring" && value === "All") ||
         (key === "partnerId" && value === "all") ||
@@ -94,7 +96,7 @@ function useProjectsHref() {
     params.delete("page")
     const query = params.toString()
     return query ? `${pathname}?${query}` : pathname
-  }, [pathname, searchParams])
+  }, [pathname, searchContext?.searchTerm, searchParams])
 }
 
 function activeFilters(props: ProjectsHeaderFilterProps, buildHref: ReturnType<typeof useProjectsHref>) {
@@ -116,16 +118,21 @@ function activeFilters(props: ProjectsHeaderFilterProps, buildHref: ReturnType<t
 
 export function ProjectsStatusControls({ currentStatus }: { currentStatus: string }) {
   const buildHref = useProjectsHref()
+  const searchContext = useProjectsSearchContext()
+  const displayedStatus = searchContext?.searchTerm.trim() && !searchContext.statusRefined
+    ? "All"
+    : currentStatus
   return (
     <nav className="flex h-9 min-w-0 items-center overflow-x-auto rounded-xl bg-[var(--bg-surface-soft)] p-1 hidescrollbar" aria-label="Project status">
       {STATUS_OPTIONS.map((status) => (
         <Link
           key={status}
           href={buildHref({ status })}
-          aria-current={currentStatus === status ? "page" : undefined}
+          onClick={() => searchContext?.setStatusRefined(true)}
+          aria-current={displayedStatus === status ? "page" : undefined}
           className={cn(
             "inline-flex h-7 shrink-0 items-center rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.035em] transition-colors sm:px-3",
-            currentStatus === status ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            displayedStatus === status ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           )}
         >
           {status}

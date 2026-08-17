@@ -10,9 +10,7 @@ import {
   FilePlus2,
   Folder,
   FolderInput,
-  FolderKanban,
   FolderPlus,
-  ListTodo,
   MoreHorizontal,
   NotebookPen,
   PanelLeft,
@@ -21,7 +19,6 @@ import {
   Pencil,
   Pin,
   PinOff,
-  Plus,
   RotateCcw,
   SlidersHorizontal,
   Trash2,
@@ -101,16 +98,10 @@ type NotesWorkspaceProps = {
   initialFolders: NoteFolderRecord[]
   foldersEnabled?: boolean
   storageUnavailable?: boolean
+  startNewNote?: boolean
 }
 
-type RailKey =
-  | "all"
-  | "pinned"
-  | "archived"
-  | "deleted"
-  | "projects"
-  | "tasks"
-  | `folder:${string}`
+type RailKey = "all" | "pinned" | "archived" | "deleted" | `folder:${string}`
 
 type MobilePane = "folders" | "list" | "editor"
 type SaveState = "idle" | "saving" | "saved" | "error"
@@ -123,31 +114,6 @@ type DateGroup = {
 
 const DEFAULT_RAIL_KEY: RailKey = "all"
 const NOTE_SURFACE_FONT = "[font-family:var(--font-geist-sans),sans-serif]"
-
-const PROJECT_REQUIREMENTS_TEMPLATE = [
-  "<h2>Requirements</h2>",
-  "<ul>",
-  "<li><strong>Goal:</strong> </li>",
-  "<li><strong>Deliverables:</strong> </li>",
-  "<li><strong>Tracking scope (GTM / GA4 / Pixel):</strong> </li>",
-  "<li><strong>Constraints:</strong> </li>",
-  "</ul>",
-  "<h3>Implementation Notes</h3>",
-  "<p></p>",
-  "<h3>Screenshots</h3>",
-  "<p></p>",
-].join("")
-
-const TASK_NOTES_TEMPLATE = [
-  "<h2>Context</h2>",
-  "<p></p>",
-  "<h2>Checklist</h2>",
-  "<ul>",
-  "<li></li>",
-  "</ul>",
-  "<h2>Screenshots</h2>",
-  "<p></p>",
-].join("")
 
 function folderRailKey(folderId: string): RailKey {
   return `folder:${folderId}`
@@ -268,12 +234,6 @@ function getFilteredByRail(
       (note) => getNoteSourceType(note) === "note" && Boolean(note.deletedAt)
     )
   }
-  if (rail === "projects") {
-    return notes.filter((note) => getNoteSourceType(note) === "project")
-  }
-  if (rail === "tasks") {
-    return notes.filter((note) => getNoteSourceType(note) === "task")
-  }
   const folderId = getFolderIdFromRailKey(rail)
   if (!folderId) return []
   return notes.filter(
@@ -333,6 +293,7 @@ export function NotesWorkspace({
   initialFolders,
   foldersEnabled = true,
   storageUnavailable = false,
+  startNewNote = false,
 }: NotesWorkspaceProps) {
   const [notes, setNotes] = React.useState<NoteRecord[]>(() => sortNotes(initialNotes))
   const [selectedNoteId, setSelectedNoteId] = React.useState<string | null>(initialSelectedNoteId)
@@ -343,8 +304,6 @@ export function NotesWorkspace({
       view === "pinned" ||
       view === "archived" ||
       view === "deleted" ||
-      view === "projects" ||
-      view === "tasks" ||
       view.startsWith("folder:")
     ) {
       return view as RailKey
@@ -359,7 +318,7 @@ export function NotesWorkspace({
   const [emptyEditorDraft, setEmptyEditorDraft] = React.useState("")
   const [search, setSearch] = React.useState("")
   const [mobilePane, setMobilePane] = React.useState<MobilePane>(
-    initialSelectedNoteId ? "editor" : "folders"
+    startNewNote || initialSelectedNoteId ? "editor" : "folders"
   )
   const [tabletSidebarOpen, setTabletSidebarOpen] = React.useState(false)
   const [tabletListOpen, setTabletListOpen] = React.useState(false)
@@ -418,6 +377,7 @@ export function NotesWorkspace({
   const saveTimeoutsRef = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const draftCreateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const draftCreateInFlightRef = React.useRef(false)
+  const startNewNoteHandledRef = React.useRef(false)
   const draggedNoteIdRef = React.useRef<string | null>(null)
   const dragPreviewRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -438,6 +398,7 @@ export function NotesWorkspace({
     const url = new URL(window.location.href)
     url.searchParams.set("view", activeRailKey)
     url.searchParams.delete("scope")
+    url.searchParams.delete("new")
     if (selectedNoteId) url.searchParams.set("note", selectedNoteId)
     else url.searchParams.delete("note")
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`)
@@ -504,8 +465,6 @@ export function NotesWorkspace({
       ).length,
       archived: personalNotes.filter((note) => note.archived && !note.deletedAt).length,
       deleted: personalNotes.filter((note) => Boolean(note.deletedAt)).length,
-      projects: notes.filter((note) => getNoteSourceType(note) === "project").length,
-      tasks: notes.filter((note) => getNoteSourceType(note) === "task").length,
     }
   }, [notes])
 
@@ -890,6 +849,19 @@ export function NotesWorkspace({
     setSaveState("idle")
     setEditorFocusToken((current) => current + 1)
   }, [flushSelectedNote, selectNoteId])
+
+  React.useEffect(() => {
+    if (!startNewNote) {
+      startNewNoteHandledRef.current = false
+      return
+    }
+    if (startNewNoteHandledRef.current) return
+
+    startNewNoteHandledRef.current = true
+    setActiveRailKey(DEFAULT_RAIL_KEY)
+    beginNewNote()
+    setMobilePane("editor")
+  }, [beginNewNote, startNewNote])
 
   const handleSelectNote = React.useCallback(
     (noteId: string | null) => {
@@ -1423,29 +1395,6 @@ export function NotesWorkspace({
     }
   }, [deletePermanently, filteredNotes, pendingDeleteNote, selectNoteId, selectedNoteId])
 
-  const appendTemplate = React.useCallback(() => {
-    const noteId = selectedNoteIdRef.current
-    if (!noteId) return
-    const currentDraft = noteDraftsRef.current.get(noteId) ?? contentDraftRef.current
-    if (selectedNoteSourceType === "project") {
-      handleContentDraftChange(
-        noteId,
-        currentDraft.trim()
-          ? `${currentDraft}<p></p>${PROJECT_REQUIREMENTS_TEMPLATE}`
-          : PROJECT_REQUIREMENTS_TEMPLATE
-      )
-      return
-    }
-    if (selectedNoteSourceType === "task") {
-      handleContentDraftChange(
-        noteId,
-        currentDraft.trim()
-          ? `${currentDraft}<p></p>${TASK_NOTES_TEMPLATE}`
-          : TASK_NOTES_TEMPLATE
-      )
-    }
-  }, [handleContentDraftChange, selectedNoteSourceType])
-
   const searchQuery = search.trim()
 
   const railButtonClass = (active: boolean) =>
@@ -1462,23 +1411,16 @@ export function NotesWorkspace({
 
   const renderLeftRail = (isMobile = false, compact = false, allowCollapse = false) => (
     <div className={cn(compact ? "flex shrink-0 flex-col" : "flex h-full min-h-0 flex-col", NOTE_SURFACE_FONT)}>
-      <div className={cn(compact ? cn("ui-scrollbar overflow-y-auto", isMobile ? "max-h-[44vh]" : "max-h-[min(44vh,420px)]") : "ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5")}>
+      <div className={cn("flex min-h-full flex-col", compact ? cn("ui-scrollbar overflow-y-auto", isMobile ? "max-h-[44vh]" : "max-h-[min(44vh,420px)]") : "ui-scrollbar flex-1 overflow-y-auto", isMobile ? "p-3" : "p-2.5")}>
         {draggedNoteId ? <span role="status" aria-live="polite" className="sr-only">Dragging note. Drop it on a folder to move it.</span> : null}
-        <section aria-label="Collections">
+        <section className="order-2 mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Collections">
           <div className="mb-1.5 flex h-8 items-center justify-between px-2">
             <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Collections</h3>
-            {allowCollapse ? (
-              <button type="button" onClick={() => setSidebarCollapsed(true)} className="inline-flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Hide collections and folders" aria-expanded={!sidebarCollapsed}>
-                <PanelLeftClose className="h-3.5 w-3.5" /> Hide
-              </button>
-            ) : null}
           </div>
           <div className="space-y-1">
             {([
               ["all", NotebookPen, "All Notes", smartCollectionCounts.all],
               ["pinned", Pin, "Pinned", smartCollectionCounts.pinned],
-              ["projects", FolderKanban, "Project Notes", smartCollectionCounts.projects],
-              ["tasks", ListTodo, "Task Notes", smartCollectionCounts.tasks],
               ["archived", Archive, "Archived", smartCollectionCounts.archived],
               ["deleted", Trash2, "Recently Deleted", smartCollectionCounts.deleted],
             ] as const).map(([key, Icon, label, count]) => (
@@ -1491,12 +1433,19 @@ export function NotesWorkspace({
         </section>
 
         {foldersEnabled ? (
-          <section className="mt-3 border-t border-[var(--line-subtle)] pt-2.5" aria-label="Folders">
+          <section className="order-1 flex-1" aria-label="Folders">
             <div className="mb-1.5 flex h-8 items-center justify-between px-2">
               <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Folders</h3>
-              <button type="button" onClick={() => { setIsAddingFolder((current) => !current); setNewFolderName("") }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" disabled={isCreatingFolder || storageUnavailable} aria-label="New folder">
-                <FolderPlus className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => { setIsAddingFolder((current) => !current); setNewFolderName("") }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" disabled={isCreatingFolder || storageUnavailable} aria-label="New folder">
+                  <FolderPlus className="h-4 w-4" />
+                </button>
+                {allowCollapse ? (
+                  <button type="button" onClick={() => setSidebarCollapsed(true)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]" aria-label="Hide folders sidebar" aria-expanded={!sidebarCollapsed}>
+                    <PanelLeftClose className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
             </div>
             {isAddingFolder ? (
               <div className="mb-1 flex h-10 items-center gap-1 rounded-xl border border-[var(--brand-cyan)] bg-[var(--surface-lowest)] px-1.5">
@@ -1698,8 +1647,6 @@ export function NotesWorkspace({
     if (activeRailKey === "pinned") return "Pinned"
     if (activeRailKey === "archived") return "Archived"
     if (activeRailKey === "deleted") return "Recently Deleted"
-    if (activeRailKey === "projects") return "Project Notes"
-    if (activeRailKey === "tasks") return "Task Notes"
     const folderId = getFolderIdFromRailKey(activeRailKey)
     if (!folderId) return "Notes"
     return folders.find((folder) => folder.id === folderId)?.name || "Folder"
@@ -1910,21 +1857,6 @@ export function NotesWorkspace({
             onDrawingRequestHandled={() => setDrawingRequestToken(undefined)}
             readOnly={isDeleted}
             onBlur={() => void flushNote(selectedNote.id)}
-            toolbarActions={
-              selectedNoteIsLinked ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={appendTemplate}
-                  className="h-8 w-8 rounded-full text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
-                  aria-label="Add template"
-                  title="Add template"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              ) : undefined
-            }
             className="bg-transparent"
             minHeightClassName="min-h-[62vh]"
           />

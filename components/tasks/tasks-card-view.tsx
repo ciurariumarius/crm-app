@@ -276,7 +276,10 @@ export function TasksCardView({
         params.set("limit", "1000")
         params.set("page", String(effectivePage))
         params.set("perPage", String(effectivePerPage))
-        params.set("status", searchApiFilters?.status || "Active")
+        params.set(
+            "status",
+            searchContext.statusRefined ? (searchApiFilters?.status || "Active") : "All"
+        )
         params.set("urgency", searchApiFilters?.urgency || "all")
         params.set("sort", searchApiFilters?.sort || "newest")
         if (searchApiFilters?.overdue) params.set("overdue", "1")
