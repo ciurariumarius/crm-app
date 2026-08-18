@@ -224,17 +224,19 @@ export function TaskGridCard({
             </div>
 
             <h3 className={cn(
-                "mt-4 line-clamp-2 pr-1 text-[19px] font-bold leading-[1.18] tracking-[-0.02em] text-[var(--text-primary)] sm:text-xl",
+                "mt-4 line-clamp-2 pr-1 text-[19px] font-bold leading-[1.18] tracking-[-0.02em] text-[var(--text-primary)] sm:text-xl"
+            )}>
+                {projectLabel}
+            </h3>
+            <p className={cn(
+                "mt-3 line-clamp-2 text-[15px] font-bold leading-5 tracking-[-0.01em] text-[var(--text-secondary)]",
                 task.status === "Completed" && "line-through opacity-55"
             )}>
                 {task.name || "Untitled task"}
-            </h3>
+            </p>
 
             <div className="mt-auto border-t border-[var(--line-subtle)] pt-4">
-                <p className="line-clamp-2 text-[15px] font-bold leading-5 tracking-[-0.01em] text-[var(--text-primary)]" title={projectLabel}>
-                    {projectLabel}
-                </p>
-                <div className="mt-1.5 flex min-w-0 items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start justify-between gap-3">
                     <p className="line-clamp-2 min-w-0 text-[13px] font-medium leading-[1.15rem] text-[var(--text-secondary)]" title={categoryLabel}>
                         {categoryLabel}
                     </p>
