@@ -936,10 +936,10 @@ export function NotesWorkspace({
               >
                 <div className="flex items-start gap-2">
                   <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-[var(--text-primary)]">{row.title || "New note"}</span>
-                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{formatDistanceToNow(new Date(row.updatedAt), { addSuffix: false })}</span>
+                  <span className="shrink-0 text-xs text-[var(--text-muted)]">{formatDistanceToNow(new Date(row.updatedAt), { addSuffix: false })}</span>
                 </div>
                 <p className="mt-1 line-clamp-2 min-h-9 text-[13px] leading-[18px] text-[var(--text-secondary)]">{row.preview || "Start writing…"}</p>
-                <p className="mt-1 truncate text-[11px] font-medium text-[var(--text-muted)]">{folders.find((folder) => folder.id === row.folderId)?.name ?? ALL_NOTES_FOLDER_LABEL}</p>
+                <p className="mt-1 truncate text-xs font-medium text-[var(--text-muted)]">{folders.find((folder) => folder.id === row.folderId)?.name ?? ALL_NOTES_FOLDER_LABEL}</p>
               </button>
             )) : (
               <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">

@@ -10,122 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          port: 22
-          script: |
-            set -Eeuo pipefail
-            SITE_PATH="/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
-            DB_PATH="$SITE_PATH/dev.db"
-            BACKUP_ROOT="/home/${{ secrets.SERVER_USER }}/backups/pixelist-crm"
+          node-version: 20
+          cache: 'npm'
 
-            cd "$SITE_PATH"
+      - name: Install Dependencies
+        run: npm ci
 
-            export NVM_DIR="/home/${{ secrets.SERVER_USER }}/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            export DATABASE_URL="file:$DB_PATH"
-            export NODE_OPTIONS="--max-old-space-size=2048"
+      - name: Install Deployment Utilities
+        run: sudo apt-get update && sudo apt-get install -y sshpass rsync
 
-            PREVIOUS_COMMIT="$(git rev-parse HEAD)"
-            DEPLOY_TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-            BACKUP_DIR="$BACKUP_ROOT/$DEPLOY_TIMESTAMP"
-            STORAGE_ROOT="$(node -r dotenv/config -e 'const path=require("node:path"); process.stdout.write(path.resolve(process.env.PROJECT_NOTES_STORAGE_ROOT || "storage/project-notes"))')"
-            if [ -z "$STORAGE_ROOT" ] || [ "$STORAGE_ROOT" = "/" ] || [ "$(basename "$STORAGE_ROOT")" != "project-notes" ]; then
-              echo "Unsafe project-note storage path: $STORAGE_ROOT"
-              exit 1
-            fi
-            BACKUP_READY=0
+      - name: Run Direct Server Deploy
+        run: bash scripts/deploy-direct.sh
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: 22
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          SITE_PATH: "/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
 
-            rollback() {
-              trap - ERR
-              set +e
-              echo "--- DEPLOY FAILED: RESTORING PREVIOUS RELEASE ---"
-              npx pm2 delete pixelist-crm >/dev/null 2>&1 || true
-
-              if [ "$BACKUP_READY" = "1" ]; then
-                rm -f -- "$DB_PATH" "${DB_PATH}-wal" "${DB_PATH}-shm"
-                cp "$BACKUP_DIR/dev.db" "$DB_PATH"
-                [ -f "$BACKUP_DIR/dev.db-wal" ] && cp "$BACKUP_DIR/dev.db-wal" "${DB_PATH}-wal"
-                [ -f "$BACKUP_DIR/dev.db-shm" ] && cp "$BACKUP_DIR/dev.db-shm" "${DB_PATH}-shm"
-                if [ -d "$BACKUP_DIR/project-notes" ]; then
-                  rm -rf -- "$STORAGE_ROOT"
-                  mkdir -p "$(dirname "$STORAGE_ROOT")"
-                  cp -a "$BACKUP_DIR/project-notes" "$STORAGE_ROOT"
-                fi
-              fi
-
-              git reset --hard "$PREVIOUS_COMMIT"
-              npm install || npm install --legacy-peer-deps
-              npx prisma generate
-              npm run build
-              DATABASE_URL="file:$DB_PATH" npx pm2 start npx --name "pixelist-crm" -- next start -p 3000
-              npx pm2 save || true
-              echo "Rollback completed. Backup retained at $BACKUP_DIR"
-              exit 1
-            }
-            trap rollback ERR
-
-            echo "--- PULLING RELEASE ---"
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "--- INSTALLING DEPENDENCIES ---"
-            npm install || npm install --legacy-peer-deps
-
-            echo "--- GENERATING PRISMA CLIENT ---"
-            npx prisma generate
-
-            echo "--- VALIDATING SINGLE-OWNER MIGRATION ---"
-            npm run data:preflight-single-owner
-            PROJECT_NOTES_STORAGE_ROOT="$STORAGE_ROOT" npm run data:migrate-project-note-storage:dry
-
-            echo "--- ENTERING MAINTENANCE WINDOW ---"
-            npx pm2 delete pixelist-crm || true
-            mkdir -p "$BACKUP_DIR"
-            printf '%s\n' "$PREVIOUS_COMMIT" > "$BACKUP_DIR/previous-commit.txt"
-            cp "$DB_PATH" "$BACKUP_DIR/dev.db"
-            [ -f "${DB_PATH}-wal" ] && cp "${DB_PATH}-wal" "$BACKUP_DIR/dev.db-wal"
-            [ -f "${DB_PATH}-shm" ] && cp "${DB_PATH}-shm" "$BACKUP_DIR/dev.db-shm"
-            if [ -d "$STORAGE_ROOT" ]; then
-              cp -a "$STORAGE_ROOT" "$BACKUP_DIR/project-notes"
-            fi
-            BACKUP_READY=1
-
-            echo "--- MIGRATING PROJECT-NOTE STORAGE ---"
-            PROJECT_NOTES_STORAGE_ROOT="$STORAGE_ROOT" npm run data:migrate-project-note-storage
-
-            echo "--- APPLYING PRISMA MIGRATIONS ---"
-            npx prisma migrate deploy
-            npx prisma generate
-            npm run data:preflight-single-owner
-
-            echo "--- BUILDING APPLICATION ---"
-            npm run build
-
-            echo "--- STARTING PM2 PROCESS ---"
-            DATABASE_URL="file:$DB_PATH" npx pm2 start npx --name "pixelist-crm" -- next start -p 3000
-            npx pm2 save || true
-
-            echo "--- RUNNING SMOKE TESTS ---"
-            READY=0
-            for ATTEMPT in $(seq 1 30); do
-              if curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3000/login; then
-                READY=1
-                break
-              fi
-              sleep 2
-            done
-            test "$READY" = "1"
-            CRON_SECRET_VALUE="$(node -r dotenv/config -e 'process.stdout.write(process.env.CRON_SECRET || "")')"
-            test -n "$CRON_SECRET_VALUE"
-            curl --fail --silent --show-error --output /dev/null \
-              --request POST \
-              --header "Authorization: Bearer $CRON_SECRET_VALUE" \
-              "http://127.0.0.1:3000/api/cron/lms-daily-admin-work?dryRun=1"
-
-            trap - ERR
-            echo "--- DEPLOYMENT COMPLETED; BACKUP RETAINED AT $BACKUP_DIR ---"

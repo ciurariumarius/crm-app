@@ -4,15 +4,12 @@ set -Eeuo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 credentials_file="${DEPLOY_ENV_FILE:-$repo_root/.env.deploy.local}"
 
-if [[ ! -f "$credentials_file" ]]; then
-  echo "Missing deployment credentials file: $credentials_file"
-  exit 1
+if [[ -f "$credentials_file" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$credentials_file"
+  set +a
 fi
-
-set -a
-# shellcheck disable=SC1090
-source "$credentials_file"
-set +a
 
 : "${SERVER_HOST:?SERVER_HOST is required}"
 : "${SERVER_USER:?SERVER_USER is required}"
