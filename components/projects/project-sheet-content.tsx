@@ -77,6 +77,7 @@ type UpdateProjectPayload = {
     isHeavyRevenueMonth?: boolean
     createdAt?: Date | string
     currentFee?: number | null
+    feeScope?: "CURRENT_MONTH" | "CURRENT_AND_FUTURE" | "FUTURE_MONTHS"
     serviceIds?: string[]
 }
 
@@ -197,6 +198,7 @@ export function ProjectSheetContent({
     )
     const [localName, setLocalName] = React.useState("")
     const [amountInput, setAmountInput] = React.useState("")
+    const [feeScope, setFeeScope] = React.useState<"CURRENT_MONTH" | "CURRENT_AND_FUTURE" | "FUTURE_MONTHS">("CURRENT_MONTH")
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
     const [isEditingServices, setIsEditingServices] = React.useState(false)
     const [activeTab, setActiveTab] = React.useState("overview")
@@ -401,7 +403,12 @@ export function ProjectSheetContent({
                         ? { isHeavyRevenueMonth: data.isHeavyRevenueMonth }
                         : {}),
                     ...(data.createdAt !== undefined ? { createdAt: data.createdAt } : {}),
-                    ...(data.currentFee !== undefined ? { currentFee: data.currentFee } : {}),
+                    ...(data.currentFee !== undefined && data.feeScope !== "FUTURE_MONTHS"
+                        ? { currentFee: data.currentFee }
+                        : {}),
+                    ...((data.feeScope === "CURRENT_AND_FUTURE" || data.feeScope === "FUTURE_MONTHS") && data.currentFee !== undefined
+                        ? { recurringBaseFee: data.currentFee }
+                        : {}),
                     ...(data.serviceIds
                         ? { services: allServices.filter((service) => data.serviceIds?.includes(service.id)) }
                         : {}),
@@ -921,11 +928,24 @@ export function ProjectSheetContent({
     const persistedServiceIds = (project.services || []).map((service) => service.id).sort()
     const normalizedDraftServiceIds = [...draftServiceIds].sort()
     const parsedDraftAmount = amountInput.trim() ? Number.parseInt(amountInput, 10) : null
-    const detailsDirty = parsedDraftAmount !== (project.currentFee == null ? null : Number(project.currentFee))
+    const currentFeeValue = project.currentFee == null ? null : Number(project.currentFee)
+    const recurringBaseFeeValue = project.recurringBaseFee == null ? currentFeeValue : Number(project.recurringBaseFee)
+    const amountDirty = feeScope === "FUTURE_MONTHS"
+        ? parsedDraftAmount !== recurringBaseFeeValue
+        : parsedDraftAmount !== currentFeeValue
+            || (feeScope === "CURRENT_AND_FUTURE" && parsedDraftAmount !== recurringBaseFeeValue)
+    const detailsDirty = amountDirty
         || normalizedDraftServiceIds.join(",") !== persistedServiceIds.join(",")
+
+    const selectFeeScope = (nextScope: "CURRENT_MONTH" | "CURRENT_AND_FUTURE" | "FUTURE_MONTHS") => {
+        setFeeScope(nextScope)
+        const targetValue = nextScope === "FUTURE_MONTHS" ? recurringBaseFeeValue : currentFeeValue
+        setAmountInput(targetValue == null ? "" : String(Math.round(targetValue)))
+    }
 
     const beginDetailsEdit = () => {
         setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
+        setFeeScope("CURRENT_MONTH")
         setDraftServiceIds((project.services || []).map((service) => service.id))
         setIsEditingServices(true)
         setIsEditingDetails(true)
@@ -933,6 +953,7 @@ export function ProjectSheetContent({
 
     const cancelDetailsEdit = () => {
         setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
+        setFeeScope("CURRENT_MONTH")
         setDraftServiceIds((project.services || []).map((service) => service.id))
         setIsEditingServices(false)
         setIsEditingDetails(false)
@@ -949,6 +970,7 @@ export function ProjectSheetContent({
         }
         const success = await handleUpdate({
             currentFee: parsedDraftAmount,
+            ...(isRecurringProject ? { feeScope } : {}),
             serviceIds: draftServiceIds,
         })
         if (success) {
@@ -1256,9 +1278,48 @@ export function ProjectSheetContent({
                                     <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-2 py-0.5 text-xs font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors group-hover/amount:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] group-hover/amount:text-[var(--brand-primary)] sm:ml-3 sm:px-2.5 sm:py-1 sm:text-xs">RON</span>
                                 </div>
                                 {isRecurringProject ? (
-                                    <p className="mt-1.5 text-center text-xs font-medium text-[var(--text-muted)]">
-                                        Applies to {format(new Date(project.createdAt), "MMMM yyyy")} only. Future months keep the recurring fee of {Number(project.recurringBaseFee ?? project.currentFee ?? 0).toLocaleString("ro-RO")} RON.
-                                    </p>
+                                    isEditingDetails ? (
+                                        <fieldset className="mt-3 space-y-2 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)]/45 p-3">
+                                            <legend className="px-1 text-xs font-semibold text-[var(--text-secondary)]">Aplică suma pentru</legend>
+                                            <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-[var(--text-secondary)]">
+                                                <input
+                                                    type="radio"
+                                                    name={`fee-scope-${project.id}`}
+                                                    value="CURRENT_MONTH"
+                                                    checked={feeScope === "CURRENT_MONTH"}
+                                                    onChange={() => selectFeeScope("CURRENT_MONTH")}
+                                                    className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
+                                                />
+                                                <span>Doar luna aceasta ({format(new Date(project.createdAt), "MMMM yyyy")})</span>
+                                            </label>
+                                            <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-[var(--text-secondary)]">
+                                                <input
+                                                    type="radio"
+                                                    name={`fee-scope-${project.id}`}
+                                                    value="CURRENT_AND_FUTURE"
+                                                    checked={feeScope === "CURRENT_AND_FUTURE"}
+                                                    onChange={() => selectFeeScope("CURRENT_AND_FUTURE")}
+                                                    className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
+                                                />
+                                                <span>Luna aceasta + viitoare</span>
+                                            </label>
+                                            <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-[var(--text-secondary)]">
+                                                <input
+                                                    type="radio"
+                                                    name={`fee-scope-${project.id}`}
+                                                    value="FUTURE_MONTHS"
+                                                    checked={feeScope === "FUTURE_MONTHS"}
+                                                    onChange={() => selectFeeScope("FUTURE_MONTHS")}
+                                                    className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
+                                                />
+                                                <span>Lunile viitoare</span>
+                                            </label>
+                                        </fieldset>
+                                    ) : (
+                                        <p className="mt-1.5 text-center text-xs font-medium text-[var(--text-muted)]">
+                                            Future months use {Number(project.recurringBaseFee ?? project.currentFee ?? 0).toLocaleString("ro-RO")} RON.
+                                        </p>
+                                    )
                                 ) : null}
                             </div>
                         </div>

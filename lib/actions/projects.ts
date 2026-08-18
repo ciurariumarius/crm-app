@@ -49,6 +49,7 @@ const UpdateProjectSchema = z.object({
     isHeavyRevenueMonth: z.boolean().optional(),
     createdAt: z.union([z.date(), z.string()]).optional(),
     currentFee: z.number().nullable().optional(),
+    feeScope: z.enum(["CURRENT_MONTH", "CURRENT_AND_FUTURE", "FUTURE_MONTHS"]).optional(),
     serviceIds: z.array(z.string().trim().min(1, "Invalid service id")).optional(),
 })
 
@@ -525,6 +526,7 @@ export async function updateProject(projectId: string, data: {
     isHeavyRevenueMonth?: boolean
     createdAt?: Date | string
     currentFee?: number | null
+    feeScope?: "CURRENT_MONTH" | "CURRENT_AND_FUTURE" | "FUTURE_MONTHS"
     serviceIds?: string[]
 }, options?: {
     expectedDescription?: string | null
@@ -543,13 +545,18 @@ export async function updateProject(projectId: string, data: {
         if (data.isHeavyRevenueMonth !== undefined) updateData.isHeavyRevenueMonth = data.isHeavyRevenueMonth
         if (data.createdAt !== undefined) updateData.createdAt = data.createdAt
         if (data.currentFee !== undefined) updateData.currentFee = data.currentFee
+        if (data.feeScope !== undefined) updateData.feeScope = data.feeScope
         if (data.serviceIds !== undefined) updateData.serviceIds = data.serviceIds
 
         const validated = UpdateProjectSchema.parse(updateData)
 
         // serviceIds is handled through relation updates below and must not be passed as a scalar field.
-        const { serviceIds, ...restValidated } = validated
+        const { serviceIds, feeScope, ...restValidated } = validated
         const prismaUpdateData: Prisma.ProjectUpdateInput = { ...restValidated }
+
+        if (feeScope !== undefined && validated.currentFee === undefined) {
+            return { success: false, error: "Fee scope requires a project amount" }
+        }
 
         if (serviceIds) {
             const uniqueServiceIds = Array.from(new Set(serviceIds))
@@ -593,6 +600,9 @@ export async function updateProject(projectId: string, data: {
                 closedMonthKey: true,
                 isHeavyRevenueMonth: true,
                 description: true,
+                currentFee: true,
+                recurringBaseFee: true,
+                services: { select: { isRecurring: true } },
             },
         })
         if (!existingProject) {
@@ -602,6 +612,27 @@ export async function updateProject(projectId: string, data: {
                 details: `projectId=${validatedProjectId}; reason=not_found`,
             })
             return { success: false, error: "Project not found" }
+        }
+
+        const isRecurringProject = existingProject.services.some((service) => service.isRecurring)
+        if (
+            isRecurringProject
+            && validated.currentFee !== undefined
+            && existingProject.recurringBaseFee === null
+        ) {
+            // Preserve the previous amount as the future-month baseline for legacy
+            // recurring rows that predate recurringBaseFee.
+            prismaUpdateData.recurringBaseFee = existingProject.currentFee
+        }
+
+        if (feeScope === "CURRENT_AND_FUTURE" || feeScope === "FUTURE_MONTHS") {
+            if (!isRecurringProject) {
+                return { success: false, error: "Future-month amounts can only be set for recurring projects" }
+            }
+            prismaUpdateData.recurringBaseFee = validated.currentFee
+            if (feeScope === "FUTURE_MONTHS") {
+                delete prismaUpdateData.currentFee
+            }
         }
 
         if (
@@ -715,7 +746,7 @@ export async function updateProject(projectId: string, data: {
 
         await logSessionAuditEvent(session, {
             action: "PROJECT_UPDATED",
-            details: `projectId=${validatedProjectId}`,
+            details: `projectId=${validatedProjectId}; feeScope=${feeScope || "unchanged"}`,
         })
         revalidateProjectPaths(projectId, project.site.partnerId, project.siteId)
         return { success: true }

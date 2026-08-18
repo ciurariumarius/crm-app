@@ -250,6 +250,7 @@ type BoardProject = {
     status: string
     paymentStatus: string
     amount: number
+    recurringBaseFee?: number | null
     secondsLogged: number
     completedTasks: number
     createdAt: string | Date
@@ -319,9 +320,10 @@ export function ProjectsBoardRows({
     const [sortBy, setSortBy] = React.useState<BoardSortBy>(initialSortBy)
     const [sortDirection, setSortDirection] = React.useState<BoardSortDirection>(initialSortDirection)
     const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
-    const [inlineEdits, setInlineEdits] = React.useState<Record<string, { status?: string; paymentStatus?: string; amount?: number }>>({})
+    const [inlineEdits, setInlineEdits] = React.useState<Record<string, { status?: string; paymentStatus?: string; amount?: number; recurringBaseFee?: number | null }>>({})
     const [amountEditorProjectId, setAmountEditorProjectId] = React.useState<string | null>(null)
     const [amountDraft, setAmountDraft] = React.useState("")
+    const [amountScope, setAmountScope] = React.useState<"CURRENT_MONTH" | "CURRENT_AND_FUTURE" | "FUTURE_MONTHS">("CURRENT_MONTH")
     const [closeDialogProject, setCloseDialogProject] = React.useState<BoardProject | null>(null)
     const [isSubmittingCloseDialog, setIsSubmittingCloseDialog] = React.useState(false)
     const [remoteProjects, setRemoteProjects] = React.useState<BoardProject[] | null>(null)
@@ -543,6 +545,9 @@ export function ProjectsBoardRows({
     const getDisplayAmount = (project: BoardProject) =>
         Number(inlineEdits[project.id]?.amount ?? project.amount ?? 0)
 
+    const getDisplayRecurringBaseFee = (project: BoardProject) =>
+        Number(inlineEdits[project.id]?.recurringBaseFee ?? project.recurringBaseFee ?? getDisplayAmount(project))
+
     const getAllocatedSeconds = (project: BoardProject) => {
         const rate = Number(hourlyRate || 0)
         if (rate <= 0) return null
@@ -648,6 +653,17 @@ export function ProjectsBoardRows({
     const openAmountEditor = (project: BoardProject) => {
         setAmountEditorProjectId(project.id)
         setAmountDraft(String(getDisplayAmount(project)))
+        setAmountScope("CURRENT_MONTH")
+    }
+
+    const selectAmountScope = (
+        project: BoardProject,
+        nextScope: "CURRENT_MONTH" | "CURRENT_AND_FUTURE" | "FUTURE_MONTHS"
+    ) => {
+        setAmountScope(nextScope)
+        setAmountDraft(String(nextScope === "FUTURE_MONTHS"
+            ? getDisplayRecurringBaseFee(project)
+            : getDisplayAmount(project)))
     }
 
     const saveProjectAmount = async (project: BoardProject) => {
@@ -659,21 +675,106 @@ export function ProjectsBoardRows({
             return
         }
 
+        const previousAmount = getDisplayAmount(project)
+        const previousRecurringBaseFee = getDisplayRecurringBaseFee(project)
         setInlineEdits((prev) => ({
             ...prev,
-            [project.id]: { ...prev[project.id], amount: parsed },
+            [project.id]: {
+                ...prev[project.id],
+                ...(amountScope !== "FUTURE_MONTHS" ? { amount: parsed } : {}),
+                ...(project.isRecurring && amountScope !== "CURRENT_MONTH" ? { recurringBaseFee: parsed } : {}),
+            },
         }))
         setAmountEditorProjectId(null)
 
-        const result = await updateProject(project.id, { currentFee: parsed })
+        const result = await updateProject(project.id, {
+            currentFee: parsed,
+            ...(project.isRecurring ? { feeScope: amountScope } : {}),
+        })
         if (!result.success) {
             setInlineEdits((prev) => ({
                 ...prev,
-                [project.id]: { ...prev[project.id], amount: project.amount },
+                [project.id]: {
+                    ...prev[project.id],
+                    amount: previousAmount,
+                    recurringBaseFee: previousRecurringBaseFee,
+                },
             }))
             toast.error(result.error || "Failed to update amount")
         }
     }
+
+    const renderAmountEditor = (project: BoardProject) => (
+        <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Amount (RON)</p>
+            <input
+                value={amountDraft}
+                onChange={(event) => setAmountDraft(event.target.value)}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                        event.preventDefault()
+                        void saveProjectAmount(project)
+                    }
+                    if (event.key === "Escape") {
+                        setAmountEditorProjectId(null)
+                    }
+                }}
+                className="h-9 w-full rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-sm outline-none focus:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--ring)_28%,transparent)]"
+                autoFocus
+            />
+            {project.isRecurring ? (
+                <fieldset className="space-y-2 border-t border-[var(--line-subtle)] pt-3">
+                    <legend className="sr-only">Aplică suma pentru</legend>
+                    <label className="flex cursor-pointer items-start gap-2 text-xs font-medium text-[var(--text-secondary)]">
+                        <input
+                            type="radio"
+                            name={`board-fee-scope-${project.id}`}
+                            checked={amountScope === "CURRENT_MONTH"}
+                            onChange={() => selectAmountScope(project, "CURRENT_MONTH")}
+                            className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
+                        />
+                        <span>Doar luna aceasta</span>
+                    </label>
+                    <label className="flex cursor-pointer items-start gap-2 text-xs font-medium text-[var(--text-secondary)]">
+                        <input
+                            type="radio"
+                            name={`board-fee-scope-${project.id}`}
+                            checked={amountScope === "CURRENT_AND_FUTURE"}
+                            onChange={() => selectAmountScope(project, "CURRENT_AND_FUTURE")}
+                            className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
+                        />
+                        <span>Luna aceasta + viitoare</span>
+                    </label>
+                    <label className="flex cursor-pointer items-start gap-2 text-xs font-medium text-[var(--text-secondary)]">
+                        <input
+                            type="radio"
+                            name={`board-fee-scope-${project.id}`}
+                            checked={amountScope === "FUTURE_MONTHS"}
+                            onChange={() => selectAmountScope(project, "FUTURE_MONTHS")}
+                            className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
+                        />
+                        <span>Lunile viitoare</span>
+                    </label>
+                </fieldset>
+            ) : null}
+            <div className="flex items-center justify-end gap-2">
+                <button
+                    type="button"
+                    className="rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)]"
+                    onClick={() => setAmountEditorProjectId(null)}
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    className="rounded-md bg-[var(--brand-primary)] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[var(--brand-primary)]"
+                    onClick={() => void saveProjectAmount(project)}
+                >
+                    Save
+                </button>
+            </div>
+        </div>
+    )
 
     const closeProjectDialog = (
         <CloseProjectDialog
@@ -964,43 +1065,10 @@ export function ProjectsBoardRows({
                                                 </PopoverTrigger>
                                                 <PopoverContent
                                                     align="end"
-                                                    className="w-44 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-xl"
+                                                    className={cn("rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-xl", project.isRecurring ? "w-64" : "w-44")}
                                                     onClick={(event) => event.stopPropagation()}
                                                 >
-                                                    <div className="space-y-2">
-                                                        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Amount (RON)</p>
-                                                        <input
-                                                            value={amountDraft}
-                                                            onChange={(event) => setAmountDraft(event.target.value)}
-                                                            onKeyDown={(event) => {
-                                                                if (event.key === "Enter") {
-                                                                    event.preventDefault()
-                                                                    void saveProjectAmount(project)
-                                                                }
-                                                                if (event.key === "Escape") {
-                                                                    setAmountEditorProjectId(null)
-                                                                }
-                                                            }}
-                                                            className="h-9 w-full rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-sm outline-none focus:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--ring)_28%,transparent)]"
-                                                            autoFocus
-                                                        />
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <button
-                                                                type="button"
-                                                                className="rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)]"
-                                                                onClick={() => setAmountEditorProjectId(null)}
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="rounded-md bg-[var(--brand-primary)] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[var(--brand-primary)]"
-                                                                onClick={() => void saveProjectAmount(project)}
-                                                            >
-                                                                Save
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                                                    {renderAmountEditor(project)}
                                                 </PopoverContent>
                                             </Popover>
                                         </div>
@@ -1254,43 +1322,10 @@ export function ProjectsBoardRows({
                                                 </PopoverTrigger>
                                                 <PopoverContent
                                                     align="end"
-                                                    className="w-44 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-xl"
+                                                    className={cn("rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-xl", project.isRecurring ? "w-64" : "w-44")}
                                                     onClick={(event) => event.stopPropagation()}
                                                 >
-                                                    <div className="space-y-2">
-                                                        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Amount (RON)</p>
-                                                        <input
-                                                            value={amountDraft}
-                                                            onChange={(event) => setAmountDraft(event.target.value)}
-                                                            onKeyDown={(event) => {
-                                                                if (event.key === "Enter") {
-                                                                    event.preventDefault()
-                                                                    void saveProjectAmount(project)
-                                                                }
-                                                                if (event.key === "Escape") {
-                                                                    setAmountEditorProjectId(null)
-                                                                }
-                                                            }}
-                                                            className="h-9 w-full rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-sm outline-none focus:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--ring)_28%,transparent)]"
-                                                            autoFocus
-                                                        />
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <button
-                                                                type="button"
-                                                                className="rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)]"
-                                                                onClick={() => setAmountEditorProjectId(null)}
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="rounded-md bg-[var(--brand-primary)] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[var(--brand-primary)]"
-                                                                onClick={() => void saveProjectAmount(project)}
-                                                            >
-                                                                Save
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                                                    {renderAmountEditor(project)}
                                                 </PopoverContent>
                                             </Popover>
                                         </div>

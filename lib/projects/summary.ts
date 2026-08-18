@@ -9,6 +9,7 @@ export type ProjectSummary = {
     status: string
     paymentStatus: string
     amount: number
+    recurringBaseFee: number | null
     secondsLogged: number
     completedTasks: number
     createdAt: Date
@@ -46,6 +47,7 @@ const summarySelect = {
     status: true,
     paymentStatus: true,
     currentFee: true,
+    recurringBaseFee: true,
     createdAt: true,
     updatedAt: true,
     closedAt: true,
@@ -194,6 +196,7 @@ export async function getProjectSummaryPage(args: {
             status: normalizeProjectStatus(row.status),
             paymentStatus: row.paymentStatus,
             amount: Number(row.currentFee ?? 0),
+            recurringBaseFee: row.recurringBaseFee == null ? null : Number(row.recurringBaseFee),
             secondsLogged: secondsByProject.get(id) || 0,
             completedTasks: counts.completed,
             createdAt: row.createdAt,

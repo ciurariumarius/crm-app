@@ -213,6 +213,87 @@ describe("partner payment transactions", () => {
     expect(Number(stored.currentFee)).toBe(250)
   })
 
+  it("changes only the current recurring month when that scope is selected", async () => {
+    const partner = await createPartner(`Current month partner ${randomUUID()}`)
+    const project = await createProject(partner.id, "Current month recurring project")
+    const service = await prisma.service.create({
+      data: {
+        id: randomUUID(),
+        serviceName: `Recurring service ${randomUUID()}`,
+        isRecurring: true,
+        standardTasks: "[]",
+      },
+    })
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { recurringBaseFee: null, services: { connect: { id: service.id } } },
+    })
+
+    const result = await projectActions.updateProject(project.id, {
+      currentFee: 325,
+      feeScope: "CURRENT_MONTH",
+    })
+
+    expect(result).toEqual({ success: true })
+    const stored = await prisma.project.findUniqueOrThrow({ where: { id: project.id } })
+    expect(Number(stored.currentFee)).toBe(325)
+    expect(Number(stored.recurringBaseFee)).toBe(250)
+  })
+
+  it("changes both the current and future recurring amounts when that scope is selected", async () => {
+    const partner = await createPartner(`Future months partner ${randomUUID()}`)
+    const project = await createProject(partner.id, "Future months recurring project")
+    const service = await prisma.service.create({
+      data: {
+        id: randomUUID(),
+        serviceName: `Recurring service ${randomUUID()}`,
+        isRecurring: true,
+        standardTasks: "[]",
+      },
+    })
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { recurringBaseFee: 250, services: { connect: { id: service.id } } },
+    })
+
+    const result = await projectActions.updateProject(project.id, {
+      currentFee: 400,
+      feeScope: "CURRENT_AND_FUTURE",
+    })
+
+    expect(result).toEqual({ success: true })
+    const stored = await prisma.project.findUniqueOrThrow({ where: { id: project.id } })
+    expect(Number(stored.currentFee)).toBe(400)
+    expect(Number(stored.recurringBaseFee)).toBe(400)
+  })
+
+  it("changes only future recurring amounts without changing the current month", async () => {
+    const partner = await createPartner(`Future-only partner ${randomUUID()}`)
+    const project = await createProject(partner.id, "Future-only recurring project")
+    const service = await prisma.service.create({
+      data: {
+        id: randomUUID(),
+        serviceName: `Recurring service ${randomUUID()}`,
+        isRecurring: true,
+        standardTasks: "[]",
+      },
+    })
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { recurringBaseFee: 250, services: { connect: { id: service.id } } },
+    })
+
+    const result = await projectActions.updateProject(project.id, {
+      currentFee: 475,
+      feeScope: "FUTURE_MONTHS",
+    })
+
+    expect(result).toEqual({ success: true })
+    const stored = await prisma.project.findUniqueOrThrow({ where: { id: project.id } })
+    expect(Number(stored.currentFee)).toBe(250)
+    expect(Number(stored.recurringBaseFee)).toBe(475)
+  })
+
   it("opens a closed recurring project in a later month without changing its history", async () => {
     const partner = await createPartner(`Recurring partner ${randomUUID()}`)
     const site = await prisma.site.create({
