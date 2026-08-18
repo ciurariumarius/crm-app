@@ -844,7 +844,7 @@ export function NotesWorkspace({
     <div className="space-y-4">
       <AppPageHeader title="Notes" search={searchInput} primaryAction={addButton} />
 
-      <div className="grid h-[calc(100dvh-190px)] min-h-[560px] overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] md:grid-cols-[220px_minmax(280px,360px)_minmax(0,1fr)]">
+      <div className="grid h-[calc(100dvh-190px)] min-h-[560px] overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] md:grid-cols-[230px_minmax(280px,360px)_minmax(0,1fr)]">
         <aside className={cn("min-h-0 flex-col border-r border-[var(--line-subtle)] bg-[var(--surface-low)]", mobilePane === "folders" ? "flex" : "hidden", "md:flex")}>
           <div className="border-b border-[var(--line-subtle)] px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Notes</p>
@@ -853,11 +853,11 @@ export function NotesWorkspace({
             <button
               type="button"
               onClick={() => { setView("all"); setMobilePane("list") }}
-              className={cn("flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold", view === "all" ? "bg-[var(--surface-lowest)] text-[var(--primary)] shadow-sm" : "text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)]/70")}
+              className={cn("flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors", view === "all" ? "bg-[var(--surface-lowest)] text-[var(--primary)] shadow-sm" : "text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)]/70")}
             >
-              <NotebookPen className="h-4 w-4" />
+              <NotebookPen className="h-4 w-4 shrink-0" />
               <span className="min-w-0 flex-1 truncate text-left">All Notes</span>
-              <span className="w-8 text-right tabular-nums text-[var(--text-muted)]">{allCount}</span>
+              <span className="shrink-0 text-xs font-medium tabular-nums text-[var(--text-muted)]">{allCount}</span>
             </button>
             <div className="mt-3 flex items-center px-3 pb-1 pt-2">
               <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Folders</span>
@@ -870,22 +870,47 @@ export function NotesWorkspace({
                 <FolderPlus className="h-4 w-4" />
               </button>
             </div>
-            {folders.map((folder) => (
-              <div key={folder.id} className={cn("group flex min-h-11 items-center rounded-xl", activeFolderId === folder.id ? "bg-[var(--surface-lowest)] shadow-sm" : "hover:bg-[var(--surface-lowest)]/70")}>
-                <button type="button" onClick={() => { setView(folderView(folder.id)); setMobilePane("list") }} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">
-                  <Folder className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-left">{folder.name}</span>
-                  <span className="w-8 text-right tabular-nums text-[var(--text-muted)]">{folder.count}</span>
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild><button type="button" className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full opacity-70 hover:bg-[var(--surface-low)] md:opacity-0 md:group-hover:opacity-100" aria-label={`${folder.name} actions`}><MoreHorizontal className="h-4 w-4" /></button></DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => { setFolderDialog({ mode: "rename", folder }); setFolderName(folder.name) }}>Rename</DropdownMenuItem>
-                    <DropdownMenuItem variant="destructive" onSelect={() => setFolderToDelete(folder)}>Delete folder</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
+            {folders.map((folder) => {
+              const isActive = activeFolderId === folder.id
+              return (
+                <div
+                  key={folder.id}
+                  className={cn(
+                    "group relative flex min-h-10 items-center rounded-xl transition-colors",
+                    isActive ? "bg-[var(--surface-lowest)] shadow-sm font-semibold" : "hover:bg-[var(--surface-lowest)]/70"
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setView(folderView(folder.id)); setMobilePane("list") }}
+                    className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-2 pl-3 pr-2 text-left text-sm text-[var(--text-secondary)]"
+                  >
+                    <Folder className={cn("h-4 w-4 shrink-0", isActive ? "text-[var(--primary)]" : "text-[var(--text-muted)]")} />
+                    <span className={cn("min-w-0 flex-1 truncate", isActive ? "text-[var(--text-primary)] font-semibold" : "")}>{folder.name}</span>
+                    <span className="shrink-0 text-xs font-medium tabular-nums text-[var(--text-muted)] transition-opacity md:group-hover:opacity-0 md:group-focus-within:opacity-0">
+                      {folder.count}
+                    </span>
+                  </button>
+                  <div className="flex shrink-0 items-center pr-1.5 md:absolute md:right-1.5 md:top-1/2 md:-translate-y-1/2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] transition-opacity hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                          aria-label={`${folder.name} actions`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => { setFolderDialog({ mode: "rename", folder }); setFolderName(folder.name) }}>Rename</DropdownMenuItem>
+                        <DropdownMenuItem variant="destructive" onSelect={() => setFolderToDelete(folder)}>Delete folder</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              )
+            })}
             <Button type="button" variant="ghost" className="mt-2 w-full justify-start gap-3 rounded-xl" onClick={() => { setFolderDialog({ mode: "create" }); setFolderName("") }}>
               <FolderPlus className="h-4 w-4" />Add Folder
             </Button>
