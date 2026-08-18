@@ -844,7 +844,7 @@ export function NotesWorkspace({
     <div className="space-y-4">
       <AppPageHeader title="Notes" search={searchInput} primaryAction={addButton} />
 
-      <div className="grid h-[calc(100dvh-190px)] min-h-[560px] overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] md:grid-cols-[230px_minmax(280px,360px)_minmax(0,1fr)]">
+      <div className="grid h-[calc(100dvh-190px)] min-h-[560px] overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] md:grid-cols-[230px_230px_minmax(0,1fr)]">
         <aside className={cn("min-h-0 flex-col border-r border-[var(--line-subtle)] bg-[var(--surface-low)]", mobilePane === "folders" ? "flex" : "hidden", "md:flex")}>
           <div className="border-b border-[var(--line-subtle)] px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">Notes</p>

@@ -157,9 +157,9 @@ function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
     )
 }
 
-function getProjectCardTitle(project: BoardProject) {
+function getProjectCardSubtitle(project: BoardProject) {
     const serviceLabel = project.serviceLabel.trim()
-    const fallback = project.name?.trim() || project.site.domainName || "Untitled project"
+    const fallback = project.name?.trim() || "No service"
     if (!project.isRecurring) return serviceLabel || fallback
 
     const createdAt = new Date(project.createdAt)
@@ -808,7 +808,7 @@ export function ProjectsBoardRows({
                         {entries.map((project) => {
                             const projectStatus = getDisplayStatus(project)
                             const projectPayment = getDisplayPayment(project)
-                            const cardTitle = getProjectCardTitle(project)
+                            const cardSubtitle = getProjectCardSubtitle(project)
 
                             return (
                                 <button
@@ -830,10 +830,9 @@ export function ProjectsBoardRows({
 
                                     <div className="mt-4 min-w-0">
                                         <h3 className={cn("line-clamp-2 text-[19px] font-bold leading-[1.18] tracking-[-0.02em] transition-colors group-hover:text-[var(--brand-primary)] sm:text-xl", getProjectTitleClass(projectStatus))}>
-                                            {cardTitle}
+                                            {project.site.domainName || project.name || "Untitled project"}
                                         </h3>
-                                        <p className={cn("mt-3 line-clamp-1 text-[15px] font-bold", getProjectMetaClass(projectStatus))}>{project.site.domainName}</p>
-                                        <p className="mt-1 line-clamp-1 text-[13px] font-medium text-[var(--text-muted)]">{project.site.partner.name}</p>
+                                        <p className={cn("mt-3 line-clamp-2 text-[15px] font-bold", getProjectMetaClass(projectStatus))}>{cardSubtitle}</p>
                                     </div>
 
                                     <div className="mt-auto flex items-end justify-between gap-3 border-t border-[var(--line-subtle)] pt-4">

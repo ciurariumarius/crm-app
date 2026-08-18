@@ -1,5 +1,6 @@
 export const PUBLIC_ASSET_PATHS = [
     "/apple-icon.png",
+    "/brands/limitless-lms.png",
     "/file.svg",
     "/favicon.ico",
     "/globe.svg",
