@@ -44,7 +44,7 @@ function run() {
     assert.match(projectWhereJson, /"createdAt":\{"gte":"2026-02-01T00:00:00\.000Z","lt":"2026-03-01T00:00:00\.000Z"\}/)
 
     const normalizedTaskFilters = normalizeTaskFilters({
-        status: "Paused",
+        status: "Pending",
         urgency: "High",
         overdue: "1",
         dueToday: "1",
@@ -52,7 +52,7 @@ function run() {
         q: "facebook",
         scope: "lms",
     })
-    assert.equal(normalizedTaskFilters.status, "Active")
+    assert.equal(normalizedTaskFilters.status, "Pending")
     assert.equal(normalizedTaskFilters.urgency, "Urgent")
     assert.equal(normalizedTaskFilters.dueTodayOnly, true)
     assert.equal(normalizedTaskFilters.overdueOnly, false)
@@ -67,7 +67,7 @@ function run() {
 
     const taskWhereJson = JSON.stringify(taskWhere)
     assert.doesNotMatch(taskWhereJson, /tenantId/)
-    assert.match(taskWhereJson, /"status":\{"in":\["Active","Paused"\]\}/)
+    assert.match(taskWhereJson, /"status":\{"in":\["Pending","Paused"\]\}/)
     assert.match(taskWhereJson, /"urgency":\{"in":\["Urgent","High"\]\}/)
     assert.match(taskWhereJson, /"partnerId":"partner-2"/)
     assert.match(taskWhereJson, /"taskScope":"LMS"/)

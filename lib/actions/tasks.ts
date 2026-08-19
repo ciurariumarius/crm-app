@@ -40,7 +40,7 @@ function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?
 }
 
 const TaskStatusSchema = z.enum(TASK_STATUS_VALUES)
-const LegacyTaskStatusSchema = z.enum(["Active", "Paused", "Completed"])
+const LegacyTaskStatusSchema = z.enum(["Active", "Paused", "Pending", "Completed", "Done"])
 const TaskUrgencySchema = z.enum(["Low", "Normal", "High", "Urgent", "Idea"])
 const TaskIdSchema = z.string().uuid()
 const TaskIdsSchema = z.array(TaskIdSchema).max(500)
@@ -942,7 +942,8 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
     try {
         const session = await requireAuth()
         const validatedTaskIds = TaskIdsSchema.parse(taskIds)
-        const validatedStatus = TaskStatusSchema.parse(status)
+        const normalized = status === "Done" ? "Completed" : status
+        const validatedStatus = TaskStatusSchema.parse(normalized)
         if (validatedTaskIds.length === 0) return { success: true as const }
         const uniqueTaskIds = Array.from(new Set(validatedTaskIds))
 

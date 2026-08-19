@@ -31,8 +31,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, Loader2, X, Play, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, FileText, Info, MoreHorizontal, Trash2 } from "lucide-react"
-import { updateTask, deleteTask, getTaskHistory } from "@/lib/actions/tasks"
+import { Calendar as CalendarIcon, Clock, Check, Loader2, X, Play, Pause, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, FileText, Info, MoreHorizontal, Trash2 } from "lucide-react"
+import { updateTask, deleteTask, getTaskHistory, updateTasksStatus } from "@/lib/actions/tasks"
 import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
 import { normalizeRichTextContent } from "@/lib/notes/content"
 import { addTaskTimeEntry } from "@/lib/actions/time"
@@ -492,8 +492,9 @@ export function TaskDetails({
         }
     }, [flushTaskNotesSave])
 
-    const handleStatusChange = React.useCallback(async (nextStatus: "Active" | "Completed") => {
-        if (!task || nextStatus === status || pendingTaskId === task.id || loading) return
+    const handleStatusChange = React.useCallback(async (nextStatus: "Active" | "Pending" | "Done") => {
+        const normalizedCurrent = (status === "Completed" || status === "Done") ? "Done" : (status === "Pending" || status === "Paused") ? "Pending" : "Active"
+        if (!task || nextStatus === normalizedCurrent || pendingTaskId === task.id || loading) return
         // Completion reads the persisted scope inside its transaction. Persist a newly
         // selected target first so a fast click cannot complete against stale mappings.
         if (targetDirty) {
@@ -515,7 +516,7 @@ export function TaskDetails({
             lmsAllocationId: lmsAllocationId || null,
             lmsTaskTypeId: lmsTaskTypeId || null,
         }
-        if (nextStatus === "Completed") {
+        if (nextStatus === "Done") {
             requestCompletion(taskWithCurrentTarget, {
                 onCompleted: () => {
                     setStatus("Completed")
@@ -524,12 +525,27 @@ export function TaskDetails({
             })
             return
         }
-        await requestReopen(taskWithCurrentTarget, {
-            onCompleted: () => {
-                setStatus("Active")
-                setHasLoadedTaskHistory(false)
-            },
-        })
+
+        if (status === "Completed" || status === "Done") {
+            const success = await requestReopen(taskWithCurrentTarget, {
+                onCompleted: () => {
+                    setStatus(nextStatus === "Pending" ? "Pending" : "Active")
+                    setHasLoadedTaskHistory(false)
+                },
+            })
+            if (success && nextStatus === "Pending") {
+                await updateTasksStatus([task.id], "Pending")
+                setStatus("Pending")
+            }
+            return
+        }
+
+        const res = await updateTasksStatus([task.id], nextStatus)
+        if (res.success) {
+            setStatus(nextStatus)
+            toast.success(`Task marked ${nextStatus}`)
+            setHasLoadedTaskHistory(false)
+        }
     }, [handleUpdate, lmsAllocationId, lmsTaskTypeId, loading, pendingTaskId, projectId, requestCompletion, requestReopen, status, targetDirty, task, taskScope])
 
     const handleDelete = async () => {
@@ -874,24 +890,42 @@ export function TaskDetails({
                                         "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
                                         status === "Active"
                                             ? "border-[color:color-mix(in_srgb,var(--state-review)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)]"
-                                            : "border-[color:color-mix(in_srgb,var(--state-success)_25%,var(--line-subtle))] bg-[var(--state-success-surface)] text-[var(--state-success)]"
+                                            : (status === "Pending" || status === "Paused")
+                                                ? "border-[color:color-mix(in_srgb,var(--state-warning)_25%,var(--line-subtle))] bg-[var(--state-warning-surface)] text-[var(--state-warning)]"
+                                                : "border-[color:color-mix(in_srgb,var(--state-success)_25%,var(--line-subtle))] bg-[var(--state-success-surface)] text-[var(--state-success)]"
                                     )}
                                 >
-                                    {status === "Active" ? <Play className="h-3.5 w-3.5 fill-current" /> : <Check className="h-3.5 w-3.5" />}
-                                    {status}
+                                    {status === "Active" ? <Play className="h-3.5 w-3.5 fill-current" /> :
+                                     (status === "Pending" || status === "Paused") ? <Pause className="h-3.5 w-3.5 fill-current" /> :
+                                     <Check className="h-3.5 w-3.5" />}
+                                    {(status === "Completed" || status === "Done") ? "Done" : (status === "Pending" || status === "Paused") ? "Pending" : "Active"}
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-40 rounded-xl p-1.5">
-                                {(["Active", "Completed"] as const).map((statusOption) => (
-                                    <DropdownMenuItem
-                                        key={statusOption}
-                                        onSelect={() => void handleStatusChange(statusOption)}
-                                        className="cursor-pointer rounded-lg"
-                                    >
-                                        {statusOption}
-                                        {status === statusOption ? <Check className="ml-auto h-4 w-4" /> : null}
-                                    </DropdownMenuItem>
-                                ))}
+                                {([
+                                    { label: "Active", value: "Active" },
+                                    { label: "Pending", value: "Pending" },
+                                    { label: "Done", value: "Done" },
+                                ] as const).map((statusOption) => {
+                                    const isCurrent = (statusOption.value === "Done" && (status === "Completed" || status === "Done"))
+                                        || (statusOption.value === "Pending" && (status === "Pending" || status === "Paused"))
+                                        || (statusOption.value === "Active" && status === "Active")
+                                    return (
+                                        <DropdownMenuItem
+                                            key={statusOption.value}
+                                            onSelect={() => void handleStatusChange(statusOption.value)}
+                                            className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                {statusOption.value === "Active" ? <Play className="h-3.5 w-3.5 fill-current text-[var(--primary)]" /> :
+                                                 statusOption.value === "Pending" ? <Pause className="h-3.5 w-3.5 fill-current text-[var(--state-warning)]" /> :
+                                                 <Check className="h-3.5 w-3.5 text-[var(--state-success)]" />}
+                                                {statusOption.label}
+                                            </span>
+                                            {isCurrent ? <Check className="ml-auto h-4 w-4 text-[var(--primary)]" /> : null}
+                                        </DropdownMenuItem>
+                                    )
+                                })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>

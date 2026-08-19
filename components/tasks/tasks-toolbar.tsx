@@ -29,7 +29,8 @@ const SORT_OPTIONS = [
 const STATUS_OPTIONS = [
   { label: "All", value: "All" },
   { label: "Active", value: "Active" },
-  { label: "Completed", value: "Completed" },
+  { label: "Pending", value: "Pending" },
+  { label: "Done", value: "Completed" },
 ] as const
 
 const PRIORITY_OPTIONS = [

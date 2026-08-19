@@ -1,4 +1,4 @@
-export const TASK_STATUS_VALUES = ["Active", "Completed"] as const
+export const TASK_STATUS_VALUES = ["Active", "Pending", "Completed"] as const
 export type TaskStatus = (typeof TASK_STATUS_VALUES)[number]
 export const TASK_URGENCY_VALUES = ["Normal", "Idea", "Urgent"] as const
 export type TaskUrgency = (typeof TASK_URGENCY_VALUES)[number]
@@ -7,7 +7,7 @@ export const PROJECT_STATUS_VALUES = ["Active", "Paused", "Completed", "Closed"]
 export type ProjectStatus = (typeof PROJECT_STATUS_VALUES)[number]
 
 export type LegacyProjectStatus = ProjectStatus | "Paused"
-export type LegacyTaskStatus = TaskStatus | "Paused"
+export type LegacyTaskStatus = TaskStatus | "Paused" | "Done"
 
 export function normalizeProjectStatus(status: string | null | undefined): ProjectStatus {
     if (status === "Paused") return "Paused"
@@ -17,7 +17,8 @@ export function normalizeProjectStatus(status: string | null | undefined): Proje
 }
 
 export function normalizeTaskStatus(status: string | null | undefined): TaskStatus {
-    if (status === "Completed") return "Completed"
+    if (status === "Completed" || status === "Done") return "Completed"
+    if (status === "Pending" || status === "Paused") return "Pending"
     return "Active"
 }
 
@@ -37,5 +38,8 @@ export function projectStatusSortOrder(status: string | null | undefined): numbe
 }
 
 export function taskStatusSortOrder(status: string | null | undefined): number {
-    return normalizeTaskStatus(status) === "Active" ? 0 : 1
+    const normalized = normalizeTaskStatus(status)
+    if (normalized === "Active") return 0
+    if (normalized === "Pending") return 1
+    return 2
 }

@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import { format, isBefore, isToday, startOfDay } from "date-fns"
-import { CheckCheck, MoreVertical, Play } from "lucide-react"
+import { Check, CheckCheck, ChevronDown, MoreVertical, Pause, Play } from "lucide-react"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
+import { updateTasksStatus } from "@/lib/actions/tasks"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -72,8 +74,8 @@ const PAUSED_BADGE_THEME_CLASS = "border border-[color:color-mix(in_srgb,var(--s
 function getTaskFlag({ urgency, status, isOverdue }: { urgency: string; status: string; isOverdue: boolean }) {
     const normalizedUrgency = normalizeTaskUrgency(urgency)
 
-    if (status === "Completed") return { label: "Completed", className: COMPLETED_BADGE_THEME_CLASS }
-    if (status === "Paused") return { label: "Paused", className: PAUSED_BADGE_THEME_CLASS }
+    if (status === "Completed" || status === "Done") return { label: "Done", className: COMPLETED_BADGE_THEME_CLASS }
+    if (status === "Pending" || status === "Paused") return { label: "Pending", className: PAUSED_BADGE_THEME_CLASS }
     if (isOverdue) return { label: "Overdue", className: OVERDUE_BADGE_THEME_CLASS }
     if (normalizedUrgency === "Urgent") return { label: "Urgent", className: URGENT_BADGE_THEME_CLASS }
     if (normalizedUrgency === "Idea") return { label: "Idea", className: IDEA_BADGE_THEME_CLASS }
@@ -139,6 +141,34 @@ export function TaskGridCard({
         : Math.max(0, task.lmsWorkEntry?.durationMinutes || 0) * 60
     const displayedTrackedSeconds = loggedSeconds + (isActiveTimerThisTask ? timerState.elapsedSeconds : 0)
 
+    const { requestReopen, pendingTaskId } = useTaskCompletion()
+
+    const handleStatusSelect = async (nextStatus: "Active" | "Pending" | "Done") => {
+        if (nextStatus === "Done") {
+            if (task.status !== "Completed") {
+                onComplete(task.id)
+            }
+        } else if (nextStatus === "Active") {
+            if (task.status === "Completed") {
+                void requestReopen(task)
+            } else if (task.status !== "Active") {
+                const res = await updateTasksStatus([task.id], "Active")
+                if (res.success) toast.success("Task marked Active")
+            }
+        } else if (nextStatus === "Pending") {
+            if (task.status === "Completed") {
+                const reopened = await requestReopen(task)
+                if (reopened) {
+                    const res = await updateTasksStatus([task.id], "Pending")
+                    if (res.success) toast.success("Task marked Pending")
+                }
+            } else if (task.status !== "Pending") {
+                const res = await updateTasksStatus([task.id], "Pending")
+                if (res.success) toast.success("Task marked Pending")
+            }
+        }
+    }
+
     return (
         <article
             data-task-card-id={task.id}
@@ -171,23 +201,48 @@ export function TaskGridCard({
                 </span>
 
                 <div className="flex min-w-0 items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
-                    <button
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation()
-                            if (task.status !== "Completed") {
-                                onComplete(task.id)
-                            }
-                        }}
-                        className={cn(
-                            "inline-flex h-6 max-w-28 items-center justify-center truncate rounded-full px-2.5 text-xs font-black uppercase tracking-[0.06em] cursor-pointer transition-transform hover:scale-105 active:scale-95",
-                            flag.className
-                        )}
-                        title={task.status === "Completed" ? "Task is completed" : "Click to mark as completed"}
-                        aria-label={task.status === "Completed" ? "Task is completed" : "Mark task as completed"}
-                    >
-                        {flag.label}
-                    </button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                type="button"
+                                disabled={pendingTaskId === task.id}
+                                className={cn(
+                                    "inline-flex h-6 max-w-28 items-center justify-center gap-1 truncate rounded-full px-2.5 text-xs font-black uppercase tracking-[0.06em] cursor-pointer transition-transform hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
+                                    flag.className
+                                )}
+                                title="Change status"
+                                aria-label={`Task status: ${flag.label}. Click to change status`}
+                            >
+                                <span className="truncate">{flag.label}</span>
+                                <ChevronDown className="h-3 w-3 shrink-0 opacity-70" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
+                            {(["Active", "Pending", "Done"] as const).map((statusOption) => {
+                                const isCurrent = (statusOption === "Done" && task.status === "Completed")
+                                    || (statusOption === "Pending" && (task.status === "Pending" || task.status === "Paused"))
+                                    || (statusOption === "Active" && (!task.status || task.status === "Active"))
+                                return (
+                                    <DropdownMenuItem
+                                        key={statusOption}
+                                        onSelect={(event) => {
+                                            event.stopPropagation()
+                                            void handleStatusSelect(statusOption)
+                                        }}
+                                        className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            {statusOption === "Active" ? <Play className="h-3 w-3 fill-current text-[var(--primary)]" /> :
+                                             statusOption === "Pending" ? <Pause className="h-3 w-3 fill-current text-[var(--state-warning)]" /> :
+                                             <Check className="h-3 w-3 text-[var(--state-success)]" />}
+                                            {statusOption}
+                                        </span>
+                                        {isCurrent ? <Check className="ml-auto h-3.5 w-3.5 text-[var(--primary)]" /> : null}
+                                    </DropdownMenuItem>
+                                )
+                            })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button

@@ -848,16 +848,13 @@ export function ProjectsBoardRows({
                         <button
                             type="button"
                             data-slot="add-project-card"
-                            aria-label="Add new project"
-                            title="Add new project"
+                            aria-label="Add project"
+                            title="Add project"
                             onClick={() => setCreateProjectOpen(true)}
-                            className="group flex min-h-[176px] min-w-0 flex-col items-center justify-center rounded-[20px] border border-dashed border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_34%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_55%,transparent)] hover:text-[var(--brand-primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
+                            className="group flex min-h-[176px] min-w-0 items-center justify-center rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_24%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
                         >
                             <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
                                 <Plus className="h-6 w-6" strokeWidth={1.8} />
-                            </span>
-                            <span className="mt-3 text-sm font-semibold text-[var(--text-secondary)] group-hover:text-[var(--brand-primary)]">
-                                Add new project
                             </span>
                         </button>
                     </div>
@@ -874,16 +871,13 @@ export function ProjectsBoardRows({
                             <button
                                 type="button"
                                 data-slot="add-project-card"
-                                aria-label="Add new project"
-                                title="Add new project"
+                                aria-label="Add project"
+                                title="Add project"
                                 onClick={() => setCreateProjectOpen(true)}
-                                className="group flex min-h-[176px] min-w-0 flex-col items-center justify-center rounded-[20px] border border-dashed border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_34%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_55%,transparent)] hover:text-[var(--brand-primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
+                                className="group flex min-h-[176px] min-w-0 items-center justify-center rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_24%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
                             >
                                 <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
                                     <Plus className="h-6 w-6" strokeWidth={1.8} />
-                                </span>
-                                <span className="mt-3 text-sm font-semibold text-[var(--text-secondary)] group-hover:text-[var(--brand-primary)]">
-                                    Add new project
                                 </span>
                             </button>
                         </div>

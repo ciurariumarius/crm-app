@@ -9,14 +9,17 @@ import { useDebounce } from "@/hooks/use-debounce"
 import { deleteTasks, updateTasksStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { Clock, Trash2, MoreVertical, Play, Pause, Square, Target, ArrowRight, Plus, Lightbulb, CalendarClock, AlertTriangle } from "lucide-react"
+import { AlertTriangle, ArrowRight, CalendarClock, Check, ChevronDown, Clock, Lightbulb, MoreVertical, Pause, Play, Plus, Square, Target, Trash2 } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 import { TASK_CARD_SHELL_CLASS, TaskGridCard } from "./task-grid-card"
 
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
+    DropdownMenu,
+    DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
@@ -119,7 +122,7 @@ export function TasksCardView({
     searchApiFilters,
 }: TasksCardViewProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
-    const { requestCompletion } = useTaskCompletion()
+    const { requestCompletion, requestReopen, pendingTaskId } = useTaskCompletion()
     const router = useRouter()
     const searchParams = useSearchParams()
     const searchParamsString = searchParams.toString()
@@ -236,8 +239,9 @@ export function TasksCardView({
     )
 
     const getStatusStyle = (status: string) => {
-        if (status === "Active" || status === "Paused") return "bg-[var(--sidebar-accent)] text-[var(--primary)] border border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] dark:bg-[var(--sidebar-accent)] dark:text-[var(--primary)] dark:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))]"
-        if (status === "Completed") return "bg-[var(--state-success-surface)] text-[var(--state-success)] border border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] dark:bg-[var(--state-success-surface)] dark:text-[var(--state-success)] dark:border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))]"
+        if (status === "Active") return "bg-[var(--sidebar-accent)] text-[var(--primary)] border border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] dark:bg-[var(--sidebar-accent)] dark:text-[var(--primary)] dark:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))]"
+        if (status === "Pending" || status === "Paused") return "bg-[color:color-mix(in_srgb,var(--state-warning)_14%,transparent)] text-[var(--state-warning)] border border-[color:color-mix(in_srgb,var(--state-warning)_34%,transparent)]"
+        if (status === "Completed" || status === "Done") return "bg-[var(--state-success-surface)] text-[var(--state-success)] border border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] dark:bg-[var(--state-success-surface)] dark:text-[var(--state-success)] dark:border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))]"
         return "bg-muted text-muted-foreground border border-border"
     }
 
@@ -543,20 +547,68 @@ export function TasksCardView({
                             </div>
 
                             <div className="mt-3 flex shrink-0 items-center justify-between gap-5 lg:mt-0 lg:w-auto lg:justify-end lg:gap-6">
-                                <div className="flex w-auto shrink-0 lg:w-24 lg:justify-center">
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            if (task.status !== "Completed") {
-                                                requestCompletion(task)
-                                            }
-                                        }}
-                                        className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-transform hover:scale-105 active:scale-95", getStatusStyle(task.status || "Active"))}
-                                        title={task.status === "Completed" ? "Task is completed" : "Click to complete task"}
-                                    >
-                                        {task.status || "Active"}
-                                    </button>
+                                <div className="flex w-auto shrink-0 lg:w-24 lg:justify-center" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button
+                                                type="button"
+                                                disabled={pendingTaskId === task.id}
+                                                className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-transform hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]", getStatusStyle(task.status || "Active"))}
+                                                title="Change status"
+                                                aria-label={`Task status: ${task.status === "Completed" ? "Done" : (task.status || "Active")}. Click to change status`}
+                                            >
+                                                <span>{task.status === "Completed" ? "Done" : (task.status || "Active")}</span>
+                                                <ChevronDown className="h-3 w-3 shrink-0 opacity-70" />
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
+                                            {(["Active", "Pending", "Done"] as const).map((statusOption) => {
+                                                const isCurrent = (statusOption === "Done" && task.status === "Completed")
+                                                    || (statusOption === "Pending" && (task.status === "Pending" || task.status === "Paused"))
+                                                    || (statusOption === "Active" && (!task.status || task.status === "Active"))
+                                                return (
+                                                    <DropdownMenuItem
+                                                        key={statusOption}
+                                                        onSelect={async (e) => {
+                                                            e.stopPropagation()
+                                                            if (statusOption === "Done") {
+                                                                if (task.status !== "Completed") {
+                                                                    requestCompletion(task, { onCompleted: () => router.refresh() })
+                                                                }
+                                                            } else if (statusOption === "Active") {
+                                                                if (task.status === "Completed") {
+                                                                    void requestReopen(task, { onCompleted: () => router.refresh() })
+                                                                } else if (task.status !== "Active") {
+                                                                    const res = await updateTasksStatus([task.id], "Active")
+                                                                    if (res.success) toast.success("Task marked Active")
+                                                                }
+                                                            } else if (statusOption === "Pending") {
+                                                                if (task.status === "Completed") {
+                                                                    const reopened = await requestReopen(task)
+                                                                    if (reopened) {
+                                                                        const res = await updateTasksStatus([task.id], "Pending")
+                                                                        if (res.success) toast.success("Task marked Pending")
+                                                                    }
+                                                                } else if (task.status !== "Pending") {
+                                                                    const res = await updateTasksStatus([task.id], "Pending")
+                                                                    if (res.success) toast.success("Task marked Pending")
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold"
+                                                    >
+                                                        <span className="flex items-center gap-2">
+                                                            {statusOption === "Active" ? <Play className="h-3 w-3 fill-current text-[var(--primary)]" /> :
+                                                             statusOption === "Pending" ? <Pause className="h-3 w-3 fill-current text-[var(--state-warning)]" /> :
+                                                             <Check className="h-3 w-3 text-[var(--state-success)]" />}
+                                                            {statusOption}
+                                                        </span>
+                                                        {isCurrent ? <Check className="ml-auto h-3.5 w-3.5 text-[var(--primary)]" /> : null}
+                                                    </DropdownMenuItem>
+                                                )
+                                            })}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
 
                                 <div className="flex w-auto shrink-0 lg:w-32 lg:justify-center">

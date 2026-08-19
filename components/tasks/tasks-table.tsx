@@ -48,6 +48,8 @@ type TaskTableTask = TaskDetailsTask & {
     updatedAt?: string | Date | null
 }
 
+import { updateTasksStatus } from "@/lib/actions/tasks"
+
 interface TasksTableProps {
     tasks: TaskTableTask[]
 }
@@ -64,12 +66,24 @@ export function TasksTable({ tasks }: TasksTableProps) {
         })
     }, [tasks])
 
-    const handleStatusChange = (task: TaskTableTask, nextStatus?: string) => {
-        const shouldComplete = nextStatus ? nextStatus === "Completed" : task.status !== "Completed"
-        if (shouldComplete) {
-            requestCompletion(task)
+    const handleStatusChange = async (task: TaskTableTask, nextStatus?: string) => {
+        if (nextStatus === "Completed" || nextStatus === "Done") {
+            if (task.status !== "Completed") requestCompletion(task)
+        } else if (nextStatus === "Pending") {
+            if (task.status === "Completed") {
+                const reopened = await requestReopen(task)
+                if (reopened) {
+                    await updateTasksStatus([task.id], "Pending")
+                }
+            } else if (task.status !== "Pending") {
+                await updateTasksStatus([task.id], "Pending")
+            }
         } else {
-            void requestReopen(task)
+            if (task.status === "Completed") {
+                void requestReopen(task)
+            } else if (task.status !== "Active") {
+                await updateTasksStatus([task.id], "Active")
+            }
         }
     }
 
@@ -143,19 +157,21 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                 <TableCell>
                                     <Select
                                         value={normalizeTaskStatus(task.status)}
-                                        onValueChange={(val) => handleStatusChange(task, val)}
+                                        onValueChange={(val) => void handleStatusChange(task, val)}
                                         disabled={pendingTaskId === task.id}
                                     >
                                         <SelectTrigger className={cn(
                                             "h-8 text-xs font-medium border-none bg-transparent hover:bg-muted/50 p-1 w-[120px]",
-                                            task.status === "Completed" ? "text-emerald-600" :
+                                            (task.status === "Completed" || task.status === "Done") ? "text-emerald-600" :
+                                                (task.status === "Pending" || task.status === "Paused") ? "text-amber-600" :
                                                 task.status === "Active" ? "text-blue-600" : "text-[var(--text-secondary)]"
                                         )}>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Active" className="text-xs font-medium text-blue-600">Active</SelectItem>
-                                            <SelectItem value="Completed" className="text-xs font-medium text-emerald-600">Completed</SelectItem>
+                                            <SelectItem value="Pending" className="text-xs font-medium text-amber-600">Pending</SelectItem>
+                                            <SelectItem value="Completed" className="text-xs font-medium text-emerald-600">Done</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </TableCell>

@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client"
 import { normalizeTaskUrgency, type TaskUrgency } from "../status"
 
-const TASK_STATUS_FILTER_VALUES = ["All", "Active", "Completed"] as const
+const TASK_STATUS_FILTER_VALUES = ["All", "Active", "Pending", "Completed"] as const
 const TASK_SCOPE_FILTER_VALUES = ["ALL", "FREELANCE", "LMS"] as const
 
 export type TaskStatusFilter = (typeof TASK_STATUS_FILTER_VALUES)[number]
@@ -56,7 +56,12 @@ export function getLocalDayBounds(now = new Date()): DayBounds {
 
 export function normalizeTaskFilters(input: TaskFiltersInput): NormalizedTaskFilters {
     const q = normalizeOptionalText(input.q)
-    const normalizedStatusInput = input.status === "Paused" ? "Active" : input.status
+    const rawStatus = input.status?.trim()
+    const normalizedStatusInput = rawStatus === "Paused" || rawStatus === "Pending"
+        ? "Pending"
+        : rawStatus === "Done" || rawStatus === "Completed"
+            ? "Completed"
+            : rawStatus
     const status = (TASK_STATUS_FILTER_VALUES as readonly string[]).includes(normalizedStatusInput || "")
         ? (normalizedStatusInput as TaskStatusFilter)
         : "Active"
@@ -96,7 +101,13 @@ export function buildTaskWhereInput(input: {
     const where: Prisma.TaskWhereInput = {}
 
     if (filters.status !== "All") {
-        where.status = filters.status === "Active" ? { in: ["Active", "Paused"] } : filters.status
+        if (filters.status === "Active") {
+            where.status = "Active"
+        } else if (filters.status === "Pending") {
+            where.status = { in: ["Pending", "Paused"] }
+        } else if (filters.status === "Completed") {
+            where.status = { in: ["Completed", "Done"] }
+        }
     }
 
     if (filters.scope !== "ALL") {
