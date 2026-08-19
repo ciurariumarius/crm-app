@@ -12,7 +12,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { cn } from "@/lib/utils"
 import { useProjectsSearchContext } from "./projects-search-context"
 
-const STATUS_OPTIONS = ["All", "Active", "Paused", "Completed", "Closed"] as const
+const STATUS_OPTIONS = [
+  { label: "All", value: "All" },
+  { label: "Active", value: "Active" },
+  { label: "Pause", value: "Paused" },
+  { label: "Done", value: "Completed" },
+  { label: "Closed", value: "Closed" },
+] as const
 const PAYMENT_OPTIONS = ["All", "Paid", "Unpaid"] as const
 const TYPE_OPTIONS = [
   { label: "All types", value: "All" },
@@ -126,16 +132,16 @@ export function ProjectsStatusControls({ currentStatus }: { currentStatus: strin
     <nav className="flex h-9 min-w-0 items-center overflow-x-auto rounded-xl bg-[var(--bg-surface-soft)] p-1 hidescrollbar" aria-label="Project status">
       {STATUS_OPTIONS.map((status) => (
         <Link
-          key={status}
-          href={buildHref({ status })}
+          key={status.value}
+          href={buildHref({ status: status.value })}
           onClick={() => searchContext?.setStatusRefined(true)}
-          aria-current={displayedStatus === status ? "page" : undefined}
+          aria-current={displayedStatus === status.value ? "page" : undefined}
           className={cn(
             "inline-flex h-7 shrink-0 items-center rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.035em] transition-colors sm:px-3",
-            displayedStatus === status ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            displayedStatus === status.value ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           )}
         >
-          {status}
+          {status.label}
         </Link>
       ))}
     </nav>

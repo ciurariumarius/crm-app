@@ -30,8 +30,8 @@ import type { DateRange } from "react-day-picker"
 const STATUS_OPTIONS = [
   { label: "All", value: "All", dotClass: "bg-[var(--text-muted)]", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
   { label: "Active", value: "Active", dotClass: "bg-emerald-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
-  { label: "Paused", value: "Paused", dotClass: "bg-amber-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
-  { label: "Completed", value: "Completed", dotClass: "bg-[var(--brand-primary-strong)]", activeClass: "bg-[var(--brand-primary)] text-white shadow-[var(--shadow-apple)]" },
+  { label: "Pause", value: "Paused", dotClass: "bg-amber-500", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
+  { label: "Done", value: "Completed", dotClass: "bg-[var(--brand-primary-strong)]", activeClass: "bg-[var(--brand-primary)] text-white shadow-[var(--shadow-apple)]" },
   { label: "Closed", value: "Closed", dotClass: "bg-[var(--text-secondary)]", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
 ]
 
