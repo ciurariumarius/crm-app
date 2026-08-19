@@ -62,10 +62,12 @@ if [[ "${SKIP_LOCAL_CHECKS:-0}" != "1" ]]; then
   fi
 
   DATABASE_URL="${DATABASE_URL:-${local_db:-file:$repo_root/prisma/dev.db}}" \
+  JWT_SECRET="${JWT_SECRET:-build-validation-only-not-for-runtime-secret-key-32b}" \
   ENABLE_SESSION_REGISTRY=true \
   DATA_ENCRYPTION_KEYS='build=0000000000000000000000000000000000000000000000000000000000000000' \
   DATA_ENCRYPTION_KEY_ID=build \
   PROJECT_NOTES_SIGNING_SECRET='build-validation-only-not-for-runtime' \
+  CRON_SECRET="${CRON_SECRET:-build-validation-only-not-for-runtime}" \
   npm run build
 fi
 
