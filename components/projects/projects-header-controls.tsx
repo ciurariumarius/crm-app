@@ -145,7 +145,6 @@ export function ProjectsStatusControls({ currentStatus }: { currentStatus: strin
 export function ProjectsFilterControl(props: ProjectsHeaderFilterProps) {
   const router = useRouter()
   const buildHref = useProjectsHref()
-  const search = useProjectsSearchContext()
   const [desktopOpen, setDesktopOpen] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [draft, setDraft] = React.useState<DraftFilters>(RESET_FILTERS)

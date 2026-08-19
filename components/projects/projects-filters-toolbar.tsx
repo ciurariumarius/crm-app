@@ -26,7 +26,6 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import type { DateRange } from "react-day-picker"
-import { useProjectsSearchContext } from "./projects-search-context"
 
 const STATUS_OPTIONS = [
   { label: "All", value: "All", dotClass: "bg-[var(--text-muted)]", activeClass: "bg-[var(--brand-cyan)] text-white shadow-sm" },
@@ -102,7 +101,6 @@ export function ProjectsFiltersToolbar({
   currentProjectId,
   currentProjectLabel,
   currentPartnerId,
-  totalProjects,
 }: {
   partners: { id: string; name: string }[]
   currentStatus: string
@@ -116,12 +114,11 @@ export function ProjectsFiltersToolbar({
   currentProjectId: string
   currentProjectLabel?: string
   currentPartnerId: string
-  totalProjects: number
+  totalProjects?: number
 }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const searchContext = useProjectsSearchContext()
 
   const buildHref = (overrides: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString())

@@ -7,6 +7,7 @@ import {
   FilePlus2,
   Folder,
   FolderPlus,
+  Loader2,
   MoreHorizontal,
   NotebookPen,
   Trash2,
@@ -684,13 +685,45 @@ export function NotesWorkspace({
     }
   }, [selectNote])
 
+  const switchView = React.useCallback((nextView: NotesView) => {
+    if (view === nextView) {
+      setMobilePane("list")
+      return
+    }
+    const targetFolderId = folderIdFromView(nextView)
+    // Instantly filter out notes from other folders so no old notes flash under the new folder
+    setRows((current) => {
+      if (nextView === "all") return current
+      if (!targetFolderId) return []
+      return current.filter((row) => row.folderId === targetFolderId)
+    })
+    setLoadingList(true)
+    setView(nextView)
+    setMobilePane("list")
+    void replaceList(nextView, search)
+  }, [replaceList, search, view])
+
+  const previousViewRef = React.useRef(view)
+  const previousSearchRef = React.useRef(search)
+
   React.useEffect(() => {
     if (initialQueryRef.current) {
       initialQueryRef.current = false
       return
     }
-    const timer = setTimeout(() => void replaceList(view, search), 200)
-    return () => clearTimeout(timer)
+    const viewChanged = previousViewRef.current !== view
+    const searchChanged = previousSearchRef.current !== search
+    previousViewRef.current = view
+    previousSearchRef.current = search
+
+    if (viewChanged) {
+      void replaceList(view, search)
+      return
+    }
+    if (searchChanged) {
+      const timer = setTimeout(() => void replaceList(view, search), 200)
+      return () => clearTimeout(timer)
+    }
   }, [replaceList, search, view])
 
   const loadMore = React.useCallback(async () => {
@@ -860,7 +893,7 @@ export function NotesWorkspace({
           <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Note folders">
             <button
               type="button"
-              onClick={() => { setView("all"); setMobilePane("list") }}
+              onClick={() => switchView("all")}
               className={cn("flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors", view === "all" ? "bg-[var(--surface-lowest)] text-[var(--primary)] shadow-sm" : "text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)]/70")}
             >
               <NotebookPen className="h-4 w-4 shrink-0" />
@@ -890,7 +923,7 @@ export function NotesWorkspace({
                 >
                   <button
                     type="button"
-                    onClick={() => { setView(folderView(folder.id)); setMobilePane("list") }}
+                    onClick={() => switchView(folderView(folder.id))}
                     className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-2 pl-3 pr-2 text-left text-sm text-[var(--text-secondary)]"
                   >
                     <Folder className={cn("h-4 w-4 shrink-0", isActive ? "text-[var(--primary)]" : "text-[var(--text-muted)]")} />
@@ -943,21 +976,28 @@ export function NotesWorkspace({
             <Button type="button" variant="ghost" size="icon" onClick={beginNewNote} aria-label="New note"><FilePlus2 className="h-4 w-4" /></Button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
-            {rows.length ? rows.map((row) => (
-              <button
-                key={row.id}
-                type="button"
-                onClick={() => void selectNote(row.id, true)}
-                className={cn("mb-1 w-full rounded-[14px] px-3 py-3 text-left transition", selectedId === row.id ? "bg-[var(--state-info-surface)]" : "hover:bg-[var(--surface-low)]")}
-              >
-                <div className="flex items-start gap-2">
-                  <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-[var(--text-primary)]">{row.title || "New note"}</span>
-                  <span className="shrink-0 text-xs text-[var(--text-muted)]">{formatDistanceToNow(new Date(row.updatedAt), { addSuffix: false })}</span>
-                </div>
-                <p className="mt-1 line-clamp-2 min-h-9 text-[13px] leading-[18px] text-[var(--text-secondary)]">{row.preview || "Start writing…"}</p>
-                <p className="mt-1 truncate text-xs font-medium text-[var(--text-muted)]">{folders.find((folder) => folder.id === row.folderId)?.name ?? ALL_NOTES_FOLDER_LABEL}</p>
-              </button>
-            )) : (
+            {loadingList && rows.length === 0 ? (
+              <div className="flex h-56 flex-col items-center justify-center gap-2 text-xs text-[var(--text-muted)]">
+                <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-primary)]" />
+                <span>Loading notes…</span>
+              </div>
+            ) : rows.length ? (
+              rows.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => void selectNote(row.id, true)}
+                  className={cn("mb-1 w-full rounded-[14px] px-3 py-3 text-left transition", selectedId === row.id ? "bg-[var(--state-info-surface)]" : "hover:bg-[var(--surface-low)]")}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-[var(--text-primary)]">{row.title || "New note"}</span>
+                    <span className="shrink-0 text-xs text-[var(--text-muted)]">{formatDistanceToNow(new Date(row.updatedAt), { addSuffix: false })}</span>
+                  </div>
+                  <p className="mt-1 line-clamp-2 min-h-9 text-[13px] leading-[18px] text-[var(--text-secondary)]">{row.preview || "Start writing…"}</p>
+                  <p className="mt-1 truncate text-xs font-medium text-[var(--text-muted)]">{folders.find((folder) => folder.id === row.folderId)?.name ?? ALL_NOTES_FOLDER_LABEL}</p>
+                </button>
+              ))
+            ) : (
               <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">
                 <NotebookPen className="mb-3 h-8 w-8 text-[var(--text-muted)]" />
                 <p className="font-semibold text-[var(--text-primary)]">{search ? "No matching notes" : "No notes yet"}</p>
@@ -965,7 +1005,7 @@ export function NotesWorkspace({
               </div>
             )}
             <div ref={loadMoreRef} className="h-1" />
-            {loadingList ? <p className="py-3 text-center text-xs text-[var(--text-muted)]">Loading…</p> : null}
+            {loadingList && rows.length > 0 ? <p className="py-3 text-center text-xs text-[var(--text-muted)]">Loading…</p> : null}
           </div>
         </section>
 

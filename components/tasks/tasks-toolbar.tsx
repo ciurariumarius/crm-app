@@ -167,7 +167,6 @@ export function TasksStatusControls({ currentStatus }: { currentStatus: string }
 
 export function TasksFilterControl(props: TasksHeaderFilterProps) {
   const router = useRouter()
-  const searchContext = useTasksSearchContext()
   const buildHref = useTasksHref()
   const [desktopOpen, setDesktopOpen] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
