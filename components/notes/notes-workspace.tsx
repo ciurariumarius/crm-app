@@ -376,9 +376,15 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
 
   return (
     <section className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]" aria-label="Note editor">
-      <div className="flex min-h-12 items-center gap-2 border-b border-[var(--line-subtle)] px-3 md:px-5">
-        <button type="button" onClick={onBack} className="inline-flex h-10 w-10 items-center justify-center rounded-full md:hidden" aria-label="Back to notes">
-          <ChevronLeft className="h-5 w-5" />
+      <div className="flex min-h-14 items-center gap-2 border-b border-[var(--line-subtle)] px-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-[var(--brand-primary)] hover:bg-[var(--surface-low)] md:hidden"
+          aria-label="Back to notes"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span>Notes</span>
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -480,7 +486,7 @@ export function NotesWorkspace({
   const [loadingDetail, setLoadingDetail] = React.useState(false)
   const [focusToken, setFocusToken] = React.useState(0)
   const [editorSessionVersion, setEditorSessionVersion] = React.useState(0)
-  const [mobilePane, setMobilePane] = React.useState<MobilePane>(initialSelectedNote ? "editor" : "list")
+  const [mobilePane, setMobilePane] = React.useState<MobilePane>(startNewNote || requestedNoteId ? "editor" : "list")
   const [folderDialog, setFolderDialog] = React.useState<{ mode: "create" | "rename"; folder?: NoteFolderRecord } | null>(null)
   const [folderName, setFolderName] = React.useState("")
   const [folderToDelete, setFolderToDelete] = React.useState<NoteFolderRecord | null>(null)
@@ -537,11 +543,13 @@ export function NotesWorkspace({
     detailCacheRef.current.delete(noteId)
   }, [])
 
-  const selectNote = React.useCallback(async (noteId: string) => {
+  const selectNote = React.useCallback(async (noteId: string, shouldSwitchMobilePane = true) => {
     if (selectedIdRef.current !== noteId) discardBlankLocalNote(selectedIdRef.current)
     selectedIdRef.current = noteId
     setSelectedId(noteId)
-    setMobilePane("editor")
+    if (shouldSwitchMobilePane) {
+      setMobilePane("editor")
+    }
     setFocusToken((token) => token + 1)
     const cached = detailCacheRef.current.get(noteId)
     if (cached) {
@@ -666,7 +674,7 @@ export function NotesWorkspace({
     if (!query && nextView === "all") setAllCount(result.data.totalCount)
     const first = result.data.rows[0]
     if (first && !result.data.rows.some((row) => row.id === selectedIdRef.current)) {
-      void selectNote(first.id)
+      void selectNote(first.id, false)
     } else if (!first) {
       selectedIdRef.current = null
       selectedNoteRef.current = null
@@ -919,7 +927,15 @@ export function NotesWorkspace({
 
         <section className={cn("min-h-0 flex-col border-r border-[var(--line-subtle)] bg-[var(--surface-lowest)]", mobilePane === "list" ? "flex" : "hidden", "md:flex")} aria-label="Notes list">
           <div className="flex min-h-14 items-center gap-2 border-b border-[var(--line-subtle)] px-3">
-            <button type="button" onClick={() => setMobilePane("folders")} className="inline-flex h-10 w-10 items-center justify-center rounded-full md:hidden" aria-label="Show folders"><ChevronLeft className="h-5 w-5" /></button>
+            <button
+              type="button"
+              onClick={() => setMobilePane("folders")}
+              className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-[var(--brand-primary)] hover:bg-[var(--surface-low)] md:hidden"
+              aria-label="Show folders"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Folders</span>
+            </button>
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-sm font-semibold text-[var(--text-primary)]">{search ? "Search" : activeFolderId ? folders.find((folder) => folder.id === activeFolderId)?.name : "All Notes"}</h2>
               <p className="text-xs tabular-nums text-[var(--text-muted)]">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>
@@ -931,7 +947,7 @@ export function NotesWorkspace({
               <button
                 key={row.id}
                 type="button"
-                onClick={() => void selectNote(row.id)}
+                onClick={() => void selectNote(row.id, true)}
                 className={cn("mb-1 w-full rounded-[14px] px-3 py-3 text-left transition", selectedId === row.id ? "bg-[var(--state-info-surface)]" : "hover:bg-[var(--surface-low)]")}
               >
                 <div className="flex items-start gap-2">

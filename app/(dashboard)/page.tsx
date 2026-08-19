@@ -230,7 +230,6 @@ export default async function HomePage() {
         <div className="flex flex-col gap-6 pb-8 sm:gap-8 sm:pb-10">
             <AppPageHeader
                 title="Overview"
-                subtitle="Your finances, LMS capacity and oldest open tasks in one place."
                 search={<GlobalSearch desktopTriggerClassName="mx-auto w-full max-w-[640px]" />}
                 mobileSearch={<GlobalSearch mobileMode="full" />}
             />

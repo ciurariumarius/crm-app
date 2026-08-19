@@ -214,15 +214,6 @@ export function TasksFilterControl(props: TasksHeaderFilterProps) {
     closePanels()
   }
 
-  const hasSearchTerm = Boolean(searchContext?.searchTerm.trim())
-  const searchResultCount = searchContext?.searchResultCount
-  const displayTotal = hasSearchTerm && searchResultCount !== null && searchResultCount !== undefined
-    ? searchResultCount
-    : props.totalTasks
-  const resultsLabel = searchContext?.isSearching
-    ? "Searching…"
-    : `${displayTotal} ${displayTotal === 1 ? "task" : "tasks"}`
-
   const panel = (
     <FiltersPanel
       projects={props.projects}
@@ -255,10 +246,6 @@ export function TasksFilterControl(props: TasksHeaderFilterProps) {
 
   return (
     <div className="flex min-w-0 items-center justify-end gap-2">
-      <p className="max-w-24 truncate whitespace-nowrap text-xs font-medium text-[var(--text-muted)] sm:max-w-none sm:text-sm">
-        {resultsLabel}
-      </p>
-
       <div className="hidden md:block">
         <Popover open={desktopOpen} onOpenChange={openDesktop}>
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>

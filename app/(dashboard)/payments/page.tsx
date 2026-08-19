@@ -20,7 +20,7 @@ function addUnpaidAmount(bucket: UnpaidBalanceSplit, amount: number, isRecurring
 function validDate(value?: string) { if (!value) return null; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.getTime()) ? null : date }
 
 export default async function PaymentsPage({ searchParams }: {
-    searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string; type?: string; balanceSort?: string; paidFrom?: string; paidTo?: string }>
+    searchParams: Promise<{ projectId?: string; partnerId?: string; q?: string; page?: string; type?: string; method?: string; balanceSort?: string; paidFrom?: string; paidTo?: string }>
 }) {
     const session = await requireAuth()
     const params = await searchParams
@@ -28,6 +28,7 @@ export default async function PaymentsPage({ searchParams }: {
     const projectId = params.projectId || "all"
     const partnerId = params.partnerId || "all"
     const type = params.type === "Recurring" || params.type === "OneTime" ? params.type : "All"
+    const method = params.method || "all"
     const balanceSort = ["amount_desc", "amount_asc", "paid_recent"].includes(params.balanceSort || "") ? params.balanceSort! : "paid_recent"
     const paidFrom = params.paidFrom || ""
     const paidTo = params.paidTo || ""
@@ -79,6 +80,7 @@ export default async function PaymentsPage({ searchParams }: {
         if (partnerId !== "all" && project.site.partnerId !== partnerId) return false
         if (type === "Recurring" && !recurring) return false
         if (type === "OneTime" && recurring) return false
+        if (method !== "all" && project.paymentMethod !== method) return false
         if ((fromDate || toDate) && !project.paidAt) return false
         if (fromDate && project.paidAt && project.paidAt < fromDate) return false
         if (toDate && project.paidAt && project.paidAt > toDate) return false
@@ -127,9 +129,19 @@ export default async function PaymentsPage({ searchParams }: {
 
             <section id="outstanding" className="scroll-mt-6">
                 <StatCard>
-                    <div className="flex items-start justify-between gap-3"><div><p className="ui-overline">Total outstanding</p><p className="mt-2 text-[32px] font-semibold leading-none tracking-tight text-[var(--state-urgent)] sm:text-[38px]">{formatCurrency(totalOutstanding)}</p></div><div className="ui-state-danger flex h-11 w-11 items-center justify-center rounded-[12px] border"><Banknote className="h-4.5 w-4.5" /></div></div>
-                    <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Open balances across current and previous months.</p>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2"><BalanceSplit label="Current month" data={currentMonthUnpaid} /><BalanceSplit label="Previous months" data={previousMonthsUnpaid} /></div>
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <p className="ui-overline text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Payments to receive</p>
+                            <p className="mt-2 text-[38px] font-bold leading-none tracking-tight text-[var(--state-urgent)] sm:text-[46px]">{formatCurrency(totalOutstanding)}</p>
+                        </div>
+                        <div className="ui-state-danger flex h-11 w-11 items-center justify-center rounded-[12px] border">
+                            <Banknote className="h-5 w-5" />
+                        </div>
+                    </div>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                        <BalanceSplit label="Current month" data={currentMonthUnpaid} />
+                        <BalanceSplit label="Previous months" data={previousMonthsUnpaid} />
+                    </div>
                 </StatCard>
             </section>
 
@@ -138,11 +150,18 @@ export default async function PaymentsPage({ searchParams }: {
                 <HomeRevenueDistributionChart sourceProjects={revenueSourceProjects} allServices={serialize(allServices)} hourlyRate={Number(user?.hourlyRate || 0)} />
             </section>
 
-            <PaymentBalancesTable rows={balanceRows} projects={paidProjectOptions} partners={partners} paymentMethods={paymentMethods} filters={{ projectId, partnerId, type, sort: balanceSort, paidFrom, paidTo }} pagination={{ page, totalPages, total: totalBalances, prevPage: page > 1 ? page - 1 : null, nextPage: page < totalPages ? page + 1 : null }} />
+            <PaymentBalancesTable rows={balanceRows} projects={paidProjectOptions} partners={partners} paymentMethods={paymentMethods} filters={{ projectId, partnerId, type, method, sort: balanceSort, paidFrom, paidTo }} pagination={{ page, totalPages, total: totalBalances, prevPage: page > 1 ? page - 1 : null, nextPage: page < totalPages ? page + 1 : null }} />
         </div>
     )
 }
 
 function BalanceSplit({ label, data }: { label: string; data: UnpaidBalanceSplit }) {
-    return <div className="rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-3"><div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold text-[var(--text-secondary)]">{label}</p><p className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">{formatCurrency(data.total)}</p></div><p className="mt-2 text-xs text-[var(--text-muted)]">Recurring {formatCurrency(data.recurring)} · One-time {formatCurrency(data.oneTime)}</p></div>
+    return (
+        <div className="rounded-[12px] border border-[var(--line-subtle)] bg-[var(--surface-low)] p-3">
+            <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-[var(--text-secondary)]">{label}</p>
+                <p className="text-sm font-bold tabular-nums text-[var(--text-primary)]">{formatCurrency(data.total)}</p>
+            </div>
+        </div>
+    )
 }

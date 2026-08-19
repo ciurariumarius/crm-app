@@ -845,6 +845,21 @@ export function ProjectsBoardRows({
                                 </button>
                             )
                         })}
+                        <button
+                            type="button"
+                            data-slot="add-project-card"
+                            aria-label="Add new project"
+                            title="Add new project"
+                            onClick={() => setCreateProjectOpen(true)}
+                            className="group flex min-h-[176px] min-w-0 flex-col items-center justify-center rounded-[20px] border border-dashed border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_34%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_55%,transparent)] hover:text-[var(--brand-primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
+                        >
+                            <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
+                                <Plus className="h-6 w-6" strokeWidth={1.8} />
+                            </span>
+                            <span className="mt-3 text-sm font-semibold text-[var(--text-secondary)] group-hover:text-[var(--brand-primary)]">
+                                Add new project
+                            </span>
+                        </button>
                     </div>
                 </section>
             )
@@ -852,11 +867,38 @@ export function ProjectsBoardRows({
 
         return (
             <>
-                {filteredProjects.length === 0 ? <EmptyProjectsState title="No projects found" description="Try a different search or reset the active filters." /> : null}
+                {filteredProjects.length === 0 ? (
+                    <div className="space-y-4">
+                        <EmptyProjectsState title="No projects found" description="Try a different search or reset the active filters." />
+                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:gap-6">
+                            <button
+                                type="button"
+                                data-slot="add-project-card"
+                                aria-label="Add new project"
+                                title="Add new project"
+                                onClick={() => setCreateProjectOpen(true)}
+                                className="group flex min-h-[176px] min-w-0 flex-col items-center justify-center rounded-[20px] border border-dashed border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_34%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_55%,transparent)] hover:text-[var(--brand-primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
+                            >
+                                <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
+                                    <Plus className="h-6 w-6" strokeWidth={1.8} />
+                                </span>
+                                <span className="mt-3 text-sm font-semibold text-[var(--text-secondary)] group-hover:text-[var(--brand-primary)]">
+                                    Add new project
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
                 <div className="space-y-8">
                     {renderCardGroup("Recurring projects", monthlyProjects, true)}
                     {renderCardGroup("One-time projects", oneTimeProjects, false)}
                 </div>
+                <GlobalCreateProjectDialog
+                    open={createProjectOpen}
+                    onOpenChange={setCreateProjectOpen}
+                    partners={partners}
+                    services={services}
+                />
                 {closeProjectDialog}
             </>
         )

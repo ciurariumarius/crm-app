@@ -171,9 +171,23 @@ export function TaskGridCard({
                 </span>
 
                 <div className="flex min-w-0 items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
-                    <span className={cn("inline-flex h-6 max-w-28 items-center justify-center truncate rounded-full px-2.5 text-xs font-black uppercase tracking-[0.06em]", flag.className)}>
+                    <button
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation()
+                            if (task.status !== "Completed") {
+                                onComplete(task.id)
+                            }
+                        }}
+                        className={cn(
+                            "inline-flex h-6 max-w-28 items-center justify-center truncate rounded-full px-2.5 text-xs font-black uppercase tracking-[0.06em] cursor-pointer transition-transform hover:scale-105 active:scale-95",
+                            flag.className
+                        )}
+                        title={task.status === "Completed" ? "Task is completed" : "Click to mark as completed"}
+                        aria-label={task.status === "Completed" ? "Task is completed" : "Mark task as completed"}
+                    >
                         {flag.label}
-                    </span>
+                    </button>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
@@ -181,9 +195,9 @@ export function TaskGridCard({
                                 size="icon"
                                 aria-label="Open task actions"
                                 title="Task actions"
-                                className="h-8 w-8 shrink-0 rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                className="h-9 w-9 shrink-0 rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] sm:h-10 sm:w-10"
                             >
-                                <MoreVertical className="h-4 w-4" />
+                                <MoreVertical className="h-5 w-5" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 rounded-2xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-2 shadow-xl">

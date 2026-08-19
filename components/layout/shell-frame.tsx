@@ -4,7 +4,6 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { GlobalTimer } from "@/components/layout/global-timer"
-import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
 import { Toaster } from "@/components/ui/sonner"
 import { PWARegister } from "@/components/pwa-register"
 import { cn } from "@/lib/utils"
@@ -39,12 +38,11 @@ export function ShellFrame({
                         isDesktopCollapsed ? "md:pl-[80px]" : "md:pl-[232px]"
                     )}
                 >
-                    <main className="cockpit-page-enter min-h-full max-w-full flex-1 overflow-x-clip px-4 pb-[calc(4.25rem+env(safe-area-inset-bottom))] pt-4 md:px-5 md:pb-7 md:pt-5 xl:px-7 xl:pb-8 xl:pt-7 2xl:px-8">
+                    <main className="cockpit-page-enter min-h-full max-w-full flex-1 overflow-x-clip px-4 pb-6 pt-4 md:px-5 md:pb-7 md:pt-5 xl:px-7 xl:pb-8 xl:pt-7 2xl:px-8">
                         {children}
                     </main>
                 </div>
             </div>
-            <MobileBottomNav />
             <GlobalTimer />
             <Toaster />
             <PWARegister />

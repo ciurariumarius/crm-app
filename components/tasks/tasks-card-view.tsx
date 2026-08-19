@@ -544,9 +544,19 @@ export function TasksCardView({
 
                             <div className="mt-3 flex shrink-0 items-center justify-between gap-5 lg:mt-0 lg:w-auto lg:justify-end lg:gap-6">
                                 <div className="flex w-auto shrink-0 lg:w-24 lg:justify-center">
-                                    <div className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold", getStatusStyle(task.status || "Active"))}>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (task.status !== "Completed") {
+                                                requestCompletion(task)
+                                            }
+                                        }}
+                                        className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-transform hover:scale-105 active:scale-95", getStatusStyle(task.status || "Active"))}
+                                        title={task.status === "Completed" ? "Task is completed" : "Click to complete task"}
+                                    >
                                         {task.status || "Active"}
-                                    </div>
+                                    </button>
                                 </div>
 
                                 <div className="flex w-auto shrink-0 lg:w-32 lg:justify-center">

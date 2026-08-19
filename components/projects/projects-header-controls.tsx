@@ -171,7 +171,6 @@ export function ProjectsFilterControl(props: ProjectsHeaderFilterProps) {
     router.push(buildHref({ ...draft, from: draft.period === "custom" ? draft.from : null, to: draft.period === "custom" ? draft.to : null }))
     close()
   }
-  const displayedTotal = search?.searchTerm.trim() && search.searchResultCount !== null ? search.searchResultCount : props.totalProjects
   const trigger = (
     <Button type="button" variant="outline" size="sm" className="h-9 rounded-xl px-2.5 sm:px-3">
       <SlidersHorizontal className="h-4 w-4" />
@@ -183,7 +182,6 @@ export function ProjectsFilterControl(props: ProjectsHeaderFilterProps) {
 
   return (
     <div className="flex min-w-0 items-center justify-end gap-2">
-      <p className="whitespace-nowrap text-xs font-medium text-[var(--text-muted)] sm:text-sm">{search?.isSearching ? "Searching…" : `${displayedTotal} ${displayedTotal === 1 ? "project" : "projects"}`}</p>
       <div className="hidden md:block">
         <Popover open={desktopOpen} onOpenChange={(open) => setOpen("desktop", open)}>
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>

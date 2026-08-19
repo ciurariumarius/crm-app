@@ -199,13 +199,6 @@ export function ProjectsFiltersToolbar({
     sort: DEFAULT_SORT,
   })
 
-  const hasSearchTerm = Boolean(searchContext?.searchTerm.trim())
-  const searchResultCount = searchContext?.searchResultCount
-  const displayTotal = hasSearchTerm && searchResultCount !== null && searchResultCount !== undefined
-    ? searchResultCount
-    : totalProjects
-  const resultsLabel = searchContext?.isSearching ? "Searching..." : `${displayTotal} Results found`
-
   return (
     <div className="space-y-2.5 sm:space-y-3">
       <FilterBarShell className="rounded-[16px] border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 py-2.5 shadow-[var(--shadow-apple)] sm:px-3.5 sm:py-3">
@@ -315,7 +308,6 @@ export function ProjectsFiltersToolbar({
 
       <FilterResultsRow className="justify-between gap-2 px-0 py-0.5 shadow-none">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-primary)] sm:text-xs">{resultsLabel}</p>
           <div className="-mx-0.5 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-0.5 hidescrollbar">
             {activeFilters.map((filter) => (
               <Link
