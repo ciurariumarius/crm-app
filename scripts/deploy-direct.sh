@@ -31,6 +31,7 @@ remote="$SERVER_USER@$SERVER_HOST"
 
 if [[ "${SKIP_LOCAL_CHECKS:-0}" != "1" ]]; then
   cd "$repo_root"
+  export DATABASE_URL="${DATABASE_URL:-file:$repo_root/prisma/dev.db}"
   npm run security:check-public-assets
   npm run lint:all
   npm run typecheck
