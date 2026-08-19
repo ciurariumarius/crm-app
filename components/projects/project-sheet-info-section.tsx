@@ -3,7 +3,6 @@
 import * as React from "react"
 import { ArrowUpRight, Check, FolderOpen, Globe, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { SidePanelChip, SidePanelInfoCard, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 import { StatusChip } from "@/components/ui/status-chip"
 
 type ServiceOption = {
@@ -42,61 +41,60 @@ export function ProjectSheetInfoSection({
     oneTimeServices,
 }: ProjectSheetInfoSectionProps) {
     return (
-        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-3">
-            <SidePanelSectionTitle title="Project info" />
-
+        <section className="space-y-4 border-t border-[var(--line-subtle)] pt-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <button type="button" onClick={onOpenPartner} className="text-left">
-                    <SidePanelInfoCard
-                        title="Partner"
-                        subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">{partnerName}</p>}
-                        action={<FolderOpen className="h-4 w-4 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]" />}
-                    />
+                <button
+                    type="button"
+                    onClick={onOpenPartner}
+                    className="group flex h-[68px] w-full items-center justify-between rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 text-left shadow-xs transition-all duration-200 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_60%,var(--brand-cyan)_40%)]"
+                >
+                    <div className="min-w-0 flex-1">
+                        <span className="text-xs font-medium text-[var(--text-muted)]">Partner</span>
+                        <p className="truncate text-sm font-bold text-[var(--text-primary)]">{partnerName}</p>
+                    </div>
+                    <FolderOpen className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition group-hover:text-[var(--text-primary)]" />
                 </button>
 
-                <SidePanelInfoCard
-                    title="Domain"
-                    subtitle={
+                <div className="flex h-[68px] w-full items-center justify-between rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-xs">
+                    <div className="min-w-0 flex-1">
+                        <span className="text-xs font-medium text-[var(--text-muted)]">Domain</span>
                         <button
                             type="button"
                             onClick={onOpenSitePanel}
-                            className="truncate text-left text-base font-black leading-tight tracking-tight text-[var(--text-primary)] transition hover:text-blue-600 sm:text-lg"
+                            className="block truncate text-left text-sm font-bold text-[var(--text-primary)] transition hover:text-[var(--brand-primary)]"
                             title="Open site panel"
                         >
                             {domainName}
                         </button>
-                    }
-                    action={
-                        <span className="inline-flex items-center gap-1 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]">
-                            <Globe className="h-4 w-4" />
-                            <ArrowUpRight className="h-4 w-4" />
-                        </span>
-                    }
-                >
-                    <div className="flex items-center gap-2">
+                    </div>
+                    <div className="ml-2 flex shrink-0 items-center gap-1.5">
                         {externalSiteUrl ? (
-                            <a href={externalSiteUrl} target="_blank" rel="noopener noreferrer">
-                                <SidePanelChip
-                                    tone="blue"
-                                    label={
-                                        <>
-                                            Open website
-                                            <ArrowUpRight className="h-3.5 w-3.5" />
-                                        </>
-                                    }
-                                    className="rounded-lg px-2.5 py-1.5 text-xs"
-                                />
+                            <a
+                                href={externalSiteUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-lowest)] hover:text-[var(--text-primary)]"
+                                title="Open website in new tab"
+                            >
+                                <span>Visit</span>
+                                <ArrowUpRight className="h-3.5 w-3.5" />
                             </a>
                         ) : (
-                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-xs opacity-70" />
+                            <button
+                                type="button"
+                                onClick={onOpenSitePanel}
+                                className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-low)] px-2.5 text-xs font-medium text-[var(--text-muted)]"
+                            >
+                                <Globe className="h-3.5 w-3.5" />
+                            </button>
                         )}
                     </div>
-                </SidePanelInfoCard>
+                </div>
             </div>
 
             <div className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
                 <div className="flex items-center justify-between gap-3">
-                    <SidePanelSectionTitle title="Project services" className="text-xs" />
+                    <span className="text-xs font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">Services</span>
                     {isEditingServices ? (
                         <span className="text-xs font-medium text-[var(--text-muted)]">Select at least one</span>
                     ) : null}

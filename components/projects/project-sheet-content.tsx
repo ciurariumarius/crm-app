@@ -9,6 +9,7 @@ import {
     CalendarRange,
     Check,
     CheckCircle,
+    ChevronDown,
     Clock3,
     FileDown,
     Loader2,
@@ -21,7 +22,6 @@ import {
     X,
     FileText,
     ListTodo,
-    MoreHorizontal,
     Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -198,12 +198,8 @@ export function ProjectSheetContent({
     )
     const [localName, setLocalName] = React.useState("")
     const [amountInput, setAmountInput] = React.useState("")
-    const [feeScope, setFeeScope] = React.useState<"CURRENT_MONTH" | "CURRENT_AND_FUTURE" | "FUTURE_MONTHS">("CURRENT_MONTH")
     const [isEditingTitle, setIsEditingTitle] = React.useState(false)
-    const [isEditingServices, setIsEditingServices] = React.useState(false)
     const [activeTab, setActiveTab] = React.useState("overview")
-    const [isEditingDetails, setIsEditingDetails] = React.useState(false)
-    const [draftServiceIds, setDraftServiceIds] = React.useState<string[]>([])
     const [description, setDescription] = React.useState(initialProject.description || "")
     const [updatingId, setUpdatingId] = React.useState<string | null>(null)
     const [isManualTimeOpen, setIsManualTimeOpen] = React.useState(false)
@@ -255,8 +251,6 @@ export function ProjectSheetContent({
         if (activeSidebarProjectIdRef.current !== initialProject.id) {
             activeSidebarProjectIdRef.current = initialProject.id
             setActiveTab("overview")
-            setIsEditingDetails(false)
-            setIsEditingServices(false)
             setHasLoadedHistory(false)
             setPaymentHistory([])
             setStatusHistory([])
@@ -531,9 +525,7 @@ export function ProjectSheetContent({
     }, [handleDescriptionChange])
 
     const toggleService = (serviceId: string) => {
-        const currentIds = isEditingDetails
-            ? draftServiceIds
-            : (project.services || []).map((service) => service.id)
+        const currentIds = (project.services || []).map((service) => service.id)
         const currentServices = allServices.filter((service) => currentIds.includes(service.id))
 
         let nextIds: string[]
@@ -561,10 +553,6 @@ export function ProjectSheetContent({
             nextIds = [...currentIds, serviceId]
         }
 
-        if (isEditingDetails) {
-            setDraftServiceIds(nextIds)
-            return
-        }
         void handleUpdate({ serviceIds: nextIds })
     }
 
@@ -586,7 +574,6 @@ export function ProjectSheetContent({
     }
 
     const handleAmountBlur = () => {
-        if (isEditingDetails) return
         const rawValue = amountInput.trim()
         if (!rawValue) {
             if (project.currentFee !== null) {
@@ -925,77 +912,14 @@ export function ProjectSheetContent({
     const minimumReopenMonth = getMinimumRecurringMonth(project.createdAt)
     const reopenMonthLabel = formatMonthKeyLabel(reopenMonth)
     const activeProjectTasks = (project.tasks || []).filter((task) => task.status !== "Completed")
-    const persistedServiceIds = (project.services || []).map((service) => service.id).sort()
-    const normalizedDraftServiceIds = [...draftServiceIds].sort()
-    const parsedDraftAmount = amountInput.trim() ? Number.parseInt(amountInput, 10) : null
-    const currentFeeValue = project.currentFee == null ? null : Number(project.currentFee)
-    const recurringBaseFeeValue = project.recurringBaseFee == null ? currentFeeValue : Number(project.recurringBaseFee)
-    const amountDirty = feeScope === "FUTURE_MONTHS"
-        ? parsedDraftAmount !== recurringBaseFeeValue
-        : parsedDraftAmount !== currentFeeValue
-            || (feeScope === "CURRENT_AND_FUTURE" && parsedDraftAmount !== recurringBaseFeeValue)
-    const detailsDirty = amountDirty
-        || normalizedDraftServiceIds.join(",") !== persistedServiceIds.join(",")
-
-    const selectFeeScope = (nextScope: "CURRENT_MONTH" | "CURRENT_AND_FUTURE" | "FUTURE_MONTHS") => {
-        setFeeScope(nextScope)
-        const targetValue = nextScope === "FUTURE_MONTHS" ? recurringBaseFeeValue : currentFeeValue
-        setAmountInput(targetValue == null ? "" : String(Math.round(targetValue)))
-    }
-
-    const beginDetailsEdit = () => {
-        setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
-        setFeeScope("CURRENT_MONTH")
-        setDraftServiceIds((project.services || []).map((service) => service.id))
-        setIsEditingServices(true)
-        setIsEditingDetails(true)
-    }
-
-    const cancelDetailsEdit = () => {
-        setAmountInput(project.currentFee == null ? "" : String(Math.round(Number(project.currentFee))))
-        setFeeScope("CURRENT_MONTH")
-        setDraftServiceIds((project.services || []).map((service) => service.id))
-        setIsEditingServices(false)
-        setIsEditingDetails(false)
-    }
-
-    const saveDetailsEdit = async () => {
-        if (amountInput.trim() && (parsedDraftAmount === null || Number.isNaN(parsedDraftAmount) || parsedDraftAmount < 0)) {
-            toast.error("Enter a valid project amount")
-            return
-        }
-        if (draftServiceIds.length === 0) {
-            toast.error("Project must keep at least one service")
-            return
-        }
-        const success = await handleUpdate({
-            currentFee: parsedDraftAmount,
-            ...(isRecurringProject ? { feeScope } : {}),
-            serviceIds: draftServiceIds,
-        })
-        if (success) {
-            setIsEditingServices(false)
-            setIsEditingDetails(false)
-        }
-    }
-
-    const requestLeaveDetailsEdit = () => {
-        if (!isEditingDetails) return true
-        if (detailsDirty && !window.confirm("Discard unsaved project detail changes?")) return false
-        cancelDetailsEdit()
-        return true
-    }
-
     const handleTabChange = (nextTab: string) => {
         if (nextTab === activeTab) return true
-        if (!requestLeaveDetailsEdit()) return false
         flushDescriptionSave()
         setActiveTab(nextTab)
         return true
     }
 
     const handleClose = () => {
-        if (!requestLeaveDetailsEdit()) return
         flushDescriptionSave()
         onClose?.()
     }
@@ -1055,28 +979,6 @@ export function ProjectSheetContent({
         >
             <div className="relative flex h-full flex-col overflow-hidden bg-[var(--bg-surface)]">
                 <div className="absolute right-5 top-5 z-30 flex items-center gap-2 sm:right-8 sm:top-7">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-11 w-11 rounded-xl text-[var(--text-muted)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
-                                aria-label="More project actions"
-                            >
-                                <MoreHorizontal className="h-5 w-5" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
-                            <DropdownMenuItem
-                                onSelect={() => void handleDelete()}
-                                className="cursor-pointer rounded-lg text-[var(--state-urgent)] focus:text-[var(--state-urgent)]"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete project
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
                     {!standalone && onClose && (
                         <button
                             type="button"
@@ -1092,11 +994,7 @@ export function ProjectSheetContent({
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 sm:px-8">
                     <div className="mx-auto max-w-[820px] space-y-6 pb-6">
                         <div className="sticky top-0 z-20 -mx-5 border-b border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 pb-2 pt-5 sm:-mx-8 sm:px-8 sm:pt-7">
-                        <div className="space-y-2 pr-28 pb-4">
-                            <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                                <span>{isRecurringProject ? "Recurring project" : "One-time project"}</span>
-                                {isRecurringProject ? <><span aria-hidden="true">•</span><span>{format(new Date(project.createdAt), "MMMM yyyy")}</span></> : null}
-                            </div>
+                        <div className="space-y-2 pr-16 pb-3">
                             {isEditingTitle ? (
                                 <Textarea
                                     value={localName}
@@ -1149,39 +1047,6 @@ export function ProjectSheetContent({
                                     Updating...
                                 </div>
                             )}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <button
-                                        type="button"
-                                        disabled={isEditingDetails || updatingId === project.id}
-                                        className={cn(
-                                            "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
-                                            project.status === "Active" && "border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_14%,var(--surface-lowest))] text-[var(--brand-primary)]",
-                                            project.status === "Paused" && "border-[color:color-mix(in_srgb,var(--state-warning)_35%,transparent)] bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
-                                            project.status === "Completed" && "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[var(--state-success-surface)] text-[var(--state-success)]",
-                                            project.status === "Closed" && "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
-                                        )}
-                                    >
-                                        {project.status === "Active" ? <Play className="h-3.5 w-3.5 fill-current" /> : null}
-                                        {project.status === "Paused" ? <Pause className="h-3.5 w-3.5" /> : null}
-                                        {project.status === "Completed" ? <Check className="h-3.5 w-3.5" /> : null}
-                                        {project.status === "Closed" ? <Square className="h-3.5 w-3.5 fill-current" /> : null}
-                                        {project.status}
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-40 rounded-xl p-1.5">
-                                    {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
-                                        <DropdownMenuItem key={statusOption} onSelect={() => updateProjectStatus(statusOption)} className="cursor-pointer rounded-lg">
-                                            {statusOption === "Active"
-                                                && isRecurringProject
-                                                && (project.status === "Closed" || project.status === "Completed")
-                                                ? "Open another month…"
-                                                : statusOption}
-                                            {project.status === statusOption ? <Check className="ml-auto h-4 w-4" /> : null}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
                         </div>
 
                         <div className="overflow-x-auto pb-2">
@@ -1209,45 +1074,76 @@ export function ProjectSheetContent({
                         >
 
                         {activeTab === "overview" ? <>
-                        <div className="flex items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Project overview</h2>
-                                <p className="mt-1 text-sm text-[var(--text-muted)]">Client, payment, and delivery details in one place.</p>
-                            </div>
-                            {!isEditingDetails ? (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={beginDetailsEdit}
-                                    className="h-11 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4"
-                                >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Edit details
-                                </Button>
-                            ) : null}
-                        </div>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <div className="flex items-center">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            {/* 1. Status Dropdown */}
+                            <div className="flex flex-col">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
+                                            disabled={updatingId === project.id}
                                             className={cn(
-                                                "group/payment relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
-                                                project.paymentStatus === "Paid" 
-                                                    ? "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-success)_84%,var(--text-primary))] shadow-[0_2px_10px_-4px_rgba(16,185,129,0.2)]"
-                                                    : "border-[color:color-mix(in_srgb,var(--state-urgent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_14%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-urgent)_84%,var(--text-primary))] shadow-[0_2px_10px_-4px_rgba(225,29,72,0.2)]"
+                                                "group/status relative flex h-11 w-full items-center justify-between gap-2 overflow-hidden rounded-[14px] border px-3.5 transition-all duration-200 active:scale-[0.98]",
+                                                project.status === "Active" && "border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_10%,var(--surface-lowest))] text-[var(--brand-primary)]",
+                                                project.status === "Paused" && "border-[color:color-mix(in_srgb,var(--state-warning)_35%,transparent)] bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
+                                                project.status === "Completed" && "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[var(--state-success-surface)] text-[var(--state-success)]",
+                                                project.status === "Closed" && "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)]"
                                             )}
                                         >
-                                            <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_20%,transparent)] transition-transform duration-300 group-hover/payment:translate-y-0" />
-                                            <span className={cn(
-                                                "relative z-10 h-2.5 w-2.5 rounded-full", 
-                                                project.paymentStatus === "Paid" ? "bg-[var(--state-success)]" : "bg-[var(--state-urgent)]"
-                                            )} />
-                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{project.paymentStatus}</span>
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                {project.status === "Active" ? <Play className="h-3.5 w-3.5 shrink-0 fill-current" /> : null}
+                                                {project.status === "Paused" ? <Pause className="h-3.5 w-3.5 shrink-0" /> : null}
+                                                {project.status === "Completed" ? <Check className="h-3.5 w-3.5 shrink-0" /> : null}
+                                                {project.status === "Closed" ? <Square className="h-3.5 w-3.5 shrink-0 fill-current" /> : null}
+                                                <span className="truncate text-xs font-bold sm:text-sm">{project.status}</span>
+                                            </div>
+                                            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
+                                    <DropdownMenuContent align="start" className="w-44 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
+                                        {(["Active", "Paused", "Completed", "Closed"] as const).map((statusOption) => (
+                                            <DropdownMenuItem
+                                                key={statusOption}
+                                                onSelect={() => updateProjectStatus(statusOption)}
+                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold"
+                                            >
+                                                {statusOption === "Active"
+                                                    && isRecurringProject
+                                                    && (project.status === "Closed" || project.status === "Completed")
+                                                    ? "Open another month…"
+                                                    : statusOption}
+                                                {project.status === statusOption ? <Check className="ml-auto h-4 w-4 text-[var(--brand-primary)]" /> : null}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+
+                            {/* 2. Payment Status Dropdown */}
+                            <div className="flex flex-col">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            type="button"
+                                            disabled={updatingId === project.id}
+                                            className={cn(
+                                                "group/payment relative flex h-11 w-full items-center justify-between gap-2 overflow-hidden rounded-[14px] border px-3.5 transition-all duration-200 active:scale-[0.98]",
+                                                project.paymentStatus === "Paid" 
+                                                    ? "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-success)_10%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-success)_90%,var(--text-primary))]"
+                                                    : "border-[color:color-mix(in_srgb,var(--state-urgent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--state-urgent)_10%,var(--surface-lowest))] text-[color:color-mix(in_srgb,var(--state-urgent)_90%,var(--text-primary))]"
+                                            )}
+                                        >
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <span className={cn(
+                                                    "h-2.5 w-2.5 shrink-0 rounded-full", 
+                                                    project.paymentStatus === "Paid" ? "bg-[var(--state-success)]" : "bg-[var(--state-urgent)]"
+                                                )} />
+                                                <span className="truncate text-xs font-bold sm:text-sm">{project.paymentStatus}</span>
+                                            </div>
+                                            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-40 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
                                         {(["Paid", "Unpaid"] as const).map((paymentOption) => (
                                             <DropdownMenuItem
                                                 key={paymentOption}
@@ -1256,73 +1152,37 @@ export function ProjectSheetContent({
                                             >
                                                 <span className={cn("mr-2 h-2 w-2 rounded-full", paymentOption === "Paid" ? "bg-[var(--state-success)]" : "bg-[var(--state-urgent)]")} />
                                                 {paymentOption}
-                                                {project.paymentStatus === paymentOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
+                                                {project.paymentStatus === paymentOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--brand-primary)]" />}
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
 
-                            <div className="flex flex-col justify-center">
-                                <div className="group/amount relative flex h-10 items-center overflow-hidden rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[var(--shadow-apple)] transition-all duration-300 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] sm:h-11 sm:px-5">
+                            {/* 3. Amount Input Card */}
+                            <div className="flex flex-col">
+                                <div className="group/amount relative flex h-11 items-center overflow-hidden rounded-[14px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3.5 shadow-xs transition-all duration-200 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_60%,var(--brand-cyan)_40%)] focus-within:border-[var(--brand-primary)] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20">
                                     <Input
                                         type="number"
                                         step={1}
                                         value={amountInput}
                                         onChange={(event) => setAmountInput(event.target.value)}
                                         onBlur={handleAmountBlur}
-                                        readOnly={!isEditingDetails}
-                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-center text-lg font-black tracking-[-0.02em] text-[var(--text-primary)] shadow-none focus-visible:ring-0 sm:text-xl md:text-2xl"
+                                        className="relative z-10 h-auto border-none bg-transparent p-0 text-left text-sm font-bold tracking-tight text-[var(--text-primary)] shadow-none focus-visible:ring-0 sm:text-base"
                                         placeholder="0"
                                     />
-                                    <span className="relative z-10 ml-2 inline-flex items-center rounded-full bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)] px-2 py-0.5 text-xs font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors group-hover/amount:bg-[color:color-mix(in_srgb,var(--brand-cyan)_12%,var(--surface-lowest))] group-hover/amount:text-[var(--brand-primary)] sm:ml-3 sm:px-2.5 sm:py-1 sm:text-xs">RON</span>
+                                    <span className="relative z-10 ml-2 inline-flex shrink-0 items-center rounded-md bg-[var(--surface-low)] px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                                        RON
+                                    </span>
                                 </div>
-                                {isRecurringProject ? (
-                                    isEditingDetails ? (
-                                        <fieldset className="mt-3 space-y-2 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)]/45 p-3">
-                                            <legend className="px-1 text-xs font-semibold text-[var(--text-secondary)]">Aplică suma pentru</legend>
-                                            <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-[var(--text-secondary)]">
-                                                <input
-                                                    type="radio"
-                                                    name={`fee-scope-${project.id}`}
-                                                    value="CURRENT_MONTH"
-                                                    checked={feeScope === "CURRENT_MONTH"}
-                                                    onChange={() => selectFeeScope("CURRENT_MONTH")}
-                                                    className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
-                                                />
-                                                <span>Doar luna aceasta ({format(new Date(project.createdAt), "MMMM yyyy")})</span>
-                                            </label>
-                                            <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-[var(--text-secondary)]">
-                                                <input
-                                                    type="radio"
-                                                    name={`fee-scope-${project.id}`}
-                                                    value="CURRENT_AND_FUTURE"
-                                                    checked={feeScope === "CURRENT_AND_FUTURE"}
-                                                    onChange={() => selectFeeScope("CURRENT_AND_FUTURE")}
-                                                    className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
-                                                />
-                                                <span>Luna aceasta + viitoare</span>
-                                            </label>
-                                            <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-[var(--text-secondary)]">
-                                                <input
-                                                    type="radio"
-                                                    name={`fee-scope-${project.id}`}
-                                                    value="FUTURE_MONTHS"
-                                                    checked={feeScope === "FUTURE_MONTHS"}
-                                                    onChange={() => selectFeeScope("FUTURE_MONTHS")}
-                                                    className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]"
-                                                />
-                                                <span>Lunile viitoare</span>
-                                            </label>
-                                        </fieldset>
-                                    ) : (
-                                        <p className="mt-1.5 text-center text-xs font-medium text-[var(--text-muted)]">
-                                            Future months use {Number(project.recurringBaseFee ?? project.currentFee ?? 0).toLocaleString("ro-RO")} RON.
-                                        </p>
-                                    )
-                                ) : null}
                             </div>
                         </div>
+
+                        {isRecurringProject ? (
+                            <p className="text-xs font-medium text-[var(--text-muted)]">
+                                Future months use {Number(project.recurringBaseFee ?? project.currentFee ?? 0).toLocaleString("ro-RO")} RON.
+                            </p>
+                        ) : null}
 
                         {project.status === "Closed" && (
                             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2">
@@ -1343,12 +1203,9 @@ export function ProjectSheetContent({
                         )}
                         <section className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4">
                             <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-sm font-semibold text-[var(--text-primary)]">Active tasks</p>
-                                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">{activeProjectTasks.length} ready to work</p>
-                                </div>
-                                <Button type="button" variant="ghost" onClick={() => setActiveTab("tasks")} className="h-10 rounded-xl px-3 text-sm font-semibold">
-                                    View all
+                                <p className="text-sm font-semibold text-[var(--text-primary)]">Tasks</p>
+                                <Button type="button" variant="ghost" onClick={() => setActiveTab("tasks")} className="h-8 rounded-lg px-2.5 text-xs font-semibold text-[var(--brand-primary)]">
+                                    View all ({project.tasks?.length || 0})
                                 </Button>
                             </div>
                             {activeProjectTasks.length > 0 ? (
@@ -1358,14 +1215,16 @@ export function ProjectSheetContent({
                                             key={task.id}
                                             type="button"
                                             onClick={() => setActiveTab("tasks")}
-                                            className="flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left text-sm font-medium text-[var(--text-primary)] transition hover:text-[var(--primary)]"
+                                            className="flex min-h-9 w-full items-center justify-between gap-3 py-2 text-left text-xs font-medium text-[var(--text-primary)] transition hover:text-[var(--brand-primary)]"
                                         >
                                             <span className="truncate">{task.name || "Untitled task"}</span>
                                             <span className="shrink-0 text-xs text-[var(--text-muted)]">Open</span>
                                         </button>
                                     ))}
                                 </div>
-                            ) : null}
+                            ) : (
+                                <p className="mt-2 text-xs text-[var(--text-muted)]">No active tasks</p>
+                            )}
                         </section>
                         </> : null}
 
@@ -1592,32 +1451,44 @@ export function ProjectSheetContent({
                             />
                         </section> : null}
 
-                        {activeTab === "overview" ? <ProjectSheetInfoSection
-                            partnerName={project.site.partner.name}
-                            domainName={project.site.domainName}
-                            onOpenPartner={() => {
-                                if (onOpenPartner) onOpenPartner(project.site.partner.id)
-                                else router.push(`/partners/${project.site.partner.id}`)
-                            }}
-                            onOpenSitePanel={openSitePanel}
-                            externalSiteUrl={externalSiteUrl}
-                            services={(isEditingDetails
-                                ? allServices.filter((service) => draftServiceIds.includes(service.id))
-                                : project.services || []).map((service) => ({
-                                id: service.id,
-                                serviceName: service.serviceName,
-                            }))}
-                            isEditingServices={isEditingDetails && isEditingServices}
-                            onToggleService={toggleService}
-                            recurringServices={recurringServices.map((service) => ({
-                                id: service.id,
-                                serviceName: service.serviceName,
-                            }))}
-                            oneTimeServices={oneTimeServices.map((service) => ({
-                                id: service.id,
-                                serviceName: service.serviceName,
-                            }))}
-                        /> : null}
+                        {activeTab === "overview" ? (
+                            <>
+                                <ProjectSheetInfoSection
+                                    partnerName={project.site.partner.name}
+                                    domainName={project.site.domainName}
+                                    onOpenPartner={() => {
+                                        if (onOpenPartner) onOpenPartner(project.site.partner.id)
+                                        else router.push(`/partners/${project.site.partner.id}`)
+                                    }}
+                                    onOpenSitePanel={openSitePanel}
+                                    externalSiteUrl={externalSiteUrl}
+                                    services={(project.services || []).map((service) => ({
+                                        id: service.id,
+                                        serviceName: service.serviceName,
+                                    }))}
+                                    isEditingServices={false}
+                                    onToggleService={toggleService}
+                                    recurringServices={recurringServices.map((service) => ({
+                                        id: service.id,
+                                        serviceName: service.serviceName,
+                                    }))}
+                                    oneTimeServices={oneTimeServices.map((service) => ({
+                                        id: service.id,
+                                        serviceName: service.serviceName,
+                                    }))}
+                                />
+                                <div className="flex items-center justify-center pt-4 pb-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleDelete()}
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--state-urgent)] opacity-70 transition hover:opacity-100 hover:underline"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Delete project
+                                    </button>
+                                </div>
+                            </>
+                        ) : null}
 
                         {activeTab === "activity" ? <ProjectHistoryLogSections
                             paymentHistory={paymentHistory}
@@ -1676,18 +1547,6 @@ export function ProjectSheetContent({
                         </div>
                     </div>
                 </div>
-
-                {activeTab === "overview" && isEditingDetails ? (
-                    <div className="flex items-center justify-end gap-3 border-t border-[var(--line-subtle)] bg-[var(--bg-surface)] px-5 py-4 sm:px-8">
-                        <Button type="button" variant="outline" onClick={cancelDetailsEdit} disabled={updatingId === project.id} className="h-11 rounded-xl px-5">
-                            Cancel
-                        </Button>
-                        <Button type="button" onClick={() => void saveDetailsEdit()} disabled={updatingId === project.id || !detailsDirty} className="h-11 rounded-xl px-5">
-                            {updatingId === project.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Save changes
-                        </Button>
-                    </div>
-                ) : null}
 
                 <TimeLogSheet
                     log={selectedTimeLog}
