@@ -54,7 +54,7 @@ export async function GET(request: Request) {
                         select: { serviceName: true, isRecurring: true },
                     },
                 },
-                orderBy: { updatedAt: "desc" },
+                orderBy: [{ createdAt: "desc" }, { updatedAt: "desc" }],
                 skip: (page - 1) * pageSize,
                 take: pageSize,
             }),

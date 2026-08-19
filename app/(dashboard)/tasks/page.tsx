@@ -3,6 +3,7 @@ import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import {
     TasksActiveFilterChips,
     TasksFilterControl,
+    TasksSortControl,
     TasksStatusControls,
 } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
@@ -23,7 +24,7 @@ const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
 const PAGE_SIZE_VALUES = new Set<number>(PAGE_SIZE_OPTIONS)
 const PAGINATION_THRESHOLD = 120
 const SORT_OPTIONS = [
-    { label: "Newest", value: "newest" },
+    { label: "Most recent", value: "newest" },
     { label: "Oldest", value: "oldest" },
     { label: "Updated", value: "updated" },
     { label: "Name A-Z", value: "name_asc" },
@@ -231,7 +232,12 @@ export default async function TasksPage({
                     search={<TasksSearchInput />}
                     mobileSearch={<TasksSearchInput />}
                     controls={<TasksStatusControls currentStatus={statusFilter} />}
-                    secondaryActions={<TasksFilterControl {...headerFilterProps} />}
+                    secondaryActions={
+                        <div className="flex items-center gap-2">
+                            <TasksSortControl currentSort={sort} />
+                            <TasksFilterControl {...headerFilterProps} />
+                        </div>
+                    }
                     footer={<TasksActiveFilterChips {...headerFilterProps} />}
                     mobilePrimaryAction={
                         <CreateTaskButton

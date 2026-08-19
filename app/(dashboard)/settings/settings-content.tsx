@@ -35,6 +35,7 @@ import { AppPageHeader } from "@/components/layout/app-page-header"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ThemeModeToggle } from "@/components/theme/theme-mode-toggle"
+import { TickTickSettingsCard } from "@/components/settings/ticktick-settings-card"
 
 export interface UserData {
     name: string | null
@@ -300,6 +301,9 @@ export function SettingsContent({
                         </Button>
                     </form>
                 </div>
+
+                {/* TickTick Integration Card */}
+                <TickTickSettingsCard />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Change Password Card */}

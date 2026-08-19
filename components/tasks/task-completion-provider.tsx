@@ -43,7 +43,7 @@ export type TaskCompletionTask = {
 type LmsOptions = {
   allocations: Array<{ id: string; client: string }>
   workTasks: Array<{ id: string; name: string; defaultDurationMinutes: number | null }>
-  projects: Array<{ id: string; label: string; status: string }>
+  projects: Array<{ id: string; label: string; status: string; createdAt?: string }>
 }
 
 type CompletionRequestOptions = {
@@ -101,6 +101,7 @@ function normalizeLmsOptions(result: unknown): LmsOptions {
             id: option.id,
             label: option.label,
             status: typeof option.status === "string" ? option.status : "Active",
+            createdAt: typeof option.createdAt === "string" ? option.createdAt : undefined,
           }]
         : []
     }),

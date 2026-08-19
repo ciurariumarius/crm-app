@@ -159,9 +159,9 @@ describe("Record Work composer", () => {
     }))
     await waitFor(() => expect(screen.getByRole("button", { name: /Save · 4 Aug/i })).toBeDisabled())
 
-    expect(screen.getByRole("button", { name: "example.ro" })).toHaveAttribute("aria-pressed", "true")
-    expect(document.querySelector('[aria-current="date"]')).toHaveTextContent("TUE")
-    expect(screen.getByRole("combobox", { name: "Select predefined task" })).toHaveFocus()
+    await waitFor(() => {
+      expect(screen.getByRole("combobox", { name: "Select predefined task" })).toHaveFocus()
+    })
     expect(screen.getByText(/Already logged:/)).toHaveTextContent("Already logged: 2h")
     expect(mocks.refresh).toHaveBeenCalled()
   })

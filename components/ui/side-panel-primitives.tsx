@@ -206,6 +206,7 @@ const CHIP_TONE_CLASS: Record<SidePanelChipTone, string> = {
 
 export function sidePanelChipToneByLabel(label: string): SidePanelChipTone {
     const key = label.toLowerCase()
+    if (key.includes("ticktick")) return "blue"
     if (key.includes("paid") || key.includes("completed") || key.includes("ready")) return "emerald"
     if (key.includes("unpaid") || key.includes("urgent") || key.includes("error") || key.includes("over")) return "rose"
     if (key.includes("active") || key.includes("saving") || key.includes("status")) return "blue"

@@ -55,7 +55,16 @@ export function TaskHistorySection({ entries, isLoading }: TaskHistorySectionPro
                             let entryTitle = "Task updated"
                             let entryBadge = "Update"
 
-                            if (entry.action === "TASK_CREATED") {
+                            if (entry.action === "TASK_TICKTICK_SYNCED") {
+                                entryTitle = entry.to || "Synced with TickTick"
+                                entryBadge = "TickTick"
+                            } else if (entry.source === "TICKTICK" && entry.action === "TASK_STATUS_CHANGED") {
+                                entryTitle = "Completed in TickTick"
+                                entryBadge = "TickTick"
+                            } else if (entry.source === "TICKTICK" && entry.action === "TASK_CREATED") {
+                                entryTitle = "Imported from TickTick"
+                                entryBadge = "TickTick"
+                            } else if (entry.action === "TASK_CREATED") {
                                 entryTitle = "Task created"
                                 entryBadge = "Created"
                             } else if (entry.action === "TASK_STATUS_CHANGED") {

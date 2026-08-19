@@ -15,11 +15,18 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ArrowDownUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTasksSearchContext } from "./tasks-search-context"
 
 const SORT_OPTIONS = [
-  { label: "Newest", value: "newest" },
+  { label: "Most recent", value: "newest" },
   { label: "Oldest", value: "oldest" },
   { label: "Recently updated", value: "updated" },
   { label: "Name A-Z", value: "name_asc" },
@@ -415,5 +422,32 @@ function ToggleButton({ active, onClick, icon, label }: { active: boolean; onCli
     >
       {icon}{label}
     </button>
+  )
+}
+
+export function TasksSortControl({ currentSort }: { currentSort: string }) {
+  const buildHref = useTasksHref()
+  const router = useRouter()
+  
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" title="Sort tasks">
+          <ArrowDownUp className="h-4 w-4 text-[var(--text-secondary)]" />
+          <span className="sr-only">Sort tasks</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {SORT_OPTIONS.map((option) => (
+          <DropdownMenuItem
+            key={option.value}
+            className={currentSort === option.value ? "bg-[var(--surface-low)] font-medium" : ""}
+            onSelect={() => router.push(buildHref({ sort: option.value }))}
+          >
+            {option.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

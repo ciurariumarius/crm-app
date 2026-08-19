@@ -17,11 +17,13 @@ import {
 import { buildContentSecurityPolicy } from './lib/security/csp'
 
 const PUBLIC_PATHS = ['/login']
-// Cron routes perform their own timing-safe CRON_SECRET authentication.
+// Cron and OAuth callback routes perform their own cryptographic authentication.
 const PUBLIC_API_PATHS = [
     '/api/cron/rollover',
     '/api/cron/lms-daily-admin-work',
     '/api/cron/notes-retention',
+    '/api/cron/ticktick-sync',
+    '/api/integrations/ticktick/callback',
     '/api/health',
 ]
 

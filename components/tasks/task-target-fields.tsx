@@ -103,6 +103,7 @@ function LmsOptionCombobox({
   onCreateRequest,
   createLabel,
   disabled,
+  headerAction,
 }: {
   label: string
   placeholder: string
@@ -114,6 +115,7 @@ function LmsOptionCombobox({
   onCreateRequest?: (suggestedName: string) => void
   createLabel?: string
   disabled?: boolean
+  headerAction?: React.ReactNode
 }) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
@@ -152,7 +154,12 @@ function LmsOptionCombobox({
       >
         <Command className="flex min-h-0 flex-col">
           <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
-          <CommandList className="max-h-[min(300px,calc(var(--radix-popover-content-available-height)-3rem))] touch-pan-y overflow-y-auto overscroll-contain">
+          {headerAction ? (
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line-subtle)] bg-[var(--surface-low)]/40 px-3 py-2">
+              {headerAction}
+            </div>
+          ) : null}
+          <CommandList className="max-h-[min(300px,calc(var(--radix-popover-content-available-height)-5rem))] touch-pan-y overflow-y-auto overscroll-contain">
             <CommandEmpty>{emptyLabel}</CommandEmpty>
             <CommandGroup>
               <CommandItem
@@ -312,23 +319,58 @@ export function TaskFreelanceProjectField({
   disabled?: boolean
 }) {
   const { lmsOptions, lmsOptionsLoading, lmsOptionsError, loadLmsOptions } = useTaskCompletion()
+  const [includeOtherStatuses, setIncludeOtherStatuses] = React.useState(false)
 
   React.useEffect(() => {
     void loadLmsOptions()
   }, [loadLmsOptions])
 
+  const filteredProjects = React.useMemo(() => {
+    return [...lmsOptions.projects]
+      .filter((p) => includeOtherStatuses || p.status === "Active" || p.id === projectId)
+      .sort((a, b) => {
+        if (a.status === "Active" && b.status !== "Active") return -1
+        if (a.status !== "Active" && b.status === "Active") return 1
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return dateB - dateA
+      })
+  }, [includeOtherStatuses, lmsOptions.projects, projectId])
+
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold text-[var(--text-secondary)]">Freelance project *</Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs font-semibold text-[var(--text-secondary)]">Freelance project *</Label>
+        <label className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] cursor-pointer hover:text-[var(--text-primary)] select-none">
+          <input
+            type="checkbox"
+            checked={includeOtherStatuses}
+            onChange={(e) => setIncludeOtherStatuses(e.target.checked)}
+            className="rounded border-[var(--line-subtle)] text-[var(--primary)] focus:ring-0 cursor-pointer h-3.5 w-3.5"
+          />
+          Include other statuses
+        </label>
+      </div>
       <LmsOptionCombobox
         label="Select freelance project"
         placeholder={lmsOptionsLoading ? "Loading freelance projects…" : "Select a freelance project"}
         searchPlaceholder="Search freelance project…"
         emptyLabel="No freelance project found."
-        options={lmsOptions.projects.map((option) => ({ id: option.id, label: option.label }))}
+        options={filteredProjects.map((option) => ({ id: option.id, label: option.label }))}
         value={projectId}
         onValueChange={onProjectChange}
         disabled={disabled || lmsOptionsLoading}
+        headerAction={
+          <label className="flex items-center justify-between w-full text-xs font-medium text-[var(--text-secondary)] cursor-pointer select-none">
+            <span>Include other statuses</span>
+            <input
+              type="checkbox"
+              checked={includeOtherStatuses}
+              onChange={(e) => setIncludeOtherStatuses(e.target.checked)}
+              className="rounded border-[var(--line-subtle)] text-[var(--primary)] focus:ring-0 cursor-pointer h-3.5 w-3.5"
+            />
+          </label>
+        }
       />
       {!projectId ? (
         <p className="text-xs leading-5 text-[var(--text-muted)]">Choose the CRM project this freelance task belongs to.</p>

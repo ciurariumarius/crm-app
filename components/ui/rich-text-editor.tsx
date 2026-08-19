@@ -994,6 +994,7 @@ export function RichTextEditor({
                         }}
                         className={cn(
                             "flex items-center",
+                            notesMode && "hidden md:flex",
                             isTopRightToolbar &&
                                 (isAppleNotesAppearance
                                     ? "fixed bottom-[calc(env(safe-area-inset-bottom)+var(--editor-keyboard-inset)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-1.25rem)] -translate-x-1/2 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_92%,var(--surface-low)_8%)] shadow-[var(--shadow-apple)] supports-[backdrop-filter]:backdrop-blur-xl md:absolute md:bottom-auto md:left-auto md:right-2.5 md:top-2.5 md:max-w-[calc(100%-1.25rem)] md:translate-x-0"
@@ -1335,7 +1336,7 @@ export function RichTextEditor({
                         className={cn(
                             mode === "document" &&
                                 (isDocumentLeft
-                                    ? cn("h-full w-full px-3 pb-7", isReadingWidth && "max-w-[760px]", isTopRightToolbar && "pr-36 sm:pr-44")
+                                    ? cn("h-full w-full px-3 pb-7", isReadingWidth && "max-w-[760px]")
                                     : "mx-auto w-full max-w-4xl px-6 pb-8")
                         )}
                     >

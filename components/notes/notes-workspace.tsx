@@ -372,6 +372,18 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
     onForkCreated(result.data)
   }, [onForkCreated])
 
+  const keepMyDraft = React.useCallback(async () => {
+    const result = await getNoteDetail(note.id)
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+    revisionRef.current = result.data.contentRevision
+    dirtyRef.current = true
+    setSaveState("idle")
+    void enqueueSave()
+  }, [note.id, enqueueSave])
+
   const currentFolderName = folders.find((folder) => folder.id === folderId)?.name
     ?? ALL_NOTES_FOLDER_LABEL
 
@@ -431,7 +443,8 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-subtle)] bg-[var(--state-danger-surface)] px-4 py-2 text-sm text-[var(--state-urgent)]">
           <span className="mr-auto">This note changed in another view. Your draft is preserved.</span>
           <Button type="button" variant="outline" size="sm" onClick={() => void reloadServerVersion()}>Reload server version</Button>
-          <Button type="button" size="sm" onClick={() => void keepAsNewNote()}>Keep as new note</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => void keepAsNewNote()}>Keep as new note</Button>
+          <Button type="button" size="sm" onClick={() => void keepMyDraft()}>Keep my draft</Button>
         </div>
       ) : null}
 
@@ -444,7 +457,7 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
         mode="document"
         panelStyle="borderless"
         documentLayout="left"
-        documentWidth="reading"
+        documentWidth="full"
         toolbarVisibility="focus"
         toolbarPreset="minimal"
         toolbarTone="quiet"
@@ -612,15 +625,20 @@ export function NotesWorkspace({
     if (local) return
     const request = ++detailRequestRef.current
     setLoadingDetail(true)
-    const result = await getNoteDetail(noteId)
-    if (request !== detailRequestRef.current) return
-    setLoadingDetail(false)
-    if (!result.success) {
-      toast.error(result.error)
-      return
+    try {
+      const result = await getNoteDetail(noteId)
+      if (request !== detailRequestRef.current) return
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      cacheDetail(result.data)
+      setSelectedNote(result.data)
+    } finally {
+      if (request === detailRequestRef.current) {
+        setLoadingDetail(false)
+      }
     }
-    cacheDetail(result.data)
-    setSelectedNote(result.data)
   }, [cacheDetail, discardBlankLocalNote])
 
   const beginNewNote = React.useCallback(() => {
@@ -712,26 +730,31 @@ export function NotesWorkspace({
   const replaceList = React.useCallback(async (nextView: NotesView, query: string) => {
     const request = ++listRequestRef.current
     setLoadingList(true)
-    const result = await queryNoteList({ view: nextView, q: query, pageSize: 50 })
-    if (request !== listRequestRef.current) return
-    setLoadingList(false)
-    if (!result.success) {
-      toast.error(result.error)
-      return
-    }
-    setRows(result.data.rows)
-    setNextCursor(result.data.nextCursor)
-    setTotalCount(result.data.totalCount)
-    if (!query && nextView === "all") setAllCount(result.data.totalCount)
-    const first = result.data.rows[0]
-    if (first && !result.data.rows.some((row) => row.id === selectedIdRef.current)) {
-      void selectNote(first.id, false)
-    } else if (!first) {
-      selectedIdRef.current = null
-      selectedNoteRef.current = null
-      setSelectedId(null)
-      setSelectedNote(null)
-      setMobilePane("list")
+    try {
+      const result = await queryNoteList({ view: nextView, q: query, pageSize: 50 })
+      if (request !== listRequestRef.current) return
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      setRows(result.data.rows)
+      setNextCursor(result.data.nextCursor)
+      setTotalCount(result.data.totalCount)
+      if (!query && nextView === "all") setAllCount(result.data.totalCount)
+      const first = result.data.rows[0]
+      if (first && !result.data.rows.some((row) => row.id === selectedIdRef.current)) {
+        void selectNote(first.id, false)
+      } else if (!first) {
+        selectedIdRef.current = null
+        selectedNoteRef.current = null
+        setSelectedId(null)
+        setSelectedNote(null)
+        setMobilePane("list")
+      }
+    } finally {
+      if (request === listRequestRef.current) {
+        setLoadingList(false)
+      }
     }
   }, [selectNote])
 
@@ -747,7 +770,7 @@ export function NotesWorkspace({
       if (!targetFolderId) return []
       return current.filter((row) => row.folderId === targetFolderId)
     })
-    setLoadingList(true)
+    previousViewRef.current = nextView
     setView(nextView)
     setMobilePane("list")
     void replaceList(nextView, search)
@@ -779,17 +802,20 @@ export function NotesWorkspace({
   const loadMore = React.useCallback(async () => {
     if (!nextCursor || loadingList) return
     setLoadingList(true)
-    const result = await queryNoteList({ view, q: search, cursor: nextCursor, pageSize: 50 })
-    setLoadingList(false)
-    if (!result.success) {
-      toast.error(result.error)
-      return
+    try {
+      const result = await queryNoteList({ view, q: search, cursor: nextCursor, pageSize: 50 })
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      setRows((current) => {
+        const known = new Set(current.map((row) => row.id))
+        return [...current, ...result.data.rows.filter((row) => !known.has(row.id))]
+      })
+      setNextCursor(result.data.nextCursor)
+    } finally {
+      setLoadingList(false)
     }
-    setRows((current) => {
-      const known = new Set(current.map((row) => row.id))
-      return [...current, ...result.data.rows.filter((row) => !known.has(row.id))]
-    })
-    setNextCursor(result.data.nextCursor)
   }, [loadingList, nextCursor, search, view])
 
   React.useEffect(() => {
@@ -933,10 +959,12 @@ export function NotesWorkspace({
   const noteGroups = React.useMemo(() => groupNotesByDate(rows), [rows])
 
   return (
-    <div className="space-y-4">
-      <AppPageHeader title="Notes" search={searchInput} primaryAction={addButton} />
+    <div className="flex h-full flex-col">
+      <div className="px-4 pt-4 pb-4 md:px-5 md:pt-5 xl:px-7 xl:pt-7 2xl:px-8">
+        <AppPageHeader title="Notes" search={searchInput} primaryAction={addButton} />
+      </div>
 
-      <div className="grid h-[calc(100dvh-190px)] min-h-[560px] overflow-hidden rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] md:grid-cols-[230px_240px_minmax(0,1fr)] lg:grid-cols-[230px_270px_minmax(0,1fr)]">
+      <div className="grid flex-1 bg-[var(--surface-lowest)] md:grid-cols-[230px_240px_minmax(0,1fr)] lg:grid-cols-[230px_270px_minmax(0,1fr)] min-h-[560px]">
         <aside className={cn("min-h-0 flex-col border-r border-[var(--line-subtle)] bg-[var(--surface-low)]", mobilePane === "folders" ? "flex" : "hidden", "md:flex")}>
           <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-3">
             <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Folders</span>

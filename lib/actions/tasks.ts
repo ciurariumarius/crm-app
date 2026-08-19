@@ -27,6 +27,7 @@ import { MAX_TASK_ESTIMATED_MINUTES } from "@/lib/tasks/estimated-time"
 import { getBucharestDateOnly, getDefaultLmsWorkDate } from "@/lib/lms-work-entries/date"
 import { z } from "zod"
 import { normalizeRichTextContent } from "@/lib/notes/content"
+import { syncOutboundTaskCreate, syncOutboundTaskComplete } from "@/lib/integrations/ticktick/sync"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/tasks")
@@ -334,6 +335,7 @@ export async function addTask(
             details: `taskId=${task.id}; projectId=${taskResult.projectId || "none"}; taskScope=${taskResult.taskScope}; status=${task.status}; priority=${task.urgency}; deadline=${formatAuditDateToken(task.deadline)}`,
         })
         revalidateTaskPaths(taskResult.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
+        void syncOutboundTaskCreate(task.id)
         return {
             success: true,
             data: {
@@ -536,6 +538,7 @@ export async function completeTask(
             result.task.project?.siteId
         )
         if (result.lmsEntryId) revalidateLmsTaskPaths()
+        void syncOutboundTaskComplete(result.task.id)
         return {
             success: true as const,
             data: {
@@ -1015,7 +1018,7 @@ export async function getTaskLmsOptions() {
                     site: { select: { domainName: true } },
                     services: { select: { serviceName: true, isRecurring: true } },
                 },
-                orderBy: { updatedAt: "desc" },
+                orderBy: [{ createdAt: "desc" }, { updatedAt: "desc" }],
             }),
         ])
 
@@ -1023,6 +1026,7 @@ export async function getTaskLmsOptions() {
             id: project.id,
             label: `${formatProjectName(project)}${project.status === "Active" ? "" : ` · ${project.status}`}`,
             status: project.status,
+            createdAt: project.createdAt.toISOString(),
         }))
 
         return {
@@ -1048,6 +1052,7 @@ export async function getTaskHistory(taskId: string) {
                         "TASK_STATUS_CHANGED",
                         "TASK_PRIORITY_CHANGED",
                         "TASK_DEADLINE_CHANGED",
+                        "TASK_TICKTICK_SYNCED",
                     ],
                 },
                 details: { contains: `taskId=${validatedTaskId}` },

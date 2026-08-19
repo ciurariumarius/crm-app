@@ -71,7 +71,15 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
     const [touched, setTouched] = React.useState({ name: false, project: false, minutes: false })
 
     const displayProjects = React.useMemo(
-        () => projects.filter((project) => showCompleted || project.status === "Active"),
+        () => [...projects]
+            .filter((project) => showCompleted || project.status === "Active")
+            .sort((a, b) => {
+                if (a.status === "Active" && b.status !== "Active") return -1
+                if (a.status !== "Active" && b.status === "Active") return 1
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+                return dateB - dateA
+            }),
         [projects, showCompleted]
     )
     const parsedEstimatedMinutes = parseTaskEstimatedMinutesInput(estimatedMinutes)
