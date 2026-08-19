@@ -47,14 +47,25 @@ if [[ "${SKIP_LOCAL_CHECKS:-0}" != "1" ]]; then
   npm run verify:design
   npm run security:audit
   npx prisma validate
-  npm run data:preflight-single-owner
-  npm run data:migrate-project-note-storage:dry
-  npm run runtime:preflight
+  local_db=""
+  if [[ -f "$repo_root/prisma/dev.db" ]]; then
+    local_db="file:$repo_root/prisma/dev.db"
+  elif [[ -f "$repo_root/dev.db" ]]; then
+    local_db="file:$repo_root/dev.db"
+  fi
+
+  if [[ -n "$local_db" ]]; then
+    DATABASE_URL="$local_db" npm run data:preflight-single-owner
+    DATABASE_URL="$local_db" npm run data:migrate-project-note-storage:dry
+    DATABASE_URL="$local_db" npm run runtime:preflight
+  fi
+
+  DATABASE_URL="${DATABASE_URL:-${local_db:-file:$repo_root/prisma/dev.db}}" \
   ENABLE_SESSION_REGISTRY=true \
-    DATA_ENCRYPTION_KEYS='build=0000000000000000000000000000000000000000000000000000000000000000' \
-    DATA_ENCRYPTION_KEY_ID=build \
-    PROJECT_NOTES_SIGNING_SECRET='build-validation-only-not-for-runtime' \
-    npm run build
+  DATA_ENCRYPTION_KEYS='build=0000000000000000000000000000000000000000000000000000000000000000' \
+  DATA_ENCRYPTION_KEY_ID=build \
+  PROJECT_NOTES_SIGNING_SECRET='build-validation-only-not-for-runtime' \
+  npm run build
 fi
 
 deploy_timestamp="$(date -u +%Y%m%dT%H%M%SZ)"

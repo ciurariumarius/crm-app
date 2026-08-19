@@ -1,10 +1,15 @@
 import "dotenv/config"
 import { strict as assert } from "node:assert"
-import prisma from "../lib/prisma"
-import { getLmsModuleDataPage } from "../lib/lms-tasks/db"
-import { getProjectSummaryPage } from "../lib/projects/summary"
+import { execFileSync } from "node:child_process"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import type { PrismaClient } from "@prisma/client"
 
-async function verifyProjectSummaries() {
+async function verifyProjectSummaries(
+    prisma: PrismaClient,
+    getProjectSummaryPage: typeof import("../lib/projects/summary").getProjectSummaryPage
+) {
     const expectedIds = (
         await prisma.project.findMany({
             select: { id: true },
@@ -37,7 +42,10 @@ async function verifyProjectSummaries() {
     }
 }
 
-async function verifyLmsPagination() {
+async function verifyLmsPagination(
+    prisma: PrismaClient,
+    getLmsModuleDataPage: typeof import("../lib/lms-tasks/db").getLmsModuleDataPage
+) {
     const first = await getLmsModuleDataPage({
         page: 1,
         pageSize: 50,
@@ -64,14 +72,46 @@ async function verifyLmsPagination() {
 }
 
 async function main() {
-    await verifyProjectSummaries()
-    await verifyLmsPagination()
-    process.stdout.write("DATA_QUERY_OPTIMIZATIONS_OK\n")
+    let temporaryDirectory: string | null = null
+    let prisma: PrismaClient | null = null
+
+    try {
+        if (!process.env.DATABASE_URL) {
+            temporaryDirectory = mkdtempSync(join(tmpdir(), "crm-data-query-"))
+            const databasePath = join(temporaryDirectory, "data-query.db")
+            process.env.DATABASE_URL = `file:${databasePath}`
+            execFileSync(
+                process.platform === "win32" ? "npx.cmd" : "npx",
+                ["prisma", "db", "push", "--skip-generate"],
+                {
+                    cwd: process.cwd(),
+                    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
+                    stdio: "pipe",
+                }
+            )
+        }
+
+        const [prismaModule, lmsDbModule, projectSummaryModule] = await Promise.all([
+            import("../lib/prisma"),
+            import("../lib/lms-tasks/db"),
+            import("../lib/projects/summary"),
+        ])
+        prisma = prismaModule.default
+
+        await verifyProjectSummaries(prisma, projectSummaryModule.getProjectSummaryPage)
+        await verifyLmsPagination(prisma, lmsDbModule.getLmsModuleDataPage)
+        process.stdout.write("DATA_QUERY_OPTIMIZATIONS_OK\n")
+    } finally {
+        if (prisma) {
+            await prisma.$disconnect()
+        }
+        if (temporaryDirectory) {
+            rmSync(temporaryDirectory, { recursive: true, force: true })
+        }
+    }
 }
 
-main()
-    .catch((error) => {
-        console.error(error)
-        process.exitCode = 1
-    })
-    .finally(async () => prisma.$disconnect())
+main().catch((error) => {
+    console.error(error)
+    process.exitCode = 1
+})
