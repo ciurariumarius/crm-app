@@ -76,20 +76,19 @@ async function main() {
     let prisma: PrismaClient | null = null
 
     try {
-        if (!process.env.DATABASE_URL) {
-            temporaryDirectory = mkdtempSync(join(tmpdir(), "crm-data-query-"))
-            const databasePath = join(temporaryDirectory, "data-query.db")
-            process.env.DATABASE_URL = `file:${databasePath}`
-            execFileSync(
-                process.platform === "win32" ? "npx.cmd" : "npx",
-                ["prisma", "db", "push", "--skip-generate"],
-                {
-                    cwd: process.cwd(),
-                    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
-                    stdio: "pipe",
-                }
-            )
-        }
+        temporaryDirectory = mkdtempSync(join(tmpdir(), "crm-data-query-"))
+        const databasePath = join(temporaryDirectory, "data-query.db")
+        const databaseUrl = `file:${databasePath}`
+        process.env.DATABASE_URL = databaseUrl
+        execFileSync(
+            process.platform === "win32" ? "npx.cmd" : "npx",
+            ["prisma", "db", "push", "--skip-generate"],
+            {
+                cwd: process.cwd(),
+                env: { ...process.env, DATABASE_URL: databaseUrl },
+                stdio: "pipe",
+            }
+        )
 
         const [prismaModule, lmsDbModule, projectSummaryModule] = await Promise.all([
             import("../lib/prisma"),
