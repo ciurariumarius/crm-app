@@ -2,14 +2,13 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { format, isToday, isPast } from "date-fns"
 import { cn, formatProjectName } from "@/lib/utils"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { useDebounce } from "@/hooks/use-debounce"
 import { deleteTasks, updateTasksStatus } from "@/lib/actions/tasks"
 import { toast } from "sonner"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
-import { AlertTriangle, ArrowRight, CalendarClock, Check, ChevronDown, Clock, Lightbulb, MoreVertical, Pause, Play, Plus, Square, Target, Trash2 } from "lucide-react"
+import { AlertTriangle, ArrowRight, Check, ChevronDown, Clock, Lightbulb, MoreVertical, Pause, Play, Plus, Square, Trash2 } from "lucide-react"
 import { TaskDetails } from "./task-details"
 import { Button } from "@/components/ui/button"
 import { TASK_CARD_SHELL_CLASS, TaskGridCard } from "./task-grid-card"
@@ -247,9 +246,9 @@ export function TasksCardView({
 
     const getUrgencyIcon = (urgency: string) => {
         const normalizedUrgency = normalizeTaskUrgency(urgency)
-        if (normalizedUrgency === "Urgent") return <AlertTriangle className="h-4 w-4 fill-[var(--state-urgent)] text-white" />
-        if (normalizedUrgency === "Idea") return <Lightbulb className="h-3 w-3" />
-        return <ArrowRight className="h-3 w-3" strokeWidth={3} />
+        if (normalizedUrgency === "High") return <AlertTriangle className="h-4 w-4 fill-rose-500 text-white" />
+        if (normalizedUrgency === "Low") return <Lightbulb className="h-3 w-3 text-zinc-400" />
+        return <ArrowRight className="h-3 w-3 text-amber-500" strokeWidth={3} />
     }
 
     const gridClass = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
@@ -489,8 +488,8 @@ export function TasksCardView({
                 </div>
                 <div>TASK / PROJECT / DESCRIPTION</div>
                 <div className="w-24 text-center">STATUS</div>
-                <div className="w-32 text-center">DEADLINE</div>
-                <div className="w-48 text-right">TIME TRACKING</div>
+                <div className="w-32 text-center">PRIORITY</div>
+                <div className="w-48 text-right">TIME</div>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -505,8 +504,7 @@ export function TasksCardView({
                     const currentTimerDuration = isActiveTimerThisTask ? timerState.elapsedSeconds : 0
                     const totalSeconds = logsDuration + currentTimerDuration
                     const timeString = formatTimer(totalSeconds)
-                    const isOverdue = task.deadline && isPast(new Date(task.deadline))
-                    const isDueToday = task.deadline && isToday(new Date(task.deadline))
+                    const priority = normalizeTaskUrgency(task.urgency)
                     const activeHighlight = isRunning ? "text-[var(--primary)]" : "text-foreground"
 
                     return (
@@ -612,17 +610,20 @@ export function TasksCardView({
                                 </div>
 
                                 <div className="flex w-auto shrink-0 lg:w-32 lg:justify-center">
-                                    {task.deadline ? (
-                                        <div className={cn(
-                                            "flex items-center gap-1.5 text-xs font-semibold tracking-tight uppercase",
-                                            isOverdue ? "text-[var(--state-urgent)]" : "text-[var(--state-review)]"
-                                        )}>
-                                            {isOverdue ? <Clock className="w-3.5 h-3.5" /> : isDueToday ? <CalendarClock className="w-4 h-4" /> : <Target className="w-3.5 h-3.5" />}
-                                            {isDueToday ? "TODAY" : format(new Date(task.deadline), "dd MMM")}
-                                        </div>
-                                    ) : (
-                                        <div className="text-xs font-medium text-muted-foreground/30">-</div>
-                                    )}
+                                    {(() => {
+                                        const pillClass = priority === "High"
+                                            ? "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 font-semibold"
+                                            : priority === "Low"
+                                              ? "border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400 font-medium"
+                                              : "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium"
+                                        const dotClass = priority === "High" ? "bg-rose-500" : priority === "Low" ? "bg-zinc-400" : "bg-amber-500"
+                                        return (
+                                            <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs", pillClass)}>
+                                                <span className={cn("h-1.5 w-1.5 rounded-full", dotClass)} />
+                                                <span>{priority}</span>
+                                            </span>
+                                        )
+                                    })()}
                                 </div>
 
                                 <div className="flex w-auto shrink-0 items-center justify-end gap-3.5 lg:w-48" onClick={e => e.stopPropagation()}>
@@ -634,11 +635,7 @@ export function TasksCardView({
                                     ) : <div className="flex flex-col items-end">
                                         <div className="text-sm font-bold tracking-tighter flex items-baseline gap-1">
                                             <span className={activeHighlight}>{timeString}</span>
-                                            {task.estimatedMinutes && (
-                                                <span className="text-muted-foreground/40 text-xs font-medium">/ {Math.floor(task.estimatedMinutes / 60)}h {task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}</span>
-                                            )}
                                         </div>
-                                        <div className="text-xs font-medium text-muted-foreground mt-0.5">Spent / Est</div>
                                     </div>}
                                     {task.taskScope !== "LMS" ? <div className="flex items-center gap-1.5 rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] p-1">
                                         <button

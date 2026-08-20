@@ -889,3 +889,22 @@
     scale: 1;
   }
 }
+
+.notes-thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 205, 202, 0.6) transparent;
+}
+.notes-thin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.notes-thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.notes-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(200, 205, 202, 0.6);
+  border-radius: 9999px;
+}
+.notes-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 165, 162, 0.9);
+}

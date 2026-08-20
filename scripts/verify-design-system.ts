@@ -41,7 +41,6 @@ function run() {
     "app/(dashboard)/vault/page.tsx",
     "app/(dashboard)/settings/settings-content.tsx",
     "app/(dashboard)/lms-analysis/layout.tsx",
-    "components/notes/notes-workspace.tsx",
     "components/ppc/google-ads-dashboard.tsx",
   ]
   for (const filePath of requiredHeaderSources) {

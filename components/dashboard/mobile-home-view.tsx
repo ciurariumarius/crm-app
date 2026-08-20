@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { format, isPast, isToday } from "date-fns"
+import { format } from "date-fns"
 import {
     CheckCircle2,
     ChevronDown,
@@ -26,6 +26,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn, formatCurrency, formatProjectName, formatRelativeDate } from "@/lib/utils"
+import { normalizeTaskUrgency } from "@/lib/status"
 import { settlePartnerDebt } from "@/lib/actions/settlement"
 import { ProjectSheetContext } from "@/components/projects/project-sheet-wrapper"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
@@ -50,6 +51,7 @@ type TaskLite = {
     id: string
     name: string
     status?: string | null
+    urgency?: string | null
     deadline?: Date | string | null
     project?: {
         name?: string | null
@@ -272,13 +274,12 @@ export function MobileHomeView({
                 ) : (
                     <div className="space-y-3">
                         {visibleTasks.map((task) => {
-                            const deadline = task?.deadline ? new Date(task.deadline) : null
-                            const isOverdue = Boolean(
-                                deadline &&
-                                task?.status !== "Completed" &&
-                                isPast(deadline) &&
-                                !isToday(deadline)
-                            )
+                            const priority = normalizeTaskUrgency(task?.urgency)
+                            const priorityPillClass = priority === "High"
+                                ? "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 font-semibold"
+                                : priority === "Low"
+                                  ? "border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400 font-medium"
+                                  : "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium"
                             const projectLabel = task?.project ? formatProjectName(task.project) : "No Project"
 
                             return (
@@ -292,16 +293,14 @@ export function MobileHomeView({
                                     <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
                                         {projectLabel}
                                     </p>
-                                    <div className="mt-3 flex items-center gap-2">
-                                        {isOverdue ? (
-                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--state-overdue)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--state-overdue)_16%,transparent)] px-2.5 py-1 text-xs font-semibold tracking-[0.03em] text-[var(--state-overdue)]">
-                                                Overdue
-                                            </Badge>
-                                        ) : (
-                                            <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--primary-container)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-2.5 py-1 text-xs font-semibold tracking-[0.03em] text-[var(--primary)]">
-                                                {task?.status || "Active"}
-                                            </Badge>
-                                        )}
+                                    <div className="mt-3 flex items-center justify-between gap-2">
+                                        <Badge className="rounded-full border border-[color:color-mix(in_srgb,var(--primary-container)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--primary-container)_16%,var(--surface-lowest))] px-2.5 py-1 text-xs font-semibold tracking-[0.03em] text-[var(--primary)]">
+                                            {task?.status || "Active"}
+                                        </Badge>
+                                        <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs", priorityPillClass)}>
+                                            <span className={cn("h-1.5 w-1.5 rounded-full", priority === "High" ? "bg-rose-500" : priority === "Low" ? "bg-zinc-400" : "bg-amber-500")} />
+                                            <span>{priority}</span>
+                                        </span>
                                     </div>
                                 </button>
                             )

@@ -15,22 +15,26 @@ type NotesSearchInputProps = {
 
 export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchInputProps>(
   function NotesSearchInput(
-    { value, onChange, showShortcutHint = true, variant = "default", density = "comfortable" },
+    { value, onChange, showShortcutHint = true, density = "comfortable" },
     ref
   ) {
     const hasValue = value.trim().length > 0
-    const isApple = variant === "apple"
-    const inputHeight = density === "compact" ? "h-9" : "h-10"
+    const inputHeight = density === "compact" ? "h-8.5" : "h-9"
 
     return (
-      <div className={cn("relative w-full md:mx-auto md:max-w-[560px]", inputHeight)}>
-        <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+      <div className={cn("relative w-full", inputHeight)}>
+        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
           <Search className="h-4 w-4" />
         </div>
         <Input
           ref={ref}
-          placeholder="Search"
+          type="text"
+          placeholder="Search notes..."
           value={value}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Escape" && hasValue) {
@@ -39,29 +43,21 @@ export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchIn
             }
           }}
           className={cn(
-            "w-full pl-11 pr-16 text-sm font-medium outline-none transition placeholder:font-medium placeholder:text-[var(--text-muted)] focus-visible:ring-offset-0",
-            inputHeight,
-            isApple
-              ? "rounded-[14px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,var(--surface-lowest))] text-[var(--text-primary)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_75%,transparent)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_18%,transparent)]"
-              : "rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-[var(--shadow-apple)] focus-visible:border-[var(--brand-cyan)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_20%,transparent)]"
+            "w-full rounded-xl border border-[#ECEFEB] bg-white dark:bg-zinc-900 pl-9 pr-12 text-xs font-normal text-zinc-900 dark:text-zinc-100 outline-none transition placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:bg-white dark:focus-visible:bg-zinc-900 focus-visible:ring-0 shadow-none",
+            inputHeight
           )}
         />
-        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
           {showShortcutHint && !hasValue ? (
-            <kbd className="hidden h-6 items-center rounded-md border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-1.5 text-xs font-semibold text-[var(--text-muted)] md:inline-flex">
-              /
+            <kbd className="hidden h-5 items-center rounded border border-zinc-200/80 bg-zinc-200/50 px-1.5 text-xs font-medium text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 md:inline-flex">
+              ⌘K
             </kbd>
           ) : null}
           {hasValue ? (
             <button
               type="button"
               onClick={() => onChange("")}
-              className={cn(
-                "inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:outline-none",
-                isApple
-                  ? "text-[var(--text-muted)] hover:bg-[var(--surface-highest)] hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_24%,transparent)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--brand-cyan)_28%,transparent)]"
-              )}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-700 focus-visible:outline-none"
               aria-label="Clear search"
             >
               <X className="h-3.5 w-3.5" />

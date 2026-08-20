@@ -27,8 +27,6 @@ export function ShellFrame({
         window.scrollTo({ top: 0, left: 0 })
     }, [pathname])
 
-    const isNotesPage = pathname?.startsWith("/notes")
-
     return (
         <div className="min-h-dvh bg-[var(--bg-canvas)] md:p-2 xl:p-4">
             <div className="relative flex min-h-dvh bg-[var(--background)] md:min-h-[calc(100dvh-1rem)] md:rounded-[14px] md:border md:border-[color:color-mix(in_srgb,var(--line-subtle)_84%,transparent)] md:shadow-[var(--shadow-shell)] xl:min-h-[calc(100dvh-2rem)] xl:rounded-[20px]">
@@ -40,10 +38,7 @@ export function ShellFrame({
                         isDesktopCollapsed ? "md:pl-[80px]" : "md:pl-[232px]"
                     )}
                 >
-                    <main className={cn(
-                        "cockpit-page-enter min-h-full max-w-full flex-1 overflow-x-clip",
-                        isNotesPage ? "flex flex-col" : "px-4 pb-6 pt-4 md:px-5 md:pb-7 md:pt-5 xl:px-7 xl:pb-8 xl:pt-7 2xl:px-8"
-                    )}>
+                    <main className="cockpit-page-enter min-h-full max-w-full flex-1 overflow-x-clip px-4 pb-6 pt-4 md:px-5 md:pb-7 md:pt-5 xl:px-7 xl:pb-8 xl:pt-7 2xl:px-8">
                         {children}
                     </main>
                 </div>

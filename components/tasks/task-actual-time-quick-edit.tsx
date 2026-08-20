@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Clock3, Loader2, Pencil } from "lucide-react"
+import { Clock3, Loader2, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { setTaskTimeTotal } from "@/lib/actions/time"
@@ -101,17 +101,19 @@ export function TaskActualTimeQuickEdit({
                     disabled={disabled}
                     onClick={(event) => event.stopPropagation()}
                     className={cn(
-                        "group/time inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50",
+                        "group/time inline-flex h-7 min-w-0 items-center gap-1.5 rounded-lg border px-2 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50",
                         savedMinutes > 0
-                            ? "border-[color:color-mix(in_srgb,var(--brand-primary)_24%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--brand-primary)_8%,var(--surface-lowest))] text-[var(--brand-primary)]"
-                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                            ? "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400 font-bold"
+                            : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-zinc-300"
                     )}
                     aria-label={`Edit total time for ${taskName || "task"}`}
                     title="Edit total time"
                 >
-                    <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                    <Clock3 className="h-3.5 w-3.5 shrink-0 text-current" />
                     <span className="truncate">{formatTaskTrackedSeconds(savedMinutes * 60)}</span>
-                    <Pencil className="h-3 w-3 shrink-0 opacity-45 transition-opacity group-hover/time:opacity-100" />
+                    {savedMinutes === 0 ? (
+                        <Plus className="h-3 w-3 shrink-0 opacity-70 transition-opacity group-hover/time:opacity-100" />
+                    ) : null}
                 </button>
             </PopoverTrigger>
 

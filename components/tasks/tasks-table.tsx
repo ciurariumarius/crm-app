@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn, formatRelativeDate } from "@/lib/utils"
-import { normalizeTaskStatus } from "@/lib/status"
-import { Calendar as CalendarIcon, Clock, Users, Globe, Target } from "lucide-react"
+import { normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
+import { Clock, Users, Globe, Target } from "lucide-react"
 import { TaskDetails, type TaskDetailsTask } from "./task-details"
 import { useTimer } from "@/components/providers/timer-provider"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
@@ -97,7 +97,7 @@ export function TasksTable({ tasks }: TasksTableProps) {
                             <TableHead className="w-[300px]">Task Name</TableHead>
                             <TableHead>Project / Partner</TableHead>
                             <TableHead className="w-[140px]">Status</TableHead>
-                            <TableHead className="w-[160px]">Deadline</TableHead>
+                            <TableHead className="w-[120px]">Priority</TableHead>
                             <TableHead className="w-[140px] text-right">Duration</TableHead>
                             <TableHead className="w-[160px] text-right">Last Update</TableHead>
                         </TableRow>
@@ -175,22 +175,22 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                         </SelectContent>
                                     </Select>
                                 </TableCell>
-                                <TableCell onClick={() => setSelectedTask(task)} className="cell-tech">
-                                    <div className="flex items-center gap-2 text-xs font-medium">
-                                        <CalendarIcon className={cn(
-                                            "h-3 w-3",
-                                            task.deadline && new Date(task.deadline) < new Date() && task.status !== "Completed" ? "text-rose-500" : "text-muted-foreground"
-                                        )} />
-                                        {task.deadline ? (
-                                            <span className={cn(
-                                                task.deadline && new Date(task.deadline) < new Date() && task.status !== "Completed" ? "text-rose-500" : "text-muted-foreground"
-                                            )}>
-                                                {formatRelativeDate(task.deadline)}
+                                <TableCell onClick={() => setSelectedTask(task)}>
+                                    {(() => {
+                                        const priority = normalizeTaskUrgency(task.urgency)
+                                        const pillClass = priority === "High"
+                                            ? "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 font-semibold"
+                                            : priority === "Low"
+                                              ? "border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400 font-medium"
+                                              : "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium"
+                                        const dotClass = priority === "High" ? "bg-rose-500" : priority === "Low" ? "bg-zinc-400" : "bg-amber-500"
+                                        return (
+                                            <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs", pillClass)}>
+                                                <span className={cn("h-1.5 w-1.5 rounded-full", dotClass)} />
+                                                <span>{priority}</span>
                                             </span>
-                                        ) : (
-                                            <span className="text-muted-foreground/30 italic">No deadline</span>
-                                        )}
-                                    </div>
+                                        )
+                                    })()}
                                 </TableCell>
                                 <TableCell onClick={() => setSelectedTask(task)} className="cell-financial">
                                     {(() => {
@@ -200,32 +200,22 @@ export function TasksTable({ tasks }: TasksTableProps) {
                                             : Math.max(0, task.lmsWorkEntry?.durationMinutes || 0) * 60
                                         const currentTimerDuration = timerState.taskId === task.id ? timerState.elapsedSeconds : 0
                                         const totalSeconds = logsDuration + currentTimerDuration
-                                        const hasTimeLogs = totalSeconds > 0
-                                        const useFallback = task.status === "Completed" && !hasTimeLogs && task.estimatedMinutes
 
-                                        if (!hasTimeLogs && !useFallback) {
-                                            if (task.estimatedMinutes) {
-                                                return (
-                                                    <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground font-medium opacity-80">
-                                                        <Target className="h-3 w-3 opacity-50" />
-                                                        <span>Est: {task.estimatedMinutes >= 60 ? `${Math.floor(task.estimatedMinutes / 60)}h ${task.estimatedMinutes % 60 > 0 ? `${task.estimatedMinutes % 60}m` : ''}` : `${task.estimatedMinutes}m`}</span>
-                                                    </div>
-                                                )
-                                            }
-                                            return <span className="text-xs text-muted-foreground/50 italic">No tracking</span>
+                                        if (totalSeconds <= 0) {
+                                            return <span className="text-xs text-muted-foreground/50 italic">0m</span>
                                         }
 
-                                        const displaySeconds = useFallback ? ((task.estimatedMinutes ?? 0) * 60) : totalSeconds
-                                        const hours = Math.floor(displaySeconds / 3600)
-                                        const mins = Math.floor((displaySeconds % 3600) / 60)
+                                        const hours = Math.floor(totalSeconds / 3600)
+                                        const mins = Math.floor((totalSeconds % 3600) / 60)
+                                        const timeText = hours > 0 && mins > 0 ? `${hours}h ${mins}m` : hours > 0 ? `${hours}h` : `${mins}m`
 
                                         return (
                                             <div className={cn(
                                                 "flex items-center justify-end gap-2 text-xs font-medium",
-                                                useFallback ? "text-amber-600" : (timerState.taskId === task.id && timerState.isRunning ? "text-primary animate-pulse font-bold" : "text-emerald-600")
+                                                timerState.taskId === task.id && timerState.isRunning ? "text-primary animate-pulse font-bold" : "text-emerald-600"
                                             )}>
-                                                {useFallback ? <Target className="h-3 w-3 opacity-50" /> : <Clock className="h-3 w-3 opacity-50" />}
-                                                <span>{hours}h {mins}m {useFallback ? "(Est)" : ""}</span>
+                                                <Clock className="h-3 w-3 opacity-50" />
+                                                <span>{timeText}</span>
                                             </div>
                                         )
                                     })()}

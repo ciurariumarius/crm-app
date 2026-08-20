@@ -8,7 +8,7 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
@@ -18,12 +18,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Calendar } from "@/components/ui/calendar"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,7 +25,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock, Check, Loader2, X, Play, Pause, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, FileText, Info, MoreHorizontal, Trash2 } from "lucide-react"
+import { Clock, Check, Loader2, X, Play, Pause, Pencil, Plus, ArrowUpRight, FolderOpen, Globe, FileText, Info, MoreHorizontal, Trash2, ChevronDown } from "lucide-react"
 import { updateTask, deleteTask, getTaskHistory, updateTasksStatus } from "@/lib/actions/tasks"
 import { NOTES_WRITE_PROTOCOL_VERSION } from "@/lib/notes/write-protocol"
 import { normalizeRichTextContent } from "@/lib/notes/content"
@@ -51,7 +45,6 @@ import { SidePanelChip, SidePanelDetailRow, SidePanelInfoCard, SidePanelSectionT
 import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
 import { TaskActualTimeQuickEdit } from "@/components/tasks/task-actual-time-quick-edit"
 import { LmsIcon } from "@/components/lms/lms-icon"
-import { TaskEstimatedTimeQuickEdit } from "@/components/tasks/task-estimated-time-quick-edit"
 import { TaskFreelanceProjectField, TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 import {
@@ -59,7 +52,6 @@ import {
     taskTargetsEqual,
     type TaskTargetSnapshot,
 } from "@/components/tasks/task-target-sync"
-import { MAX_TASK_ESTIMATED_MINUTES, parseTaskEstimatedMinutesInput } from "@/lib/tasks/estimated-time"
 
 type TaskTimeLog = {
     id?: string
@@ -178,9 +170,7 @@ export function TaskDetails({
     const [name, setName] = React.useState("")
     const [description, setDescription] = React.useState("")
     const [status, setStatus] = React.useState("")
-    const [urgency, setUrgency] = React.useState("")
-    const [deadline, setDeadline] = React.useState<Date | undefined>(undefined)
-    const [estimatedMinutes, setEstimatedMinutes] = React.useState("")
+    const [urgency, setUrgency] = React.useState("Medium")
     const [taskScope, setTaskScope] = React.useState<TaskScopeValue>("GENERAL")
     const [projectId, setProjectId] = React.useState("")
     const [lmsAllocationId, setLmsAllocationId] = React.useState("")
@@ -218,9 +208,7 @@ export function TaskDetails({
         lmsTaskTypeId: "",
     })
     const detailsBaselineRef = React.useRef({
-        urgency: "Normal",
-        deadlineTime: undefined as number | undefined,
-        estimatedMinutes: "",
+        urgency: "Medium",
     })
     const awaitingTargetRefreshRef = React.useRef(false)
     const saveQueueRef = React.useRef<Promise<void>>(Promise.resolve())
@@ -239,6 +227,7 @@ export function TaskDetails({
         setDisplayTrackedSeconds(taskLoggedSeconds)
     }, [task?.id, taskLoggedSeconds])
 
+    // Load initial data
     React.useEffect(() => {
         if (!task) {
             selectedTaskIdRef.current = null
@@ -265,12 +254,8 @@ export function TaskDetails({
             setDescription(normalizeRichTextContent(task.description))
             setStatus(normalizeTaskStatus(task.status))
             setUrgency(normalizeTaskUrgency(task.urgency))
-            setDeadline(task.deadline ? new Date(task.deadline) : undefined)
-            setEstimatedMinutes(task.estimatedMinutes == null ? "" : String(task.estimatedMinutes))
             detailsBaselineRef.current = {
                 urgency: normalizeTaskUrgency(task.urgency),
-                deadlineTime: task.deadline ? new Date(task.deadline).getTime() : undefined,
-                estimatedMinutes: task.estimatedMinutes == null ? "" : String(task.estimatedMinutes),
             }
             setIsManualTimeOpen(false)
             setManualMinutes("")
@@ -338,18 +323,6 @@ export function TaskDetails({
         || currentTarget.lmsTaskTypeId !== savedTarget.lmsTaskTypeId
     const detailsDirty = targetDirty
         || urgency !== detailsBaselineRef.current.urgency
-        || deadline?.getTime() !== detailsBaselineRef.current.deadlineTime
-        || estimatedMinutes !== detailsBaselineRef.current.estimatedMinutes
-    const parsedQuickEstimatedMinutes = parseTaskEstimatedMinutesInput(estimatedMinutes)
-    const quickEstimatedMinutes = typeof parsedQuickEstimatedMinutes === "number"
-        ? parsedQuickEstimatedMinutes
-        : null
-    const handleQuickEstimatedTimeSaved = React.useCallback((nextMinutes: number | null) => {
-        const nextValue = nextMinutes == null ? "" : String(nextMinutes)
-        setEstimatedMinutes(nextValue)
-        detailsBaselineRef.current.estimatedMinutes = nextValue
-        setHasLoadedTaskHistory(false)
-    }, [])
     const bumpTargetRevision = React.useCallback(() => {
         targetRevisionRef.current += 1
     }, [])
@@ -363,19 +336,11 @@ export function TaskDetails({
     const handleUpdate = React.useCallback((): Promise<boolean> => {
         if (!task) return Promise.resolve(false)
 
-        const parsedEstimatedMinutes = parseTaskEstimatedMinutesInput(estimatedMinutes)
-        if (parsedEstimatedMinutes === undefined) {
-            toast.error(`Planned time must be between 1 and ${MAX_TASK_ESTIMATED_MINUTES} minutes`)
-            return Promise.resolve(false)
-        }
-
         const taskId = task.id
         const saveRevision = targetRevisionRef.current
         const targetSnapshot = currentTarget
         const updateSnapshot = {
             urgency,
-            deadline,
-            estimatedMinutes: parsedEstimatedMinutes,
             taskScope,
             projectId: taskScope === "FREELANCE" ? projectId || null : null,
             lmsAllocationId: taskScope === "LMS" ? lmsAllocationId || null : null,
@@ -403,8 +368,6 @@ export function TaskDetails({
                         setSavedTarget(targetSnapshot)
                         detailsBaselineRef.current = {
                             urgency,
-                            deadlineTime: deadline?.getTime(),
-                            estimatedMinutes,
                         }
                     }
                     toast.success("Task updated")
@@ -428,7 +391,7 @@ export function TaskDetails({
 
         saveQueueRef.current = queuedSave.then(() => undefined, () => undefined)
         return queuedSave
-    }, [currentTarget, deadline, estimatedMinutes, lmsAllocationId, lmsTaskTypeId, projectId, router, task, taskScope, urgency])
+    }, [currentTarget, lmsAllocationId, lmsTaskTypeId, projectId, router, task, taskScope, urgency])
 
     const persistTaskDescription = React.useCallback(async (nextDescription: string) => {
         if (!task?.id || nextDescription === lastSavedDescriptionRef.current) return true
@@ -711,8 +674,6 @@ export function TaskDetails({
 
     const cancelDetailsEdit = () => {
         setUrgency(detailsBaselineRef.current.urgency)
-        setDeadline(detailsBaselineRef.current.deadlineTime ? new Date(detailsBaselineRef.current.deadlineTime) : undefined)
-        setEstimatedMinutes(detailsBaselineRef.current.estimatedMinutes)
         setTaskScope(savedTarget.taskScope)
         setProjectId(savedTarget.projectId)
         setLmsAllocationId(savedTarget.lmsAllocationId)
@@ -977,9 +938,8 @@ export function TaskDetails({
                                     <div className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[var(--shadow-apple)]">
                                         <SidePanelDetailRow label="Target" value={taskScope === "LMS" ? "LMS" : taskScope === "FREELANCE" ? "Freelance" : "Not assigned"} />
                                         <SidePanelDetailRow label="Priority" value={urgency} />
-                                        <SidePanelDetailRow label="Deadline" value={deadline ? format(deadline, "dd MMM yyyy") : "No deadline"} />
                                         <SidePanelDetailRow
-                                            label="Tracked time"
+                                            label="Time"
                                             value={(
                                                 <TaskActualTimeQuickEdit
                                                     taskId={task.id}
@@ -989,140 +949,62 @@ export function TaskDetails({
                                                 />
                                             )}
                                         />
-                                        <SidePanelDetailRow
-                                            label="Planned time"
-                                            value={(
-                                                <TaskEstimatedTimeQuickEdit
-                                                    taskId={task.id}
-                                                    taskName={name}
-                                                    estimatedMinutes={quickEstimatedMinutes}
-                                                    onSaved={handleQuickEstimatedTimeSaved}
-                                                />
-                                            )}
-                                        />
                                     </div>
                                 ) : (
                                     <div className="space-y-5 rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 sm:p-5">
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <div className="flex items-center">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className={cn(
-                                                "group/priority relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
-                                                urgency === "Urgent" && "border-[color:color-mix(in_srgb,var(--state-urgent)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-urgent)_10%,var(--surface-lowest))] text-[var(--state-urgent)] hover:border-[var(--state-urgent)]",
-                                                urgency === "Normal" && "border-[color:color-mix(in_srgb,var(--state-warning)_25%,var(--line-subtle))] bg-[var(--warning-surface)] text-[var(--warning-foreground)] hover:border-[var(--state-warning)]",
-                                                urgency === "Idea" && "border-[color:color-mix(in_srgb,var(--state-review)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)] hover:border-[var(--state-review)]"
-                                            )}
-                                        >
-                                            <div className="absolute inset-0 translate-y-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_22%,transparent)] transition-transform duration-300 group-hover/priority:translate-y-0" />
-                                            <span className={cn(
-                                                "relative z-10 h-2.5 w-2.5 rounded-full shadow-sm",
-                                                urgency === "Urgent" && "bg-[var(--state-urgent)]",
-                                                urgency === "Normal" && "bg-[var(--state-warning)]",
-                                                urgency === "Idea" && "bg-[var(--brand-primary)]"
-                                            )} />
-                                            <span className="relative z-10 text-xs font-bold tracking-[0.01em] sm:text-[13px]">{urgency}</span>
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-36 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
-                                        {(["Urgent", "Normal", "Idea"] as const).map((urgencyOption) => (
-                                            <DropdownMenuItem
-                                                key={urgencyOption}
-                                                onSelect={() => setUrgency(urgencyOption)}
-                                                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
-                                            >
-                                                <span className={cn(
-                                                    "mr-2 h-2 w-2 rounded-full",
-                                                    urgencyOption === "Urgent" && "bg-[var(--state-urgent)]",
-                                                    urgencyOption === "Normal" && "bg-[var(--state-warning)]",
-                                                    urgencyOption === "Idea" && "bg-[var(--brand-primary)]"
-                                                )} />
-                                                {urgencyOption}
-                                                {urgency === urgencyOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold text-[var(--text-secondary)]">Priority</Label>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        className={cn(
+                                                            "group/priority relative flex h-10 w-full items-center justify-between overflow-hidden rounded-full border px-3 transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
+                                                            urgency === "High" && "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 font-semibold",
+                                                            urgency === "Low" && "border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400 font-medium",
+                                                            urgency === "Medium" && "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium"
+                                                        )}
+                                                    >
+                                                        <span className="flex items-center gap-2">
+                                                            <span className={cn(
+                                                                "h-2 w-2 rounded-full",
+                                                                urgency === "High" && "bg-rose-500",
+                                                                urgency === "Medium" && "bg-amber-500",
+                                                                urgency === "Low" && "bg-zinc-400"
+                                                            )} />
+                                                            <span className="text-xs font-bold tracking-[0.01em] sm:text-[13px]">{urgency}</span>
+                                                        </span>
+                                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" className="w-48 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
+                                                    {(["High", "Medium", "Low"] as const).map((urgencyOption) => (
+                                                        <DropdownMenuItem
+                                                            key={urgencyOption}
+                                                            onSelect={() => setUrgency(urgencyOption)}
+                                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
+                                                        >
+                                                            <span className={cn(
+                                                                "mr-2 h-2 w-2 rounded-full",
+                                                                urgencyOption === "High" && "bg-rose-500",
+                                                                urgencyOption === "Medium" && "bg-amber-500",
+                                                                urgencyOption === "Low" && "bg-zinc-400"
+                                                            )} />
+                                                            {urgencyOption}
+                                                            {urgency === urgencyOption && <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-muted)]" />}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
 
-                            <div className="flex flex-col justify-center">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className={cn(
-                                                "group/deadline relative flex h-10 w-full items-center justify-between overflow-hidden rounded-full border px-3 shadow-[var(--shadow-apple)] transition-all duration-300 active:scale-[0.98] sm:h-11 sm:px-4",
-                                                deadline
-                                                    ? "border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] bg-[var(--sidebar-accent)] text-[var(--primary)] hover:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))]"
-                                                    : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
-                                            )}
-                                        >
-                                            <span className="flex min-w-0 items-center gap-2">
-                                                <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
-                                                <span className="truncate text-xs font-bold tracking-[0.01em] sm:text-[13px]">
-                                                    {deadline ? format(deadline, "dd MMM yyyy") : "Set deadline"}
+                                        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-5">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <SidePanelSectionTitle title="Task target" icon={<FolderOpen className="h-3.5 w-3.5" />} />
+                                                <span className="text-xs font-medium text-[var(--text-muted)]">
+                                                    {taskScope === "LMS" ? "Shared with LMS" : taskScope === "FREELANCE" ? "Freelance workflow" : "Choose a target"}
                                                 </span>
-                                            </span>
-                                            <span className="ml-2 inline-flex shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--surface-lowest)_80%,transparent)] px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-                                                {deadline ? format(deadline, "EEE") : "None"}
-                                            </span>
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto rounded-xl p-0 pointer-events-auto" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={deadline}
-                                            onSelect={setDeadline}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
-
-                        <section className="space-y-2 border-t border-[var(--line-subtle)] pt-5">
-                            <div className="flex items-center justify-between gap-3">
-                                <SidePanelSectionTitle title="Planned time" icon={<Clock className="h-3.5 w-3.5" />} />
-                                <span className="text-xs font-medium text-[var(--text-muted)]">
-                                    {taskScope === "LMS" ? "Completion default" : "Estimate"}
-                                </span>
-                            </div>
-                            <div className="relative max-w-52">
-                                <Input
-                                    id="task-estimated-minutes"
-                                    type="number"
-                                    inputMode="numeric"
-                                    min={1}
-                                    max={MAX_TASK_ESTIMATED_MINUTES}
-                                    step={1}
-                                    value={estimatedMinutes}
-                                    onChange={(event) => setEstimatedMinutes(event.target.value)}
-                                    placeholder="ex. 60"
-                                    aria-label="Planned time in minutes"
-                                    className={cn(
-                                        "h-11 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-low)] pr-14 font-semibold",
-                                        parseTaskEstimatedMinutesInput(estimatedMinutes) === undefined && "border-[var(--state-urgent)]"
-                                    )}
-                                    disabled={loading}
-                                />
-                                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[var(--text-muted)]">
-                                    min
-                                </span>
-                            </div>
-                            <p className="text-xs leading-5 text-[var(--text-muted)]">
-                                Leave empty for no estimate. LMS uses this value as the suggested duration when completing the task.
-                            </p>
-                        </section>
-
-                        <section className="space-y-3 border-t border-[var(--line-subtle)] pt-5">
-                            <div className="flex items-center justify-between gap-3">
-                                <SidePanelSectionTitle title="Task target" icon={<FolderOpen className="h-3.5 w-3.5" />} />
-                                <span className="text-xs font-medium text-[var(--text-muted)]">
-                                    {taskScope === "LMS" ? "Shared with LMS" : taskScope === "FREELANCE" ? "Freelance workflow" : "Choose a target"}
-                                </span>
-                            </div>
+                                            </div>
                             <TaskTargetSelector
                                 value={taskScope}
                                 disabled={loading || pendingTaskId === task.id || status === "Completed"}

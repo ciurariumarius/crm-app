@@ -22,16 +22,25 @@ import {
     Copy,
     Download,
     ImagePlus,
+    Italic,
+    Link2,
     List,
     ListChecks,
     Table as TableIcon,
     Minus,
+    MoreHorizontal,
     Plus,
     Trash2,
     X,
 } from "lucide-react"
 import { Toggle } from "@/components/ui/toggle"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 const MAX_UPLOAD_FILE_BYTES = 12 * 1024 * 1024
@@ -667,7 +676,7 @@ export function RichTextEditor({
             ScreenshotImage,
             FolderMention,
             Placeholder.configure({
-                placeholder: placeholder ?? "Start writing...",
+                placeholder: placeholder !== undefined ? placeholder : (notesMode ? "" : "Start writing..."),
                 emptyEditorClass:
                     "is-editor-empty before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:pointer-events-none before:h-0",
             }),
@@ -940,13 +949,14 @@ export function RichTextEditor({
     }
 
     const currentViewerSrc = viewer.sources[viewer.index] || ""
-    const resolvedToolbarPinned = notesMode ? false : toolbarPinned
-    const resolvedToolbarVisibility = notesMode ? "focus" : toolbarVisibility
+    const isAppleNotesAppearance = notesMode && notesAppearance === "apple"
+    const resolvedToolbarPinned = isAppleNotesAppearance ? true : (notesMode ? false : toolbarPinned)
+    const resolvedToolbarVisibility = isAppleNotesAppearance ? "always" : (notesMode ? "focus" : toolbarVisibility)
     const resolvedToolbarPreset = notesMode ? "minimal" : toolbarPreset
     const resolvedToolbarTone = notesMode ? "quiet" : toolbarTone
-    const resolvedToolbarPlacement = notesMode ? "top-right" : toolbarPlacement
+    const resolvedToolbarPlacement = isAppleNotesAppearance ? "inline" : (notesMode ? "top-right" : toolbarPlacement)
     const isToolbarPinned = resolvedToolbarPinned
-    const showToolbar = !readOnly && (isToolbarPinned || resolvedToolbarVisibility === "always" || isFocused)
+    const showToolbar = !readOnly && (isAppleNotesAppearance || isToolbarPinned || resolvedToolbarVisibility === "always" || isFocused)
     const isMinimalToolbar = resolvedToolbarPreset === "minimal"
     const isCompactToolbar = isMinimalToolbar || isToolbarPinned
     const isTopRightToolbar = resolvedToolbarPlacement === "top-right"
@@ -954,7 +964,6 @@ export function RichTextEditor({
     const isDocumentLeft = mode === "document" && documentLayout === "left"
     const isQuietToolbar = resolvedToolbarTone === "quiet"
     const isReadingWidth = mode === "document" && documentWidth === "reading"
-    const isAppleNotesAppearance = notesMode && notesAppearance === "apple"
     const compactControlClass = notesMode ? "h-9 w-9 md:h-8 md:w-8 lg:h-7 lg:w-7" : "h-8 w-8"
     const compactIconClass = notesMode ? "h-[1rem] w-[1rem] md:h-[0.94rem] md:w-[0.94rem] lg:h-[0.86rem] lg:w-[0.86rem]" : "h-4 w-4"
     const notesControlClass = notesMode
@@ -968,7 +977,7 @@ export function RichTextEditor({
             <div
                 style={{ "--editor-keyboard-inset": `${keyboardInset}px` } as React.CSSProperties}
                 className={cn(
-                    "flex flex-col overflow-hidden rounded-xl transition-colors",
+                    "flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl transition-colors",
                     isTopRightToolbar && "relative",
                     variant === "default" &&
                         "border border-input bg-transparent focus-within:ring-1 focus-within:ring-ring",
@@ -985,7 +994,7 @@ export function RichTextEditor({
                     className
                 )}
             >
-                {showToolbar && (
+                {showToolbar && !isAppleNotesAppearance && (
                     <div
                         onMouseDown={(event) => {
                             const target = event.target as HTMLElement
@@ -1321,7 +1330,7 @@ export function RichTextEditor({
                     ref={editorViewportRef}
                     onMouseDown={handleEditorViewportMouseDown}
                     className={cn(
-                        "relative min-h-[150px] flex-1 overflow-y-auto p-4",
+                        "relative min-h-0 h-full flex-1 overflow-y-auto",
                         isTopRightToolbar && "pt-2",
                         variant === "plain" &&
                             mode === "panel" &&
@@ -1336,12 +1345,132 @@ export function RichTextEditor({
                         className={cn(
                             mode === "document" &&
                                 (isDocumentLeft
-                                    ? cn("h-full w-full px-3 pb-7", isReadingWidth && "max-w-[760px]")
+                                    ? cn(
+                                          "min-h-full w-full",
+                                          isAppleNotesAppearance ? "px-4 md:px-8 pt-3 pb-20" : "px-3 pb-7",
+                                          isReadingWidth && "max-w-[760px]"
+                                      )
                                     : "mx-auto w-full max-w-4xl px-6 pb-8")
                         )}
                     >
                         {mode === "document" && documentHeader ? (
-                            <div className="pb-2.5">{documentHeader}</div>
+                            <div className="pb-1">{documentHeader}</div>
+                        ) : null}
+                        {isAppleNotesAppearance && showToolbar ? (
+                            <div
+                                onMouseDown={(event) => {
+                                    const target = event.target as HTMLElement
+                                    if (target.closest("input, select, textarea")) return
+                                    event.preventDefault()
+                                }}
+                                className="mb-6 mt-1 flex w-fit items-center gap-3.5 rounded-xl border border-[#ECEFEB] bg-white px-3.5 py-1.5 shadow-none dark:border-zinc-800 dark:bg-zinc-900"
+                            >
+                                <Toggle
+                                    size="sm"
+                                    pressed={editor.isActive("heading", { level: 1 }) || editor.isActive("heading", { level: 2 })}
+                                    onPressedChange={(pressed) =>
+                                        pressed
+                                            ? editor.chain().focus().setHeading({ level: 1 }).run()
+                                            : editor.chain().focus().setParagraph().run()
+                                    }
+                                    className="h-7 px-2 text-xs font-semibold text-zinc-700 hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 rounded-lg transition-colors"
+                                    aria-label="Text format"
+                                    title="Text format"
+                                >
+                                    Aa
+                                </Toggle>
+                                <Toggle
+                                    size="sm"
+                                    pressed={editor.isActive("bold")}
+                                    onPressedChange={(pressed) =>
+                                        pressed
+                                            ? editor.chain().focus().setBold().run()
+                                            : editor.chain().focus().unsetBold().run()
+                                    }
+                                    className="h-7 w-7 p-0 text-zinc-700 hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 rounded-lg transition-colors"
+                                    aria-label="Bold"
+                                >
+                                    <Bold className="h-4 w-4" />
+                                </Toggle>
+                                <Toggle
+                                    size="sm"
+                                    pressed={editor.isActive("italic")}
+                                    onPressedChange={(pressed) =>
+                                        pressed
+                                            ? editor.chain().focus().setItalic().run()
+                                            : editor.chain().focus().unsetItalic().run()
+                                    }
+                                    className="h-7 w-7 p-0 text-zinc-700 hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 rounded-lg transition-colors"
+                                    aria-label="Italic"
+                                >
+                                    <Italic className="h-4 w-4" />
+                                </Toggle>
+                                <Toggle
+                                    size="sm"
+                                    pressed={editor.isActive("bulletList")}
+                                    onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
+                                    className="h-7 w-7 p-0 text-zinc-700 hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 rounded-lg transition-colors"
+                                    aria-label="Bullet list"
+                                >
+                                    <List className="h-4 w-4" />
+                                </Toggle>
+                                <Toggle
+                                    size="sm"
+                                    pressed={editor.isActive("taskList")}
+                                    onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
+                                    className="h-7 w-7 p-0 text-zinc-700 hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 rounded-lg transition-colors"
+                                    aria-label="Checklist"
+                                    title="Checklist"
+                                >
+                                    <ListChecks className="h-4 w-4" />
+                                </Toggle>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const previousUrl = editor.getAttributes("link")?.href
+                                        const url = window.prompt("URL", previousUrl || "")
+                                        if (url === null) return
+                                        if (url === "") {
+                                            editor.chain().focus().extendMarkRange("link").unsetLink().run()
+                                            return
+                                        }
+                                        editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
+                                    }}
+                                    className={cn(
+                                        "inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors",
+                                        editor.isActive("link") && "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                                    )}
+                                    aria-label="Link"
+                                    title="Link"
+                                >
+                                    <Link2 className="h-4 w-4" />
+                                </button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
+                                            aria-label="More formatting options"
+                                        >
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleCodeBlock().run()}>
+                                            <Code2 className="mr-2 h-4 w-4" /> Code block
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+                                            <TableIcon className="mr-2 h-4 w-4" /> Insert Table
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => imageInputRef.current?.click()} disabled={imageUploadsDisabled}>
+                                            <ImagePlus className="mr-2 h-4 w-4" /> Upload Image
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => editor.chain().focus().setHorizontalRule().run()}>
+                                            <Minus className="mr-2 h-4 w-4" /> Divider
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                         ) : null}
                         <EditorContent editor={editor} />
                     </div>

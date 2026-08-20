@@ -8,7 +8,6 @@ import { ListChecks, ArrowRight, Clock, Trash2 } from "lucide-react"
 import { TaskSheetContext } from "@/components/tasks/task-sheet-wrapper"
 import { deleteTasks } from "@/lib/actions/tasks"
 import { toast } from "sonner"
-import { isPast, isToday } from "date-fns"
 import { normalizeTaskUrgency } from "@/lib/status"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
@@ -42,8 +41,6 @@ interface FocusTask {
 const COLS = 3   // lg grid columns — must match grid class below
 const ROWS = 3   // how many rows to show before "See all"
 const VISIBLE_LIMIT = COLS * ROWS  // 9 cards
-const URGENT_VISIBLE_CAP_WHEN_OVERDUE_EXISTS = 6
-const OVERDUE_VISIBLE_CAP = 3
 
 export function FocusMatrix({ tasks }: FocusMatrixProps) {
     const { openTask } = React.useContext(TaskSheetContext)
@@ -58,13 +55,6 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
         tasks,
         (state, updatedTaskId: string) => state.filter((task) => task.id !== updatedTaskId)
     )
-
-    const isOverdueTask = (deadline: Date | string | null | undefined) => {
-        if (!deadline) return false
-        const date = new Date(deadline)
-        if (Number.isNaN(date.getTime())) return false
-        return isPast(date) && !isToday(date)
-    }
 
     const handleComplete = (taskId: string) => {
         const task = optimisticTasks.find((entry) => entry.id === taskId)
@@ -120,46 +110,20 @@ export function FocusMatrix({ tasks }: FocusMatrixProps) {
     )
 
     const getSortBucket = (task: FocusTask) => {
-        const urgency = normalizeTaskUrgency(task.urgency)
-        if (urgency === "Urgent") return 0
-        if (isOverdueTask(task.deadline)) return 1
+        const priority = normalizeTaskUrgency(task.urgency)
+        if (priority === "High") return 0
+        if (priority === "Medium") return 1
         return 2
     }
 
-    // Sort: urgent first, then overdue, then everything else
+    // Sort: High priority first, then Medium, then Low
     const sorted = [...optimisticTasks].sort((a, b) => {
         const bucketDiff = getSortBucket(a) - getSortBucket(b)
         if (bucketDiff !== 0) return bucketDiff
-
-        // same bucket — sort by deadline asc, nulls/invalids last
-        const aDateRaw = a.deadline ? new Date(a.deadline).getTime() : Infinity
-        const bDateRaw = b.deadline ? new Date(b.deadline).getTime() : Infinity
-        const aDate = Number.isNaN(aDateRaw) ? Infinity : aDateRaw
-        const bDate = Number.isNaN(bDateRaw) ? Infinity : bDateRaw
-        if (aDate !== bDate) return aDate - bDate
-
         return (a.name ?? "").localeCompare(b.name ?? "")
     })
 
-    const urgentTasks = sorted.filter((task) => getSortBucket(task) === 0)
-    const overdueTasks = sorted.filter((task) => getSortBucket(task) === 1)
-    const otherTasks = sorted.filter((task) => getSortBucket(task) === 2)
-
-    const urgentCap = overdueTasks.length > 0 ? URGENT_VISIBLE_CAP_WHEN_OVERDUE_EXISTS : VISIBLE_LIMIT
-    const urgentVisible = urgentTasks.slice(0, urgentCap)
-    const overdueVisible = overdueTasks.slice(
-        0,
-        Math.min(OVERDUE_VISIBLE_CAP, VISIBLE_LIMIT - urgentVisible.length)
-    )
-
-    const visible = [...urgentVisible, ...overdueVisible]
-    if (visible.length < VISIBLE_LIMIT) {
-        const overflowUrgent = urgentTasks.slice(urgentVisible.length)
-        const overflowOverdue = overdueTasks.slice(overdueVisible.length)
-        const fillPool = [...overflowUrgent, ...overflowOverdue, ...otherTasks]
-        visible.push(...fillPool.slice(0, VISIBLE_LIMIT - visible.length))
-    }
-
+    const visible = sorted.slice(0, VISIBLE_LIMIT)
     const hasMore = sorted.length > VISIBLE_LIMIT
 
     if (sorted.length === 0) {

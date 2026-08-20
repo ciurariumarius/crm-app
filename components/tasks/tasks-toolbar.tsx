@@ -3,7 +3,9 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { CalendarClock, CalendarDays, SlidersHorizontal, X } from "lucide-react"
+import { ArrowDownUp, Check, CheckCircle2, RefreshCw, SlidersHorizontal, Smartphone, X } from "lucide-react"
+import { toast } from "sonner"
+import { syncTickTickNow } from "@/lib/actions/integrations"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -21,30 +23,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ArrowDownUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTasksSearchContext } from "./tasks-search-context"
 
 const SORT_OPTIONS = [
-  { label: "Most recent", value: "newest" },
-  { label: "Oldest", value: "oldest" },
-  { label: "Recently updated", value: "updated" },
-  { label: "Name A-Z", value: "name_asc" },
-  { label: "Name Z-A", value: "name_desc" },
+  { label: "Creation date (Newest first)", value: "newest" },
+  { label: "Creation date (Oldest first)", value: "oldest" },
+  { label: "Last updated", value: "updated" },
+  { label: "Name (A-Z)", value: "name_asc" },
+  { label: "Name (Z-A)", value: "name_desc" },
 ] as const
 
 const STATUS_OPTIONS = [
-  { label: "All", value: "All" },
-  { label: "Active", value: "Active" },
+  { label: "Open", value: "Active" },
   { label: "Pending", value: "Pending" },
   { label: "Done", value: "Completed" },
 ] as const
 
 const PRIORITY_OPTIONS = [
   { label: "All", value: "all" },
-  { label: "Urgent", value: "Urgent" },
-  { label: "Normal", value: "Normal" },
-  { label: "Idea", value: "Idea" },
+  { label: "High", value: "High" },
+  { label: "Medium", value: "Medium" },
+  { label: "Low", value: "Low" },
 ] as const
 
 const SCOPE_OPTIONS = [
@@ -56,8 +56,6 @@ const SCOPE_OPTIONS = [
 type DraftFilters = {
   urgency: string
   scope: string
-  overdue: boolean
-  dueToday: boolean
   projectId: string
   taskId: string
   partnerId: string
@@ -67,8 +65,6 @@ type DraftFilters = {
 const RESET_FILTERS: DraftFilters = {
   urgency: "all",
   scope: "ALL",
-  overdue: false,
-  dueToday: false,
   projectId: "all",
   taskId: "all",
   partnerId: "all",
@@ -79,8 +75,8 @@ export type TasksHeaderFilterProps = {
   projects: { id: string; name: string }[]
   partners: { id: string; name: string }[]
   currentUrgency: string
-  currentOverdue: boolean
-  currentDueToday: boolean
+  currentOverdue?: boolean
+  currentDueToday?: boolean
   currentSort: string
   currentProject: string
   currentTaskId: string
@@ -133,8 +129,6 @@ function getActiveFilters(
   const activeFilters: { key: string; label: string; href: string }[] = []
 
   if (props.currentUrgency !== "all") activeFilters.push({ key: "urgency", label: `Priority: ${props.currentUrgency}`, href: buildHref({ urgency: "all" }) })
-  if (props.currentOverdue) activeFilters.push({ key: "overdue", label: "Overdue", href: buildHref({ overdue: null }) })
-  if (props.currentDueToday) activeFilters.push({ key: "dueToday", label: "Due today", href: buildHref({ dueToday: null }) })
   if (props.currentTaskId !== "all") activeFilters.push({ key: "taskId", label: "Selected task", href: buildHref({ taskId: "all" }) })
   if (props.currentProject !== "all" && selectedProject) activeFilters.push({ key: "projectId", label: selectedProject.name, href: buildHref({ projectId: "all" }) })
   if (props.currentPartner !== "all" && selectedPartner) activeFilters.push({ key: "partnerId", label: selectedPartner.name, href: buildHref({ partnerId: "all" }) })
@@ -144,32 +138,110 @@ function getActiveFilters(
   return activeFilters
 }
 
-export function TasksStatusControls({ currentStatus }: { currentStatus: string }) {
+export function TasksStatusControls({
+  currentStatus,
+  activeCount,
+  pendingCount,
+}: {
+  currentStatus: string
+  activeCount?: number
+  pendingCount?: number
+}) {
   const buildHref = useTasksHref()
   const searchContext = useTasksSearchContext()
   const displayedStatus = searchContext?.searchTerm.trim() && !searchContext.statusRefined
     ? "All"
-    : currentStatus
+    : currentStatus || "Active"
 
   return (
-    <nav className="inline-flex h-9 min-w-0 items-center rounded-xl bg-[var(--bg-surface-soft)] p-1" aria-label="Task status">
-      {STATUS_OPTIONS.map((option) => (
-        <Link
-          key={option.value}
-          href={buildHref({ status: option.value })}
-          onClick={() => searchContext?.setStatusRefined(true)}
-          aria-current={displayedStatus === option.value ? "page" : undefined}
-          className={cn(
-            "inline-flex h-7 items-center rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.035em] transition-colors sm:px-3",
-            displayedStatus === option.value
-              ? "bg-[var(--brand-primary)] text-white shadow-sm"
-              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          )}
-        >
-          {option.label}
-        </Link>
-      ))}
+    <nav className="flex items-center justify-center gap-7 sm:gap-9 px-4 md:px-6" aria-label="Task status">
+      {STATUS_OPTIONS.map((option) => {
+        const isCurrent = displayedStatus === option.value
+          || (option.value === "Active" && (displayedStatus === "All" && !searchContext?.searchTerm.trim()))
+          || (option.value === "Active" && !currentStatus)
+
+        return (
+          <Link
+            key={option.value}
+            href={buildHref({ status: option.value })}
+            onClick={() => searchContext?.setStatusRefined(true)}
+            aria-current={isCurrent ? "page" : undefined}
+            className={cn(
+              "group relative inline-flex items-center gap-2 py-2 text-[15px] sm:text-base font-semibold tracking-[-0.01em] transition-colors",
+              isCurrent
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            )}
+          >
+            {option.value === "Active" && isCurrent ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+            ) : null}
+            <span>{option.label}</span>
+            {option.value === "Active" && typeof activeCount === "number" && activeCount > 0 ? (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-100/90 px-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                {activeCount}
+              </span>
+            ) : null}
+            {option.value === "Pending" && typeof pendingCount === "number" && pendingCount > 0 ? (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-100/90 px-1.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                {pendingCount}
+              </span>
+            ) : null}
+            {isCurrent ? (
+              <span className="absolute inset-x-0 -bottom-1 h-[2.5px] rounded-full bg-emerald-600" />
+            ) : null}
+          </Link>
+        )
+      })}
     </nav>
+  )
+}
+
+export function TasksSortControl({ currentSort }: { currentSort: string }) {
+  const router = useRouter()
+  const buildHref = useTasksHref()
+  const isCustomSort = Boolean(currentSort && currentSort !== "newest")
+
+  const handleSortSelect = (sortValue: string) => {
+    router.push(buildHref({ sort: sortValue === "newest" ? null : sortValue }))
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="relative h-10 w-10 shrink-0 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+          aria-label={`Sort tasks${isCustomSort ? ` (${currentSort})` : ""}`}
+          title="Sort tasks"
+        >
+          <ArrowDownUp className="h-4.5 w-4.5" />
+          {isCustomSort ? (
+            <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-[var(--brand-primary)]" />
+          ) : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
+        <div className="px-2.5 py-1.5 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+          Sort by
+        </div>
+        {SORT_OPTIONS.map((option) => {
+          const isSelected = (currentSort || "newest") === option.value
+          return (
+            <DropdownMenuItem
+              key={option.value}
+              onSelect={() => handleSortSelect(option.value)}
+              className="cursor-pointer rounded-xl px-2.5 py-2 text-xs font-semibold"
+            >
+              <span>{option.label}</span>
+              {isSelected ? <Check className="ml-auto h-3.5 w-3.5 text-[var(--primary)]" /> : null}
+            </DropdownMenuItem>
+          )
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -184,13 +256,11 @@ export function TasksFilterControl(props: TasksHeaderFilterProps) {
   const currentDraft = React.useCallback((): DraftFilters => ({
     urgency: props.currentUrgency,
     scope: props.currentScope,
-    overdue: props.currentOverdue,
-    dueToday: props.currentDueToday,
     projectId: props.currentProject,
     taskId: props.currentTaskId,
     partnerId: props.currentPartner,
     sort: props.currentSort,
-  }), [props.currentDueToday, props.currentOverdue, props.currentPartner, props.currentProject, props.currentScope, props.currentSort, props.currentTaskId, props.currentUrgency])
+  }), [props.currentPartner, props.currentProject, props.currentScope, props.currentSort, props.currentTaskId, props.currentUrgency])
 
   const openDesktop = (nextOpen: boolean) => {
     if (nextOpen) setDraft(currentDraft())
@@ -211,8 +281,6 @@ export function TasksFilterControl(props: TasksHeaderFilterProps) {
     router.push(buildHref({
       urgency: draft.urgency,
       scope: draft.scope,
-      overdue: draft.overdue ? "1" : null,
-      dueToday: draft.dueToday ? "1" : null,
       projectId: draft.projectId,
       taskId: draft.taskId,
       partnerId: draft.partnerId,
@@ -237,14 +305,14 @@ export function TasksFilterControl(props: TasksHeaderFilterProps) {
     <Button
       type="button"
       variant="outline"
-      size="sm"
-      className="h-9 rounded-xl px-2.5 sm:px-3"
+      size="icon"
+      className="relative h-10 w-10 shrink-0 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
       aria-label={`Filters${activeFilters.length ? `, ${activeFilters.length} active` : ""}`}
+      title="Filters"
     >
-      <SlidersHorizontal className="h-4 w-4" />
-      <span className="hidden sm:inline">Filters</span>
+      <SlidersHorizontal className="h-4.5 w-4.5" />
       {activeFilters.length > 0 ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1.5 text-xs font-bold text-white">
+        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-xs font-bold text-white shadow-sm">
           {activeFilters.length}
         </span>
       ) : null}
@@ -253,6 +321,8 @@ export function TasksFilterControl(props: TasksHeaderFilterProps) {
 
   return (
     <div className="flex min-w-0 items-center justify-end gap-2">
+      <TasksSortControl currentSort={props.currentSort} />
+
       <div className="hidden md:block">
         <Popover open={desktopOpen} onOpenChange={openDesktop}>
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>
@@ -286,8 +356,6 @@ export function TasksActiveFilterChips(props: TasksHeaderFilterProps) {
 
   const clearHref = buildHref({
     urgency: "all",
-    overdue: null,
-    dueToday: null,
     sort: "newest",
     projectId: "all",
     taskId: "all",
@@ -323,6 +391,31 @@ function FiltersPanel({ projects, partners, draft, setDraft, onApply, onReset, o
   onReset: () => void
   onCancel: () => void
 }) {
+  const router = useRouter()
+  const [isSyncing, setIsSyncing] = React.useState(false)
+
+  const handleSyncTickTick = async () => {
+    setIsSyncing(true)
+    try {
+      const res = await syncTickTickNow()
+      if (res.success) {
+        const total = (res.importedCount || 0) + (res.completedInPixelistCount || 0) + (res.pushedToTickTickCount || 0) + (res.completedInTickTickCount || 0)
+        if (total > 0) {
+          toast.success(`TickTick sync: ${res.importedCount} imported, ${res.completedInPixelistCount} completed in app, ${res.pushedToTickTickCount} pushed`)
+        } else {
+          toast.success("TickTick is up to date!")
+        }
+        router.refresh()
+      } else {
+        toast.error(res.error || "TickTick sync failed")
+      }
+    } catch {
+      toast.error("Failed to sync TickTick tasks")
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   return (
     <div className="p-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -353,13 +446,6 @@ function FiltersPanel({ projects, partners, draft, setDraft, onApply, onReset, o
           </Select>
         </FilterField>
 
-        <FilterField label="Schedule">
-          <div className="grid grid-cols-2 gap-2">
-            <ToggleButton active={draft.overdue} onClick={() => setDraft((current) => ({ ...current, overdue: !current.overdue, dueToday: false }))} icon={<CalendarClock className="h-4 w-4" />} label="Overdue" />
-            <ToggleButton active={draft.dueToday} onClick={() => setDraft((current) => ({ ...current, dueToday: !current.dueToday, overdue: false }))} icon={<CalendarDays className="h-4 w-4" />} label="Due today" />
-          </div>
-        </FilterField>
-
         <FilterField label="Project">
           <Select value={draft.projectId} onValueChange={(projectId) => setDraft((current) => ({ ...current, projectId, taskId: "all", partnerId: projectId === "all" ? current.partnerId : "all", scope: projectId === "all" ? current.scope : "FREELANCE" }))}>
             <SelectTrigger size="sm" className="w-full shadow-none" aria-label="Project filter"><SelectValue placeholder="All projects" /></SelectTrigger>
@@ -386,6 +472,29 @@ function FiltersPanel({ projects, partners, draft, setDraft, onApply, onReset, o
             <SelectContent>{SORT_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
           </Select>
         </FilterField>
+
+        <div className="sm:col-span-2 flex items-center justify-between rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-low)]/50 p-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:color-mix(in_srgb,#6366f1_14%,transparent)] text-[#6366f1] dark:bg-[color:color-mix(in_srgb,#818cf8_18%,transparent)] dark:text-[#818cf8]">
+              <Smartphone className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-[var(--text-primary)]">TickTick Sync</p>
+              <p className="text-xs text-[var(--text-muted)]">Import & sync tasks with TickTick</p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isSyncing}
+            onClick={handleSyncTickTick}
+            className="h-8 gap-1.5 text-xs font-semibold border-[var(--line-subtle)] bg-[var(--surface-lowest)] hover:bg-[var(--surface-low)]"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin text-primary")} />
+            {isSyncing ? "Syncing..." : "Sync now"}
+          </Button>
+        </div>
       </div>
 
       <div className="mt-5 flex items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-4">
@@ -405,49 +514,5 @@ function FilterField({ label, children }: { label: string; children: React.React
       <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">{label}</p>
       {children}
     </div>
-  )
-}
-
-function ToggleButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-9 items-center justify-center gap-2 rounded-xl border px-2 text-sm font-semibold transition-colors",
-        active
-          ? "border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--brand-primary)_8%,var(--surface-lowest))] text-[var(--brand-primary)]"
-          : "border-[var(--line-subtle)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
-      )}
-    >
-      {icon}{label}
-    </button>
-  )
-}
-
-export function TasksSortControl({ currentSort }: { currentSort: string }) {
-  const buildHref = useTasksHref()
-  const router = useRouter()
-  
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 w-9 rounded-xl p-0" title="Sort tasks">
-          <ArrowDownUp className="h-4 w-4 text-[var(--text-secondary)]" />
-          <span className="sr-only">Sort tasks</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {SORT_OPTIONS.map((option) => (
-          <DropdownMenuItem
-            key={option.value}
-            className={currentSort === option.value ? "bg-[var(--surface-low)] font-medium" : ""}
-            onSelect={() => router.push(buildHref({ sort: option.value }))}
-          >
-            {option.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ListTodo } from "lucide-react"
+import { Plus } from "lucide-react"
 import { GlobalCreateTaskDialog } from "./global-create-task-dialog"
 import { cn } from "@/lib/utils"
 
@@ -32,10 +32,13 @@ export function CreateTaskButton({
         <>
             <Button
                 onClick={() => setOpen(true)}
-                className={cn("header-action-button shrink-0", className)}
+                className={cn(
+                    "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 sm:px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98]",
+                    className
+                )}
             >
-                <ListTodo className="h-4 w-4 md:mr-1.5" strokeWidth={2.2} />
-                <span className={showLabelOnMobile ? "inline text-sm font-semibold" : "header-action-label"}>
+                <Plus className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+                <span className={showLabelOnMobile ? "inline" : "hidden sm:inline"}>
                     {label}
                 </span>
             </Button>

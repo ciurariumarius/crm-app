@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
-import { Calendar as CalendarIcon, Check, ChevronDown, ChevronUp, ChevronsUpDown, Loader2, SlidersHorizontal } from "lucide-react"
+import { Check, ChevronDown, ChevronUp, ChevronsUpDown, Loader2, SlidersHorizontal } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { addTask } from "@/lib/actions/tasks"
@@ -10,7 +9,6 @@ import { formatProjectName } from "@/lib/utils"
 import { MAX_TASK_ESTIMATED_MINUTES, parseTaskEstimatedMinutesInput } from "@/lib/tasks/estimated-time"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import {
     Command,
     CommandEmpty,
@@ -60,12 +58,10 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
     const [lmsAllocationId, setLmsAllocationId] = React.useState("")
     const [lmsTaskTypeId, setLmsTaskTypeId] = React.useState("")
     const [status, setStatus] = React.useState("Active")
-    const [urgency, setUrgency] = React.useState("Normal")
-    const [deadline, setDeadline] = React.useState<Date>()
+    const [urgency, setUrgency] = React.useState("Medium")
     const [estimatedMinutes, setEstimatedMinutes] = React.useState("")
     const [isLoading, setIsLoading] = React.useState(false)
     const [showCompleted, setShowCompleted] = React.useState(false)
-    const [deadlineOpen, setDeadlineOpen] = React.useState(false)
     const [projectOpen, setProjectOpen] = React.useState(false)
     const [showDetails, setShowDetails] = React.useState(false)
     const [touched, setTouched] = React.useState({ name: false, project: false, minutes: false })
@@ -95,11 +91,9 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
         setLmsAllocationId("")
         setLmsTaskTypeId("")
         setStatus("Active")
-        setUrgency("Normal")
-        setDeadline(undefined)
+        setUrgency("Medium")
         setEstimatedMinutes("")
         setShowCompleted(false)
-        setDeadlineOpen(false)
         setProjectOpen(false)
         setShowDetails(false)
         setTouched({ name: false, project: false, minutes: false })
@@ -120,7 +114,6 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
             const result = await addTask(taskScope === "FREELANCE" ? selectedProjectId : undefined, name.trim(), {
                 status: taskScope === "LMS" ? "Active" : status,
                 urgency,
-                deadline,
                 estimatedMinutes: parsedEstimatedMinutes ?? undefined,
                 taskScope,
                 lmsAllocationId: taskScope === "LMS" ? lmsAllocationId || null : null,
@@ -269,7 +262,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                         ) : null}
 
                         <div className="space-y-2">
-                            <Label htmlFor="new-task-estimated-minutes" className="text-xs font-semibold text-[var(--text-secondary)]">Planned time (min)</Label>
+                            <Label htmlFor="new-task-estimated-minutes" className="text-xs font-semibold text-[var(--text-secondary)]">Time (min)</Label>
                             <Input
                                 id="new-task-estimated-minutes"
                                 type="number"
@@ -330,38 +323,11 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                     <Select value={urgency} onValueChange={setUrgency} disabled={isLoading}>
                                         <SelectTrigger className="h-11 w-full rounded-xl shadow-none"><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Urgent">Urgent</SelectItem>
-                                            <SelectItem value="Normal">Normal</SelectItem>
-                                            <SelectItem value="Idea">Idea</SelectItem>
+                                            <SelectItem value="High">High</SelectItem>
+                                            <SelectItem value="Medium">Medium</SelectItem>
+                                            <SelectItem value="Low">Low</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                </div>
-
-                                <div className="space-y-2 sm:col-span-2">
-                                    <Label className="text-xs font-semibold text-[var(--text-secondary)]">Deadline</Label>
-                                    <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className={cn("h-11 w-full justify-start rounded-xl px-3 text-left font-semibold shadow-none", !deadline && "font-normal text-[var(--text-muted)]")}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                                                {deadline ? format(deadline, "PPP") : "Pick a date"}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto rounded-xl p-0" align="start" collisionPadding={16}>
-                                            <Calendar
-                                                mode="single"
-                                                selected={deadline}
-                                                onSelect={(date) => {
-                                                    setDeadline(date)
-                                                    setDeadlineOpen(false)
-                                                }}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
                                 </div>
                             </div>
                         ) : null}

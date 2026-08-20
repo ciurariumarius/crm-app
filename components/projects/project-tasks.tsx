@@ -1,12 +1,11 @@
 "use client"
 
 import { useContext, useMemo, useState } from "react"
-import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { CalendarDays, Loader2, Play, Plus } from "lucide-react"
+import { Loader2, Play, Plus } from "lucide-react"
 import { addTask } from "@/lib/actions/tasks"
 import { useTimer } from "@/components/providers/timer-provider"
 import { toast } from "sonner"
@@ -160,8 +159,7 @@ export function ProjectTasks({
                 )}
 
                 {sortedTasks.map((task) => {
-                    const dueDate = toDate(task.deadline) ?? toDate(task.createdAt)
-                    const urgencyLabel = normalizeTaskUrgency(task.urgency).toUpperCase()
+                    const priority = normalizeTaskUrgency(task.urgency)
                     const isCompleted = task.status === "Completed"
 
                     return (
@@ -197,15 +195,15 @@ export function ProjectTasks({
                             </button>
 
                             <div className="hidden items-center gap-2 sm:flex">
-                                <span className="rounded-lg bg-[var(--surface-low)] px-2.5 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-                                    {urgencyLabel}
+                                <span className={cn(
+                                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                                    priority === "High" && "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400",
+                                    priority === "Low" && "border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400 font-medium",
+                                    priority === "Medium" && "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium"
+                                )}>
+                                    <span className={cn("h-1.5 w-1.5 rounded-full", priority === "High" ? "bg-rose-500" : priority === "Low" ? "bg-zinc-400" : "bg-amber-500")} />
+                                    <span>{priority}</span>
                                 </span>
-                                {dueDate && (
-                                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)]">
-                                        <CalendarDays className="h-3.5 w-3.5" />
-                                        {format(dueDate, "MMM d")}
-                                    </span>
-                                )}
                             </div>
 
                             {!isCompleted && (

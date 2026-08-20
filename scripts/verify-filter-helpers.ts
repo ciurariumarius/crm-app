@@ -53,7 +53,7 @@ function run() {
         scope: "lms",
     })
     assert.equal(normalizedTaskFilters.status, "Pending")
-    assert.equal(normalizedTaskFilters.urgency, "Urgent")
+    assert.equal(normalizedTaskFilters.urgency, "High")
     assert.equal(normalizedTaskFilters.dueTodayOnly, true)
     assert.equal(normalizedTaskFilters.overdueOnly, false)
     assert.equal(normalizedTaskFilters.scope, "LMS")
@@ -68,7 +68,7 @@ function run() {
     const taskWhereJson = JSON.stringify(taskWhere)
     assert.doesNotMatch(taskWhereJson, /tenantId/)
     assert.match(taskWhereJson, /"status":\{"in":\["Pending","Paused"\]\}/)
-    assert.match(taskWhereJson, /"urgency":\{"in":\["Urgent","High"\]\}/)
+    assert.match(taskWhereJson, /"urgency":\{"in":\["High","Urgent","urgent","high"\]\}/)
     assert.match(taskWhereJson, /"partnerId":"partner-2"/)
     assert.match(taskWhereJson, /"taskScope":"LMS"/)
     assert.match(taskWhereJson, /"lmsAllocation":\{"client":\{"contains":"facebook"\}\}/)

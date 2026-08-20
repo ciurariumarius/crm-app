@@ -6,7 +6,7 @@ const TASK_SCOPE_FILTER_VALUES = ["ALL", "FREELANCE", "LMS"] as const
 
 export type TaskStatusFilter = (typeof TASK_STATUS_FILTER_VALUES)[number]
 export type TaskScopeFilter = (typeof TASK_SCOPE_FILTER_VALUES)[number]
-export type TaskUrgencyFilter = "all" | TaskUrgency
+export type TaskUrgencyFilter = "all" | "High" | "Medium" | "Low" | TaskUrgency
 
 export type TaskFiltersInput = {
     q?: string | null
@@ -123,12 +123,13 @@ export function buildTaskWhereInput(input: {
     }
 
     if (filters.urgency !== "all") {
+        const normalized = normalizeTaskUrgency(filters.urgency)
         where.urgency =
-            filters.urgency === "Urgent"
-                ? { in: ["Urgent", "High"] }
-                : filters.urgency === "Idea"
-                  ? { in: ["Idea", "Low"] }
-                  : { in: ["Normal"] }
+            normalized === "High"
+                ? { in: ["High", "Urgent", "urgent", "high"] }
+                : normalized === "Low"
+                  ? { in: ["Low", "Idea", "idea", "low"] }
+                  : { in: ["Medium", "Normal", "normal", "medium"] }
     }
 
     if (filters.q) {

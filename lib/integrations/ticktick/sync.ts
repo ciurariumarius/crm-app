@@ -272,11 +272,11 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
             }
         }
 
-        // 4. Check all mapped Pixelist tasks that are currently "Active" to see if completed in TickTick
+        // 4. Check all mapped Pixelist tasks that are currently open (Active or Pending) to see if completed in TickTick
         for (const mapping of existingMappings) {
             if (
                 mapping.task &&
-                mapping.task.status === "Active" &&
+                (mapping.task.status === "Active" || mapping.task.status === "Pending") &&
                 mapping.externalTaskId &&
                 !mapping.externalTaskId.startsWith("pending_")
             ) {
@@ -304,6 +304,7 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                 }
 
                 if (isCompletedInTickTick) {
+                    const previousStatus = mapping.task.status
                     await prisma.$transaction(async (tx) => {
                         await tx.task.update({
                             where: { id: mapping.taskId },
@@ -322,7 +323,7 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                             data: {
                                 action: "TASK_STATUS_CHANGED",
                                 success: true,
-                                details: `taskId=${mapping.taskId}; from=Active; to=Completed; source=TICKTICK`,
+                                details: `taskId=${mapping.taskId}; from=${previousStatus}; to=Completed; source=TICKTICK`,
                             },
                         })
                     })

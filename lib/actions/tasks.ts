@@ -294,6 +294,7 @@ export async function addTask(
                 lmsTaskTypeId,
             })
 
+            const initialMinutes = validated.options?.estimatedMinutes
             const task = await tx.task.create({
                 data: {
                     ...taskTarget,
@@ -301,7 +302,18 @@ export async function addTask(
                     status: validated.options?.status || "Active",
                     urgency: normalizeTaskUrgency(validated.options?.urgency),
                     deadline: validated.options?.deadline,
-                    estimatedMinutes: validated.options?.estimatedMinutes,
+                    estimatedMinutes: initialMinutes,
+                    ...(initialMinutes ? {
+                        timeLogs: {
+                            create: {
+                                projectId: taskTarget.projectId,
+                                durationSeconds: initialMinutes * 60,
+                                startTime: new Date(),
+                                endTime: new Date(),
+                                source: "MANUAL",
+                            }
+                        }
+                    } : {})
                 },
                 include: {
                     project: {
@@ -660,6 +672,68 @@ export async function toggleTaskStatus(taskId: string, currentStatus: string, pr
     } catch (error) {
         console.error("Toggle task status failed:", error)
         return taskActionFailure(error, "Failed to toggle task status")
+    }
+}
+
+export async function setTaskStatus(taskId: string, status: "Active" | "Pending" | "Completed" | "Done") {
+    try {
+        const session = await requireAuth()
+        const validatedTaskId = TaskIdSchema.parse(taskId)
+        const targetStatus = status === "Done" ? "Completed" : status
+        const validatedStatus = TaskStatusSchema.parse(targetStatus)
+
+        const task = await prisma.task.findUnique({
+            where: { id: validatedTaskId },
+            select: {
+                id: true,
+                status: true,
+                taskScope: true,
+                projectId: true,
+                project: {
+                    select: {
+                        site: { select: { partnerId: true } },
+                        siteId: true,
+                    },
+                },
+            },
+        })
+        if (!task) {
+            await logSessionAuditEvent(session, {
+                action: "TASK_STATUS_UPDATE_FAILED",
+                success: false,
+                details: `taskId=${validatedTaskId}; reason=not_found`,
+            })
+            return { success: false, error: "Task not found" }
+        }
+
+        const currentStatus = normalizeTaskStatus(task.status)
+        if (currentStatus === validatedStatus) return { success: true }
+
+        if (validatedStatus === "Completed") {
+            return await completeTask(task.id)
+        }
+
+        if (currentStatus === "Completed") {
+            const reopenResult = await reopenTask(task.id)
+            if (!reopenResult.success) return reopenResult
+            if (validatedStatus === "Active") return { success: true }
+        }
+
+        await prisma.task.update({
+            where: { id: task.id },
+            data: { status: validatedStatus },
+        })
+
+        await logSessionAuditEvent(session, {
+            action: "TASK_STATUS_CHANGED",
+            details: `taskId=${task.id}; projectId=${task.projectId || "none"}; from=${currentStatus}; to=${validatedStatus}`,
+        })
+
+        revalidateTaskPaths(task.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
+        return { success: true }
+    } catch (error) {
+        console.error("Set task status failed:", error)
+        return taskActionFailure(error, "Failed to update task status")
     }
 }
 

@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { isToday, isPast } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Clock, CheckCircle2, Target, Plus, LayoutGrid, Sparkles, Trash2 } from "lucide-react"
 import { GlobalCreateTaskDialog } from "@/components/tasks/global-create-task-dialog"
@@ -61,7 +60,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
     const [createTaskOpen, setCreateTaskOpen] = React.useState(false)
     const [quickLogTask, setQuickLogTask] = React.useState<QuickLogTask | null>(null)
     const [cols, setCols] = React.useState<3 | 4>(3)
-    const [filter, setFilter] = React.useState<"all" | "overdue" | "urgent">("all")
+    const [filter, setFilter] = React.useState<"all" | "high" | "medium" | "low">("all")
     const [optimisticTasks, setOptimisticTasks] = React.useOptimistic(
         tasks,
         (state, updatedTask: string) => state.filter((task) => task.id !== updatedTask)
@@ -80,10 +79,12 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
 
     const filteredTasks = React.useMemo(() => {
         switch (filter) {
-            case "overdue":
-                return optimisticTasks.filter(t => t.deadline && isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)))
-            case "urgent":
-                return optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency || "Normal") === "Urgent")
+            case "high":
+                return optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "High")
+            case "medium":
+                return optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "Medium")
+            case "low":
+                return optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "Low")
             default:
                 return optimisticTasks
         }
@@ -97,14 +98,13 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
         })
     }
 
-    const urgentTasks = optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency || "Normal") === "Urgent")
-    const overdueTasks = optimisticTasks.filter(t => t.deadline && isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)))
-    const dueTodayTasks = optimisticTasks.filter(t => t.deadline && isToday(new Date(t.deadline)))
+    const highTasks = optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "High")
+    const mediumTasks = optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "Medium")
+    const lowTasks = optimisticTasks.filter(t => normalizeTaskUrgency(t.urgency) === "Low")
 
     return (
         <>
             <div className="flex flex-col h-full bg-transparent overflow-hidden">
-                {/* Header Section */}
                 {/* Header Section */}
                 <div className="py-4 px-1 flex flex-col gap-5">
                     <div className="flex flex-row items-center justify-between">
@@ -117,16 +117,16 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                     Your Tasks
                                 </h2>
                                 <div className="flex items-center gap-2 mt-0.5 text-xs font-medium text-muted-foreground">
-                                    <span className={cn(urgentTasks.length > 0 && "font-bold text-[var(--state-urgent)]")}>
-                                        {urgentTasks.length} urgent
+                                    <span className={cn(highTasks.length > 0 && "font-bold text-rose-600 dark:text-rose-400")}>
+                                        {highTasks.length} high
                                     </span>
                                     <span>•</span>
-                                    <span className={cn(overdueTasks.length > 0 && "font-bold text-[var(--state-overdue)]")}>
-                                        {overdueTasks.length} due
+                                    <span>
+                                        {mediumTasks.length} medium
                                     </span>
                                     <span>•</span>
-                                    <span className={cn(dueTodayTasks.length > 0 && "text-[var(--state-success)] font-bold")}>
-                                        {dueTodayTasks.length} for today
+                                    <span>
+                                        {lowTasks.length} low
                                     </span>
                                 </div>
                             </div>
@@ -167,7 +167,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                         </div>
                     </div>
 
-                    {/* Navigation Tabs - Notion Style */}
+                    {/* Navigation Tabs */}
                     <div className="flex items-center gap-4 border-b border-border/40">
                         <button
                             onClick={() => setFilter("all")}
@@ -181,26 +181,35 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                             {filter === "all" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-foreground rounded-full" />}
                         </button>
                         <button
-                            onClick={() => setFilter("overdue")}
+                            onClick={() => setFilter("high")}
                             className={cn(
                                 "flex items-center gap-2 px-1 py-2 text-xs font-semibold tracking-[0.02em] transition-all relative",
-                                filter === "overdue" ? "text-[var(--state-overdue)]" : "text-muted-foreground hover:text-[var(--state-overdue)]"
-                            )}
-                        >
-                            <Clock className="h-3.5 w-3.5" />
-                            Overdue
-                            {filter === "overdue" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] rounded-full bg-[var(--state-overdue)]" />}
-                        </button>
-                        <button
-                            onClick={() => setFilter("urgent")}
-                            className={cn(
-                                "flex items-center gap-2 px-1 py-2 text-xs font-semibold tracking-[0.02em] transition-all relative",
-                                filter === "urgent" ? "text-[var(--state-urgent)]" : "text-muted-foreground hover:text-[var(--state-urgent)]"
+                                filter === "high" ? "text-rose-600 dark:text-rose-400 font-bold" : "text-muted-foreground hover:text-rose-600"
                             )}
                         >
                             <Sparkles className="h-3.5 w-3.5" />
-                            Urgent
-                            {filter === "urgent" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] rounded-full bg-[var(--state-urgent)]" />}
+                            High Priority
+                            {filter === "high" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] rounded-full bg-rose-500" />}
+                        </button>
+                        <button
+                            onClick={() => setFilter("medium")}
+                            className={cn(
+                                "flex items-center gap-2 px-1 py-2 text-xs font-semibold tracking-[0.02em] transition-all relative",
+                                filter === "medium" ? "text-foreground font-bold" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Medium Priority
+                            {filter === "medium" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] rounded-full bg-foreground" />}
+                        </button>
+                        <button
+                            onClick={() => setFilter("low")}
+                            className={cn(
+                                "flex items-center gap-2 px-1 py-2 text-xs font-semibold tracking-[0.02em] transition-all relative",
+                                filter === "low" ? "text-zinc-500 font-bold" : "text-muted-foreground hover:text-zinc-500"
+                            )}
+                        >
+                            Low Priority
+                            {filter === "low" && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] rounded-full bg-zinc-400" />}
                         </button>
                     </div>
 
@@ -264,7 +273,7 @@ export function UpcomingTasks({ tasks, projects = [] }: UpcomingTasksProps) {
                                     <div className="col-span-full flex flex-col items-center justify-center h-[220px] text-muted-foreground/50 gap-2 border-2 border-dashed border-muted/50 rounded-2xl bg-muted/5">
                                         <CheckCircle2 className="h-8 w-8 opacity-20" />
                                         <span className="text-xs font-medium">
-                                            {filter === "overdue" ? "No overdue tasks!" : filter === "urgent" ? "No urgent tasks!" : "All clear for today!"}
+                                            {filter === "high" ? "No high priority tasks!" : filter === "medium" ? "No medium priority tasks!" : filter === "low" ? "No low priority tasks!" : "All clear!"}
                                         </span>
                                     </div>
                                 )}

@@ -3,7 +3,6 @@ import { TasksCardView } from "@/components/tasks/tasks-card-view"
 import {
     TasksActiveFilterChips,
     TasksFilterControl,
-    TasksSortControl,
     TasksStatusControls,
 } from "@/components/tasks/tasks-toolbar"
 import { CreateTaskButton } from "@/components/tasks/create-task-button"
@@ -24,11 +23,11 @@ const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
 const PAGE_SIZE_VALUES = new Set<number>(PAGE_SIZE_OPTIONS)
 const PAGINATION_THRESHOLD = 120
 const SORT_OPTIONS = [
-    { label: "Most recent", value: "newest" },
-    { label: "Oldest", value: "oldest" },
-    { label: "Updated", value: "updated" },
-    { label: "Name A-Z", value: "name_asc" },
-    { label: "Name Z-A", value: "name_desc" },
+    { label: "Creation date (Newest first)", value: "newest" },
+    { label: "Creation date (Oldest first)", value: "oldest" },
+    { label: "Last updated", value: "updated" },
+    { label: "Name (A-Z)", value: "name_asc" },
+    { label: "Name (Z-A)", value: "name_desc" },
 ] as const
 const SORT_VALUES = new Set(SORT_OPTIONS.map((option) => option.value))
 
@@ -105,7 +104,7 @@ export default async function TasksPage({
     const shouldPaginate = totalTasks > PAGINATION_THRESHOLD
     const page = shouldPaginate ? requestedPage : 1
 
-    const [tasksRaw, allServicesRaw, activeTimerRaw, allProjectsRaw, userRaw] = await Promise.all([
+    const [tasksRaw, activeCount, pendingCount, allServicesRaw, activeTimerRaw, allProjectsRaw, userRaw] = await Promise.all([
         prisma.task.findMany({
             where,
             include: {
@@ -133,6 +132,8 @@ export default async function TasksPage({
             orderBy: buildSort(sort),
             ...(shouldPaginate ? { skip: (page - 1) * perPage, take: perPage } : {}),
         }),
+        prisma.task.count({ where: { status: { in: ["Active", "Normal"] } } }),
+        prisma.task.count({ where: { status: { in: ["Pending", "Paused"] } } }),
         prisma.service.findMany({ orderBy: { serviceName: "asc" } }),
         prisma.timeLog.findFirst({
             where: { endTime: null },
@@ -231,28 +232,23 @@ export default async function TasksPage({
                     title="Tasks"
                     search={<TasksSearchInput />}
                     mobileSearch={<TasksSearchInput />}
-                    controls={<TasksStatusControls currentStatus={statusFilter} />}
-                    secondaryActions={
-                        <div className="flex items-center gap-2">
-                            <TasksSortControl currentSort={sort} />
-                            <TasksFilterControl {...headerFilterProps} />
-                        </div>
-                    }
+                    controls={<TasksStatusControls currentStatus={statusFilter} activeCount={activeCount} pendingCount={pendingCount} />}
+                    secondaryActions={<TasksFilterControl {...headerFilterProps} />}
                     footer={<TasksActiveFilterChips {...headerFilterProps} />}
                     mobilePrimaryAction={
                         <CreateTaskButton
                             projects={activeProjects}
-                            label="Add"
+                            label="Add Task"
                             showLabelOnMobile
-                            className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
+                            className="!h-10 !w-auto !min-w-0 !rounded-xl !bg-emerald-600 hover:!bg-emerald-700 !px-5 sm:!px-6 !gap-2 !text-white font-semibold shadow-sm"
                         />
                     }
                     primaryAction={
                         <CreateTaskButton
                             projects={activeProjects}
-                            label="Add"
+                            label="Add Task"
                             showLabelOnMobile
-                            className="!h-11 !w-auto !min-w-0 !rounded-[12px] !px-6 !gap-2 !text-white xl:!px-7"
+                            className="!h-10 !w-auto !min-w-0 !rounded-xl !bg-emerald-600 hover:!bg-emerald-700 !px-5 sm:!px-6 !gap-2 !text-white font-semibold shadow-sm"
                         />
                     }
                 />

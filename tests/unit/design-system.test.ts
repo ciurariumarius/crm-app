@@ -51,7 +51,7 @@ describe("design system contracts", () => {
     expect(taskSidebar).toContain("const persistTaskDescription")
     expect(taskSidebar).toContain("const commitTitle = async")
     expect(taskSidebar).toContain("const updateSnapshot = {")
-    expect(taskSidebar).toMatch(/const updateSnapshot = \{\s*urgency,\s*deadline,/)
+    expect(taskSidebar).toMatch(/const updateSnapshot = \{\s*urgency,/)
     expect(taskSidebar).toContain("Discard unsaved task detail changes?")
     expect(taskSidebar).not.toContain("Discard unsaved project detail changes?")
   })

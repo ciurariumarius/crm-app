@@ -1,7 +1,8 @@
 export const TASK_STATUS_VALUES = ["Active", "Pending", "Completed"] as const
 export type TaskStatus = (typeof TASK_STATUS_VALUES)[number]
-export const TASK_URGENCY_VALUES = ["Normal", "Idea", "Urgent"] as const
+export const TASK_URGENCY_VALUES = ["Low", "Medium", "High", "Normal", "Idea", "Urgent"] as const
 export type TaskUrgency = (typeof TASK_URGENCY_VALUES)[number]
+export type TaskPriority = "Low" | "Medium" | "High"
 
 export const PROJECT_STATUS_VALUES = ["Active", "Paused", "Completed", "Closed"] as const
 export type ProjectStatus = (typeof PROJECT_STATUS_VALUES)[number]
@@ -22,11 +23,15 @@ export function normalizeTaskStatus(status: string | null | undefined): TaskStat
     return "Active"
 }
 
-export function normalizeTaskUrgency(urgency: string | null | undefined): TaskUrgency {
-    const value = (urgency || "").toLowerCase()
-    if (value === "urgent" || value === "high") return "Urgent"
-    if (value === "idea" || value === "low") return "Idea"
-    return "Normal"
+export function normalizeTaskUrgency(urgency: string | null | undefined): "Low" | "Medium" | "High" {
+    const value = (urgency || "").toLowerCase().trim()
+    if (value === "urgent" || value === "high") return "High"
+    if (value === "idea" || value === "low") return "Low"
+    return "Medium"
+}
+
+export function normalizeTaskPriority(priority: string | null | undefined): TaskPriority {
+    return normalizeTaskUrgency(priority)
 }
 
 export function projectStatusSortOrder(status: string | null | undefined): number {

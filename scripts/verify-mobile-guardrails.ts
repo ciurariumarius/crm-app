@@ -56,7 +56,6 @@ function run() {
   assert.match(taskEstimateQuickEdit, /updateTask\(taskId, \{ estimatedMinutes: nextMinutes \}\)/)
   assert.match(taskActualTimeQuickEdit, /setTaskTimeTotal/)
   assert.match(taskActualTimeQuickEdit, /Edit total time/)
-  assert.match(taskDetails, /TaskEstimatedTimeQuickEdit/)
   assert.match(taskDetails, /addTaskTimeEntry/)
   assert.match(taskDetails, /TaskActualTimeQuickEdit/)
   assert.doesNotMatch(taskDetails, /LMS time is recorded on completion/)

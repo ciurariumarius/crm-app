@@ -3,14 +3,19 @@
 import * as React from "react"
 import { differenceInCalendarDays, format, isToday, isYesterday } from "date-fns"
 import {
+  ChevronDown,
   ChevronLeft,
-  FilePlus2,
   Folder,
-  FolderPlus,
   Loader2,
   MoreHorizontal,
   NotebookPen,
+  Pin,
+  Plus,
+  Search,
+  Share2,
+  SquarePen,
   Trash2,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -27,7 +32,7 @@ import {
   type NoteListRow,
   type NotesView,
 } from "@/lib/actions/notes"
-import { AppPageHeader } from "@/components/layout/app-page-header"
+import { MobileMenuTrigger } from "@/components/layout/mobile-menu-trigger"
 import { NotesSearchInput } from "@/components/notes/notes-search-input"
 import { RichTextEditor, type RichTextFolderOption } from "@/components/ui/rich-text-editor"
 import { Button } from "@/components/ui/button"
@@ -58,7 +63,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   ALL_NOTES_FOLDER_LABEL,
-  folderMentionHtml,
   readFolderMentionId,
   removeFolderMentions,
 } from "@/lib/notes/folder-mentions"
@@ -141,6 +145,10 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
   note: ClientNoteDetail
   folders: NoteFolderRecord[]
   focusToken: number
+  isPinned: boolean
+  onTogglePin: () => void
+  onDuplicate: () => void
+  onMoveToFolder: () => void
   onSaved: (note: NoteDetail) => void
   onCreated: (note: NoteDetail) => void
   onForkCreated: (note: NoteDetail) => void
@@ -151,6 +159,10 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
   note,
   folders,
   focusToken,
+  isPinned,
+  onTogglePin,
+  onDuplicate,
+  onMoveToFolder,
   onSaved,
   onCreated,
   onForkCreated,
@@ -328,16 +340,6 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
     void enqueueSave()
   }, [enqueueSave])
 
-  const assignFolder = React.useCallback((nextFolderId: string | null) => {
-    const folder = folders.find((item) => item.id === nextFolderId) ?? null
-    const contentWithoutMentions = removeFolderMentions(draftRef.current).trimStart()
-    const content = folder
-      ? `${contentWithoutMentions}<p>${folderMentionHtml(folder)}</p>`
-      : contentWithoutMentions
-    setExternalUpdateToken((token) => token + 1)
-    flushFolderChange(nextFolderId, content)
-  }, [folders, flushFolderChange])
-
   const reloadServerVersion = React.useCallback(async () => {
     const result = await getNoteDetail(note.id)
     if (!result.success) {
@@ -384,63 +386,10 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
     void enqueueSave()
   }, [note.id, enqueueSave])
 
-  const currentFolderName = folders.find((folder) => folder.id === folderId)?.name
-    ?? ALL_NOTES_FOLDER_LABEL
-
   return (
-    <section className="flex h-full min-h-0 flex-col bg-[var(--surface-lowest)]" aria-label="Note editor">
-      <div className="flex min-h-14 items-center gap-2 border-b border-[var(--line-subtle)] px-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-[var(--brand-primary)] hover:bg-[var(--surface-low)] md:hidden"
-          aria-label="Back to notes"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>Notes</span>
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="inline-flex min-h-9 min-w-0 items-center gap-2 rounded-full px-3 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-low)]">
-              <Folder className="h-4 w-4 shrink-0" />
-              <span className="truncate">{currentFolderName}</span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
-            <DropdownMenuItem onSelect={() => assignFolder(null)}>All Notes</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {folders.map((folder) => (
-              <DropdownMenuItem key={folder.id} onSelect={() => assignFolder(folder.id)}>
-                {folder.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <span className={cn(
-          "ml-auto text-xs font-medium",
-          saveState === "error" || saveState === "conflict" ? "text-[var(--state-urgent)]" : "text-[var(--text-muted)]"
-        )}>
-          {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Save failed" : saveState === "conflict" ? "Changed elsewhere" : ""}
-        </span>
-        {saveState === "error" ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => void enqueueSave()}>Retry</Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onDelete}
-          className="shrink-0 gap-1.5 text-[var(--state-urgent)] hover:bg-[var(--state-danger-surface)] hover:text-[var(--state-urgent)]"
-          aria-label="Delete note"
-          title="Delete note"
-        >
-          <Trash2 className="h-4 w-4" />
-          Delete
-        </Button>
-      </div>
-
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[#FCFCFB] dark:bg-zinc-950" aria-label="Note editor">
       {saveState === "conflict" ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-subtle)] bg-[var(--state-danger-surface)] px-4 py-2 text-sm text-[var(--state-urgent)]">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--line-subtle)] bg-[var(--state-danger-surface)] px-4 py-2 text-sm text-[var(--state-urgent)]">
           <span className="mr-auto">This note changed in another view. Your draft is preserved.</span>
           <Button type="button" variant="outline" size="sm" onClick={() => void reloadServerVersion()}>Reload server version</Button>
           <Button type="button" variant="outline" size="sm" onClick={() => void keepAsNewNote()}>Keep as new note</Button>
@@ -448,30 +397,112 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
         </div>
       ) : null}
 
-      <RichTextEditor
-        value={draft}
-        onChange={handleChange}
-        onBlur={() => { if (dirtyRef.current) void enqueueSave() }}
-        placeholder="Start writing… Type # to choose a folder"
-        variant="plain"
-        mode="document"
-        panelStyle="borderless"
-        documentLayout="left"
-        documentWidth="full"
-        toolbarVisibility="focus"
-        toolbarPreset="minimal"
-        toolbarTone="quiet"
-        toolbarPinned
-        notesMode
-        notesAppearance="apple"
-        focusToken={focusToken}
-        showImageGallery={false}
-        folderOptions={folderOptions}
-        onFolderMentionChange={flushFolderChange}
-        externalUpdateToken={externalUpdateToken}
-        className="min-h-0 flex-1"
-        minHeightClassName="min-h-full"
-      />
+      <div className="relative min-h-0 h-full flex-1 overflow-hidden notes-thin-scrollbar">
+        <RichTextEditor
+          value={draft}
+          onChange={handleChange}
+          onBlur={() => { if (dirtyRef.current) void enqueueSave() }}
+          placeholder=""
+          variant="plain"
+          mode="document"
+          panelStyle="borderless"
+          documentLayout="left"
+          documentWidth="full"
+          documentHeader={
+            <div className="flex items-center justify-between pt-4 pb-1">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 md:hidden"
+                  aria-label="Back to notes"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <p className="text-xs text-zinc-400 font-normal">
+                  {format(new Date(note.updatedAt), "d MMMM yyyy 'at' HH:mm")}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                {saveState === "saving" ? (
+                  <span className="mr-2 text-xs font-medium text-zinc-400">Saving…</span>
+                ) : saveState === "error" || saveState === "conflict" ? (
+                  <span className="mr-2 text-xs font-medium text-red-500">
+                    {saveState === "error" ? "Save failed" : "Changed elsewhere"}
+                  </span>
+                ) : null}
+                {saveState === "error" ? (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => void enqueueSave()} className="text-xs h-7">Retry</Button>
+                ) : null}
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={onTogglePin}
+                  className={cn(
+                    "h-8 w-8 rounded-lg transition-colors",
+                    isPinned
+                      ? "text-[#07965F] bg-[#EAF7F0] hover:bg-[#EAF7F0]/80 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  )}
+                  title={isPinned ? "Unpin note" : "Pin note"}
+                >
+                  <Pin className={cn("h-4 w-4", isPinned && "fill-current")} />
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg"
+                      aria-label="Note actions"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onSelect={() => {
+                      if (typeof navigator !== "undefined" && navigator.clipboard) {
+                        navigator.clipboard.writeText(window.location.href)
+                        toast.success("Note link copied to clipboard")
+                      }
+                    }}>
+                      <Share2 className="mr-2 h-4 w-4" /> Share note
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={onMoveToFolder}>
+                      <Folder className="mr-2 h-4 w-4" /> Move to folder
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={onDuplicate}>
+                      <SquarePen className="mr-2 h-4 w-4" /> Duplicate note
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={onDelete} className="text-red-600 focus:text-red-600">
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete note
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          }
+          toolbarVisibility="always"
+          toolbarPreset="minimal"
+          toolbarTone="quiet"
+          toolbarPinned
+          notesMode
+          notesAppearance="apple"
+          focusToken={focusToken}
+          showImageGallery={false}
+          folderOptions={folderOptions}
+          onFolderMentionChange={flushFolderChange}
+          externalUpdateToken={externalUpdateToken}
+          className="h-full min-h-0"
+          minHeightClassName="min-h-full pb-16"
+        />
+      </div>
     </section>
   )
 }))
@@ -490,25 +521,63 @@ function formatNoteSnippetDate(date: Date, now: Date = new Date()): string {
   return format(date, "dd/MM/yyyy")
 }
 
-function groupNotesByDate(rows: ClientNoteRow[]): Array<{ title: string; notes: ClientNoteRow[] }> {
+type SortBy = "updatedAt" | "createdAt" | "title"
+
+function groupNotesByDate(
+  rows: ClientNoteRow[],
+  pinnedIds: Set<string>,
+  sortBy: SortBy = "updatedAt"
+): Array<{ title: string; notes: ClientNoteRow[] }> {
+  const pinnedNotes = rows.filter((r) => pinnedIds.has(r.id))
+  const unpinnedNotes = rows.filter((r) => !pinnedIds.has(r.id))
+
+  const sortedUnpinned = [...unpinnedNotes].sort((a, b) => {
+    if (sortBy === "title") {
+      return (a.title || "").localeCompare(b.title || "")
+    }
+    if (sortBy === "createdAt") {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    }
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  })
+
+  const result: Array<{ title: string; notes: ClientNoteRow[] }> = []
+
+  if (pinnedNotes.length > 0) {
+    result.push({
+      title: "PINNED",
+      notes: pinnedNotes,
+    })
+  }
+
+  if (sortBy === "title") {
+    if (sortedUnpinned.length > 0) {
+      result.push({
+        title: "ALL NOTES",
+        notes: sortedUnpinned,
+      })
+    }
+    return result
+  }
+
   const now = new Date()
   const groups: Record<string, ClientNoteRow[]> = {}
   const groupOrder: string[] = []
 
-  for (const row of rows) {
-    const date = new Date(row.updatedAt)
-    let section = "Previous 30 Days"
+  for (const row of sortedUnpinned) {
+    const date = new Date(sortBy === "createdAt" ? row.createdAt : row.updatedAt)
+    let section = "PREVIOUS 30 DAYS"
 
     if (isToday(date)) {
-      section = "Today"
+      section = "TODAY"
     } else if (isYesterday(date)) {
-      section = "Yesterday"
+      section = "YESTERDAY"
     } else if (differenceInCalendarDays(now, date) <= 7 && differenceInCalendarDays(now, date) >= 0) {
-      section = "Previous 7 Days"
+      section = "PREVIOUS 7 DAYS"
     } else if (differenceInCalendarDays(now, date) <= 30 && differenceInCalendarDays(now, date) >= 0) {
-      section = "Previous 30 Days"
+      section = "PREVIOUS 30 DAYS"
     } else if (date.getFullYear() === now.getFullYear()) {
-      section = format(date, "MMMM")
+      section = format(date, "MMMM").toUpperCase()
     } else {
       section = format(date, "yyyy")
     }
@@ -520,10 +589,14 @@ function groupNotesByDate(rows: ClientNoteRow[]): Array<{ title: string; notes: 
     groups[section].push(row)
   }
 
-  return groupOrder.map((title) => ({
-    title,
-    notes: groups[title],
-  }))
+  for (const title of groupOrder) {
+    result.push({
+      title,
+      notes: groups[title],
+    })
+  }
+
+  return result
 }
 
 export function NotesWorkspace({
@@ -551,10 +624,35 @@ export function NotesWorkspace({
   const [focusToken, setFocusToken] = React.useState(0)
   const [editorSessionVersion, setEditorSessionVersion] = React.useState(0)
   const [mobilePane, setMobilePane] = React.useState<MobilePane>(startNewNote || requestedNoteId ? "editor" : "list")
+  const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false)
+  const mobileSearchRef = React.useRef<HTMLInputElement>(null)
   const [folderDialog, setFolderDialog] = React.useState<{ mode: "create" | "rename"; folder?: NoteFolderRecord } | null>(null)
   const [folderName, setFolderName] = React.useState("")
   const [folderToDelete, setFolderToDelete] = React.useState<NoteFolderRecord | null>(null)
   const [noteToDelete, setNoteToDelete] = React.useState<ClientNoteDetail | null>(null)
+  const [noteToMove, setNoteToMove] = React.useState<ClientNoteDetail | null>(null)
+  const [sortBy, setSortBy] = React.useState<SortBy>("updatedAt")
+  const [pinnedIds, setPinnedIds] = React.useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set()
+    try {
+      const raw = localStorage.getItem("notes_pinned_ids")
+      return raw ? new Set(JSON.parse(raw)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+
+  const togglePin = React.useCallback((id: string) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      try {
+        localStorage.setItem("notes_pinned_ids", JSON.stringify(Array.from(next)))
+      } catch {}
+      return next
+    })
+  }, [])
   const detailCacheRef = React.useRef(new Map<string, NoteDetail>())
   const rowsRef = React.useRef<ClientNoteRow[]>(initialRows)
   const selectedIdRef = React.useRef<string | null>(initialSelectedNote?.id ?? null)
@@ -845,6 +943,47 @@ export function NotesWorkspace({
     setRows((current) => sortRows([{ ...rowFromDetail(note) }, ...current.filter((row) => row.id !== note.id)]))
   }, [cacheDetail])
 
+  const duplicateCurrentNote = React.useCallback(async () => {
+    const current = selectedNoteRef.current
+    if (!current) return
+    const id = crypto.randomUUID()
+    const result = await createNote({
+      id,
+      content: current.content,
+      folderId: current.folderId,
+    })
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+    toast.success("Note duplicated")
+    applySavedNote(result.data)
+    setSelectedId(result.data.id)
+    setSelectedNote(result.data)
+    setAllCount((c) => c + 1)
+    setFocusToken((t) => t + 1)
+  }, [applySavedNote])
+
+  const moveNoteToFolder = React.useCallback(async (targetFolderId: string | null) => {
+    if (!noteToMove) return
+    const result = await saveNoteContent({
+      noteId: noteToMove.id,
+      content: noteToMove.content,
+      expectedRevision: noteToMove.contentRevision,
+      folderId: targetFolderId,
+    })
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+    toast.success("Note moved")
+    setNoteToMove(null)
+    applySavedNote(result.data)
+    if (selectedId === noteToMove.id) {
+      setSelectedNote(result.data)
+    }
+  }, [noteToMove, selectedId, applySavedNote])
+
   const createOrRenameFolder = React.useCallback(async () => {
     if (!folderDialog || !folderName.trim()) return
     if (folderDialog.mode === "rename" && selectedNote?.localOnly && selectedNote.folderId === folderDialog.folder?.id) {
@@ -929,11 +1068,10 @@ export function NotesWorkspace({
         return
       }
     }
-    setRows((current) => current.filter((row) => row.id !== noteToDelete.id))
-    setAllCount((count) => Math.max(0, count - 1))
-    if (noteToDelete.folderId) {
-      setFolders((current) => current.map((folder) => folder.id === noteToDelete.folderId ? { ...folder, count: Math.max(0, folder.count - 1) } : folder))
-    }
+    toast.success("Note deleted")
+    setRows((rows) => rows.filter((r) => r.id !== noteToDelete.id))
+    setTotalCount((c) => Math.max(0, c - 1))
+    setAllCount((c) => Math.max(0, c - 1))
     detailCacheRef.current.delete(noteToDelete.id)
     window.localStorage.removeItem(`notes.draft.${noteToDelete.id}`)
     const next = rows.find((row) => row.id !== noteToDelete.id)
@@ -946,51 +1084,93 @@ export function NotesWorkspace({
     }
   }, [noteToDelete, rows, selectNote])
 
-  const searchInput = <NotesSearchInput value={search} onChange={setSearch} variant="apple" />
+  const searchInput = (
+    <NotesSearchInput
+      ref={mobileSearchRef}
+      value={search}
+      onChange={setSearch}
+      showShortcutHint={true}
+    />
+  )
   const addButton = (
-    <Button type="button" onClick={beginNewNote} className="min-h-10 gap-2 rounded-[14px] px-4">
-      <FilePlus2 className="h-4 w-4" />
-      <span className="hidden sm:inline">New Note</span>
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={beginNewNote}
+      className="h-8 w-8 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg"
+      title="New Note"
+    >
+      <SquarePen className="h-4 w-4" />
     </Button>
   )
 
   const activeFolderId = folderIdFromView(view)
   const visibleCount = search ? totalCount : view === "all" ? allCount : folders.find((folder) => folder.id === activeFolderId)?.count ?? totalCount
-  const noteGroups = React.useMemo(() => groupNotesByDate(rows), [rows])
+  const noteGroups = React.useMemo(() => groupNotesByDate(rows, pinnedIds, sortBy), [rows, pinnedIds, sortBy])
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="px-4 pt-4 pb-4 md:px-5 md:pt-5 xl:px-7 xl:pt-7 2xl:px-8">
-        <AppPageHeader title="Notes" search={searchInput} primaryAction={addButton} />
+    <div className="-mx-4 -mt-4 -mb-6 flex h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] flex-col overflow-hidden bg-[#F3F6F3] dark:bg-zinc-950 md:-mx-5 md:-mt-5 md:-mb-7 md:h-[calc(100dvh-4rem)] md:max-h-[calc(100dvh-4rem)] xl:-mx-7 xl:-mt-7 xl:-mb-8 xl:h-[calc(100dvh-5.5rem)] xl:max-h-[calc(100dvh-5.5rem)] 2xl:-mx-8">
+      {/* Mobile Header when in Folders Pane */}
+      <div className={cn("px-4 py-3 border-b border-[#ECEFEB] dark:border-zinc-800 bg-[#FAFBFA] dark:bg-zinc-950 flex md:hidden items-center justify-between", mobilePane === "folders" ? "flex" : "hidden")}>
+        <div className="flex items-center gap-3">
+          <MobileMenuTrigger />
+          <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Notes</h1>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button type="button" variant="ghost" size="icon" onClick={() => {
+            setMobileSearchOpen((open) => {
+              if (!open) setTimeout(() => mobileSearchRef.current?.focus(), 50)
+              return !open
+            })
+          }} className="h-8 w-8 text-zinc-500">
+            {mobileSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+          </Button>
+          {addButton}
+        </div>
       </div>
+      {mobileSearchOpen && mobilePane === "folders" ? (
+        <div className="px-4 py-2 border-b border-[#ECEFEB] dark:border-zinc-800 bg-[#FAFBFA] dark:bg-zinc-950 md:hidden">
+          {searchInput}
+        </div>
+      ) : null}
 
-      <div className="grid flex-1 bg-[var(--surface-lowest)] md:grid-cols-[230px_240px_minmax(0,1fr)] lg:grid-cols-[230px_270px_minmax(0,1fr)] min-h-[560px]">
-        <aside className={cn("min-h-0 flex-col border-r border-[var(--line-subtle)] bg-[var(--surface-low)]", mobilePane === "folders" ? "flex" : "hidden", "md:flex")}>
-          <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-3">
-            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Folders</span>
+      <div className="grid flex-1 h-full min-h-0 overflow-hidden md:grid-cols-[230px_290px_minmax(0,1fr)] lg:grid-cols-[230px_300px_minmax(0,1fr)]">
+        {/* Column 1: Folders Sidebar */}
+        <aside className={cn("h-full min-h-0 flex flex-col overflow-hidden border-r border-[#ECEFEB] dark:border-zinc-800 bg-[#FAFBFA] dark:bg-zinc-950", mobilePane === "folders" ? "flex" : "hidden", "md:flex")}>
+          <div className="hidden md:flex flex-col gap-3 px-4 pt-5 pb-2 shrink-0">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Notes</h1>
+              {addButton}
+            </div>
+            {searchInput}
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-2 mt-1 shrink-0">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">FOLDERS</span>
             <button
               type="button"
               onClick={() => { setFolderDialog({ mode: "create" }); setFolderName("") }}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-lowest)] hover:text-[var(--text-primary)] transition-colors"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               aria-label="Add folder"
             >
-              <FolderPlus className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
             </button>
           </div>
-          <nav className="min-h-0 flex-1 overflow-y-auto p-2 space-y-1" aria-label="Note folders">
+          <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-1 space-y-0.5 flex flex-col notes-thin-scrollbar" aria-label="Note folders">
             <button
               type="button"
               onClick={() => switchView("all")}
               className={cn(
-                "flex min-h-8.5 w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
+                "flex min-h-8.5 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
                 view === "all"
-                  ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] font-semibold shadow-xs"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)]/70 hover:text-[var(--text-primary)]"
+                  ? "bg-[#EAF7F0] dark:bg-emerald-950/40 text-[#07965F] dark:text-emerald-400 font-semibold shadow-none"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-900/50 font-normal"
               )}
             >
-              <Folder className={cn("h-4 w-4 shrink-0", view === "all" ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
+              <Folder className={cn("h-4 w-4 shrink-0", view === "all" ? "text-[#07965F] dark:text-emerald-400" : "text-zinc-400")} />
               <span className="min-w-0 flex-1 truncate text-left">All Notes</span>
-              <span className="shrink-0 text-xs font-medium tabular-nums text-[var(--text-muted)]">{allCount}</span>
+              <span className={cn("shrink-0 text-xs tabular-nums", view === "all" ? "text-[#07965F] dark:text-emerald-400 font-semibold" : "text-zinc-400")}>{allCount}</span>
             </button>
             {folders.map((folder) => {
               const isActive = activeFolderId === folder.id
@@ -999,17 +1179,17 @@ export function NotesWorkspace({
                   key={folder.id}
                   className={cn(
                     "group relative flex min-h-8.5 items-center rounded-lg transition-colors",
-                    isActive ? "bg-[var(--surface-lowest)] shadow-xs font-semibold" : "hover:bg-[var(--surface-lowest)]/70"
+                    isActive ? "bg-[#EAF7F0] dark:bg-emerald-950/40 text-[#07965F] dark:text-emerald-400 font-semibold" : "hover:bg-zinc-100/60 dark:hover:bg-zinc-900/50 font-normal text-zinc-700 dark:text-zinc-300"
                   )}
                 >
                   <button
                     type="button"
                     onClick={() => switchView(folderView(folder.id))}
-                    className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-1.5 pl-2.5 pr-2 text-left text-sm text-[var(--text-secondary)]"
+                    className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-2 pl-3 pr-2 text-left text-sm"
                   >
-                    <Folder className={cn("h-4 w-4 shrink-0", isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
-                    <span className={cn("min-w-0 flex-1 truncate text-sm", isActive ? "text-[var(--text-primary)] font-semibold" : "text-[var(--text-secondary)]")}>{folder.name}</span>
-                    <span className="shrink-0 text-xs font-medium tabular-nums text-[var(--text-muted)] transition-opacity md:group-hover:opacity-0 md:group-focus-within:opacity-0">
+                    <Folder className={cn("h-4 w-4 shrink-0", isActive ? "text-[#07965F] dark:text-emerald-400" : "text-zinc-400")} />
+                    <span className="min-w-0 flex-1 truncate text-sm">{folder.name}</span>
+                    <span className={cn("shrink-0 text-xs tabular-nums", isActive ? "text-[#07965F] dark:text-emerald-400 font-semibold" : "text-zinc-400")}>
                       {folder.count}
                     </span>
                   </button>
@@ -1018,7 +1198,7 @@ export function NotesWorkspace({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex h-6.5 w-6.5 items-center justify-center rounded-md text-[var(--text-muted)] transition-opacity hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 transition-opacity hover:bg-zinc-200/50 hover:text-zinc-700 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0 md:group-hover:opacity-100"
                           aria-label={`${folder.name} actions`}
                         >
                           <MoreHorizontal className="h-3.5 w-3.5" />
@@ -1033,89 +1213,115 @@ export function NotesWorkspace({
                 </div>
               )
             })}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="mt-2 w-full justify-start gap-2.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              onClick={() => { setFolderDialog({ mode: "create" }); setFolderName("") }}
-            >
-              <FolderPlus className="h-3.5 w-3.5" />Add Folder
-            </Button>
+            
+            <div className="mt-auto px-1 pb-4 pt-6 shrink-0">
+              <button
+                type="button"
+                className="flex min-h-8.5 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-normal text-zinc-500 hover:bg-zinc-100/60 hover:text-zinc-800 transition-colors"
+              >
+                <Trash2 className="h-4 w-4 shrink-0 text-zinc-400" />
+                <span className="min-w-0 flex-1 truncate text-left">Recently Deleted</span>
+              </button>
+            </div>
           </nav>
         </aside>
 
-        <section className={cn("min-h-0 flex-col border-r border-[var(--line-subtle)] bg-[var(--surface-lowest)]", mobilePane === "list" ? "flex" : "hidden", "md:flex")} aria-label="Notes list">
-          <div className="flex min-h-14 items-center gap-2 border-b border-[var(--line-subtle)] px-3">
-            <button
-              type="button"
-              onClick={() => setMobilePane("folders")}
-              className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-[var(--brand-primary)] hover:bg-[var(--surface-low)] md:hidden"
-              aria-label="Show folders"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span>Folders</span>
-            </button>
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-sm font-semibold text-[var(--text-primary)]">{search ? "Search" : activeFolderId ? folders.find((folder) => folder.id === activeFolderId)?.name : "All Notes"}</h2>
-              <p className="text-xs tabular-nums text-[var(--text-muted)]">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>
+        {/* Column 2: Notes List */}
+        <section className={cn("h-full min-h-0 flex-col overflow-hidden border-r border-[#ECEFEB] dark:border-zinc-800 bg-[#FFFFFF] dark:bg-zinc-950", mobilePane === "list" ? "flex" : "hidden", "md:flex")} aria-label="Notes list">
+          <div className="flex flex-col gap-0.5 px-4 pt-5 pb-3 shrink-0 border-b border-[#ECEFEB] dark:border-zinc-800 md:border-none">
+            <div className="flex items-center gap-2 md:hidden mb-1 -ml-1">
+              <button
+                type="button"
+                onClick={() => setMobilePane("folders")}
+                className="inline-flex items-center gap-1 rounded-lg px-1 py-1 text-xs font-semibold text-[#07965F] hover:bg-emerald-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Folders</span>
+              </button>
             </div>
-            <Button type="button" variant="ghost" size="icon" onClick={beginNewNote} aria-label="New note"><FilePlus2 className="h-4 w-4" /></Button>
+            <div className="flex items-center justify-between">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="flex items-center gap-1.5 text-lg font-bold text-zinc-900 dark:text-zinc-100 hover:text-[#07965F] transition-colors">
+                    <span className="truncate max-w-[200px]">{search ? "Search" : activeFolderId ? folders.find((folder) => folder.id === activeFolderId)?.name : "All Notes"}</span>
+                    <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto notes-thin-scrollbar">
+                  <DropdownMenuItem onSelect={() => switchView("all")} className="font-medium">All Notes</DropdownMenuItem>
+                  {folders.map(f => (
+                    <DropdownMenuItem key={f.id} onSelect={() => switchView(folderView(f.id))}>{f.name}</DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Sort by</div>
+                  <DropdownMenuItem onSelect={() => setSortBy("updatedAt")} className={cn(sortBy === "updatedAt" && "text-[#07965F] font-semibold")}>
+                    Last edited {sortBy === "updatedAt" ? "✓" : ""}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setSortBy("createdAt")} className={cn(sortBy === "createdAt" && "text-[#07965F] font-semibold")}>
+                    Date created {sortBy === "createdAt" ? "✓" : ""}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setSortBy("title")} className={cn(sortBy === "title" && "text-[#07965F] font-semibold")}>
+                    Title {sortBy === "title" ? "✓" : ""}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <p className="text-xs text-zinc-400 font-normal mt-0.5">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-1 notes-thin-scrollbar">
             {loadingList && rows.length === 0 ? (
-              <div className="flex h-56 flex-col items-center justify-center gap-2 text-xs text-[var(--text-muted)]">
-                <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-primary)]" />
+              <div className="flex h-56 flex-col items-center justify-center gap-2 text-xs text-zinc-400">
+                <Loader2 className="h-5 w-5 animate-spin text-[#07965F]" />
                 <span>Loading notes…</span>
               </div>
             ) : rows.length ? (
               <div className="space-y-4">
                 {noteGroups.map((group) => (
                   <div key={group.title} className="space-y-1">
-                    <h3 className="px-2 pt-1 text-xs font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                    <h3 className="px-3.5 pt-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                       {group.title}
                     </h3>
-                    <div className="rounded-[14px] bg-[var(--surface-lowest)]">
-                      {group.notes.map((row, index) => {
+                    <div className="flex flex-col gap-1">
+                      {group.notes.map((row) => {
                         const isSelected = selectedId === row.id
-                        const showDivider = index < group.notes.length - 1 && !isSelected && selectedId !== group.notes[index + 1]?.id
-                        const snippetDate = formatNoteSnippetDate(new Date(row.updatedAt))
-                        const folderName = folders.find((folder) => folder.id === row.folderId)?.name ?? ALL_NOTES_FOLDER_LABEL
+                        const snippetDate = formatNoteSnippetDate(new Date(sortBy === "createdAt" ? row.createdAt : row.updatedAt))
+                        const noteFolderName = (view === "all" || Boolean(search)) && row.folderId
+                          ? folders.find((f) => f.id === row.folderId)?.name
+                          : null
 
                         return (
-                          <React.Fragment key={row.id}>
-                            <button
-                              type="button"
-                              onClick={() => void selectNote(row.id, true)}
-                              className={cn(
-                                "group relative flex w-full flex-col gap-0.5 rounded-[12px] px-3 py-2 text-left transition-colors",
-                                isSelected
-                                  ? "bg-[var(--state-info-surface)] shadow-xs"
-                                  : "hover:bg-[var(--surface-low)]/80"
-                              )}
-                            >
-                              <div className="flex min-w-0 items-center justify-between gap-2">
-                                <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", isSelected ? "text-[var(--text-primary)]" : "text-[var(--text-primary)]")}>
-                                  {row.title || "New note"}
+                          <button
+                            key={row.id}
+                            type="button"
+                            onClick={() => void selectNote(row.id, true)}
+                            className={cn(
+                              "group relative flex w-full flex-col rounded-xl px-3.5 py-2.5 text-left transition-colors",
+                              isSelected
+                                ? "bg-[#EEF8F2] dark:bg-emerald-950/30 shadow-none"
+                                : "hover:bg-zinc-100/50 dark:hover:bg-zinc-900/50"
+                            )}
+                          >
+                            <div className="flex min-w-0 items-center justify-between gap-2 w-full">
+                              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                                {row.title || "New note"}
+                              </span>
+                              <span className="shrink-0 text-xs text-zinc-400 font-normal">
+                                {snippetDate}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 min-w-0 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                              {noteFolderName ? (
+                                <span className="inline-flex items-center gap-1 shrink-0 text-zinc-600 dark:text-zinc-300 font-medium">
+                                  <Folder className="h-3 w-3 text-zinc-400" />
+                                  <span>{noteFolderName}</span>
+                                  <span className="text-zinc-300 dark:text-zinc-600 font-normal">·</span>
                                 </span>
-                              </div>
-                              <div className="flex min-w-0 items-baseline gap-2 text-xs">
-                                <span className="shrink-0 font-medium text-[var(--text-primary)] opacity-90">
-                                  {snippetDate}
-                                </span>
-                                <span className="min-w-0 flex-1 truncate text-[var(--text-secondary)] opacity-80">
-                                  {row.preview || "No additional text"}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 text-xs font-medium text-[var(--text-muted)]">
-                                <Folder className="h-3 w-3 shrink-0 opacity-70" />
-                                <span className="truncate">{folderName}</span>
-                              </div>
-                            </button>
-                            {showDivider ? (
-                              <div className="mx-3 border-b border-[var(--line-subtle)]" />
-                            ) : null}
-                          </React.Fragment>
+                              ) : null}
+                              <p className="truncate min-w-0 flex-1">
+                                {row.preview || "No additional text"}
+                              </p>
+                            </div>
+                          </button>
                         )
                       })}
                     </div>
@@ -1124,17 +1330,18 @@ export function NotesWorkspace({
               </div>
             ) : (
               <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">
-                <NotebookPen className="mb-3 h-8 w-8 text-[var(--text-muted)]" />
-                <p className="font-semibold text-[var(--text-primary)]">{search ? "No matching notes" : "No notes yet"}</p>
-                {!search ? <Button type="button" variant="ghost" className="mt-2" onClick={beginNewNote}>Create a note</Button> : null}
+                <NotebookPen className="mb-3 h-8 w-8 text-zinc-400" />
+                <p className="font-semibold text-zinc-900 dark:text-zinc-100">{search ? "No matching notes" : "No notes yet"}</p>
+                {!search ? <Button type="button" variant="ghost" className="mt-2 text-xs" onClick={beginNewNote}>Create a note</Button> : null}
               </div>
             )}
             <div ref={loadMoreRef} className="h-1" />
-            {loadingList && rows.length > 0 ? <p className="py-3 text-center text-xs text-[var(--text-muted)]">Loading…</p> : null}
+            {loadingList && rows.length > 0 ? <p className="py-3 text-center text-xs text-zinc-400">Loading…</p> : null}
           </div>
         </section>
 
-        <div className={cn("min-h-0 min-w-0", mobilePane === "editor" ? "block" : "hidden", "md:block")}>
+        {/* Column 3: Editor */}
+        <div className={cn("h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-[#FCFCFB] dark:bg-zinc-950", mobilePane === "editor" ? "block" : "hidden", "md:block")}>
           {loadingDetail ? (
             <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">Loading note…</div>
           ) : selectedNote ? (
@@ -1144,6 +1351,10 @@ export function NotesWorkspace({
               note={selectedNote}
               folders={folders}
               focusToken={focusToken}
+              isPinned={pinnedIds.has(selectedNote.id)}
+              onTogglePin={() => togglePin(selectedNote.id)}
+              onDuplicate={duplicateCurrentNote}
+              onMoveToFolder={() => setNoteToMove(selectedNote)}
               onSaved={applySavedNote}
               onCreated={applySavedNote}
               onForkCreated={(note) => { applySavedNote(note); setAllCount((count) => count + 1); selectedIdRef.current = note.id; selectedNoteRef.current = note; setSelectedId(note.id); setSelectedNote(note); setFocusToken((token) => token + 1) }}
@@ -1160,6 +1371,40 @@ export function NotesWorkspace({
           )}
         </div>
       </div>
+
+      {/* Move Note Dialog */}
+      <Dialog open={Boolean(noteToMove)} onOpenChange={(open) => { if (!open) setNoteToMove(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Move to folder</DialogTitle></DialogHeader>
+          <div className="space-y-1 py-2">
+            <button
+              type="button"
+              onClick={() => void moveNoteToFolder(null)}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-left transition-colors",
+                noteToMove?.folderId === null ? "bg-[#EAF7F0] text-[#07965F] font-semibold" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              )}
+            >
+              <Folder className="h-4 w-4" />
+              <span>All Notes (No folder)</span>
+            </button>
+            {folders.map((folder) => (
+              <button
+                key={folder.id}
+                type="button"
+                onClick={() => void moveNoteToFolder(folder.id)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-left transition-colors",
+                  noteToMove?.folderId === folder.id ? "bg-[#EAF7F0] text-[#07965F] font-semibold" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                )}
+              >
+                <Folder className="h-4 w-4" />
+                <span>{folder.name}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(folderDialog)} onOpenChange={(open) => { if (!open) setFolderDialog(null) }}>
         <DialogContent className="sm:max-w-md">
