@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { ArrowDownUp, Check, CheckCircle2, RefreshCw, SlidersHorizontal, Smartphone, X } from "lucide-react"
+import { ArrowDownUp, Check, RefreshCw, SlidersHorizontal, Smartphone, X } from "lucide-react"
 import { toast } from "sonner"
 import { syncTickTickNow } from "@/lib/actions/integrations"
 import { Button } from "@/components/ui/button"
@@ -154,7 +154,7 @@ export function TasksStatusControls({
     : currentStatus || "Active"
 
   return (
-    <nav className="flex items-center justify-center gap-7 sm:gap-9 px-4 md:px-6" aria-label="Task status">
+    <nav className="flex flex-1 items-center justify-around md:justify-center gap-1 sm:gap-4 md:gap-6 px-1 md:px-6 h-11 md:h-auto rounded-2xl border border-[var(--line-subtle)] md:border-none bg-[var(--surface-lowest)] md:bg-transparent md:shadow-none shadow-[var(--shadow-apple)]" aria-label="Task status">
       {STATUS_OPTIONS.map((option) => {
         const isCurrent = displayedStatus === option.value
           || (option.value === "Active" && (displayedStatus === "All" && !searchContext?.searchTerm.trim()))
@@ -167,18 +167,15 @@ export function TasksStatusControls({
             onClick={() => searchContext?.setStatusRefined(true)}
             aria-current={isCurrent ? "page" : undefined}
             className={cn(
-              "group relative inline-flex items-center gap-2 py-2 text-[15px] sm:text-base font-semibold tracking-[-0.01em] transition-colors",
+              "group relative inline-flex items-center justify-center gap-1.5 h-full px-2 md:py-2 text-[14px] sm:text-[15px] md:text-base font-semibold tracking-[-0.01em] transition-colors",
               isCurrent
-                ? "text-emerald-700 dark:text-emerald-400"
+                ? "text-[var(--brand-primary)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             )}
           >
-            {option.value === "Active" && isCurrent ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-            ) : null}
             <span>{option.label}</span>
             {option.value === "Active" && typeof activeCount === "number" && activeCount > 0 ? (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-100/90 px-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--brand-primary)_12%,transparent)] px-1.5 text-xs font-bold text-[var(--brand-primary)]">
                 {activeCount}
               </span>
             ) : null}
@@ -188,7 +185,7 @@ export function TasksStatusControls({
               </span>
             ) : null}
             {isCurrent ? (
-              <span className="absolute inset-x-0 -bottom-1 h-[2.5px] rounded-full bg-emerald-600" />
+              <span className="absolute inset-x-2 bottom-0 md:-bottom-1 h-[2.5px] rounded-t-full md:rounded-full bg-[var(--brand-primary)]" />
             ) : null}
           </Link>
         )
@@ -213,7 +210,7 @@ export function TasksSortControl({ currentSort }: { currentSort: string }) {
           type="button"
           variant="outline"
           size="icon"
-          className="relative h-10 w-10 shrink-0 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+          className="relative h-11 w-11 shrink-0 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
           aria-label={`Sort tasks${isCustomSort ? ` (${currentSort})` : ""}`}
           title="Sort tasks"
         >
@@ -306,7 +303,7 @@ export function TasksFilterControl(props: TasksHeaderFilterProps) {
       type="button"
       variant="outline"
       size="icon"
-      className="relative h-10 w-10 shrink-0 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+      className="relative h-11 w-11 shrink-0 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] shadow-[var(--shadow-apple)] md:shadow-none hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
       aria-label={`Filters${activeFilters.length ? `, ${activeFilters.length} active` : ""}`}
       title="Filters"
     >
@@ -321,7 +318,9 @@ export function TasksFilterControl(props: TasksHeaderFilterProps) {
 
   return (
     <div className="flex min-w-0 items-center justify-end gap-2">
-      <TasksSortControl currentSort={props.currentSort} />
+      <div className="hidden md:block">
+        <TasksSortControl currentSort={props.currentSort} />
+      </div>
 
       <div className="hidden md:block">
         <Popover open={desktopOpen} onOpenChange={openDesktop}>

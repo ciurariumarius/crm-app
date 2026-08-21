@@ -10,6 +10,7 @@ import { AppPageHeader } from "@/components/layout/app-page-header"
 import { formatProjectName } from "@/lib/utils"
 import { normalizeProjectStatus, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { TasksSearchInput } from "@/components/tasks/tasks-search-input"
+import { TasksMobileSearchTrigger } from "@/components/tasks/tasks-mobile-search-toggle"
 import { TasksSearchProvider } from "@/components/tasks/tasks-search-context"
 import { TasksPaginationBar } from "@/components/tasks/tasks-pagination-bar"
 import { Prisma } from "@prisma/client"
@@ -236,12 +237,15 @@ export default async function TasksPage({
                     secondaryActions={<TasksFilterControl {...headerFilterProps} />}
                     footer={<TasksActiveFilterChips {...headerFilterProps} />}
                     mobilePrimaryAction={
-                        <CreateTaskButton
-                            projects={activeProjects}
-                            label="Add Task"
-                            showLabelOnMobile
-                            className="!h-10 !w-auto !min-w-0 !rounded-xl !bg-emerald-600 hover:!bg-emerald-700 !px-5 sm:!px-6 !gap-2 !text-white font-semibold shadow-sm"
-                        />
+                        <div className="flex items-center gap-2">
+                            <TasksMobileSearchTrigger />
+                            <CreateTaskButton
+                                projects={activeProjects}
+                                label=""
+                                showLabelOnMobile={false}
+                                className="!h-11 !w-11 !min-w-0 !p-0 !rounded-2xl !bg-[var(--surface-lowest)] text-emerald-600 hover:!bg-[color:color-mix(in_srgb,var(--brand-primary)_5%,transparent)] shadow-[var(--shadow-apple)] flex items-center justify-center border border-[color:color-mix(in_srgb,var(--brand-primary)_20%,var(--line-subtle))]"
+                            />
+                        </div>
                     }
                     primaryAction={
                         <CreateTaskButton

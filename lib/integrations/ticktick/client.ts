@@ -42,6 +42,22 @@ export interface CreateTickTickTaskPayload {
     isAllDay?: boolean
     timeZone?: string
     priority?: number
+    tags?: string[]
+}
+
+export interface UpdateTickTickTaskPayload {
+    id: string
+    projectId: string
+    title?: string
+    content?: string
+    desc?: string
+    status?: number
+    completedTime?: string
+    dueDate?: string
+    isAllDay?: boolean
+    timeZone?: string
+    tags?: string[]
+    priority?: number
 }
 
 export class TickTickApiError extends Error {
@@ -160,6 +176,20 @@ export async function createTickTickTask(
     payload: CreateTickTickTaskPayload
 ): Promise<TickTickTask> {
     return tickTickFetch<TickTickTask>("/task", accessToken, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    })
+}
+
+/**
+ * Update an existing task in TickTick
+ */
+export async function updateTickTickTask(
+    accessToken: string,
+    taskId: string,
+    payload: UpdateTickTickTaskPayload
+): Promise<TickTickTask> {
+    return tickTickFetch<TickTickTask>(`/task/${encodeURIComponent(taskId)}`, accessToken, {
         method: "POST",
         body: JSON.stringify(payload),
     })

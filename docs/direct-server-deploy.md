@@ -1,6 +1,6 @@
 # Direct server deployment
 
-This is the production runbook for `crm.populatia.ro`. Deployment is performed
+This is the production runbook for `crm.pixelist.ro`. Deployment is performed
 over SSH and does not require a commit or Git push.
 
 ## Credentials
@@ -13,7 +13,7 @@ Keep `.env.deploy.local` outside Git with mode `600`. It contains only:
 - `SERVER_PASSWORD`
 - `SITE_PATH`
 
-The site path must match `/home/<user>/htdocs/crm.populatia.ro`. Never place
+The site path must match `/home/<user>/htdocs/crm.pixelist.ro`. Never place
 diagnostic output or credentials under the application's `public/` directory.
 Private diagnostics belong under `$HOME/diagnostics` with mode `600`.
 

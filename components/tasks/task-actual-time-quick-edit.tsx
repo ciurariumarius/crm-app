@@ -112,7 +112,9 @@ export function TaskActualTimeQuickEdit({
                     <Clock3 className="h-3.5 w-3.5 shrink-0 text-current" />
                     <span className="truncate">{formatTaskTrackedSeconds(savedMinutes * 60)}</span>
                     {savedMinutes === 0 ? (
-                        <Plus className="h-3 w-3 shrink-0 opacity-70 transition-opacity group-hover/time:opacity-100" />
+                        <div className="ml-0.5 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded bg-[color:color-mix(in_srgb,var(--text-muted)_15%,transparent)] transition-colors group-hover/time:bg-[color:color-mix(in_srgb,var(--text-muted)_25%,transparent)]">
+                            <Plus className="h-3 w-3 text-[var(--text-primary)]" strokeWidth={2.5} />
+                        </div>
                     ) : null}
                 </button>
             </PopoverTrigger>

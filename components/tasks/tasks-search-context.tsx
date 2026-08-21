@@ -14,6 +14,8 @@ type TasksSearchContextValue = {
     setSearchPagination: React.Dispatch<React.SetStateAction<SearchPaginationState | null>>
     statusRefined: boolean
     setStatusRefined: React.Dispatch<React.SetStateAction<boolean>>
+    mobileSearchExpanded: boolean
+    setMobileSearchExpanded: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const TasksSearchContext = React.createContext<TasksSearchContextValue | null>(null)
@@ -32,6 +34,7 @@ export function TasksSearchProvider({
     const [isSearching, setIsSearching] = React.useState(false)
     const [searchPagination, setSearchPagination] = React.useState<SearchPaginationState | null>(null)
     const [statusRefined, setStatusRefined] = React.useState(initialStatusRefined)
+    const [mobileSearchExpanded, setMobileSearchExpanded] = React.useState(false)
 
     const value = React.useMemo(
         () => ({
@@ -45,8 +48,10 @@ export function TasksSearchProvider({
             setSearchPagination,
             statusRefined,
             setStatusRefined,
+            mobileSearchExpanded,
+            setMobileSearchExpanded,
         }),
-        [isSearching, searchPagination, searchResultCount, searchTerm, statusRefined]
+        [isSearching, searchPagination, searchResultCount, searchTerm, statusRefined, mobileSearchExpanded]
     )
 
     return <TasksSearchContext.Provider value={value}>{children}</TasksSearchContext.Provider>

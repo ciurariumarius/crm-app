@@ -19,7 +19,7 @@ function getAppBaseUrl(origin?: string): string {
             return cleaned
         }
     }
-    return process.env.NODE_ENV === "production" ? "https://crm.populatia.ro" : (origin?.trim() || "http://localhost:3000")
+    return process.env.NODE_ENV === "production" ? "https://crm.pixelist.ro" : (origin?.trim() || "http://localhost:3000")
 }
 
 export function getTickTickRedirectUri(origin?: string): string {

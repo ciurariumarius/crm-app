@@ -27,7 +27,7 @@ function run() {
   assert.match(appPageHeader, /md:grid md:grid-cols-\[minmax\(180px,1fr\)_minmax\(280px,640px\)_minmax\(160px,1fr\)\]/)
   assert.match(appPageHeader, /xl:grid-cols-\[minmax\(240px,1fr\)_minmax\(360px,640px\)_minmax\(240px,1fr\)\]/)
   assert.match(appPageHeader, /controls\?: React\.ReactNode/)
-  assert.match(appPageHeader, /xl:grid-cols-\[minmax\(150px,auto\)_minmax\(320px,1\.8fr\)_auto_auto_auto\]/)
+  assert.match(appPageHeader, /xl:grid-cols-\[auto_minmax\(240px,320px\)_1fr_auto_auto\]/)
 
   const projectsToolbar = read("components/projects/projects-filters-toolbar.tsx")
   assert.match(projectsToolbar, /overscroll-x-contain xl:overflow-visible xl:px-0/)

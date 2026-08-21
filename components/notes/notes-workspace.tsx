@@ -51,6 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -144,7 +145,7 @@ function hasMeaningfulNoteContent(content: string) {
 const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
   note: ClientNoteDetail
   folders: NoteFolderRecord[]
-  focusToken: number
+  focusToken?: number
   isPinned: boolean
   onTogglePin: () => void
   onDuplicate: () => void
@@ -386,8 +387,91 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
     void enqueueSave()
   }, [note.id, enqueueSave])
 
+  const saveStatus = saveState === "saving" ? (
+    <span className="text-xs font-medium text-zinc-400">Saving…</span>
+  ) : saveState === "error" || saveState === "conflict" ? (
+    <span className="text-xs font-medium text-red-500">
+      {saveState === "error" ? "Save failed" : "Changed elsewhere"}
+    </span>
+  ) : saveState === "saved" ? (
+    <span className="text-xs font-medium text-zinc-400">Saved</span>
+  ) : null
+
+  const noteActions = (
+    <>
+      {saveState === "error" ? (
+        <Button type="button" variant="ghost" size="sm" onClick={() => void enqueueSave()} className="h-8 px-2 text-xs">Retry</Button>
+      ) : null}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onTogglePin}
+        className={cn(
+          "h-10 w-10 rounded-xl transition-colors md:h-8 md:w-8 md:rounded-lg",
+          isPinned
+            ? "bg-[#EAF7F0] text-[#07965F] hover:bg-[#EAF7F0]/80 dark:bg-emerald-950/40 dark:text-emerald-400"
+            : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
+        )}
+        title={isPinned ? "Unpin note" : "Pin note"}
+        aria-label={isPinned ? "Unpin note" : "Pin note"}
+      >
+        <Pin className={cn("h-4 w-4", isPinned && "fill-current")} />
+      </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-xl text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 md:h-8 md:w-8 md:rounded-lg"
+            aria-label="Note actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onSelect={() => {
+            if (typeof navigator !== "undefined" && navigator.clipboard) {
+              navigator.clipboard.writeText(window.location.href)
+              toast.success("Note link copied to clipboard")
+            }
+          }}>
+            <Share2 className="mr-2 h-4 w-4" /> Share note
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={onMoveToFolder}>
+            <Folder className="mr-2 h-4 w-4" /> Move to folder
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={onDuplicate}>
+            <SquarePen className="mr-2 h-4 w-4" /> Duplicate note
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={onDelete} className="text-red-600 focus:text-red-600">
+            <Trash2 className="mr-2 h-4 w-4" /> Delete note
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  )
+
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[#FCFCFB] dark:bg-zinc-950" aria-label="Note editor">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent" aria-label="Note editor">
+      <div className="flex min-h-12 shrink-0 items-center justify-between border-b border-[var(--line-subtle)] px-2 md:hidden">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex h-11 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-[#07965F] transition-colors hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+          aria-label="Back to notes list"
+        >
+          <ChevronLeft className="h-5 w-5" />
+          <span>Notes</span>
+        </button>
+        <div className="flex min-w-0 items-center gap-0.5">
+          <div className="max-w-24 truncate px-1">{saveStatus}</div>
+          {noteActions}
+        </div>
+      </div>
       {saveState === "conflict" ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--line-subtle)] bg-[var(--state-danger-surface)] px-4 py-2 text-sm text-[var(--state-urgent)]">
           <span className="mr-auto">This note changed in another view. Your draft is preserved.</span>
@@ -409,84 +493,20 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
           documentLayout="left"
           documentWidth="full"
           documentHeader={
-            <div className="flex items-center justify-between pt-4 pb-1">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 md:hidden"
-                  aria-label="Back to notes"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <p className="text-xs text-zinc-400 font-normal">
+            <>
+              <p className="truncate pb-1 pt-2 text-xs font-normal text-zinc-400 md:hidden">
+                {format(new Date(note.updatedAt), "d MMMM yyyy 'at' HH:mm")}
+              </p>
+              <div className="hidden min-w-0 items-center justify-between gap-2 pb-1 pt-4 md:flex">
+                <p className="min-w-0 truncate text-xs font-normal text-zinc-400">
                   {format(new Date(note.updatedAt), "d MMMM yyyy 'at' HH:mm")}
                 </p>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {saveStatus}
+                  {noteActions}
+                </div>
               </div>
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                {saveState === "saving" ? (
-                  <span className="mr-2 text-xs font-medium text-zinc-400">Saving…</span>
-                ) : saveState === "error" || saveState === "conflict" ? (
-                  <span className="mr-2 text-xs font-medium text-red-500">
-                    {saveState === "error" ? "Save failed" : "Changed elsewhere"}
-                  </span>
-                ) : null}
-                {saveState === "error" ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => void enqueueSave()} className="text-xs h-7">Retry</Button>
-                ) : null}
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={onTogglePin}
-                  className={cn(
-                    "h-8 w-8 rounded-lg transition-colors",
-                    isPinned
-                      ? "text-[#07965F] bg-[#EAF7F0] hover:bg-[#EAF7F0]/80 dark:bg-emerald-950/40 dark:text-emerald-400"
-                      : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  )}
-                  title={isPinned ? "Unpin note" : "Pin note"}
-                >
-                  <Pin className={cn("h-4 w-4", isPinned && "fill-current")} />
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg"
-                      aria-label="Note actions"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onSelect={() => {
-                      if (typeof navigator !== "undefined" && navigator.clipboard) {
-                        navigator.clipboard.writeText(window.location.href)
-                        toast.success("Note link copied to clipboard")
-                      }
-                    }}>
-                      <Share2 className="mr-2 h-4 w-4" /> Share note
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={onMoveToFolder}>
-                      <Folder className="mr-2 h-4 w-4" /> Move to folder
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={onDuplicate}>
-                      <SquarePen className="mr-2 h-4 w-4" /> Duplicate note
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={onDelete} className="text-red-600 focus:text-red-600">
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete note
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+            </>
           }
           toolbarVisibility="always"
           toolbarPreset="minimal"
@@ -500,7 +520,7 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
           onFolderMentionChange={flushFolderChange}
           externalUpdateToken={externalUpdateToken}
           className="h-full min-h-0"
-          minHeightClassName="min-h-full pb-16"
+          minHeightClassName="min-h-full overscroll-y-contain"
         />
       </div>
     </section>
@@ -621,10 +641,11 @@ export function NotesWorkspace({
   const [allCount, setAllCount] = React.useState(initialAllCount)
   const [loadingList, setLoadingList] = React.useState(false)
   const [loadingDetail, setLoadingDetail] = React.useState(false)
-  const [focusToken, setFocusToken] = React.useState(0)
+  const [focusToken, setFocusToken] = React.useState<number | undefined>(undefined)
   const [editorSessionVersion, setEditorSessionVersion] = React.useState(0)
   const [mobilePane, setMobilePane] = React.useState<MobilePane>(startNewNote || requestedNoteId ? "editor" : "list")
   const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false)
+  const [mobileListOptionsOpen, setMobileListOptionsOpen] = React.useState(false)
   const mobileSearchRef = React.useRef<HTMLInputElement>(null)
   const [folderDialog, setFolderDialog] = React.useState<{ mode: "create" | "rename"; folder?: NoteFolderRecord } | null>(null)
   const [folderName, setFolderName] = React.useState("")
@@ -657,6 +678,7 @@ export function NotesWorkspace({
   const rowsRef = React.useRef<ClientNoteRow[]>(initialRows)
   const selectedIdRef = React.useRef<string | null>(initialSelectedNote?.id ?? null)
   const selectedNoteRef = React.useRef<ClientNoteDetail | null>(initialSelectedNote)
+  const mobilePaneRef = React.useRef<MobilePane>(mobilePane)
   const listRequestRef = React.useRef(0)
   const detailRequestRef = React.useRef(0)
   const initialQueryRef = React.useRef(true)
@@ -680,6 +702,55 @@ export function NotesWorkspace({
   React.useEffect(() => {
     selectedNoteRef.current = selectedNote
   }, [selectedNote])
+
+  React.useEffect(() => {
+    mobilePaneRef.current = mobilePane
+  }, [mobilePane])
+
+  const navigateMobilePane = React.useCallback((nextPane: MobilePane, replace = false) => {
+    if (mobilePaneRef.current === nextPane) return
+    mobilePaneRef.current = nextPane
+    setMobilePane(nextPane)
+    if (!window.matchMedia("(max-width: 767px)").matches) return
+    const currentState = (window.history.state ?? {}) as Record<string, unknown>
+    const currentDepth = typeof currentState.notesDepth === "number" ? currentState.notesDepth : 0
+    const nextState = {
+      ...currentState,
+      notesPane: nextPane,
+      notesDepth: replace ? currentDepth : currentDepth + 1,
+    }
+    window.history[replace ? "replaceState" : "pushState"](nextState, "", window.location.href)
+  }, [])
+
+  const returnToMobilePane = React.useCallback((fallbackPane: MobilePane) => {
+    const currentState = (window.history.state ?? {}) as Record<string, unknown>
+    const currentDepth = typeof currentState.notesDepth === "number" ? currentState.notesDepth : 0
+    if (window.matchMedia("(max-width: 767px)").matches && currentDepth > 0) {
+      window.history.back()
+      return
+    }
+    navigateMobilePane(fallbackPane, true)
+  }, [navigateMobilePane])
+
+  React.useEffect(() => {
+    const currentState = (window.history.state ?? {}) as Record<string, unknown>
+    window.history.replaceState({
+      ...currentState,
+      notesPane: mobilePaneRef.current,
+      notesDepth: typeof currentState.notesDepth === "number" ? currentState.notesDepth : 0,
+    }, "", window.location.href)
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as { notesPane?: MobilePane } | null
+      if (state?.notesPane && ["folders", "list", "editor"].includes(state.notesPane)) {
+        mobilePaneRef.current = state.notesPane
+        setMobilePane(state.notesPane)
+        setMobileSearchOpen(false)
+      }
+    }
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [])
 
   const cacheDetail = React.useCallback((note: NoteDetail) => {
     const cache = detailCacheRef.current
@@ -710,9 +781,9 @@ export function NotesWorkspace({
     selectedIdRef.current = noteId
     setSelectedId(noteId)
     if (shouldSwitchMobilePane) {
-      setMobilePane("editor")
+      setMobileSearchOpen(false)
+      navigateMobilePane("editor")
     }
-    setFocusToken((token) => token + 1)
     const cached = detailCacheRef.current.get(noteId)
     if (cached) {
       setSelectedNote(cached)
@@ -737,7 +808,7 @@ export function NotesWorkspace({
         setLoadingDetail(false)
       }
     }
-  }, [cacheDetail, discardBlankLocalNote])
+  }, [cacheDetail, discardBlankLocalNote, navigateMobilePane])
 
   const beginNewNote = React.useCallback(() => {
     discardBlankLocalNote(selectedId)
@@ -767,9 +838,10 @@ export function NotesWorkspace({
     selectedNoteRef.current = detail
     setSelectedId(id)
     setSelectedNote(detail)
-    setMobilePane("editor")
-    setFocusToken((token) => token + 1)
-  }, [discardBlankLocalNote, selectedId, view])
+    setMobileSearchOpen(false)
+    navigateMobilePane("editor")
+    setFocusToken((token) => (token ?? 0) + 1)
+  }, [discardBlankLocalNote, navigateMobilePane, selectedId, view])
 
   React.useEffect(() => {
     if (recoveredDraftHandledRef.current || startNewNote || !requestedNoteId) return
@@ -804,7 +876,6 @@ export function NotesWorkspace({
       setSelectedId(requestedNoteId)
       setSelectedNote(detail)
       setMobilePane("editor")
-      setFocusToken((token) => token + 1)
     } catch {
       // Ignore malformed recovery data.
     }
@@ -822,7 +893,10 @@ export function NotesWorkspace({
     if (selectedId) url.searchParams.set("note", selectedId)
     else url.searchParams.delete("note")
     url.searchParams.delete("new")
-    window.history.replaceState({}, "", `${url.pathname}${url.search}`)
+    window.history.replaceState({
+      ...(window.history.state ?? {}),
+      notesPane: mobilePaneRef.current,
+    }, "", `${url.pathname}${url.search}`)
   }, [selectedId, view])
 
   const replaceList = React.useCallback(async (nextView: NotesView, query: string) => {
@@ -858,7 +932,7 @@ export function NotesWorkspace({
 
   const switchView = React.useCallback((nextView: NotesView) => {
     if (view === nextView) {
-      setMobilePane("list")
+      navigateMobilePane("list")
       return
     }
     const targetFolderId = folderIdFromView(nextView)
@@ -870,9 +944,10 @@ export function NotesWorkspace({
     })
     previousViewRef.current = nextView
     setView(nextView)
-    setMobilePane("list")
+    setMobileSearchOpen(false)
+    navigateMobilePane("list")
     void replaceList(nextView, search)
-  }, [replaceList, search, view])
+  }, [navigateMobilePane, replaceList, search, view])
 
   const previousViewRef = React.useRef(view)
   const previousSearchRef = React.useRef(search)
@@ -961,7 +1036,7 @@ export function NotesWorkspace({
     setSelectedId(result.data.id)
     setSelectedNote(result.data)
     setAllCount((c) => c + 1)
-    setFocusToken((t) => t + 1)
+    setFocusToken((token) => (token ?? 0) + 1)
   }, [applySavedNote])
 
   const moveNoteToFolder = React.useCallback(async (targetFolderId: string | null) => {
@@ -1084,9 +1159,16 @@ export function NotesWorkspace({
     }
   }, [noteToDelete, rows, selectNote])
 
-  const searchInput = (
+  const mobileSearchInput = (
     <NotesSearchInput
       ref={mobileSearchRef}
+      value={search}
+      onChange={setSearch}
+      showShortcutHint={false}
+    />
+  )
+  const desktopSearchInput = (
+    <NotesSearchInput
       value={search}
       onChange={setSearch}
       showShortcutHint={true}
@@ -1098,8 +1180,9 @@ export function NotesWorkspace({
       variant="ghost"
       size="icon"
       onClick={beginNewNote}
-      className="h-8 w-8 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg"
+      className="h-10 w-10 rounded-xl text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 md:h-8 md:w-8 md:rounded-lg"
       title="New Note"
+      aria-label="New note"
     >
       <SquarePen className="h-4 w-4" />
     </Button>
@@ -1108,61 +1191,65 @@ export function NotesWorkspace({
   const activeFolderId = folderIdFromView(view)
   const visibleCount = search ? totalCount : view === "all" ? allCount : folders.find((folder) => folder.id === activeFolderId)?.count ?? totalCount
   const noteGroups = React.useMemo(() => groupNotesByDate(rows, pinnedIds, sortBy), [rows, pinnedIds, sortBy])
+  const activeFolderName = activeFolderId ? folders.find((folder) => folder.id === activeFolderId)?.name ?? "All Notes" : "All Notes"
+
+  const toggleMobileSearch = React.useCallback(() => {
+    const nextOpen = !mobileSearchOpen
+    if (nextOpen && mobilePaneRef.current !== "list") {
+      navigateMobilePane("list")
+    }
+    setMobileSearchOpen(nextOpen)
+    if (nextOpen) setTimeout(() => mobileSearchRef.current?.focus(), 50)
+  }, [mobileSearchOpen, navigateMobilePane])
 
   return (
-    <div className="-mx-4 -mt-4 -mb-6 flex h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] flex-col overflow-hidden bg-[#F3F6F3] dark:bg-zinc-950 md:-mx-5 md:-mt-5 md:-mb-7 md:h-[calc(100dvh-4rem)] md:max-h-[calc(100dvh-4rem)] xl:-mx-7 xl:-mt-7 xl:-mb-8 xl:h-[calc(100dvh-5.5rem)] xl:max-h-[calc(100dvh-5.5rem)] 2xl:-mx-8">
-      {/* Mobile Header when in Folders Pane */}
-      <div className={cn("px-4 py-3 border-b border-[#ECEFEB] dark:border-zinc-800 bg-[#FAFBFA] dark:bg-zinc-950 flex md:hidden items-center justify-between", mobilePane === "folders" ? "flex" : "hidden")}>
+    <div className="-mx-4 -mb-6 -mt-4 flex h-dvh max-h-dvh flex-col overflow-hidden bg-transparent md:-mx-5 md:-mb-7 md:-mt-5 md:h-[calc(100dvh-4rem)] md:max-h-[calc(100dvh-4rem)] xl:-mx-7 xl:-mb-8 xl:-mt-7 xl:h-[calc(100dvh-5.5rem)] xl:max-h-[calc(100dvh-5.5rem)] 2xl:-mx-8">
+      <header className="flex min-h-16 shrink-0 items-center justify-between border-b border-[var(--line-subtle)] bg-transparent px-4 py-2 md:hidden">
         <div className="flex items-center gap-3">
           <MobileMenuTrigger />
           <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Notes</h1>
         </div>
         <div className="flex items-center gap-1">
-          <Button type="button" variant="ghost" size="icon" onClick={() => {
-            setMobileSearchOpen((open) => {
-              if (!open) setTimeout(() => mobileSearchRef.current?.focus(), 50)
-              return !open
-            })
-          }} className="h-8 w-8 text-zinc-500">
+          <Button type="button" variant="ghost" size="icon" onClick={toggleMobileSearch} className="h-10 w-10 rounded-xl text-zinc-500" aria-label={mobileSearchOpen ? "Close search" : "Search notes"}>
             {mobileSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
           </Button>
           {addButton}
         </div>
-      </div>
-      {mobileSearchOpen && mobilePane === "folders" ? (
-        <div className="px-4 py-2 border-b border-[#ECEFEB] dark:border-zinc-800 bg-[#FAFBFA] dark:bg-zinc-950 md:hidden">
-          {searchInput}
+      </header>
+      {mobileSearchOpen ? (
+        <div className="shrink-0 border-b border-[var(--line-subtle)] bg-transparent px-4 py-2 md:hidden">
+          {mobileSearchInput}
         </div>
       ) : null}
 
-      <div className="grid flex-1 h-full min-h-0 overflow-hidden md:grid-cols-[230px_290px_minmax(0,1fr)] lg:grid-cols-[230px_300px_minmax(0,1fr)]">
+      <div className="grid h-full min-h-0 flex-1 overflow-hidden md:grid-cols-[230px_230px_minmax(0,1fr)]">
         {/* Column 1: Folders Sidebar */}
-        <aside className={cn("h-full min-h-0 flex flex-col overflow-hidden border-r border-[#ECEFEB] dark:border-zinc-800 bg-[#FAFBFA] dark:bg-zinc-950", mobilePane === "folders" ? "flex" : "hidden", "md:flex")}>
+        <aside className={cn("h-full min-h-0 flex-col overflow-hidden bg-transparent md:border-r md:border-[var(--line-subtle)]", mobilePane === "folders" ? "flex" : "hidden", "md:flex")}>
           <div className="hidden md:flex flex-col gap-3 px-4 pt-5 pb-2 shrink-0">
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Notes</h1>
               {addButton}
             </div>
-            {searchInput}
+            {desktopSearchInput}
           </div>
 
-          <div className="flex items-center justify-between px-4 py-2 mt-1 shrink-0">
+          <div className="mt-0 flex min-h-12 shrink-0 items-center justify-between border-b border-[var(--line-subtle)] px-4 py-1 md:mt-1 md:min-h-0 md:border-b-0 md:py-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">FOLDERS</span>
             <button
               type="button"
               onClick={() => { setFolderDialog({ mode: "create" }); setFolderName("") }}
-              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 md:h-6 md:w-6 md:rounded-md"
               aria-label="Add folder"
             >
               <Plus className="h-4 w-4" />
             </button>
           </div>
-          <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-1 space-y-0.5 flex flex-col notes-thin-scrollbar" aria-label="Note folders">
+          <nav className="min-h-0 flex-1 overscroll-y-contain overflow-y-auto px-2 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-1 space-y-0.5 flex flex-col notes-thin-scrollbar md:pb-1" aria-label="Note folders">
             <button
               type="button"
               onClick={() => switchView("all")}
               className={cn(
-                "flex min-h-8.5 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+                "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors md:min-h-8.5 md:rounded-lg",
                 view === "all"
                   ? "bg-[#EAF7F0] dark:bg-emerald-950/40 text-[#07965F] dark:text-emerald-400 font-semibold shadow-none"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-900/50 font-normal"
@@ -1178,14 +1265,14 @@ export function NotesWorkspace({
                 <div
                   key={folder.id}
                   className={cn(
-                    "group relative flex min-h-8.5 items-center rounded-lg transition-colors",
+                    "group relative flex min-h-11 items-center rounded-xl transition-colors md:min-h-8.5 md:rounded-lg",
                     isActive ? "bg-[#EAF7F0] dark:bg-emerald-950/40 text-[#07965F] dark:text-emerald-400 font-semibold" : "hover:bg-zinc-100/60 dark:hover:bg-zinc-900/50 font-normal text-zinc-700 dark:text-zinc-300"
                   )}
                 >
                   <button
                     type="button"
                     onClick={() => switchView(folderView(folder.id))}
-                    className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-2 pl-3 pr-2 text-left text-sm"
+                    className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl py-2 pl-3 pr-2 text-left text-sm md:min-h-0 md:rounded-lg"
                   >
                     <Folder className={cn("h-4 w-4 shrink-0", isActive ? "text-[#07965F] dark:text-emerald-400" : "text-zinc-400")} />
                     <span className="min-w-0 flex-1 truncate text-sm">{folder.name}</span>
@@ -1198,7 +1285,7 @@ export function NotesWorkspace({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 transition-opacity hover:bg-zinc-200/50 hover:text-zinc-700 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-zinc-400 transition-opacity hover:bg-zinc-200/50 hover:text-zinc-700 focus-visible:opacity-100 data-[state=open]:opacity-100 md:h-6 md:w-6 md:rounded-md md:opacity-0 md:group-hover:opacity-100"
                           aria-label={`${folder.name} actions`}
                         >
                           <MoreHorizontal className="h-3.5 w-3.5" />
@@ -1214,10 +1301,10 @@ export function NotesWorkspace({
               )
             })}
             
-            <div className="mt-auto px-1 pb-4 pt-6 shrink-0">
+            <div className="mt-auto hidden shrink-0 px-1 pb-4 pt-6 md:block">
               <button
                 type="button"
-                className="flex min-h-8.5 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-normal text-zinc-500 hover:bg-zinc-100/60 hover:text-zinc-800 transition-colors"
+                className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-normal text-zinc-500 transition-colors hover:bg-zinc-100/60 hover:text-zinc-800 md:min-h-8.5 md:rounded-lg"
               >
                 <Trash2 className="h-4 w-4 shrink-0 text-zinc-400" />
                 <span className="min-w-0 flex-1 truncate text-left">Recently Deleted</span>
@@ -1227,23 +1314,31 @@ export function NotesWorkspace({
         </aside>
 
         {/* Column 2: Notes List */}
-        <section className={cn("h-full min-h-0 flex-col overflow-hidden border-r border-[#ECEFEB] dark:border-zinc-800 bg-[#FFFFFF] dark:bg-zinc-950", mobilePane === "list" ? "flex" : "hidden", "md:flex")} aria-label="Notes list">
-          <div className="flex flex-col gap-0.5 px-4 pt-5 pb-3 shrink-0 border-b border-[#ECEFEB] dark:border-zinc-800 md:border-none">
-            <div className="flex items-center gap-2 md:hidden mb-1 -ml-1">
+        <section className={cn("h-full min-h-0 flex-col overflow-hidden bg-transparent md:border-r md:border-[var(--line-subtle)]", mobilePane === "list" ? "flex" : "hidden", "md:flex")} aria-label="Notes list">
+          <div className="flex min-h-14 shrink-0 flex-col justify-center gap-0.5 border-b border-[var(--line-subtle)] px-3 py-1 md:min-h-0 md:border-b-0 md:px-4 md:pb-3 md:pt-5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1">
               <button
                 type="button"
-                onClick={() => setMobilePane("folders")}
-                className="inline-flex items-center gap-1 rounded-lg px-1 py-1 text-xs font-semibold text-[#07965F] hover:bg-emerald-50"
+                onClick={() => returnToMobilePane("folders")}
+                className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl px-1 text-sm font-semibold text-[#07965F] hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30 md:hidden"
+                aria-label="Back to folders"
               >
-                <ChevronLeft className="h-4 w-4" />
-                <span>Folders</span>
+                <ChevronLeft className="h-5 w-5" />
               </button>
-            </div>
-            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setMobileListOptionsOpen(true)}
+                className="flex min-w-0 items-center gap-1.5 rounded-xl px-1 py-1 text-left text-lg font-bold text-zinc-900 transition-colors hover:text-[#07965F] dark:text-zinc-100 md:hidden"
+                aria-label="Choose folder and sorting"
+              >
+                <span className="max-w-[150px] truncate sm:max-w-[190px]">{search ? "Search" : activeFolderName}</span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+              </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button type="button" className="flex items-center gap-1.5 text-lg font-bold text-zinc-900 dark:text-zinc-100 hover:text-[#07965F] transition-colors">
-                    <span className="truncate max-w-[200px]">{search ? "Search" : activeFolderId ? folders.find((folder) => folder.id === activeFolderId)?.name : "All Notes"}</span>
+                  <button type="button" className="hidden items-center gap-1.5 text-lg font-bold text-zinc-900 transition-colors hover:text-[#07965F] dark:text-zinc-100 md:flex">
+                    <span className="max-w-[200px] truncate">{search ? "Search" : activeFolderName}</span>
                     <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
                   </button>
                 </DropdownMenuTrigger>
@@ -1265,10 +1360,12 @@ export function NotesWorkspace({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
+              <p className="shrink-0 text-xs font-normal text-zinc-400 md:hidden">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>
             </div>
-            <p className="text-xs text-zinc-400 font-normal mt-0.5">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>
+            <p className="mt-0.5 hidden text-xs font-normal text-zinc-400 md:block">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-1 notes-thin-scrollbar">
+          <div className="min-h-0 flex-1 overscroll-y-contain overflow-y-auto px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-1 notes-thin-scrollbar md:pb-1">
             {loadingList && rows.length === 0 ? (
               <div className="flex h-56 flex-col items-center justify-center gap-2 text-xs text-zinc-400">
                 <Loader2 className="h-5 w-5 animate-spin text-[#07965F]" />
@@ -1295,7 +1392,7 @@ export function NotesWorkspace({
                             type="button"
                             onClick={() => void selectNote(row.id, true)}
                             className={cn(
-                              "group relative flex w-full flex-col rounded-xl px-3.5 py-2.5 text-left transition-colors",
+                              "group relative flex min-h-16 w-full flex-col justify-center rounded-xl px-3.5 py-2.5 text-left transition-colors",
                               isSelected
                                 ? "bg-[#EEF8F2] dark:bg-emerald-950/30 shadow-none"
                                 : "hover:bg-zinc-100/50 dark:hover:bg-zinc-900/50"
@@ -1341,7 +1438,7 @@ export function NotesWorkspace({
         </section>
 
         {/* Column 3: Editor */}
-        <div className={cn("h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-[#FCFCFB] dark:bg-zinc-950", mobilePane === "editor" ? "block" : "hidden", "md:block")}>
+        <div className={cn("h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent", mobilePane === "editor" ? "block" : "hidden", "md:block")}>
           {loadingDetail ? (
             <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">Loading note…</div>
           ) : selectedNote ? (
@@ -1357,9 +1454,9 @@ export function NotesWorkspace({
               onMoveToFolder={() => setNoteToMove(selectedNote)}
               onSaved={applySavedNote}
               onCreated={applySavedNote}
-              onForkCreated={(note) => { applySavedNote(note); setAllCount((count) => count + 1); selectedIdRef.current = note.id; selectedNoteRef.current = note; setSelectedId(note.id); setSelectedNote(note); setFocusToken((token) => token + 1) }}
+              onForkCreated={(note) => { applySavedNote(note); setAllCount((count) => count + 1); selectedIdRef.current = note.id; selectedNoteRef.current = note; setSelectedId(note.id); setSelectedNote(note); setFocusToken((token) => (token ?? 0) + 1) }}
               onMeaningfulDraft={(noteId) => setRows((current) => current.map((row) => row.id === noteId ? { ...row, hasLocalContent: true } : row))}
-              onBack={() => setMobilePane("list")}
+              onBack={() => returnToMobilePane("list")}
               onDelete={() => setNoteToDelete(selectedNote)}
             />
           ) : (
@@ -1371,6 +1468,74 @@ export function NotesWorkspace({
           )}
         </div>
       </div>
+
+      <Sheet open={mobileListOptionsOpen} onOpenChange={setMobileListOptionsOpen}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="max-h-[80dvh] rounded-t-[24px] border-x-0 border-b-0 border-t border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-0 md:hidden"
+        >
+          <SheetTitle className="sr-only">Choose notes folder and sorting</SheetTitle>
+          <div className="mx-auto mt-3 h-1.5 w-10 rounded-full bg-[var(--line-subtle)]" />
+          <div className="overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 notes-thin-scrollbar">
+            <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">Folders</p>
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => { setMobileListOptionsOpen(false); switchView("all") }}
+                className={cn(
+                  "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors",
+                  view === "all" ? "bg-[#EAF7F0] font-semibold text-[#07965F] dark:bg-emerald-950/40 dark:text-emerald-400" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                )}
+              >
+                <Folder className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">All Notes</span>
+                <span className="text-xs tabular-nums opacity-70">{allCount}</span>
+              </button>
+              {folders.map((folder) => {
+                const isActive = activeFolderId === folder.id
+                return (
+                  <button
+                    key={folder.id}
+                    type="button"
+                    onClick={() => { setMobileListOptionsOpen(false); switchView(folderView(folder.id)) }}
+                    className={cn(
+                      "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors",
+                      isActive ? "bg-[#EAF7F0] font-semibold text-[#07965F] dark:bg-emerald-950/40 dark:text-emerald-400" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                    )}
+                  >
+                    <Folder className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+                    <span className="text-xs tabular-nums opacity-70">{folder.count}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <p className="mt-5 px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">Sort by</p>
+            <div className="space-y-1">
+              {([
+                ["updatedAt", "Last edited"],
+                ["createdAt", "Date created"],
+                ["title", "Title"],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => { setSortBy(value); setMobileListOptionsOpen(false) }}
+                  className={cn(
+                    "flex min-h-11 w-full items-center justify-between rounded-xl px-3 text-left text-sm transition-colors",
+                    sortBy === value ? "bg-[#EAF7F0] font-semibold text-[#07965F] dark:bg-emerald-950/40 dark:text-emerald-400" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  )}
+                >
+                  <span>{label}</span>
+                  {sortBy === value ? <span aria-hidden="true">✓</span> : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Move Note Dialog */}
       <Dialog open={Boolean(noteToMove)} onOpenChange={(open) => { if (!open) setNoteToMove(null) }}>

@@ -6,7 +6,7 @@ import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { useTasksSearchContext } from "./tasks-search-context"
-
+import { cn } from "@/lib/utils"
 export function TasksSearchInput() {
     const router = useRouter()
     const pathname = usePathname()
@@ -66,19 +66,11 @@ export function TasksSearchInput() {
 
     const inputRef = React.useRef<HTMLInputElement>(null)
 
-    React.useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-                event.preventDefault()
-                inputRef.current?.focus()
-            }
-        }
-        window.addEventListener("keydown", handleKeyDown)
-        return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [])
-
     return (
-        <div className="relative h-10 w-full md:max-w-[280px] lg:max-w-[320px]">
+        <div className={cn(
+            "relative h-10 w-full md:max-w-[280px] lg:max-w-[320px] transition-all",
+            searchContext?.mobileSearchExpanded ? "flex" : "hidden md:flex"
+        )}>
             <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                 <Search className="h-4 w-4" />
             </div>
@@ -93,11 +85,8 @@ export function TasksSearchInput() {
                     }
                     setSearchTerm(nextValue)
                 }}
-                className="h-10 w-full rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-9 pr-12 text-sm font-medium text-[var(--text-primary)] shadow-sm outline-none transition placeholder:font-medium placeholder:text-[var(--text-muted)] focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:ring-offset-0"
+                className="h-10 w-full rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-9 pr-4 text-sm font-medium text-[var(--text-primary)] shadow-sm outline-none transition placeholder:font-medium placeholder:text-[var(--text-muted)] focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:ring-offset-0"
             />
-            <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-[var(--line-subtle)] bg-[var(--surface-low)] px-1.5 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
-                ⌘ K
-            </kbd>
         </div>
     )
 }

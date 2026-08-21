@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { generateOAuthState, verifyOAuthState, extractUserIdFromOAuthState } from "@/lib/integrations/ticktick/auth"
-import { formatTickTickTaskPayload } from "@/lib/integrations/ticktick/sync"
+import {
+    formatTickTickTaskPayload,
+    parseTickTickTaskTitleAndStatus,
+    TICKTICK_PENDING_ICON,
+    TICKTICK_PENDING_TAG,
+} from "@/lib/integrations/ticktick/sync"
 import { TickTickApiError } from "@/lib/integrations/ticktick/client"
 import { encryptSensitiveValue, decryptSensitiveValue } from "@/lib/crypto"
 
@@ -109,6 +114,7 @@ describe("TickTick Integration Tests", () => {
             expect(payload.title).toBe("[tacoloco.ro] - Update Homepage Hero")
             expect(payload.content).toContain("DEV, Mentenanță - August 2026")
             expect(payload.content).toContain("Change banner image and headline")
+            expect(payload.tags).toBeUndefined()
         })
 
         it("formats LMS task with client in title and category in description", () => {
@@ -121,6 +127,7 @@ describe("TickTick Integration Tests", () => {
 
             expect(payload.title).toBe("[LMS Client Alpha] - Monthly report review")
             expect(payload.content).toBe("LMS: Reporting")
+            expect(payload.tags).toBeUndefined()
         })
 
         it("formats general task without site prefix", () => {
@@ -131,6 +138,79 @@ describe("TickTick Integration Tests", () => {
 
             expect(payload.title).toBe("Renew domain license")
             expect(payload.content).toBeUndefined()
+            expect(payload.tags).toBeUndefined()
+        })
+
+        it("prepends pause icon and adds pending tag when task status is Pending", () => {
+            const payload = formatTickTickTaskPayload({
+                name: "Fix navigation menu",
+                status: "Pending",
+                taskScope: "FREELANCE",
+                project: {
+                    name: "Taco Loco",
+                    site: { domainName: "tacoloco.ro" },
+                },
+            })
+
+            expect(payload.title).toBe(`${TICKTICK_PENDING_ICON} [tacoloco.ro] - Fix navigation menu`)
+            expect(payload.tags).toEqual([TICKTICK_PENDING_TAG])
+        })
+
+        it("prepends pause icon for Paused legacy status", () => {
+            const payload = formatTickTickTaskPayload({
+                name: "Internal task",
+                status: "Paused",
+                taskScope: "GENERAL",
+            })
+
+            expect(payload.title).toBe(`${TICKTICK_PENDING_ICON} Internal task`)
+            expect(payload.tags).toEqual([TICKTICK_PENDING_TAG])
+        })
+    })
+
+    describe("TickTick Task Title & Pending Status Parsing", () => {
+        it("detects ⏸️ icon and extracts clean task title", () => {
+            const result = parseTickTickTaskTitleAndStatus("⏸️ [tacoloco.ro] - Fix header")
+            expect(result.isPending).toBe(true)
+            expect(result.cleanTitle).toBe("[tacoloco.ro] - Fix header")
+        })
+
+        it("detects ⏳ icon and extracts clean task title", () => {
+            const result = parseTickTickTaskTitleAndStatus("⏳ [tacoloco.ro] - Fix header")
+            expect(result.isPending).toBe(true)
+            expect(result.cleanTitle).toBe("[tacoloco.ro] - Fix header")
+        })
+
+        it("detects 🟡 icon and extracts clean task title", () => {
+            const result = parseTickTickTaskTitleAndStatus("🟡 [tacoloco.ro] - Fix header")
+            expect(result.isPending).toBe(true)
+            expect(result.cleanTitle).toBe("[tacoloco.ro] - Fix header")
+        })
+
+        it("detects (P) and [P] text markers and extracts clean title", () => {
+            const prefixP = parseTickTickTaskTitleAndStatus("(P) [site.com] - Do work")
+            expect(prefixP.isPending).toBe(true)
+            expect(prefixP.cleanTitle).toBe("[site.com] - Do work")
+
+            const bracketP = parseTickTickTaskTitleAndStatus("[P] [site.com] - Do work")
+            expect(bracketP.isPending).toBe(true)
+            expect(bracketP.cleanTitle).toBe("[site.com] - Do work")
+
+            const suffixP = parseTickTickTaskTitleAndStatus("[site.com] - Do work (P)")
+            expect(suffixP.isPending).toBe(true)
+            expect(suffixP.cleanTitle).toBe("[site.com] - Do work")
+        })
+
+        it("detects pending from tags even if title has no icon", () => {
+            const result = parseTickTickTaskTitleAndStatus("Regular task title", ["pending"])
+            expect(result.isPending).toBe(true)
+            expect(result.cleanTitle).toBe("Regular task title")
+        })
+
+        it("returns isPending false for normal titles without pending markers", () => {
+            const result = parseTickTickTaskTitleAndStatus("[tacoloco.ro] - Active task title")
+            expect(result.isPending).toBe(false)
+            expect(result.cleanTitle).toBe("[tacoloco.ro] - Active task title")
         })
     })
 })

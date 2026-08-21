@@ -18,7 +18,7 @@ fi
 SERVER_PORT="${SERVER_PORT:-22}"
 
 case "$SITE_PATH" in
-  /home/*/htdocs/crm.populatia.ro) ;;
+  /home/*/htdocs/crm.pixelist.ro) ;;
   *)
     echo "Refusing unexpected SITE_PATH: $SITE_PATH"
     exit 1
@@ -26,7 +26,7 @@ case "$SITE_PATH" in
 esac
 
 export SSHPASS="$SERVER_PASSWORD"
-ssh_command=(sshpass -e ssh -o StrictHostKeyChecking=accept-new -p "$SERVER_PORT")
+ssh_command=(sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=accept-new -p "$SERVER_PORT")
 remote="$SERVER_USER@$SERVER_HOST"
 
 if [[ "${SKIP_LOCAL_CHECKS:-0}" != "1" ]]; then
@@ -100,7 +100,7 @@ set -Eeuo pipefail
 site_path="$1"
 backup_dir="$2"
 case "$site_path" in
-  /home/*/htdocs/crm.populatia.ro) ;;
+  /home/*/htdocs/crm.pixelist.ro) ;;
   *) echo "Unsafe site path"; exit 1 ;;
 esac
 case "$backup_dir" in
@@ -163,7 +163,7 @@ rsync -az --delete \
   --exclude='storage/project-notes/' \
   --exclude='public/uploads/project-notes/' \
   --exclude='backups/' \
-  -e "sshpass -e ssh -o StrictHostKeyChecking=accept-new -p $SERVER_PORT" \
+  -e "sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=accept-new -p $SERVER_PORT" \
   "$repo_root/" "$remote:$SITE_PATH/"
 
 "${ssh_command[@]}" "$remote" 'bash -s' -- "$SITE_PATH" "$backup_dir" "$remote_artifact" "$source_checksum" <<'REMOTE_DEPLOY'
@@ -173,7 +173,7 @@ backup_dir="$2"
 artifact_path="$3"
 expected_source_checksum="$4"
 case "$site_path" in
-  /home/*/htdocs/crm.populatia.ro) ;;
+  /home/*/htdocs/crm.pixelist.ro) ;;
   *) echo "Unsafe site path"; exit 1 ;;
 esac
 case "$backup_dir" in
@@ -193,6 +193,8 @@ export DATABASE_URL="file:$db_path"
 export PROJECT_NOTES_STORAGE_ROOT="$storage_root"
 export NODE_OPTIONS="--max-old-space-size=2048"
 [[ "$expected_source_checksum" =~ ^[a-f0-9]{64}$ ]]
+previous_node_modules="$backup_dir/node_modules-before-install"
+failed_node_modules="$backup_dir/node_modules-failed-install"
 
 rollback() {
   trap - ERR
@@ -219,7 +221,14 @@ rollback() {
   fi
   rm -rf -- "$restore_dir"
   cd "$site_path"
-  npm ci
+  if [[ -d "$previous_node_modules" ]]; then
+    if [[ -d node_modules ]]; then
+      mv -- node_modules "$failed_node_modules"
+    fi
+    mv -- "$previous_node_modules" node_modules
+  else
+    npm ci
+  fi
   npx prisma generate
   npx pm2 start npm --name pixelist-crm -- start -- -p 3000
   npx pm2 save >/dev/null 2>&1 || true
@@ -232,6 +241,9 @@ cd "$site_path"
 actual_source_checksum="$(node scripts/source-checksum.mjs)"
 [[ "$actual_source_checksum" = "$expected_source_checksum" ]]
 printf '%s  source\n' "$actual_source_checksum" > "$backup_dir/source-checksum.txt"
+if [[ -d node_modules ]]; then
+  mv -- node_modules "$previous_node_modules"
+fi
 npm ci
 npx prisma generate
 npm run data:preflight-single-owner
@@ -287,6 +299,7 @@ npx pm2 set pm2-logrotate:compress true
 npx pm2 save >/dev/null
 
 trap - ERR
+rm -rf -- "$previous_node_modules" || true
 echo "Deployment completed with backup: $backup_dir"
 REMOTE_DEPLOY
 

@@ -39,9 +39,9 @@ function HeaderIdentity({
   includeMenu?: boolean
 }) {
   return (
-    <div className="flex min-w-0 items-start gap-3">
+    <div className="flex min-w-0 items-center gap-3">
       {includeMenu ? <MobileMenuTrigger /> : null}
-      <div className="min-w-0 pt-0.5">
+      <div className="min-w-0">
         {eyebrow ? <p className="ui-overline truncate">{eyebrow}</p> : null}
         <div className="flex min-w-0 items-center gap-2.5">
           {titleIcon ? <span className="shrink-0">{titleIcon}</span> : null}
@@ -84,7 +84,7 @@ export function AppPageHeader({
     <header
       data-slot="app-page-header"
       className={cn(
-        "rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] md:px-5 md:py-4 xl:px-6",
+        "md:rounded-[16px] md:border md:border-[var(--line-subtle)] md:bg-[var(--surface-lowest)] md:p-4 md:shadow-[var(--shadow-apple)] xl:px-6 md:px-5 md:py-4",
         className
       )}
     >
@@ -104,25 +104,25 @@ export function AppPageHeader({
       </div>
 
       {controls ? (
-        <div className="hidden items-center gap-x-4 gap-y-3 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(280px,640px)_auto] xl:grid-cols-[minmax(150px,auto)_minmax(320px,1.8fr)_auto_auto_auto]">
-          <div className="md:col-start-1 md:row-start-1 xl:col-start-1">
+        <div className="hidden items-center gap-x-4 gap-y-3 md:grid md:grid-cols-[minmax(180px,1fr)_minmax(280px,640px)_auto] xl:grid-cols-[auto_minmax(240px,320px)_1fr_auto_auto]">
+          <div className="md:col-start-1 md:row-start-1 xl:col-start-1 xl:row-start-1">
             <HeaderIdentity title={title} titleIcon={titleIcon} subtitle={resolvedSubtitle} eyebrow={eyebrow} />
           </div>
-          <div className="min-w-0 md:col-start-1 md:row-start-2 xl:col-start-3 xl:row-start-1">
-            {controls}
-          </div>
           {resolvedTabletSearch ? (
-            <div className="w-full justify-self-center md:col-start-2 md:row-start-1 xl:col-start-2">
+            <div className="w-full justify-self-center md:col-start-2 md:row-start-1 xl:col-start-2 xl:row-start-1 xl:justify-self-start">
               {resolvedTabletSearch}
             </div>
-          ) : <div />}
+          ) : <div className="hidden xl:block" />}
+          <div className="min-w-0 md:col-start-1 md:row-start-2 xl:col-start-3 xl:row-start-1 xl:justify-self-center">
+            {controls}
+          </div>
           {secondaryActions ? (
             <div className="flex min-w-0 items-center justify-end md:col-span-2 md:col-start-2 md:row-start-2 xl:col-span-1 xl:col-start-4 xl:row-start-1">
               {secondaryActions}
             </div>
-          ) : null}
+          ) : <div className="hidden xl:block" />}
           {resolvedTabletAction ? (
-            <div className="shrink-0 md:col-start-3 md:row-start-1 xl:col-start-5">
+            <div className="shrink-0 md:col-start-3 md:row-start-1 xl:col-start-5 xl:row-start-1">
               {resolvedTabletAction}
             </div>
           ) : null}

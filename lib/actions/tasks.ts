@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/auth"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { LMS_CRM_EMPLOYEE_NAME } from "@/lib/lms-work-entries/crm-template"
-import { TASK_STATUS_VALUES, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
+import { TASK_STATUS_VALUES, TASK_URGENCY_VALUES, normalizeTaskStatus, normalizeTaskUrgency } from "@/lib/status"
 import { formatProjectName } from "@/lib/utils"
 import {
     buildCrmTaskWorkEntrySourceKey,
@@ -27,7 +27,7 @@ import { MAX_TASK_ESTIMATED_MINUTES } from "@/lib/tasks/estimated-time"
 import { getBucharestDateOnly, getDefaultLmsWorkDate } from "@/lib/lms-work-entries/date"
 import { z } from "zod"
 import { normalizeRichTextContent } from "@/lib/notes/content"
-import { syncOutboundTaskCreate, syncOutboundTaskComplete } from "@/lib/integrations/ticktick/sync"
+import { syncOutboundTaskCreate, syncOutboundTaskComplete, syncOutboundTaskUpdate } from "@/lib/integrations/ticktick/sync"
 
 function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?: string) {
     revalidatePath("/tasks")
@@ -42,7 +42,7 @@ function revalidateTaskPaths(projectId?: string, sitePartnerId?: string, siteId?
 
 const TaskStatusSchema = z.enum(TASK_STATUS_VALUES)
 const LegacyTaskStatusSchema = z.enum(["Active", "Paused", "Pending", "Completed", "Done"])
-const TaskUrgencySchema = z.enum(["Low", "Normal", "High", "Urgent", "Idea"])
+const TaskUrgencySchema = z.enum(TASK_URGENCY_VALUES)
 const TaskIdSchema = z.string().uuid()
 const TaskIdsSchema = z.array(TaskIdSchema).max(500)
 const ProjectIdSchema = z.string().uuid()
@@ -621,6 +621,7 @@ export async function reopenTask(taskId: string) {
             result.task.project?.siteId
         )
         if (result.entryId) revalidateLmsTaskPaths()
+        void syncOutboundTaskUpdate(result.task.id)
         const warning = result.exportedEntryPreserved
             ? "The exported LMS work entry was preserved; reopening the task does not remove exported history."
             : undefined
@@ -730,6 +731,7 @@ export async function setTaskStatus(taskId: string, status: "Active" | "Pending"
         })
 
         revalidateTaskPaths(task.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
+        void syncOutboundTaskUpdate(task.id)
         return { success: true }
     } catch (error) {
         console.error("Set task status failed:", error)
@@ -957,6 +959,7 @@ export async function updateTask(taskId: string, data: {
                 existingTask.project?.siteId
             )
         }
+        void syncOutboundTaskUpdate(task.id)
 
         return { success: true }
     } catch (error) {
@@ -1060,6 +1063,9 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
             action: "TASKS_BULK_STATUS_UPDATED",
             details: `count=${updated.count}; status=${validatedStatus}`,
         })
+        for (const id of uniqueTaskIds) {
+            void syncOutboundTaskUpdate(id)
+        }
         revalidatePath("/tasks")
         revalidatePath("/projects")
         revalidatePath("/")

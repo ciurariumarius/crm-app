@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { GlobalTimer } from "@/components/layout/global-timer"
 import { Toaster } from "@/components/ui/sonner"
 import { PWARegister } from "@/components/pwa-register"
+import { IosInstallHint } from "@/components/layout/ios-install-hint"
 import { cn } from "@/lib/utils"
 import { useHeader } from "@/components/layout/header-context"
 import { useResponsiveProfile } from "@/hooks/use-responsive-profile"
@@ -45,6 +46,7 @@ export function ShellFrame({
             </div>
             <GlobalTimer />
             <Toaster />
+            <IosInstallHint />
             <PWARegister />
         </div>
     )

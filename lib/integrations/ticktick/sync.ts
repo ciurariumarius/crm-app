@@ -9,12 +9,15 @@ import {
     getTickTickProjectData,
     getTickTickTask,
     createTickTickTask,
+    updateTickTickTask,
     completeTickTickTask,
     TickTickApiError,
     type TickTickTask,
 } from "./client"
 
 const TICKTICK_PROVIDER = "ticktick"
+export const TICKTICK_PENDING_ICON = "⏸️"
+export const TICKTICK_PENDING_TAG = "pending"
 
 export interface SyncResult {
     success: boolean
@@ -27,11 +30,12 @@ export interface SyncResult {
 
 /**
  * Format task title and content for TickTick
- * e.g. Title: "[tacoloco.ro] - task name"
+ * e.g. Title: "[tacoloco.ro] - task name" or "⏸️ [tacoloco.ro] - task name"
  * e.g. Content: "DEV, Mentenanță - August 2026\n\nTask details..."
  */
 export function formatTickTickTaskPayload(task: {
     name: string
+    status?: string | null
     description?: string | null
     taskScope?: string | null
     project?: {
@@ -42,7 +46,7 @@ export function formatTickTickTaskPayload(task: {
     } | null
     lmsAllocation?: { client?: string | null } | null
     lmsTaskType?: { name?: string | null } | null
-}): { title: string; content?: string } {
+}): { title: string; content?: string; tags?: string[] } {
     let sitePrefix = ""
     let projectDetails = ""
 
@@ -83,7 +87,9 @@ export function formatTickTickTaskPayload(task: {
         }
     }
 
-    const title = sitePrefix ? `${sitePrefix} - ${task.name}` : task.name
+    const baseTitle = sitePrefix ? `${sitePrefix} - ${task.name}` : task.name
+    const isPending = task.status === "Pending" || task.status === "Paused"
+    const title = isPending ? `${TICKTICK_PENDING_ICON} ${baseTitle}` : baseTitle
 
     const contentLines: string[] = []
     if (projectDetails) {
@@ -94,8 +100,46 @@ export function formatTickTickTaskPayload(task: {
     }
 
     const content = contentLines.length > 0 ? contentLines.join("\n\n") : undefined
+    const tags = isPending ? [TICKTICK_PENDING_TAG] : undefined
 
-    return { title, content }
+    return { title, content, tags }
+}
+
+/**
+ * Parse a TickTick task title and tags to detect Pending state and extract clean title
+ */
+export function parseTickTickTaskTitleAndStatus(
+    rawTitle: string,
+    tags?: string[]
+): { cleanTitle: string; isPending: boolean } {
+    let title = (rawTitle || "").trim()
+    let isPending = false
+
+    // Check tags array
+    if (tags && Array.isArray(tags)) {
+        if (tags.some((t) => typeof t === "string" && t.trim().toLowerCase() === TICKTICK_PENDING_TAG)) {
+            isPending = true
+        }
+    }
+
+    // Check leading emoji/text markers: ⏸️, ⏸, ⏳, ⌛, 🟡, (P), [P], (p), [p]
+    const prefixMatch = title.match(/^(\u23F8\uFE0F|\u23F8|\u23F3|\u231B|\u{1F7E1}|\([pP]\)|\[[pP]\])\s*/u)
+    if (prefixMatch) {
+        isPending = true
+        title = title.substring(prefixMatch[0].length).trim()
+    }
+
+    // Check trailing markers: (P), [P], (p), [p]
+    const suffixMatch = title.match(/\s*(\([pP]\)|\[[pP]\])$/)
+    if (suffixMatch) {
+        isPending = true
+        title = title.substring(0, title.length - suffixMatch[0].length).trim()
+    }
+
+    return {
+        cleanTitle: title || "Untitled Task",
+        isPending,
+    }
 }
 
 /**
@@ -196,9 +240,10 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                 if (!existing) {
                     // Task exists in TickTick but NOT mapped in Pixelist -> Import into Pixelist
                     const isCompleted = tickTask.status === 2
+                    const { cleanTitle, isPending } = parseTickTickTaskTitleAndStatus(tickTask.title, tickTask.tags)
 
                     // Smart project matching: check if title starts with [domain] - Task Name
-                    let importedName = tickTask.title || "Untitled Task"
+                    let importedName = cleanTitle || "Untitled Task"
                     let linkedProjectId: string | null = null
                     let importedScope = "GENERAL"
 
@@ -225,12 +270,14 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                         }
                     }
 
+                    const initialStatus = isCompleted ? "Completed" : isPending ? "Pending" : "Active"
+
                     await prisma.$transaction(async (tx) => {
                         const newTask = await tx.task.create({
                             data: {
                                 name: importedName,
                                 description: tickTask.content || null,
-                                status: isCompleted ? "Completed" : "Active",
+                                status: initialStatus,
                                 urgency: "Normal",
                                 taskScope: importedScope,
                                 projectId: linkedProjectId,
@@ -252,7 +299,7 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                             data: {
                                 action: "TASK_CREATED",
                                 success: true,
-                                details: `taskId=${newTask.id}; status=${isCompleted ? "Completed" : "Active"}; source=TICKTICK`,
+                                details: `taskId=${newTask.id}; status=${initialStatus}; source=TICKTICK`,
                             },
                         })
                     })
@@ -261,6 +308,7 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                     logger.info("[ticktick-sync] Imported new task from TickTick", {
                         externalTaskId: tickTask.id,
                         title: tickTask.title,
+                        status: initialStatus,
                         linkedProjectId,
                     })
                 }
@@ -272,7 +320,7 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
             }
         }
 
-        // 4. Check all mapped Pixelist tasks that are currently open (Active or Pending) to see if completed in TickTick
+        // 4. Check all mapped Pixelist tasks that are currently open (Active or Pending) to see if status changed in TickTick
         for (const mapping of existingMappings) {
             if (
                 mapping.task &&
@@ -333,6 +381,62 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                         taskId: mapping.taskId,
                         externalTaskId: mapping.externalTaskId,
                     })
+                } else if (tickTask) {
+                    // Check if Pending status changed in TickTick
+                    const { isPending: tickIsPending } = parseTickTickTaskTitleAndStatus(tickTask.title, tickTask.tags)
+                    const currentPixelistStatus = mapping.task.status
+
+                    if (tickIsPending && currentPixelistStatus === "Active") {
+                        await prisma.$transaction(async (tx) => {
+                            await tx.task.update({
+                                where: { id: mapping.taskId },
+                                data: { status: "Pending" },
+                            })
+                            await tx.taskIntegration.update({
+                                where: { id: mapping.id },
+                                data: {
+                                    syncStatus: "synced",
+                                    lastSyncedAt: new Date(),
+                                },
+                            })
+                            await tx.auditLog.create({
+                                data: {
+                                    action: "TASK_STATUS_CHANGED",
+                                    success: true,
+                                    details: `taskId=${mapping.taskId}; from=Active; to=Pending; source=TICKTICK`,
+                                },
+                            })
+                        })
+                        logger.info("[ticktick-sync] Marked Pixelist task Pending from TickTick", {
+                            taskId: mapping.taskId,
+                            externalTaskId: mapping.externalTaskId,
+                        })
+                    } else if (!tickIsPending && currentPixelistStatus === "Pending") {
+                        await prisma.$transaction(async (tx) => {
+                            await tx.task.update({
+                                where: { id: mapping.taskId },
+                                data: { status: "Active" },
+                            })
+                            await tx.taskIntegration.update({
+                                where: { id: mapping.id },
+                                data: {
+                                    syncStatus: "synced",
+                                    lastSyncedAt: new Date(),
+                                },
+                            })
+                            await tx.auditLog.create({
+                                data: {
+                                    action: "TASK_STATUS_CHANGED",
+                                    success: true,
+                                    details: `taskId=${mapping.taskId}; from=Pending; to=Active; source=TICKTICK`,
+                                },
+                            })
+                        })
+                        logger.info("[ticktick-sync] Marked Pixelist task Active from TickTick", {
+                            taskId: mapping.taskId,
+                            externalTaskId: mapping.externalTaskId,
+                        })
+                    }
                 }
             }
         }
@@ -341,7 +445,7 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
         const pendingOutbound = await prisma.taskIntegration.findMany({
             where: {
                 provider: TICKTICK_PROVIDER,
-                syncStatus: { in: ["pending_create", "pending_complete"] },
+                syncStatus: { in: ["pending_create", "pending_complete", "pending_update"] },
             },
             include: {
                 task: {
@@ -369,6 +473,7 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                         title: payload.title,
                         projectId: externalProjectId,
                         content: payload.content,
+                        tags: payload.tags,
                     })
 
                     await prisma.$transaction(async (tx) => {
@@ -411,6 +516,33 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
                         })
                     })
                     completedInTickTickCount++
+                } else if (item.syncStatus === "pending_update" && item.externalTaskId) {
+                    const payload = formatTickTickTaskPayload(item.task)
+                    await updateTickTickTask(token, item.externalTaskId, {
+                        id: item.externalTaskId,
+                        projectId: externalProjectId,
+                        title: payload.title,
+                        content: payload.content,
+                        tags: payload.tags,
+                    })
+
+                    await prisma.$transaction(async (tx) => {
+                        await tx.taskIntegration.update({
+                            where: { id: item.id },
+                            data: {
+                                syncStatus: "synced",
+                                syncError: null,
+                                lastSyncedAt: new Date(),
+                            },
+                        })
+                        await tx.auditLog.create({
+                            data: {
+                                action: "TASK_TICKTICK_SYNCED",
+                                success: true,
+                                details: `taskId=${item.taskId}; externalTaskId=${item.externalTaskId}; to=Updated in TickTick (${item.task.status}); source=TICKTICK`,
+                            },
+                        })
+                    })
                 }
             } catch (err) {
                 logger.error("[ticktick-sync] Outbound sync failed for task", {
@@ -531,6 +663,106 @@ export async function syncTickTick(options: { manual?: boolean } = {}): Promise<
 }
 
 /**
+ * Non-blocking outbound update when a task is updated in Pixelist (e.g. moved to Pending or Active)
+ */
+export async function syncOutboundTaskUpdate(taskId: string): Promise<void> {
+    try {
+        const integration = await getTickTickIntegrationRecord()
+        if (!integration || !integration.enabled || !integration.externalProjectId) {
+            return
+        }
+
+        const task = await prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                taskIntegrations: true,
+                project: {
+                    include: {
+                        site: true,
+                        services: true,
+                    },
+                },
+                lmsAllocation: true,
+                lmsTaskType: true,
+            },
+        })
+        if (!task) return
+
+        const mapping = task.taskIntegrations.find((ti) => ti.provider === TICKTICK_PROVIDER)
+        if (!mapping || !mapping.externalTaskId || mapping.externalTaskId.startsWith("pending_")) {
+            return
+        }
+
+        // If task is completed, route to complete sync
+        if (task.status === "Completed") {
+            return syncOutboundTaskComplete(taskId)
+        }
+
+        const token = await getTickTickAccessToken()
+        if (!token) {
+            await prisma.taskIntegration.update({
+                where: { id: mapping.id },
+                data: { syncStatus: "pending_update" },
+            })
+            return
+        }
+
+        const payload = formatTickTickTaskPayload(task)
+        try {
+            await updateTickTickTask(token, mapping.externalTaskId, {
+                id: mapping.externalTaskId,
+                projectId: integration.externalProjectId,
+                title: payload.title,
+                content: payload.content,
+                tags: payload.tags,
+            })
+
+            await prisma.$transaction(async (tx) => {
+                await tx.taskIntegration.update({
+                    where: { id: mapping.id },
+                    data: {
+                        syncStatus: "synced",
+                        syncError: null,
+                        lastSyncedAt: new Date(),
+                    },
+                })
+                await tx.auditLog.create({
+                    data: {
+                        action: "TASK_TICKTICK_SYNCED",
+                        success: true,
+                        details: `taskId=${task.id}; externalTaskId=${mapping.externalTaskId}; to=Updated in TickTick (${task.status}); source=TICKTICK`,
+                    },
+                })
+            })
+
+            logger.info("[ticktick-sync] Immediate outbound task updated in TickTick", {
+                taskId: task.id,
+                externalTaskId: mapping.externalTaskId,
+                title: payload.title,
+                status: task.status,
+            })
+        } catch (apiError) {
+            logger.error("[ticktick-sync] Immediate outbound task update failed", {
+                taskId: task.id,
+                error: apiError instanceof Error ? apiError.message : String(apiError),
+            })
+            await prisma.taskIntegration.update({
+                where: { id: mapping.id },
+                data: {
+                    syncStatus: "pending_update",
+                    syncError: apiError instanceof Error ? apiError.message : "API error",
+                },
+            })
+        }
+    } catch (err) {
+        logger.error("[ticktick-sync] Unexpected error in syncOutboundTaskUpdate", {
+            taskId,
+            error: err,
+        })
+    }
+}
+
+/**
  * Non-blocking outbound push when a task is created in Pixelist
  */
 export async function syncOutboundTaskCreate(taskId: string): Promise<void> {
@@ -591,6 +823,7 @@ export async function syncOutboundTaskCreate(taskId: string): Promise<void> {
                 title: payload.title,
                 projectId: integration.externalProjectId,
                 content: payload.content,
+                tags: payload.tags,
             })
 
             await prisma.$transaction(async (tx) => {
@@ -742,7 +975,7 @@ export async function syncOutboundTaskComplete(taskId: string): Promise<void> {
 }
 
 /**
- * Export / push all unmapped active tasks from Pixelist into TickTick
+ * Export / push all unmapped active and pending tasks from Pixelist into TickTick
  */
 export async function pushAllActiveTasksToTickTick(): Promise<{ success: boolean; pushedCount: number; error?: string }> {
     const integration = await getTickTickIntegrationRecord()
@@ -761,9 +994,9 @@ export async function pushAllActiveTasksToTickTick(): Promise<{ success: boolean
     })
     const mappedTaskIds = new Set(existingMappings.map((m) => m.taskId))
 
-    const activeTasks = await prisma.task.findMany({
+    const openTasks = await prisma.task.findMany({
         where: {
-            status: "Active",
+            status: { in: ["Active", "Pending"] },
             id: { notIn: Array.from(mappedTaskIds) },
         },
         include: {
@@ -780,13 +1013,14 @@ export async function pushAllActiveTasksToTickTick(): Promise<{ success: boolean
     })
 
     let pushedCount = 0
-    for (const task of activeTasks) {
+    for (const task of openTasks) {
         try {
             const payload = formatTickTickTaskPayload(task)
             const created = await createTickTickTask(token, {
                 title: payload.title,
                 projectId: integration.externalProjectId,
                 content: payload.content,
+                tags: payload.tags,
             })
 
             await prisma.$transaction(async (tx) => {

@@ -11,7 +11,8 @@ import {
     ChevronUp,
     CircleDot,
     Clock,
-    Tag,
+    Play,
+    Pause,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
@@ -189,9 +190,22 @@ export function TaskGridCard({
         ? task.lmsAllocation?.client || "LMS project"
         : task.project?.site?.domainName || task.project?.name || "No Project"
     const recurringMonthLabel = isRecurring ? toMonthYearLabel(task.project?.createdAt || task.createdAt) : ""
-    const categoryLabel = isLmsTask
-        ? task.lmsTaskType?.name || "LMS Task"
-        : [serviceLabels.join(" • ") || task.project?.name, recurringMonthLabel].filter(Boolean).join(" • ") || "General"
+    const categoryChips = React.useMemo(() => {
+        if (isLmsTask) return [task.lmsTaskType?.name || "LMS Task"]
+        const chips: string[] = []
+        if (serviceLabels.length > 0) {
+            chips.push(...serviceLabels)
+        } else if (task.project?.name) {
+            chips.push(task.project.name)
+        }
+        if (recurringMonthLabel) {
+            chips.push(recurringMonthLabel)
+        }
+        if (chips.length === 0) {
+            chips.push("General")
+        }
+        return chips
+    }, [isLmsTask, task.lmsTaskType?.name, serviceLabels, task.project?.name, recurringMonthLabel])
     const priorityPill = getPriorityPill(currentUrgency)
     const statusPill = getStatusPill(currentStatus)
     const sessionSeconds = task.timeLogs?.reduce(
@@ -362,13 +376,14 @@ export function TaskGridCard({
                                     type="button"
                                     disabled={isUpdatingStatus || pendingTaskId === task.id}
                                     className={cn(
-                                        "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-all cursor-pointer hover:opacity-80 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] disabled:opacity-50",
+                                        "inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-xs font-bold transition-all cursor-pointer hover:opacity-80 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] disabled:opacity-50",
                                         statusPill.className
                                     )}
                                     title={`Status: ${statusPill.label}. Click to change`}
                                     aria-label={`Change task status, currently ${statusPill.label}`}
                                 >
                                     {statusPill.icon}
+                                    <span>{statusPill.label}</span>
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
@@ -419,9 +434,15 @@ export function TaskGridCard({
             {/* CARD FOOTER: Divider, Tags, and Time/Date Bottom Row */}
             <div className="mt-auto pt-3">
                 <div className="border-t border-[var(--line-subtle)] pt-3">
-                    <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)]">
-                        <Tag className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
-                        <span className="truncate">{categoryLabel}</span>
+                    <div className="flex flex-wrap min-w-0 items-center gap-1.5">
+                        {categoryChips.map((chip, idx) => (
+                            <span
+                                key={idx}
+                                className="inline-flex max-w-full items-center rounded bg-[var(--surface-sunken)] px-1.5 py-0.5 text-[12px] font-bold text-[var(--text-secondary)] truncate border border-[var(--line-subtle)]"
+                            >
+                                {chip}
+                            </span>
+                        ))}
                     </div>
 
                     <div className="mt-3 flex min-w-0 items-center justify-between gap-2">

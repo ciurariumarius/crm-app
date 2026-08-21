@@ -32,5 +32,4 @@ jobs:
           SERVER_PORT: 22
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
-          SITE_PATH: "/home/${{ secrets.SERVER_USER }}/htdocs/crm.populatia.ro"
-
+          SITE_PATH: "/home/${{ secrets.SERVER_USER }}/htdocs/crm.pixelist.ro"

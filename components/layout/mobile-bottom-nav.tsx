@@ -76,6 +76,7 @@ export function MobileBottomNav() {
     const [quickActionOptionsLoaded, setQuickActionOptionsLoaded] = React.useState(false)
     const [quickActionOptionsLoading, setQuickActionOptionsLoading] = React.useState(false)
     const [isDockHidden, setIsDockHidden] = React.useState(false)
+    const [isKeyboardOpen, setIsKeyboardOpen] = React.useState(false)
     const lastScrollYRef = React.useRef(0)
     const directionalTravelRef = React.useRef(0)
     const lastDirectionRef = React.useRef<"up" | "down" | null>(null)
@@ -256,12 +257,43 @@ export function MobileBottomNav() {
         }
     }, [createProjectOpen, createTaskOpen, quickActionsOpen])
 
+    React.useEffect(() => {
+        const viewport = window.visualViewport
+        if (!viewport) return
+        let frame = 0
+
+        const updateKeyboardState = () => {
+            window.cancelAnimationFrame(frame)
+            frame = window.requestAnimationFrame(() => {
+                const activeElement = document.activeElement as HTMLElement | null
+                const hasEditableFocus = Boolean(
+                    activeElement?.matches("input, textarea, [contenteditable='true'], [role='textbox']")
+                )
+                const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+                setIsKeyboardOpen(hasEditableFocus && inset > 96)
+            })
+        }
+
+        updateKeyboardState()
+        viewport.addEventListener("resize", updateKeyboardState)
+        viewport.addEventListener("scroll", updateKeyboardState)
+        document.addEventListener("focusin", updateKeyboardState)
+        document.addEventListener("focusout", updateKeyboardState)
+        return () => {
+            window.cancelAnimationFrame(frame)
+            viewport.removeEventListener("resize", updateKeyboardState)
+            viewport.removeEventListener("scroll", updateKeyboardState)
+            document.removeEventListener("focusin", updateKeyboardState)
+            document.removeEventListener("focusout", updateKeyboardState)
+        }
+    }, [])
+
     return (
         <>
             <nav
                 className={cn(
                     "pointer-events-none fixed inset-x-0 bottom-[max(0.35rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-3 transition-all duration-300 md:hidden",
-                    isDockHidden ? "translate-y-[120%] opacity-0" : "translate-y-0 opacity-100"
+                    isDockHidden || isKeyboardOpen ? "translate-y-[120%] opacity-0" : "translate-y-0 opacity-100"
                 )}
                 aria-label="Mobile navigation"
             >
