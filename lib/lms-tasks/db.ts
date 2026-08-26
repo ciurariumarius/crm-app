@@ -77,11 +77,13 @@ export async function getLmsOwnerCapacitySummary(
   asOf: string = getBucharestDateOnly()
 ): Promise<LmsOwnerCapacitySummary> {
   const ranges = getLmsOwnerSummaryRanges(asOf)
-  const endExclusive = isoDateToUtcDate(addDaysToIso(asOf, 1))
+  const asOfEndExclusive = isoDateToUtcDate(addDaysToIso(asOf, 1))
   const monthStart = isoDateToUtcDate(ranges.month.from)
+  const monthEndExclusive = isoDateToUtcDate(addDaysToIso(ranges.month.to, 1))
   const quarterStart = isoDateToUtcDate(ranges.quarter.from)
+  const quarterEndExclusive = isoDateToUtcDate(addDaysToIso(ranges.quarter.to, 1))
 
-  if (!endExclusive || !monthStart || !quarterStart) {
+  if (!asOfEndExclusive || !monthStart || !quarterStart || !monthEndExclusive || !quarterEndExclusive) {
     throw new Error("Unable to resolve LMS owner summary date range")
   }
 
@@ -90,21 +92,21 @@ export async function getLmsOwnerCapacitySummary(
     prisma.lmsTaskLog.aggregate({
       where: {
         ...ownerWhere,
-        taskDate: { gte: monthStart, lt: endExclusive },
+        taskDate: { gte: monthStart, lt: monthEndExclusive },
       },
       _sum: { durationMinutes: true },
     }),
     prisma.lmsTaskLog.aggregate({
       where: {
         ...ownerWhere,
-        taskDate: { gte: quarterStart, lt: endExclusive },
+        taskDate: { gte: quarterStart, lt: quarterEndExclusive },
       },
       _sum: { durationMinutes: true },
     }),
     prisma.lmsTaskLog.findFirst({
       where: {
         ...ownerWhere,
-        taskDate: { lt: endExclusive },
+        taskDate: { lt: asOfEndExclusive },
       },
       orderBy: { taskDate: "desc" },
       select: { taskDate: true },

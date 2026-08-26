@@ -46,15 +46,19 @@ export function getLmsOwnerSummaryRanges(asOf: string): LmsOwnerSummaryRanges {
   const year = date.getUTCFullYear()
   const monthIndex = date.getUTCMonth()
   const quarterStartMonthIndex = Math.floor(monthIndex / 3) * 3
+  const quarterEndMonthIndex = quarterStartMonthIndex + 2
+
+  const monthEnd = toIsoDate(new Date(Date.UTC(year, monthIndex + 1, 0)))
+  const quarterEnd = toIsoDate(new Date(Date.UTC(year, quarterEndMonthIndex + 1, 0)))
 
   return {
     month: {
       from: toIsoDateFromParts(year, monthIndex, 1),
-      to: asOf,
+      to: monthEnd,
     },
     quarter: {
       from: toIsoDateFromParts(year, quarterStartMonthIndex, 1),
-      to: asOf,
+      to: quarterEnd,
     },
   }
 }

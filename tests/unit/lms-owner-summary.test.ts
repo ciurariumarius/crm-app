@@ -23,14 +23,14 @@ vi.mock("@/lib/prisma", () => ({
 import { getLmsOwnerCapacitySummary } from "@/lib/lms-tasks/db"
 
 describe("LMS owner summary periods", () => {
-  it("builds month-to-date and quarter-to-date ranges", () => {
+  it("builds entire-month and entire-quarter ranges", () => {
     expect(getLmsOwnerSummaryRanges("2026-08-17")).toEqual({
-      month: { from: "2026-08-01", to: "2026-08-17" },
-      quarter: { from: "2026-07-01", to: "2026-08-17" },
+      month: { from: "2026-08-01", to: "2026-08-31" },
+      quarter: { from: "2026-07-01", to: "2026-09-30" },
     })
     expect(getLmsOwnerSummaryRanges("2026-01-01")).toEqual({
-      month: { from: "2026-01-01", to: "2026-01-01" },
-      quarter: { from: "2026-01-01", to: "2026-01-01" },
+      month: { from: "2026-01-01", to: "2026-01-31" },
+      quarter: { from: "2026-01-01", to: "2026-03-31" },
     })
   })
 
@@ -40,36 +40,36 @@ describe("LMS owner summary periods", () => {
     )
   })
 
-  it("calculates Romanian workday capacity and one-decimal utilization", () => {
+  it("calculates entire month and entire quarter Romanian workday capacity", () => {
     const summary = buildLmsOwnerCapacitySummary({
       employeeName: LMS_CRM_EMPLOYEE_NAME,
       asOf: "2026-08-17",
       latestTaskDate: "2026-08-14",
-      monthLoggedMinutes: 2_640,
-      quarterLoggedMinutes: 8_160,
+      monthLoggedMinutes: 5_040,
+      quarterLoggedMinutes: 15_840,
     })
 
     expect(summary.latestTaskDate).toBe("2026-08-14")
     expect(summary.month).toEqual({
       from: "2026-08-01",
-      to: "2026-08-17",
-      loggedMinutes: 2_640,
-      capacityMinutes: 5_280,
-      capacityHours: 88,
+      to: "2026-08-31",
+      loggedMinutes: 5_040,
+      capacityMinutes: 10_080,
+      capacityHours: 168,
       utilizationPercent: 50,
     })
     expect(summary.quarter).toEqual({
       from: "2026-07-01",
-      to: "2026-08-17",
-      loggedMinutes: 8_160,
-      capacityMinutes: 16_320,
-      capacityHours: 272,
+      to: "2026-09-30",
+      loggedMinutes: 15_840,
+      capacityMinutes: 31_680,
+      capacityHours: 528,
       utilizationPercent: 50,
     })
   })
 
-  it("uses the canonical Romanian holidays including 6 and 7 January", () => {
-    const firstWeek = buildLmsOwnerCapacitySummary({
+  it("uses the canonical Romanian holidays including 6 and 7 January for full month", () => {
+    const january = buildLmsOwnerCapacitySummary({
       employeeName: LMS_CRM_EMPLOYEE_NAME,
       asOf: "2026-01-07",
       latestTaskDate: null,
@@ -77,7 +77,7 @@ describe("LMS owner summary periods", () => {
       quarterLoggedMinutes: 0,
     })
 
-    expect(firstWeek.month.capacityMinutes).toBe(8 * 60)
+    expect(january.month.capacityMinutes).toBe(18 * 8 * 60)
   })
 
   it("keeps the full-year Romanian capacity on the canonical calendar", () => {
@@ -91,18 +91,14 @@ describe("LMS owner summary periods", () => {
   })
 
   it("returns zero utilization when the range has no workday capacity", () => {
-    const summary = buildLmsOwnerCapacitySummary({
-      employeeName: LMS_CRM_EMPLOYEE_NAME,
-      asOf: "2026-01-01",
-      latestTaskDate: null,
-      monthLoggedMinutes: 60,
-      quarterLoggedMinutes: 60,
+    const summary = buildLmsOwnerPeriodSummary({
+      from: "2026-01-01",
+      to: "2026-01-01",
+      loggedMinutes: 60,
     })
 
-    expect(summary.month.capacityMinutes).toBe(0)
-    expect(summary.month.utilizationPercent).toBe(0)
-    expect(summary.quarter.capacityMinutes).toBe(0)
-    expect(summary.quarter.utilizationPercent).toBe(0)
+    expect(summary.capacityMinutes).toBe(0)
+    expect(summary.utilizationPercent).toBe(0)
   })
 
   it("preserves utilization above 100 percent", () => {
@@ -141,7 +137,7 @@ describe("getLmsOwnerCapacitySummary", () => {
         executant: LMS_CRM_EMPLOYEE_NAME,
         taskDate: {
           gte: new Date("2026-08-01T00:00:00.000Z"),
-          lt: new Date("2026-08-18T00:00:00.000Z"),
+          lt: new Date("2026-09-01T00:00:00.000Z"),
         },
       },
       _sum: { durationMinutes: true },
@@ -151,7 +147,7 @@ describe("getLmsOwnerCapacitySummary", () => {
         executant: LMS_CRM_EMPLOYEE_NAME,
         taskDate: {
           gte: new Date("2026-07-01T00:00:00.000Z"),
-          lt: new Date("2026-08-18T00:00:00.000Z"),
+          lt: new Date("2026-10-01T00:00:00.000Z"),
         },
       },
       _sum: { durationMinutes: true },

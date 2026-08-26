@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts"
+import { Pie, PieChart, ResponsiveContainer, Cell, Tooltip } from "recharts"
 import { cn, formatCurrency } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
@@ -26,7 +26,6 @@ export type RevenueAnalysisEntry = {
     key: string
     label: string
     revenue: number
-    hoursThisMonth?: number
     projectCount?: number
     openProjectId?: string
     openPartnerId?: string
@@ -47,7 +46,6 @@ export type RevenueSourceProject = {
   currentFee: number
   createdAt: string
   revenueType: "recurring" | "one-time"
-  hoursThisMonth?: number
   label: string
   site: {
     id?: string | null
@@ -83,6 +81,9 @@ const MODE_OPTIONS: Array<{ label: string; value: RevenueMode }> = [
     { label: "Type", value: "type" },
 ]
 
+const MAX_CHART_SEGMENTS = 8
+const COLLAPSED_LIST_SIZE = 4
+
 type PieLabelProps = {
     cx: number
     cy: number
@@ -114,10 +115,6 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
             {`${(percent * 100).toFixed(0)}%`}
         </text>
     )
-}
-
-function formatHours(value: number | undefined) {
-    return `${(value || 0).toFixed(1)}h`
 }
 
 function presetDateToUtc(value: string | null) {
@@ -179,12 +176,10 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
             key: partnerId,
             label: partnerLabel,
             revenue: 0,
-            hoursThisMonth: 0,
             projectCount: 0,
             openPartnerId: sourceProject.site?.partner?.id,
         }
         partnerEntry.revenue += fee
-        partnerEntry.hoursThisMonth = (partnerEntry.hoursThisMonth || 0) + (sourceProject.hoursThisMonth || 0)
         partnerEntry.projectCount = (partnerEntry.projectCount || 0) + 1
         partner.set(partnerId, partnerEntry)
 
@@ -192,13 +187,11 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
             key: String(domainId),
             label: domainLabel,
             revenue: 0,
-            hoursThisMonth: 0,
             projectCount: 0,
             openSiteId: sourceProject.site?.id || undefined,
             openPartnerId: sourceProject.site?.partner?.id || undefined,
         }
         domainEntry.revenue += fee
-        domainEntry.hoursThisMonth = (domainEntry.hoursThisMonth || 0) + (sourceProject.hoursThisMonth || 0)
         domainEntry.projectCount = (domainEntry.projectCount || 0) + 1
         domain.set(String(domainId), domainEntry)
 
@@ -206,7 +199,6 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
             key: sourceProject.id,
             label: sourceProject.label,
             revenue: 0,
-            hoursThisMonth: sourceProject.hoursThisMonth || 0,
             projectCount: 1,
             openProjectId: sourceProject.id,
             openSiteId: sourceProject.site?.id || undefined,
@@ -221,11 +213,9 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
             key: typeKey,
             label: typeKey === "recurring" ? "Recurring" : "One-Time",
             revenue: 0,
-            hoursThisMonth: 0,
             projectCount: 0,
         }
         typeEntry.revenue += fee
-        typeEntry.hoursThisMonth = (typeEntry.hoursThisMonth || 0) + (sourceProject.hoursThisMonth || 0)
         typeEntry.projectCount = (typeEntry.projectCount || 0) + 1
         type.set(typeKey, typeEntry)
     }
@@ -239,19 +229,18 @@ function buildRevenueDataset(projects: RevenueSourceProject[], range?: DateRange
     }
 }
 
-function getEntryMeta(entry: RevenueAnalysisEntry, isOther: boolean) {
-    if (isOther) return "Multiple small items"
-    const hoursLabel = `${formatHours(entry.hoursThisMonth)} this month`
-    if ((entry.projectCount || 0) > 1) return `${entry.projectCount} projects • ${hoursLabel}`
-    return hoursLabel
+function getEntryMeta(entry: RevenueAnalysisEntry, mode: RevenueMode) {
+    if (mode === "project") return null
+    const count = entry.projectCount || 0
+    return `${count} ${count === 1 ? "project" : "projects"}`
 }
 
-function reduceForChart(data: RevenueAnalysisEntry[], max = 8) {
+function reduceForChart(data: RevenueAnalysisEntry[], max = MAX_CHART_SEGMENTS) {
     const sorted = [...data].filter((entry) => entry.revenue > 0).sort((a, b) => b.revenue - a.revenue)
     if (sorted.length <= max) return sorted
 
-    const kept = sorted.slice(0, max)
-    const otherTotal = sorted.slice(max).reduce((sum, entry) => sum + entry.revenue, 0)
+    const kept = sorted.slice(0, max - 1)
+    const otherTotal = sorted.slice(max - 1).reduce((sum, entry) => sum + entry.revenue, 0)
     return [...kept, { key: "__other__", label: "Other", revenue: otherTotal }]
 }
 
@@ -382,9 +371,11 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
     const [isOpeningEntity, setIsOpeningEntity] = React.useState(false)
     const [isListExpanded, setIsListExpanded] = React.useState(false)
     const [activeSegment, setActiveSegment] = React.useState<string | null>(null)
+    const [hoveredSegment, setHoveredSegment] = React.useState<string | null>(null)
 
     React.useEffect(() => {
         setActiveSegment(null)
+        setHoveredSegment(null)
         setIsListExpanded(false)
     }, [mode, period])
 
@@ -436,6 +427,21 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
     const chartData = React.useMemo(() => reduceForChart(rows), [rows])
     const totalRevenue = activeDataset.totalRevenue
     const totalCount = rows.length
+    const highlightedSegment = hoveredSegment || activeSegment
+    const visibleRows = isListExpanded ? rows : rows.slice(0, COLLAPSED_LIST_SIZE)
+    const groupedStartIndex = chartData.findIndex((entry) => entry.key === "__other__")
+
+    const getSegmentKey = React.useCallback((entryKey: string) => {
+        const directIndex = chartData.findIndex((entry) => entry.key === entryKey)
+        if (directIndex >= 0) return entryKey
+        return groupedStartIndex >= 0 ? "__other__" : entryKey
+    }, [chartData, groupedStartIndex])
+
+    const getEntryColor = React.useCallback((entryKey: string) => {
+        const segmentKey = getSegmentKey(entryKey)
+        const colorIndex = chartData.findIndex((entry) => entry.key === segmentKey)
+        return COLORS[Math.max(0, colorIndex) % COLORS.length]
+    }, [chartData, getSegmentKey])
 
     const openRowEntity = React.useCallback(async (entry: RevenueAnalysisEntry) => {
         if (mode === "project") {
@@ -493,7 +499,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
 
     return (
         <section className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-6 lg:p-8">
-            <div className="mb-4 flex flex-col gap-2.5 sm:mb-6 sm:gap-4 lg:mb-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="mb-4 flex flex-col gap-3 sm:mb-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
@@ -503,9 +509,6 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                         <span className="rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5">
                             {totalCount} visible {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`}
                         </span>
-                        <span className="rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5">
-                            {dateLabel}
-                        </span>
                     </div>
                     <div className="sm:hidden">
                         <span className="inline-flex rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
@@ -514,7 +517,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     </div>
                 </div>
 
-                <div className="flex w-full flex-col gap-2 lg:w-auto lg:min-w-[360px] lg:gap-3">
+                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
                     <RevenueDateFilter
                         label={dateLabel}
                         presets={presets}
@@ -530,7 +533,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                         }}
                     />
 
-                    <div className="grid grid-cols-2 gap-1 rounded-[16px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] p-1 sm:flex sm:flex-wrap sm:items-center">
+                    <div className="grid flex-1 grid-cols-2 gap-1 rounded-[16px] border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] p-1 sm:flex sm:flex-none sm:items-center">
                         {MODE_OPTIONS.map((option) => (
                             <button
                                 key={option.value}
@@ -550,8 +553,8 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                 </div>
             </div>
 
-            <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-[minmax(280px,400px)_1fr] lg:gap-10">
-                <div className="relative mx-auto flex aspect-square w-full max-w-[250px] items-center justify-center sm:h-[300px] sm:max-w-[320px] lg:h-[340px] lg:max-w-none">
+            <div className="grid items-center gap-4 sm:gap-6 lg:grid-cols-[minmax(260px,340px)_1fr] lg:gap-8">
+                <div className="relative mx-auto flex aspect-square w-full max-w-[250px] items-center justify-center sm:max-w-[300px] lg:max-w-[320px]">
                     <div className="absolute inset-0 z-0 outline-none">
                         <ResponsiveContainer width="100%" height="100%" className="outline-none">
                             <PieChart style={{ outline: 'none' }}>
@@ -575,21 +578,45 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                                     {chartData.map((entry, index) => (
                                         <Cell 
                                             key={`${entry.key}-${index}`} 
-                                            fill={COLORS[index]} 
+                                            fill={COLORS[index % COLORS.length]}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-label={`${entry.label}: ${formatCurrency(entry.revenue)}, ${((entry.revenue / totalRevenue) * 100).toFixed(1)}% of total revenue`}
                                             style={{ 
                                                 cursor: "pointer", 
                                                 outline: "none",
-                                                opacity: activeSegment && activeSegment !== entry.key ? 0.3 : 1, 
+                                                opacity: highlightedSegment && highlightedSegment !== entry.key ? 0.3 : 1,
                                                 transition: "opacity 0.2s" 
                                             }}
                                             onClick={() => {
                                                 const newActive = activeSegment === entry.key ? null : entry.key;
                                                 setActiveSegment(newActive);
-                                                if (newActive && index >= 4) setIsListExpanded(true);
+                                                if (newActive && (index >= COLLAPSED_LIST_SIZE || entry.key === "__other__")) setIsListExpanded(true);
                                             }}
+                                            onKeyDown={(event) => {
+                                                if (event.key !== "Enter" && event.key !== " ") return
+                                                event.preventDefault()
+                                                const newActive = activeSegment === entry.key ? null : entry.key
+                                                setActiveSegment(newActive)
+                                                if (newActive && (index >= COLLAPSED_LIST_SIZE || entry.key === "__other__")) setIsListExpanded(true)
+                                            }}
+                                            onMouseEnter={() => setHoveredSegment(entry.key)}
+                                            onMouseLeave={() => setHoveredSegment(null)}
+                                            onFocus={() => setHoveredSegment(entry.key)}
+                                            onBlur={() => setHoveredSegment(null)}
                                         />
                                     ))}
                                 </Pie>
+                                <Tooltip
+                                    formatter={(value) => formatCurrency(Number(value))}
+                                    contentStyle={{
+                                        borderRadius: "12px",
+                                        border: "1px solid var(--line-subtle)",
+                                        background: "var(--bg-surface)",
+                                        boxShadow: "var(--shadow-apple)",
+                                        fontSize: "12px",
+                                    }}
+                                />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
@@ -602,69 +629,69 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3 sm:gap-4">
-                    <div className="flex flex-col justify-center gap-2.5 sm:gap-3">
-                        {(isListExpanded ? chartData : chartData.slice(0, 4)).map((entry, index) => {
-                            const isOther = entry.key === "__other__"
+                <div className="flex min-w-0 flex-col gap-2.5">
+                    <div className="flex flex-col justify-center gap-2">
+                        {visibleRows.map((entry) => {
                             const share = totalRevenue > 0 ? (entry.revenue / totalRevenue) * 100 : 0
-
-                            const originalEntry = isOther ? null : rows.find((row) => row.key === entry.key)
-                            const canOpen = !isOther && (
+                            const canOpen = (
                                 mode === "project"
-                                    ? Boolean(originalEntry?.openProjectId)
+                                    ? Boolean(entry.openProjectId)
                                     : mode === "partner"
-                                      ? Boolean(originalEntry?.openPartnerId)
+                                      ? Boolean(entry.openPartnerId)
                                       : mode === "domain"
-                                        ? Boolean(originalEntry?.openSiteId)
+                                        ? Boolean(entry.openSiteId)
                                         : false
                             )
-                            const dotColor = COLORS[index]
-                            const isHighlighted = activeSegment === entry.key
-
-                            const metaText = getEntryMeta(originalEntry || entry, isOther)
+                            const segmentKey = getSegmentKey(entry.key)
+                            const dotColor = getEntryColor(entry.key)
+                            const isHighlighted = highlightedSegment === segmentKey
+                            const metaText = getEntryMeta(entry, mode)
 
                             return (
                                 <button
                                     key={entry.key}
                                     type="button"
                                     onClick={() => {
-                                        if (canOpen && originalEntry) void openRowEntity(originalEntry)
+                                        if (canOpen) {
+                                            void openRowEntity(entry)
+                                            return
+                                        }
+                                        setActiveSegment(activeSegment === segmentKey ? null : segmentKey)
                                     }}
-                                    disabled={!canOpen}
+                                    onMouseEnter={() => setHoveredSegment(segmentKey)}
+                                    onMouseLeave={() => setHoveredSegment(null)}
+                                    onFocus={() => setHoveredSegment(segmentKey)}
+                                    onBlur={() => setHoveredSegment(null)}
+                                    aria-pressed={activeSegment === segmentKey}
+                                    title={entry.label}
                                     className={cn(
-                                        "flex w-full min-w-0 overflow-hidden flex-col items-start gap-2.5 rounded-[16px] px-4 py-3 text-left transition-all sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4",
-                                        isHighlighted ? "relative z-10 scale-[1.02] border border-blue-200/70 bg-[var(--surface-lowest)] shadow-lg ring-2 ring-blue-500/70" : "border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)]",
-                                        canOpen && !isHighlighted ? "group cursor-pointer hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_92%,transparent)]" : !canOpen && !isHighlighted ? "cursor-default" : ""
+                                        "flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-[14px] border px-3.5 py-3 text-left transition-all sm:px-4",
+                                        isHighlighted ? "relative z-10 border-blue-200/70 bg-[var(--surface-lowest)] shadow-md ring-2 ring-blue-500/60" : "border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_82%,transparent)]",
+                                        !isHighlighted && "group cursor-pointer hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_92%,transparent)]"
                                     )}
                                 >
-                                    <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 sm:flex sm:w-auto sm:items-center sm:gap-4">
+                                    <div className="flex min-w-0 flex-1 items-center gap-3">
                                         <span
-                                            className="col-start-1 row-span-2 mt-1 h-2.5 w-2.5 shrink-0 rounded-full sm:mt-0"
+                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
                                             style={{ backgroundColor: dotColor }}
                                         />
-                                        <div className="col-start-2 min-w-0">
+                                        <div className="min-w-0">
                                             <p className="truncate text-xs font-bold text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-[13px]">
                                                     {entry.label}
                                             </p>
-                                            <p className="mt-1 truncate text-xs font-bold text-[var(--text-muted)] sm:mt-0 sm:text-xs">
-                                                {metaText}
-                                            </p>
-                                        </div>
-                                        <div className="col-start-3 row-span-2 shrink-0 text-right sm:hidden">
-                                            <p className="text-xs font-bold text-[var(--text-primary)]">
-                                                {formatCurrency(entry.revenue)}
-                                            </p>
-                                            <p className="mt-0.5 text-xs font-semibold text-[var(--text-muted)]">
-                                                {share.toFixed(1)}%
-                                            </p>
+                                            {metaText ? (
+                                                <p className="mt-0.5 truncate text-xs font-semibold text-[var(--text-muted)]">
+                                                    {metaText}
+                                                </p>
+                                            ) : null}
                                         </div>
                                     </div>
 
-                                    <div className="hidden w-full min-w-0 items-center justify-between gap-3 sm:flex sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
-                                        <p className="text-[13px] font-bold text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-sm">
+                                    <div className="shrink-0 text-right">
+                                        <p className="text-xs font-bold tabular-nums text-[var(--text-primary)] transition-colors group-hover:text-blue-600 sm:text-sm">
                                             {formatCurrency(entry.revenue)}
                                         </p>
-                                        <div className="mt-0.5 text-xs font-semibold text-[var(--text-muted)] sm:text-xs">
+                                        <div className="mt-0.5 text-xs font-semibold tabular-nums text-[var(--text-muted)]">
                                             {share.toFixed(1)}%
                                         </div>
                                     </div>
@@ -672,7 +699,7 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
                             )
                         })}
                     </div>
-                    {chartData.length > 4 && (
+                    {rows.length > COLLAPSED_LIST_SIZE && (
                         <button
                             onClick={() => setIsListExpanded(!isListExpanded)}
                             className="w-full rounded-xl border border-transparent py-2 text-center text-xs font-bold text-[var(--text-secondary)] transition-colors hover:border-[var(--line-subtle)] hover:bg-[color:color-mix(in_srgb,var(--surface-low)_88%,transparent)] hover:text-[var(--text-primary)] sm:py-2.5 sm:text-xs"

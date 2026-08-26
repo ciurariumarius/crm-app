@@ -10,6 +10,8 @@ import {
   Loader2,
   MoreHorizontal,
   NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pin,
   Plus,
   Search,
@@ -84,6 +86,7 @@ import {
   NOTES_LIST_DEFAULT_WIDTH,
   NOTES_FOLDERS_WIDTH_STORAGE_KEY,
   NOTES_LIST_WIDTH_STORAGE_KEY,
+  NOTES_FOLDERS_COLLAPSED_STORAGE_KEY,
   parseStoredNotesPaneWidth,
 } from "@/lib/notes/workspace-state"
 
@@ -789,6 +792,25 @@ export function NotesWorkspace({
       return NOTES_LIST_DEFAULT_WIDTH
     }
   })
+
+  const [isFoldersCollapsed, setIsFoldersCollapsed] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false
+    try {
+      return localStorage.getItem(NOTES_FOLDERS_COLLAPSED_STORAGE_KEY) === "true"
+    } catch {
+      return false
+    }
+  })
+
+  const toggleFoldersCollapsed = React.useCallback(() => {
+    setIsFoldersCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(NOTES_FOLDERS_COLLAPSED_STORAGE_KEY, String(next))
+      } catch {}
+      return next
+    })
+  }, [])
 
   const foldersWidthRef = React.useRef(foldersWidth)
   const listWidthRef = React.useRef(listWidth)
@@ -1506,6 +1528,11 @@ export function NotesWorkspace({
         beginNewNote()
         return
       }
+      if ((event.metaKey || event.ctrlKey) && event.altKey && event.key.toLowerCase() === "s") {
+        event.preventDefault()
+        toggleFoldersCollapsed()
+        return
+      }
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return
       event.preventDefault()
       if (window.matchMedia("(max-width: 767px)").matches) {
@@ -1518,7 +1545,7 @@ export function NotesWorkspace({
     }
     window.addEventListener("keydown", handleShortcut)
     return () => window.removeEventListener("keydown", handleShortcut)
-  }, [beginNewNote, navigateMobilePane])
+  }, [beginNewNote, navigateMobilePane, toggleFoldersCollapsed])
 
   return (
     <div data-slot="notes-workspace" className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-transparent">
@@ -1545,7 +1572,9 @@ export function NotesWorkspace({
         style={{
           gridTemplateColumns: responsiveReady && !isMobile
             ? (responsiveProfile === "desktop"
-                ? `${foldersWidth}px ${listWidth}px minmax(0, 1fr)`
+                ? (!isFoldersCollapsed
+                    ? `${foldersWidth}px ${listWidth}px minmax(0, 1fr)`
+                    : `${listWidth}px minmax(0, 1fr)`)
                 : `${listWidth}px minmax(0, 1fr)`)
             : undefined,
         }}
@@ -1556,11 +1585,24 @@ export function NotesWorkspace({
           className={cn(
             "relative h-full min-h-0 flex-col overflow-hidden bg-transparent xl:border-r xl:border-[var(--line-subtle)]",
             mobilePane === "folders" ? "flex" : "hidden",
-            "md:hidden xl:flex"
+            isFoldersCollapsed ? "md:hidden xl:hidden" : "md:hidden xl:flex"
           )}
         >
           <div className="hidden md:flex flex-col gap-3 px-3 pt-5 pb-2 shrink-0">
-            <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Notes</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Notes</h1>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={toggleFoldersCollapsed}
+                className="hidden h-8 w-8 rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] xl:inline-flex"
+                title="Hide sidebar (⌘⌥S)"
+                aria-label="Hide sidebar"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
+            </div>
             {desktopSearchInput}
           </div>
 
@@ -1700,6 +1742,19 @@ export function NotesWorkspace({
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
+              {isFoldersCollapsed ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleFoldersCollapsed}
+                  className="hidden h-8 w-8 shrink-0 rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] xl:inline-flex"
+                  title="Show sidebar (⌘⌥S)"
+                  aria-label="Show sidebar"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                </Button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setMobileListOptionsOpen(true)}

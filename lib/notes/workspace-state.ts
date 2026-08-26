@@ -251,6 +251,7 @@ export const NOTES_LIST_DEFAULT_WIDTH = 230
 
 export const NOTES_FOLDERS_WIDTH_STORAGE_KEY = "pixelist_notes_folders_width"
 export const NOTES_LIST_WIDTH_STORAGE_KEY = "pixelist_notes_list_width"
+export const NOTES_FOLDERS_COLLAPSED_STORAGE_KEY = "pixelist_notes_folders_collapsed"
 
 export function clampNotesPaneWidth(
   width: number | null | undefined,
