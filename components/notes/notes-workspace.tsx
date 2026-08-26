@@ -1463,7 +1463,7 @@ export function NotesWorkspace({
       ref={desktopSearchRef}
       value={search}
       onChange={setSearch}
-      showShortcutHint={true}
+      showShortcutHint={false}
     />
   )
   const addButton = (
@@ -1472,8 +1472,8 @@ export function NotesWorkspace({
       variant="ghost"
       size="icon"
       onClick={beginNewNote}
-      className="h-10 w-10 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] md:h-8 md:w-8 md:rounded-lg"
-      title="New Note"
+      className="h-8 w-8 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] shadow-sm transition-all hover:border-[var(--primary)] hover:bg-[color:color-mix(in_srgb,var(--primary)_12%,transparent)] hover:text-[var(--primary)]"
+      title="New Note (⌘N)"
       aria-label="New note"
     >
       <SquarePen className="h-4 w-4" />
@@ -1501,6 +1501,11 @@ export function NotesWorkspace({
 
   React.useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
+        event.preventDefault()
+        beginNewNote()
+        return
+      }
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return
       event.preventDefault()
       if (window.matchMedia("(max-width: 767px)").matches) {
@@ -1513,7 +1518,7 @@ export function NotesWorkspace({
     }
     window.addEventListener("keydown", handleShortcut)
     return () => window.removeEventListener("keydown", handleShortcut)
-  }, [navigateMobilePane])
+  }, [beginNewNote, navigateMobilePane])
 
   return (
     <div data-slot="notes-workspace" className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-transparent">
@@ -1555,10 +1560,7 @@ export function NotesWorkspace({
           )}
         >
           <div className="hidden md:flex flex-col gap-3 px-3 pt-5 pb-2 shrink-0">
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Notes</h1>
-              {addButton}
-            </div>
+            <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Notes</h1>
             {desktopSearchInput}
           </div>
 
@@ -1678,7 +1680,7 @@ export function NotesWorkspace({
           <div className="hidden shrink-0 flex-col gap-3 border-b border-[var(--line-subtle)] px-4 pb-3 pt-4 md:flex xl:hidden">
             <div className="flex items-center justify-between gap-2">
               <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Notes</h1>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setMobileListOptionsOpen(true)} className="h-8 px-2.5 text-xs font-semibold">
                   Folders
                 </Button>
@@ -1710,7 +1712,7 @@ export function NotesWorkspace({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button type="button" className="hidden items-center gap-1.5 text-lg font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--primary)] xl:flex">
-                    <span className="max-w-[200px] truncate">{search ? "Search" : activeFolderName}</span>
+                    <span className="max-w-[180px] truncate">{search ? "Search" : activeFolderName}</span>
                     <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                   </button>
                 </DropdownMenuTrigger>
@@ -1733,6 +1735,11 @@ export function NotesWorkspace({
                 </DropdownMenuContent>
               </DropdownMenu>
               </div>
+
+              <div className="hidden items-center gap-2 xl:flex">
+                {addButton}
+              </div>
+
               <p className="shrink-0 text-xs font-normal text-[var(--text-muted)] md:hidden">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>
             </div>
             <p className="mt-0.5 hidden text-xs font-normal text-[var(--text-muted)] md:block">{visibleCount} {visibleCount === 1 ? "note" : "notes"}</p>

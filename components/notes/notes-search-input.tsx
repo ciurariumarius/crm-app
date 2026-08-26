@@ -15,7 +15,7 @@ type NotesSearchInputProps = {
 
 export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchInputProps>(
   function NotesSearchInput(
-    { value, onChange, showShortcutHint = true, density = "comfortable" },
+    { value, onChange, showShortcutHint = false, density = "comfortable" },
     ref
   ) {
     const hasValue = value.trim().length > 0
@@ -44,7 +44,8 @@ export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchIn
             }
           }}
           className={cn(
-            "w-full rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-9 pr-12 text-xs font-normal text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)] focus-visible:border-[var(--primary)] focus-visible:bg-[var(--surface-lowest)] focus-visible:ring-0 shadow-none",
+            "w-full rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-9 text-xs font-normal text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)] focus-visible:border-[var(--primary)] focus-visible:bg-[var(--surface-lowest)] focus-visible:ring-0 shadow-none",
+            hasValue ? "pr-8" : showShortcutHint ? "pr-12" : "pr-3",
             inputHeight
           )}
         />
