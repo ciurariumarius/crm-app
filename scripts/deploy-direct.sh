@@ -138,6 +138,7 @@ fi
 [[ -f "$db_path" ]] && cp -- "$db_path" "$backup_dir/dev.db"
 [[ -f "${db_path}-wal" ]] && cp -- "${db_path}-wal" "$backup_dir/dev.db-wal"
 [[ -f "${db_path}-shm" ]] && cp -- "${db_path}-shm" "$backup_dir/dev.db-shm"
+[[ -f "$site_path/package-lock.json" ]] && cp -- "$site_path/package-lock.json" "$backup_dir/package-lock.json"
 if [[ -d "$storage_root" ]]; then
   cp -a -- "$storage_root" "$backup_dir/project-notes"
 fi
@@ -222,12 +223,10 @@ rollback() {
   rm -rf -- "$restore_dir"
   cd "$site_path"
   if [[ -d "$previous_node_modules" ]]; then
-    if [[ -d node_modules ]]; then
-      mv -- node_modules "$failed_node_modules"
-    fi
+    rm -rf node_modules
     mv -- "$previous_node_modules" node_modules
   else
-    npm ci
+    npm ci --prefer-offline --no-audit
   fi
   npx prisma generate
   npx pm2 start npm --name pixelist-crm -- start -- -p 3000
@@ -242,16 +241,13 @@ actual_source_checksum="$(node scripts/source-checksum.mjs)"
 [[ "$actual_source_checksum" = "$expected_source_checksum" ]]
 printf '%s  source\n' "$actual_source_checksum" > "$backup_dir/source-checksum.txt"
 
-pkg_lock_checksum="$(sha256sum package-lock.json | awk '{print $1}')"
-prev_pkg_lock_checksum=""
-if [[ -f "$backup_dir/source.tgz" ]]; then
-  prev_pkg_lock_checksum="$(tar -xzOf "$backup_dir/source.tgz" package-lock.json 2>/dev/null | sha256sum | awk '{print $1}' || true)"
-fi
-
-if [[ -n "$prev_pkg_lock_checksum" && "$pkg_lock_checksum" = "$prev_pkg_lock_checksum" && -d node_modules ]]; then
+if [[ -f "$backup_dir/package-lock.json" ]] && cmp -s "$backup_dir/package-lock.json" "$site_path/package-lock.json" && [[ -d node_modules && -d node_modules/@prisma ]]; then
   echo "Dependencies unchanged; keeping existing node_modules"
-  cp -al node_modules "$previous_node_modules" 2>/dev/null || cp -a node_modules "$previous_node_modules"
+  rm -rf "$previous_node_modules"
+  cp -a node_modules "$previous_node_modules" 2>/dev/null || true
 else
+  echo "Dependencies changed or missing; running npm ci"
+  rm -rf "$previous_node_modules"
   if [[ -d node_modules ]]; then
     mv -- node_modules "$previous_node_modules"
   fi
