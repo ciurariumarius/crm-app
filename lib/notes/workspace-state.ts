@@ -240,3 +240,37 @@ export function enqueueSerializedNoteSave<T>(
   void nextSave.then(cleanup, cleanup)
   return nextSave
 }
+
+export const NOTES_FOLDERS_MIN_WIDTH = 180
+export const NOTES_FOLDERS_MAX_WIDTH = 380
+export const NOTES_FOLDERS_DEFAULT_WIDTH = 180
+
+export const NOTES_LIST_MIN_WIDTH = 200
+export const NOTES_LIST_MAX_WIDTH = 500
+export const NOTES_LIST_DEFAULT_WIDTH = 230
+
+export const NOTES_FOLDERS_WIDTH_STORAGE_KEY = "pixelist_notes_folders_width"
+export const NOTES_LIST_WIDTH_STORAGE_KEY = "pixelist_notes_list_width"
+
+export function clampNotesPaneWidth(
+  width: number | null | undefined,
+  min: number,
+  max: number,
+  fallback: number
+): number {
+  if (width === null || width === undefined || !Number.isFinite(width)) {
+    return fallback
+  }
+  return Math.max(min, Math.min(max, Math.round(width)))
+}
+
+export function parseStoredNotesPaneWidth(
+  raw: string | null | undefined,
+  min: number,
+  max: number,
+  fallback: number
+): number {
+  if (!raw) return fallback
+  const parsed = Number(raw)
+  return clampNotesPaneWidth(parsed, min, max, fallback)
+}

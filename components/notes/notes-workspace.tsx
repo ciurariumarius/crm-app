@@ -76,6 +76,15 @@ import {
   applyFolderCountChange,
   resolveNotesUrlNoteId,
   shouldApplyNotesRequest,
+  NOTES_FOLDERS_MIN_WIDTH,
+  NOTES_FOLDERS_MAX_WIDTH,
+  NOTES_FOLDERS_DEFAULT_WIDTH,
+  NOTES_LIST_MIN_WIDTH,
+  NOTES_LIST_MAX_WIDTH,
+  NOTES_LIST_DEFAULT_WIDTH,
+  NOTES_FOLDERS_WIDTH_STORAGE_KEY,
+  NOTES_LIST_WIDTH_STORAGE_KEY,
+  parseStoredNotesPaneWidth,
 } from "@/lib/notes/workspace-state"
 
 const RichTextEditor = dynamic(
@@ -753,6 +762,104 @@ export function NotesWorkspace({
     }
   })
 
+  const [foldersWidth, setFoldersWidth] = React.useState<number>(() => {
+    if (typeof window === "undefined") return NOTES_FOLDERS_DEFAULT_WIDTH
+    try {
+      return parseStoredNotesPaneWidth(
+        localStorage.getItem(NOTES_FOLDERS_WIDTH_STORAGE_KEY),
+        NOTES_FOLDERS_MIN_WIDTH,
+        NOTES_FOLDERS_MAX_WIDTH,
+        NOTES_FOLDERS_DEFAULT_WIDTH
+      )
+    } catch {
+      return NOTES_FOLDERS_DEFAULT_WIDTH
+    }
+  })
+
+  const [listWidth, setListWidth] = React.useState<number>(() => {
+    if (typeof window === "undefined") return NOTES_LIST_DEFAULT_WIDTH
+    try {
+      return parseStoredNotesPaneWidth(
+        localStorage.getItem(NOTES_LIST_WIDTH_STORAGE_KEY),
+        NOTES_LIST_MIN_WIDTH,
+        NOTES_LIST_MAX_WIDTH,
+        NOTES_LIST_DEFAULT_WIDTH
+      )
+    } catch {
+      return NOTES_LIST_DEFAULT_WIDTH
+    }
+  })
+
+  const foldersWidthRef = React.useRef(foldersWidth)
+  const listWidthRef = React.useRef(listWidth)
+  foldersWidthRef.current = foldersWidth
+  listWidthRef.current = listWidth
+
+  const [isResizingFolders, setIsResizingFolders] = React.useState(false)
+  const [isResizingList, setIsResizingList] = React.useState(false)
+
+  const handleFoldersResizeStart = React.useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    setIsResizingFolders(true)
+    const startX = e.clientX
+    const startWidth = foldersWidthRef.current
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      moveEvent.preventDefault()
+      const delta = moveEvent.clientX - startX
+      const nextWidth = Math.max(
+        NOTES_FOLDERS_MIN_WIDTH,
+        Math.min(NOTES_FOLDERS_MAX_WIDTH, Math.round(startWidth + delta))
+      )
+      foldersWidthRef.current = nextWidth
+      setFoldersWidth(nextWidth)
+    }
+
+    const handlePointerUp = () => {
+      setIsResizingFolders(false)
+      window.removeEventListener("pointermove", handlePointerMove)
+      window.removeEventListener("pointerup", handlePointerUp)
+      try {
+        localStorage.setItem(NOTES_FOLDERS_WIDTH_STORAGE_KEY, String(foldersWidthRef.current))
+      } catch {}
+    }
+
+    window.addEventListener("pointermove", handlePointerMove)
+    window.addEventListener("pointerup", handlePointerUp)
+  }, [])
+
+  const handleListResizeStart = React.useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    setIsResizingList(true)
+    const startX = e.clientX
+    const startWidth = listWidthRef.current
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      moveEvent.preventDefault()
+      const delta = moveEvent.clientX - startX
+      const nextWidth = Math.max(
+        NOTES_LIST_MIN_WIDTH,
+        Math.min(NOTES_LIST_MAX_WIDTH, Math.round(startWidth + delta))
+      )
+      listWidthRef.current = nextWidth
+      setListWidth(nextWidth)
+    }
+
+    const handlePointerUp = () => {
+      setIsResizingList(false)
+      window.removeEventListener("pointermove", handlePointerMove)
+      window.removeEventListener("pointerup", handlePointerUp)
+      try {
+        localStorage.setItem(NOTES_LIST_WIDTH_STORAGE_KEY, String(listWidthRef.current))
+      } catch {}
+    }
+
+    window.addEventListener("pointermove", handlePointerMove)
+    window.addEventListener("pointerup", handlePointerUp)
+  }, [])
+
   React.useEffect(() => setResponsiveReady(true), [])
 
   const togglePin = React.useCallback((id: string) => {
@@ -1428,9 +1535,25 @@ export function NotesWorkspace({
         </div>
       ) : null}
 
-      <div className="grid h-full min-h-0 flex-1 overflow-hidden md:grid-cols-[230px_minmax(0,1fr)] xl:grid-cols-[180px_230px_minmax(0,1fr)]">
+      <div
+        className="grid h-full min-h-0 flex-1 overflow-hidden md:grid-cols-[230px_minmax(0,1fr)] xl:grid-cols-[180px_230px_minmax(0,1fr)]"
+        style={{
+          gridTemplateColumns: responsiveReady && !isMobile
+            ? (responsiveProfile === "desktop"
+                ? `${foldersWidth}px ${listWidth}px minmax(0, 1fr)`
+                : `${listWidth}px minmax(0, 1fr)`)
+            : undefined,
+        }}
+      >
         {/* Column 1: Folders Sidebar */}
-        <aside data-slot="notes-folders" className={cn("h-full min-h-0 flex-col overflow-hidden bg-transparent xl:border-r xl:border-[var(--line-subtle)]", mobilePane === "folders" ? "flex" : "hidden", "md:hidden xl:flex")}>
+        <aside
+          data-slot="notes-folders"
+          className={cn(
+            "relative h-full min-h-0 flex-col overflow-hidden bg-transparent xl:border-r xl:border-[var(--line-subtle)]",
+            mobilePane === "folders" ? "flex" : "hidden",
+            "md:hidden xl:flex"
+          )}
+        >
           <div className="hidden md:flex flex-col gap-3 px-3 pt-5 pb-2 shrink-0">
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Notes</h1>
@@ -1512,10 +1635,46 @@ export function NotesWorkspace({
             })}
             
           </nav>
+
+          {/* Folders Resize Handle (Desktop only) */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize folders sidebar"
+            title="Drag to resize folders (double-click to reset)"
+            onPointerDown={handleFoldersResizeStart}
+            onDoubleClick={() => {
+              setFoldersWidth(NOTES_FOLDERS_DEFAULT_WIDTH)
+              foldersWidthRef.current = NOTES_FOLDERS_DEFAULT_WIDTH
+              try {
+                localStorage.setItem(NOTES_FOLDERS_WIDTH_STORAGE_KEY, String(NOTES_FOLDERS_DEFAULT_WIDTH))
+              } catch {}
+            }}
+            className={cn(
+              "absolute right-0 top-0 bottom-0 w-2.5 -mr-1 z-30 cursor-col-resize select-none touch-none",
+              "hidden xl:flex items-center justify-center hover:bg-[color:color-mix(in_srgb,var(--primary)_20%,transparent)] transition-colors group/resizer",
+              isResizingFolders && "bg-[color:color-mix(in_srgb,var(--primary)_30%,transparent)]"
+            )}
+          >
+            <div
+              className={cn(
+                "w-0.5 h-7 rounded-full bg-transparent group-hover/resizer:bg-[var(--primary)] transition-colors",
+                isResizingFolders && "bg-[var(--primary)]"
+              )}
+            />
+          </div>
         </aside>
 
         {/* Column 2: Notes List */}
-        <section data-slot="notes-list" className={cn("h-full min-h-0 flex-col overflow-hidden bg-transparent md:border-r md:border-[var(--line-subtle)]", mobilePane === "list" ? "flex" : "hidden", "md:flex")} aria-label="Notes list">
+        <section
+          data-slot="notes-list"
+          className={cn(
+            "relative h-full min-h-0 flex-col overflow-hidden bg-transparent md:border-r md:border-[var(--line-subtle)]",
+            mobilePane === "list" ? "flex" : "hidden",
+            "md:flex"
+          )}
+          aria-label="Notes list"
+        >
           <div className="hidden shrink-0 flex-col gap-3 border-b border-[var(--line-subtle)] px-4 pb-3 pt-4 md:flex xl:hidden">
             <div className="flex items-center justify-between gap-2">
               <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Notes</h1>
@@ -1634,6 +1793,34 @@ export function NotesWorkspace({
             )}
             <div ref={loadMoreRef} className="h-1" />
             {loadingList && rows.length > 0 ? <p className="py-3 text-center text-xs text-[var(--text-muted)]">Loading…</p> : null}
+          </div>
+
+          {/* Notes List Resize Handle (Tablet & Desktop) */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize notes list"
+            title="Drag to resize notes list (double-click to reset)"
+            onPointerDown={handleListResizeStart}
+            onDoubleClick={() => {
+              setListWidth(NOTES_LIST_DEFAULT_WIDTH)
+              listWidthRef.current = NOTES_LIST_DEFAULT_WIDTH
+              try {
+                localStorage.setItem(NOTES_LIST_WIDTH_STORAGE_KEY, String(NOTES_LIST_DEFAULT_WIDTH))
+              } catch {}
+            }}
+            className={cn(
+              "absolute right-0 top-0 bottom-0 w-2.5 -mr-1 z-30 cursor-col-resize select-none touch-none",
+              "hidden md:flex items-center justify-center hover:bg-[color:color-mix(in_srgb,var(--primary)_20%,transparent)] transition-colors group/resizer",
+              isResizingList && "bg-[color:color-mix(in_srgb,var(--primary)_30%,transparent)]"
+            )}
+          >
+            <div
+              className={cn(
+                "w-0.5 h-7 rounded-full bg-transparent group-hover/resizer:bg-[var(--primary)] transition-colors",
+                isResizingList && "bg-[var(--primary)]"
+              )}
+            />
           </div>
         </section>
 
@@ -1820,6 +2007,10 @@ export function NotesWorkspace({
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={pendingAction === "delete-note"} onClick={() => void confirmDeleteNote()}>Delete permanently</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {(isResizingFolders || isResizingList) ? (
+        <div className="fixed inset-0 z-50 cursor-col-resize select-none pointer-events-auto" />
+      ) : null}
     </div>
   )
 }

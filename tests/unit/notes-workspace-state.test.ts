@@ -13,6 +13,14 @@ import {
   shouldAcceptNoteEditorChange,
   shouldDiscardNewNote,
   shouldApplyNotesRequest,
+  clampNotesPaneWidth,
+  parseStoredNotesPaneWidth,
+  NOTES_FOLDERS_MIN_WIDTH,
+  NOTES_FOLDERS_MAX_WIDTH,
+  NOTES_FOLDERS_DEFAULT_WIDTH,
+  NOTES_LIST_MIN_WIDTH,
+  NOTES_LIST_MAX_WIDTH,
+  NOTES_LIST_DEFAULT_WIDTH,
 } from "@/lib/notes/workspace-state"
 import {
   hasCurrentNotesWriteProtocol,
@@ -274,5 +282,19 @@ describe("Notes workspace state", () => {
       resolveProjectNoteDraftContent(storage, "project-1", "<p></p>", 101)
     ).toBe("<p>Recover this text</p>")
     expect(values.has("crm:project-note-draft:project-1")).toBe(false)
+  })
+
+  it("clamps and parses customized pane widths within permitted ranges", () => {
+    expect(clampNotesPaneWidth(150, NOTES_FOLDERS_MIN_WIDTH, NOTES_FOLDERS_MAX_WIDTH, NOTES_FOLDERS_DEFAULT_WIDTH)).toBe(180)
+    expect(clampNotesPaneWidth(450, NOTES_FOLDERS_MIN_WIDTH, NOTES_FOLDERS_MAX_WIDTH, NOTES_FOLDERS_DEFAULT_WIDTH)).toBe(380)
+    expect(clampNotesPaneWidth(220, NOTES_FOLDERS_MIN_WIDTH, NOTES_FOLDERS_MAX_WIDTH, NOTES_FOLDERS_DEFAULT_WIDTH)).toBe(220)
+    expect(clampNotesPaneWidth(null, NOTES_FOLDERS_MIN_WIDTH, NOTES_FOLDERS_MAX_WIDTH, NOTES_FOLDERS_DEFAULT_WIDTH)).toBe(180)
+    expect(clampNotesPaneWidth(Number.NaN, NOTES_FOLDERS_MIN_WIDTH, NOTES_FOLDERS_MAX_WIDTH, NOTES_FOLDERS_DEFAULT_WIDTH)).toBe(180)
+
+    expect(parseStoredNotesPaneWidth("260", NOTES_LIST_MIN_WIDTH, NOTES_LIST_MAX_WIDTH, NOTES_LIST_DEFAULT_WIDTH)).toBe(260)
+    expect(parseStoredNotesPaneWidth("120", NOTES_LIST_MIN_WIDTH, NOTES_LIST_MAX_WIDTH, NOTES_LIST_DEFAULT_WIDTH)).toBe(200)
+    expect(parseStoredNotesPaneWidth("800", NOTES_LIST_MIN_WIDTH, NOTES_LIST_MAX_WIDTH, NOTES_LIST_DEFAULT_WIDTH)).toBe(500)
+    expect(parseStoredNotesPaneWidth(null, NOTES_LIST_MIN_WIDTH, NOTES_LIST_MAX_WIDTH, NOTES_LIST_DEFAULT_WIDTH)).toBe(230)
+    expect(parseStoredNotesPaneWidth("invalid", NOTES_LIST_MIN_WIDTH, NOTES_LIST_MAX_WIDTH, NOTES_LIST_DEFAULT_WIDTH)).toBe(230)
   })
 })
