@@ -18,59 +18,70 @@ async function authenticate(page: Page) {
   await page.goto("/notes")
 }
 
-test("Notes stays entry-focused and overflow-free at every breakpoint", async ({ page }) => {
+async function expectNoDocumentOverflow(page: Page) {
+  await expect.poll(() => page.evaluate(() => ({
+    horizontal: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+    vertical: document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1,
+  }))).toEqual({ horizontal: true, vertical: true })
+}
+
+test("Notes uses the intended mobile, tablet, and desktop pane layouts", async ({ page }) => {
   await authenticate(page)
+
   for (const viewport of [
-    { name: "mobile", width: 390, height: 844 },
-    { name: "tablet", width: 768, height: 1024 },
-    { name: "desktop", width: 1440, height: 900 },
-    { name: "wide", width: 1920, height: 1080 },
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
   ] as const) {
     await page.setViewportSize(viewport)
     await page.goto("/notes")
 
-    const header = page.locator('[data-slot="app-page-header"]')
-    await expect(header.getByRole("heading", { name: "Notes" })).toBeVisible()
-    await expect(header.locator('input[placeholder="Search"]:visible')).toBeVisible()
-    await expect(header.locator('button:visible').filter({ hasText: "New Note" })).toBeVisible()
-    await expect(page.getByText("Smart Folders & Tags")).toHaveCount(0)
-    await expect(page.getByText("Current View")).toHaveCount(0)
-    await expect(page.getByRole("button", { name: /gallery|list view/i })).toHaveCount(0)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true)
+    const workspace = page.locator('[data-slot="notes-workspace"]')
+    const folders = page.locator('[data-slot="notes-folders"]')
+    const list = page.locator('[data-slot="notes-list"]')
+    const editorPane = page.locator('[data-slot="notes-editor"]')
+    const toolbar = page.locator('[data-slot="notes-formatting-toolbar"]')
 
-    if (viewport.width >= 768) {
-      const editor = page.getByRole("textbox", { name: "Note content" })
-      await expect(editor).toBeVisible()
-      await expect(editor).toHaveAttribute("aria-multiline", "true")
-      await expect(editor).toHaveAttribute("inputmode", "text")
-      await expect(editor).toHaveAttribute("autocorrect", "on")
-      await expect(editor).toHaveAttribute("autocapitalize", "sentences")
-      await expect(editor).toHaveAttribute("autocomplete", "off")
-      await expect(editor).toHaveAttribute("enterkeyhint", "enter")
-      await editor.evaluate((element) => (element as HTMLElement).focus())
-      await expect(page.getByRole("button", { name: "Draw" })).toBeVisible()
-      if (viewport.name === "tablet") {
-        await page.getByRole("button", { name: "Draw" }).click({ force: true })
-        const drawingDialog = page.getByRole("dialog", { name: "New drawing" })
-        await expect(drawingDialog).toBeVisible()
-        await expect(drawingDialog.getByRole("img", { name: "Drawing canvas" })).toBeVisible()
-        await drawingDialog.getByRole("button", { name: "Cancel" }).click()
-        await expect(drawingDialog).toBeHidden()
+    await expect(workspace).toBeVisible()
+    await expect(list).toBeVisible()
+    await expectNoDocumentOverflow(page)
+
+    if (viewport.width < 768) {
+      await expect(folders).toBeHidden()
+      await expect(editorPane).toBeHidden()
+      await expect(toolbar).toBeHidden()
+
+      const firstNote = list.locator("button[data-note-id]").first()
+      if (await firstNote.count()) {
+        await firstNote.click()
+        await expect(editorPane).toBeVisible()
+        const editor = page.getByRole("textbox", { name: "Note content" })
+        await expect(editor).toBeVisible()
+        await expect(editor).not.toBeFocused()
+        await expect(toolbar).toBeHidden()
+        await expect(page).toHaveURL((url) => Boolean(url.searchParams.get("note")))
+        await page.getByRole("button", { name: "Back to notes list" }).click()
+        await expect(list).toBeVisible()
+        await expect(page).toHaveURL((url) => !url.searchParams.has("note"))
       }
-    }
-
-    if (viewport.width >= 1280) {
-      await page.getByRole("button", { name: "Hide collections and folders" }).click()
-      await expect(page.getByRole("button", { name: "Show collections and folders" })).toBeVisible()
-      await page.getByRole("button", { name: "Hide notes list" }).click()
-      await expect(page.getByRole("button", { name: "Show notes list" })).toBeVisible()
-      await page.getByRole("button", { name: "Show notes list" }).click()
-      await page.getByRole("button", { name: "Show collections and folders" }).click()
+    } else if (viewport.width < 1280) {
+      await expect(folders).toBeHidden()
+      await expect(editorPane).toBeVisible()
+      await expect(page.getByRole("button", { name: "Folders" })).toBeVisible()
+      await expect(toolbar).toBeVisible()
+    } else {
+      await expect(folders).toBeVisible()
+      await expect(editorPane).toBeVisible()
+      await expect(toolbar).toBeVisible()
     }
   }
 })
 
-test("new-note deep link focuses a blank editor without persisting an empty note", async ({ page }) => {
+test("new-note deep link focuses a blank editor without persisting an untouched note", async ({ page }) => {
   await authenticate(page)
   await page.setViewportSize({ width: 390, height: 844 })
 
@@ -87,8 +98,19 @@ test("new-note deep link focuses a blank editor without persisting an empty note
   await expect(editor).toBeVisible()
   await expect(editor).toBeFocused()
   await expect(editor).toHaveText("")
+  await expect(page.locator('[data-slot="notes-formatting-toolbar"]')).toBeHidden()
   await expect(page).toHaveURL((url) => url.pathname === "/notes" && !url.searchParams.has("new"))
 
-  await page.waitForTimeout(700)
+  await page.waitForTimeout(1_000)
   expect(notesPostRequests).toEqual([])
+})
+
+test("Notes search exposes its keyboard shortcut and accessible name", async ({ page }) => {
+  await authenticate(page)
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.goto("/notes")
+
+  const search = page.getByRole("textbox", { name: "Search notes" })
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K")
+  await expect(search).toBeFocused()
 })

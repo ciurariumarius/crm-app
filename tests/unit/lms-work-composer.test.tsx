@@ -83,6 +83,7 @@ const pageData: LmsWorkLogPageData = {
   unexportedEntries: 0,
   totalMinutes: 0,
   workedDays: 0,
+  uniqueClientsCount: 1,
   firstWorkDate: null,
   lastWorkDate: null,
   page: 1,
@@ -280,5 +281,30 @@ describe("Record Work composer", () => {
     expect(screen.queryByRole("button", { name: /Reopen CRM task/ })).not.toBeInTheDocument()
     fireEvent.click(screen.getAllByRole("button", { name: "Delete Development" })[0])
     await waitFor(() => expect(mocks.deleteLmsWorkEntry).toHaveBeenCalledWith(orphanEntry.id))
+  })
+
+  it("renders unique clients card and calculates capacity from tasks timeframe when all time is selected", () => {
+    render(
+      <LmsWorkLogWorkspace
+        data={{
+          ...pageData,
+          totalEntries: 2,
+          totalMinutes: 180,
+          workedDays: 2,
+          uniqueClientsCount: 4,
+          firstWorkDate: "2026-08-03",
+          lastWorkDate: "2026-08-04",
+          from: null,
+          to: null,
+        }}
+        activePeriod="all"
+        initialComposerContext={composerContext}
+      />
+    )
+
+    expect(screen.getByText("Unique clients")).toBeInTheDocument()
+    expect(screen.getByText("Unique clients").closest("div")).toHaveTextContent("4")
+    expect(screen.queryByText("Choose a date range")).not.toBeInTheDocument()
+    expect(screen.getByText(/16h · 19%/)).toBeInTheDocument()
   })
 })

@@ -83,6 +83,7 @@ export type LmsWorkLogPageData = {
   unexportedEntries: number
   totalMinutes: number
   workedDays: number
+  uniqueClientsCount: number
   firstWorkDate: string | null
   lastWorkDate: string | null
   page: number

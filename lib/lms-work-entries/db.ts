@@ -193,6 +193,7 @@ export async function getLmsWorkLogPageData(args?: {
     dateFilterRows,
     clientFilterRows,
     taskFilterRows,
+    uniqueClientRows,
   ] = await Promise.all([
     prisma.lmsAllocation.findMany({
       select: { id: true, client: true },
@@ -245,6 +246,10 @@ export async function getLmsWorkLogPageData(args?: {
     prisma.lmsWorkEntry.groupBy({
       by: ["taskTypeId", "taskNameSnapshot"],
       where: taskFilterWhere,
+    }),
+    prisma.lmsWorkEntry.groupBy({
+      by: ["clientDomainSnapshot"],
+      where,
     }),
   ])
 
@@ -340,6 +345,7 @@ export async function getLmsWorkLogPageData(args?: {
     unexportedEntries,
     totalMinutes: aggregate._sum.durationMinutes ?? 0,
     workedDays: workedDates.length,
+    uniqueClientsCount: uniqueClientRows.length,
     firstWorkDate: aggregate._min.workDate,
     lastWorkDate: aggregate._max.workDate,
     page,

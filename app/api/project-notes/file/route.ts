@@ -5,7 +5,6 @@ import { requireAuth } from "@/lib/auth"
 import { apiRouteError } from "@/lib/api-response"
 import {
     getProjectNoteMimeTypeFromRelativePath,
-    isProjectNoteUrlExpired,
     resolveProjectNoteAbsolutePath,
     verifyProjectNotePathSignature,
 } from "@/lib/project-note-storage"
@@ -28,10 +27,6 @@ export async function GET(request: Request) {
             const expiresAtUnix = Number.parseInt(expiresAtRaw, 10)
             if (!Number.isFinite(expiresAtUnix) || expiresAtUnix <= 0) {
                 return NextResponse.json({ success: false, error: "Invalid file expiry timestamp." }, { status: 400 })
-            }
-
-            if (isProjectNoteUrlExpired(expiresAtUnix)) {
-                return NextResponse.json({ success: false, error: "File URL has expired." }, { status: 403 })
             }
 
             if (!verifyProjectNotePathSignature(relativePath, signature, expiresAtUnix)) {

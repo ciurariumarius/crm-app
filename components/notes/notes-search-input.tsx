@@ -29,6 +29,7 @@ export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchIn
         <Input
           ref={ref}
           type="text"
+          aria-label="Search notes"
           placeholder="Search notes..."
           value={value}
           autoComplete="off"
@@ -43,13 +44,13 @@ export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchIn
             }
           }}
           className={cn(
-            "w-full rounded-xl border border-[#ECEFEB] bg-white dark:bg-zinc-900 pl-9 pr-12 text-xs font-normal text-zinc-900 dark:text-zinc-100 outline-none transition placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:bg-white dark:focus-visible:bg-zinc-900 focus-visible:ring-0 shadow-none",
+            "w-full rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] pl-9 pr-12 text-xs font-normal text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)] focus-visible:border-[var(--primary)] focus-visible:bg-[var(--surface-lowest)] focus-visible:ring-0 shadow-none",
             inputHeight
           )}
         />
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
           {showShortcutHint && !hasValue ? (
-            <kbd className="hidden h-5 items-center rounded border border-zinc-200/80 bg-zinc-200/50 px-1.5 text-xs font-medium text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 md:inline-flex">
+            <kbd className="hidden h-5 items-center rounded border border-[var(--line-subtle)] bg-[var(--surface-low)] px-1.5 text-xs font-medium text-[var(--text-muted)] md:inline-flex">
               ⌘K
             </kbd>
           ) : null}
@@ -57,7 +58,7 @@ export const NotesSearchInput = React.forwardRef<HTMLInputElement, NotesSearchIn
             <button
               type="button"
               onClick={() => onChange("")}
-              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-200/60 hover:text-zinc-700 focus-visible:outline-none"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] focus-visible:outline-none"
               aria-label="Clear search"
             >
               <X className="h-3.5 w-3.5" />

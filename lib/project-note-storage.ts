@@ -120,9 +120,13 @@ export function isProjectNoteUrlExpired(expiresAtUnix: number) {
 }
 
 export function createSignedProjectNoteUrl(
-    relativePath: string,
-    options?: { expiresAtUnix?: number; ttlSeconds?: number }
+  relativePath: string,
+  options?: { expiresAtUnix?: number; ttlSeconds?: number }
 ) {
+    if (options?.expiresAtUnix === undefined && options?.ttlSeconds === undefined) {
+        const signature = signProjectNotePath(relativePath)
+        return `/api/project-notes/file?path=${encodeURIComponent(relativePath)}&sig=${signature}`
+    }
     const nowUnix = Math.floor(Date.now() / 1000)
     const ttlSeconds = clampNumber(
         options?.ttlSeconds ?? parseTtlFromEnv(),

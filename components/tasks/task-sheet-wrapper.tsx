@@ -15,6 +15,7 @@ interface TaskSheetWrapperProps {
     project?: unknown // Optional project context to inject into tasks
     onOpenProject?: (project: unknown) => void
     onOpenSite?: (site: unknown) => void
+    onOpenPartner?: (partnerId: string) => void
     panelSize?: SidePanelSize
     panelStackLevel?: number
     children: React.ReactNode
@@ -36,6 +37,7 @@ export function TaskSheetWrapper({
     project,
     onOpenProject,
     onOpenSite,
+    onOpenPartner,
     panelSize = "compact",
     panelStackLevel = 1,
     children,
@@ -82,6 +84,7 @@ export function TaskSheetWrapper({
                 panelStackLevel={panelStackLevel}
                 onOpenProject={onOpenProject}
                 onOpenSite={onOpenSite}
+                onOpenPartner={onOpenPartner}
             />
         </TaskSheetContext.Provider>
     )

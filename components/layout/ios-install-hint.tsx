@@ -54,7 +54,7 @@ export function IosInstallHint() {
         <aside
             role="status"
             aria-live="polite"
-            className="fixed inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-[420px] items-start gap-3 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,transparent)] p-3.5 text-[var(--text-primary)] shadow-[var(--shadow-apple)] backdrop-blur-xl md:hidden"
+            className="fixed inset-x-3 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-[420px] items-start gap-3 rounded-2xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-lowest)_96%,transparent)] p-3.5 text-[var(--text-primary)] shadow-[var(--shadow-apple)] backdrop-blur-xl md:hidden"
         >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-low)] text-[var(--primary)]">
                 <Share className="h-4.5 w-4.5" aria-hidden="true" />

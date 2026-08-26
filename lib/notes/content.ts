@@ -25,3 +25,16 @@ export function hasNoteContentStateChanged(input: {
   return input.savedContent !== input.nextContent
     || input.savedFolderId !== input.nextFolderId
 }
+
+export function normalizeRichTextLink(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return ""
+  if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`
+  try {
+    const url = new URL(candidate)
+    return ["http:", "https:", "mailto:", "tel:"].includes(url.protocol) ? candidate : null
+  } catch {
+    return null
+  }
+}

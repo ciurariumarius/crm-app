@@ -42,6 +42,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+import { normalizeRichTextLink } from "@/lib/notes/content"
 
 const MAX_UPLOAD_FILE_BYTES = 12 * 1024 * 1024
 
@@ -65,7 +67,7 @@ const ScreenshotImage = Node.create({
         return [
             "img",
             mergeAttributes(HTMLAttributes, {
-                class: "max-w-[70%] h-auto rounded-lg border border-[var(--line-subtle)] shadow-sm my-3 cursor-zoom-in",
+                class: "max-w-full h-auto rounded-lg border border-[var(--line-subtle)] shadow-sm my-3 cursor-zoom-in",
             }),
         ]
     },
@@ -171,11 +173,6 @@ const INITIAL_VIEWER_STATE: ImageViewerState = {
     index: 0,
     zoom: 1,
     sources: [],
-}
-
-function stripAnchorTags(value: string): string {
-    if (!value) return value
-    return value.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, "$1")
 }
 
 function extractImageSources(editor: TiptapEditor): string[] {
@@ -600,6 +597,11 @@ export function RichTextEditor({
         }
         const from = $from.pos - query.length - 1
         const coordinates = currentEditor.view.coordsAtPos($from.pos)
+        const visualViewport = window.visualViewport
+        const viewportLeft = visualViewport?.offsetLeft ?? 0
+        const viewportTop = visualViewport?.offsetTop ?? 0
+        const viewportWidth = visualViewport?.width ?? window.innerWidth
+        const viewportHeight = visualViewport?.height ?? window.innerHeight
         const next: FolderSuggestionState = {
             from,
             to: $from.pos,
@@ -608,8 +610,8 @@ export function RichTextEditor({
                 folderSuggestionRef.current?.selectedIndex ?? 0,
                 Math.max(0, matchingFolderOptions(query).length - 1)
             ),
-            left: Math.max(12, Math.min(coordinates.left, window.innerWidth - 280)),
-            top: Math.min(coordinates.bottom + 8, window.innerHeight - 280),
+            left: Math.max(viewportLeft + 12, Math.min(coordinates.left, viewportLeft + viewportWidth - 268)),
+            top: Math.max(viewportTop + 12, Math.min(coordinates.bottom + 8, viewportTop + viewportHeight - 280)),
         }
         folderSuggestionRef.current = next
         setFolderSuggestion(next)
@@ -661,7 +663,17 @@ export function RichTextEditor({
 
     const editor = useEditor({
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                link: {
+                    openOnClick: false,
+                    autolink: true,
+                    defaultProtocol: "https",
+                    HTMLAttributes: {
+                        rel: "noopener noreferrer nofollow",
+                        target: "_blank",
+                    },
+                },
+            }),
             TaskList,
             TaskItem.configure({
                 nested: true,
@@ -681,7 +693,7 @@ export function RichTextEditor({
             }),
         ],
         editable: !readOnly,
-        content: stripAnchorTags(value),
+        content: value,
         editorProps: {
             attributes: {
                 role: "textbox",
@@ -694,7 +706,7 @@ export function RichTextEditor({
                 autocomplete: "off",
                 enterkeyhint: "enter",
                 class: cn(
-                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-[var(--line-subtle)] [&_pre]:bg-[var(--surface-low)] [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_70%,transparent)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-xs [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-[var(--surface-low)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_code]:text-[var(--text-secondary)] [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-full md:[&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-[var(--line-subtle)] [&_pre]:bg-[var(--surface-low)] [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_70%,transparent)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-xs [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-[var(--surface-low)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_code]:text-[var(--text-secondary)] [&_.tableWrapper]:max-w-full [&_.tableWrapper]:overflow-x-auto [&_table]:min-w-[520px] [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
                     "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li>label]:mt-1 [&_ul[data-type=taskList]_li>div]:min-w-0 [&_ul[data-type=taskList]_input]:accent-[var(--brand-primary)]",
                     mode === "document" && "min-h-full",
                     notesMode && "text-[17px] leading-[1.65] [&_p]:my-[0.7em]",
@@ -838,7 +850,7 @@ export function RichTextEditor({
 
     React.useEffect(() => {
         if (!editor) return
-        const sanitizedValue = stripAnchorTags(value)
+        const sanitizedValue = value
         if (sanitizedValue === editor.getHTML()) return
         const forceExternalUpdate = externalUpdateToken !== lastExternalUpdateTokenRef.current
         if (!forceExternalUpdate && sanitizedValue === lastEditorHtmlRef.current) return
@@ -1326,7 +1338,7 @@ export function RichTextEditor({
                                 (isDocumentLeft
                                     ? cn(
                                           "min-h-full w-full",
-                                          isAppleNotesAppearance ? "px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-3 md:px-8 md:pb-20" : "px-3 pb-7",
+                                          isAppleNotesAppearance ? "px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 md:px-8 md:pb-12" : "px-3 pb-7",
                                           isReadingWidth && "max-w-[760px]"
                                       )
                                     : "mx-auto w-full max-w-4xl px-6 pb-8")
@@ -1337,12 +1349,13 @@ export function RichTextEditor({
                         ) : null}
                         {isAppleNotesAppearance && showToolbar ? (
                             <div
+                                data-slot="notes-formatting-toolbar"
                                 onMouseDown={(event) => {
                                     const target = event.target as HTMLElement
                                     if (target.closest("input, select, textarea")) return
                                     event.preventDefault()
                                 }}
-                                className="mb-6 mt-1 hidden w-fit max-w-full items-center gap-3.5 overflow-x-auto rounded-xl border border-[#ECEFEB] bg-white px-3.5 py-1.5 shadow-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-800 dark:bg-zinc-900 md:flex"
+                                className="mb-6 mt-1 hidden w-fit max-w-full items-center gap-3.5 overflow-x-auto rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3.5 py-1.5 shadow-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex"
                             >
                                 <Toggle
                                     size="sm"
@@ -1352,7 +1365,7 @@ export function RichTextEditor({
                                             ? editor.chain().focus().setHeading({ level: 1 }).run()
                                             : editor.chain().focus().setParagraph().run()
                                     }
-                                    className="h-9 shrink-0 rounded-lg px-2.5 text-xs font-semibold text-zinc-700 transition-colors hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 md:h-7 md:px-2"
+                                    className="h-9 shrink-0 rounded-lg px-2.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] md:h-7 md:px-2"
                                     aria-label="Text format"
                                     title="Text format"
                                 >
@@ -1366,7 +1379,7 @@ export function RichTextEditor({
                                             ? editor.chain().focus().setBold().run()
                                             : editor.chain().focus().unsetBold().run()
                                     }
-                                    className="h-9 w-9 shrink-0 rounded-lg p-0 text-zinc-700 transition-colors hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 md:h-7 md:w-7"
+                                    className="h-9 w-9 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] md:h-7 md:w-7"
                                     aria-label="Bold"
                                 >
                                     <Bold className="h-4 w-4" />
@@ -1379,7 +1392,7 @@ export function RichTextEditor({
                                             ? editor.chain().focus().setItalic().run()
                                             : editor.chain().focus().unsetItalic().run()
                                     }
-                                    className="h-9 w-9 shrink-0 rounded-lg p-0 text-zinc-700 transition-colors hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 md:h-7 md:w-7"
+                                    className="h-9 w-9 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] md:h-7 md:w-7"
                                     aria-label="Italic"
                                 >
                                     <Italic className="h-4 w-4" />
@@ -1388,7 +1401,7 @@ export function RichTextEditor({
                                     size="sm"
                                     pressed={editor.isActive("bulletList")}
                                     onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
-                                    className="h-9 w-9 shrink-0 rounded-lg p-0 text-zinc-700 transition-colors hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 md:h-7 md:w-7"
+                                    className="h-9 w-9 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] md:h-7 md:w-7"
                                     aria-label="Bullet list"
                                 >
                                     <List className="h-4 w-4" />
@@ -1397,7 +1410,7 @@ export function RichTextEditor({
                                     size="sm"
                                     pressed={editor.isActive("taskList")}
                                     onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
-                                    className="h-9 w-9 shrink-0 rounded-lg p-0 text-zinc-700 transition-colors hover:text-zinc-950 data-[state=on]:bg-zinc-100 data-[state=on]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=on]:bg-zinc-800 md:h-7 md:w-7"
+                                    className="h-9 w-9 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] data-[state=on]:bg-[var(--surface-low)] data-[state=on]:text-[var(--text-primary)] md:h-7 md:w-7"
                                     aria-label="Checklist"
                                     title="Checklist"
                                 >
@@ -1407,17 +1420,22 @@ export function RichTextEditor({
                                     type="button"
                                     onClick={() => {
                                         const previousUrl = editor.getAttributes("link")?.href
-                                        const url = window.prompt("URL", previousUrl || "")
-                                        if (url === null) return
+                                        const requestedUrl = window.prompt("URL", previousUrl || "")
+                                        if (requestedUrl === null) return
+                                        const url = normalizeRichTextLink(requestedUrl)
                                         if (url === "") {
                                             editor.chain().focus().extendMarkRange("link").unsetLink().run()
+                                            return
+                                        }
+                                        if (!url) {
+                                            toast.error("Use a valid http, https, mailto, or tel link.")
                                             return
                                         }
                                         editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
                                     }}
                                     className={cn(
-                                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white md:h-7 md:w-7",
-                                        editor.isActive("link") && "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] md:h-7 md:w-7",
+                                        editor.isActive("link") && "bg-[var(--surface-low)] text-[var(--text-primary)]"
                                     )}
                                     aria-label="Link"
                                     title="Link"
@@ -1428,7 +1446,7 @@ export function RichTextEditor({
                                     <DropdownMenuTrigger asChild>
                                         <button
                                             type="button"
-                                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white md:h-7 md:w-7"
+                                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] md:h-7 md:w-7"
                                             aria-label="More formatting options"
                                         >
                                             <MoreHorizontal className="h-4 w-4" />

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ProjectSheetContent } from "@/components/projects/project-sheet-content"
 import { SiteSheetContent } from "@/components/vault/site-sheet-content"
+import { PartnerSheetContent } from "@/components/vault/partner-sheet-content"
 
 import { QuickTimeLogDialog } from "@/components/time/quick-time-log-dialog"
 
@@ -129,6 +130,7 @@ export function TasksCardView({
     void _initialActiveTimer
     const [selectedProject, setSelectedProject] = React.useState<ProjectWithDetails | null>(null)
     const [selectedSite, setSelectedSite] = React.useState<SiteWithOptionalPartner | null>(null)
+    const [selectedPartnerId, setSelectedPartnerId] = React.useState<string | null>(null)
     const [selectedTask, setSelectedTask] = React.useState<TaskCardViewTask | null>(null)
     const [quickLogTask, setQuickLogTask] = React.useState<TaskCardViewTask | null>(null)
     const [selectedIds, setSelectedIds] = React.useState<string[]>([])
@@ -251,7 +253,7 @@ export function TasksCardView({
         return <ArrowRight className="h-3 w-3 text-amber-500" strokeWidth={3} />
     }
 
-    const gridClass = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    const gridClass = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4"
 
     const normalizedSearch = (searchContext?.searchTerm || "").trim().toLowerCase()
     const debouncedSearch = useDebounce(normalizedSearch, 250)
@@ -799,6 +801,9 @@ export function TasksCardView({
                 onOpenSite={(site) => {
                     setSelectedSite(site)
                 }}
+                onOpenPartner={(partnerId) => {
+                    setSelectedPartnerId(partnerId)
+                }}
             />
 
             {/* Project Details Sheet */}
@@ -811,7 +816,20 @@ export function TasksCardView({
                             hourlyRate={hourlyRate}
                             onUpdate={(updated) => setSelectedProject((prev) => (prev ? { ...prev, ...updated } : prev))}
                             onOpenSite={(site) => setSelectedSite(site)}
+                            onOpenPartner={(partnerId) => setSelectedPartnerId(partnerId)}
                             onClose={() => setSelectedProject(null)}
+                        />
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Partner Details Sheet */}
+            <Sheet open={!!selectedPartnerId} onOpenChange={(open) => !open && setSelectedPartnerId(null)}>
+                <SheetContent side="right" showCloseButton={false} className={cn("z-[85]", sidePanelClass("narrow", 2))}>
+                    {selectedPartnerId && (
+                        <PartnerSheetContent
+                            partnerId={selectedPartnerId}
+                            onClose={() => setSelectedPartnerId(null)}
                         />
                     )}
                 </SheetContent>
@@ -819,7 +837,7 @@ export function TasksCardView({
 
             {/* Site detail view if needed */}
             <Sheet open={!!selectedSite} onOpenChange={(open) => !open && setSelectedSite(null)}>
-                <SheetContent side="right" showCloseButton={false} className={sidePanelClass("narrow", 2)}>
+                <SheetContent side="right" showCloseButton={false} className={cn("z-[90]", sidePanelClass("narrow", 2))}>
                     {selectedSite && (
                         <SiteSheetContent
                             site={selectedSite as Site & { partner?: { id: string; name: string } }}

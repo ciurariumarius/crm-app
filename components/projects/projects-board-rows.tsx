@@ -189,7 +189,7 @@ function EmptyProjectsState({
 
 function ProjectsGridSkeleton() {
     return (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:gap-6">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 2xl:gap-6">
             {Array.from({ length: 6 }).map((_, index) => (
                 <div
                     key={`project-grid-skeleton-${index}`}
@@ -804,7 +804,7 @@ export function ProjectsBoardRows({
                         <h2 className="text-[15px] font-bold tracking-tight text-[var(--text-primary)]">{title}</h2>
                         <span className="text-xs font-semibold text-[var(--text-muted)]">{entries.length}</span>
                     </div>
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:gap-6">
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 2xl:gap-6">
                         {entries.map((project) => {
                             const projectStatus = getDisplayStatus(project)
                             const projectPayment = getDisplayPayment(project)
@@ -816,7 +816,7 @@ export function ProjectsBoardRows({
                                     type="button"
                                     onClick={() => openDetails(project)}
                                     className={cn(
-                                        "group flex min-h-[176px] min-w-0 flex-col rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] p-4 text-left shadow-[var(--shadow-apple)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_22%,var(--line-subtle))] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]",
+                                        "group flex min-h-[176px] min-w-0 flex-col rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] p-4 text-left shadow-[var(--shadow-apple)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_22%,var(--line-subtle))] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:min-h-[195px] sm:p-5 xl:min-h-[210px]",
                                         getProjectToneClass(projectStatus)
                                     )}
                                 >
@@ -874,14 +874,14 @@ export function ProjectsBoardRows({
                 {filteredProjects.length === 0 ? (
                     <div className="space-y-4">
                         <EmptyProjectsState title="No projects found" description="Try a different search or reset the active filters." />
-                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:gap-6">
+                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 2xl:gap-6">
                             <button
                                 type="button"
                                 data-slot="add-project-card"
                                 aria-label="Add project"
                                 title="Add project"
                                 onClick={() => setCreateProjectOpen(true)}
-                                className="group flex min-h-[176px] min-w-0 items-center justify-center rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_24%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
+                                className="group flex min-h-[176px] min-w-0 items-center justify-center rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_24%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 sm:min-h-[195px] sm:p-5 xl:min-h-[210px]"
                             >
                                 <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
                                     <Plus className="h-6 w-6" strokeWidth={1.8} />

@@ -23,6 +23,56 @@ export function parseTaskTrackedMinutesInput(value: string) {
   return minutes
 }
 
+export function parseFlexibleMinutes(value: string): number | undefined {
+  const trimmed = value.trim().toLowerCase()
+  if (!trimmed) return undefined
+
+  if (/^\d+$/.test(trimmed)) {
+    const minutes = Number(trimmed)
+    return Number.isSafeInteger(minutes) && minutes >= 0 && minutes <= MAX_TASK_TRACKED_MINUTES
+      ? minutes
+      : undefined
+  }
+
+  const decimalHoursMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*h(?:ours?)?$/)
+  if (decimalHoursMatch) {
+    const hours = parseFloat(decimalHoursMatch[1])
+    if (!Number.isNaN(hours) && hours >= 0) {
+      const minutes = Math.round(hours * 60)
+      return minutes <= MAX_TASK_TRACKED_MINUTES ? minutes : undefined
+    }
+  }
+
+  let totalMinutes = 0
+  let matched = false
+
+  const hoursMatch = trimmed.match(/(\d+)\s*h(?:ours?)?/)
+  if (hoursMatch) {
+    totalMinutes += parseInt(hoursMatch[1], 10) * 60
+    matched = true
+  }
+
+  const minutesMatch = trimmed.match(/(\d+)\s*m(?:in(?:ute)?s?)?/)
+  if (minutesMatch) {
+    totalMinutes += parseInt(minutesMatch[1], 10)
+    matched = true
+  }
+
+  if (hoursMatch && !minutesMatch) {
+    const afterHours = trimmed.substring(trimmed.indexOf("h") + 1).trim()
+    if (/^\d+$/.test(afterHours)) {
+      totalMinutes += parseInt(afterHours, 10)
+      matched = true
+    }
+  }
+
+  if (matched && totalMinutes >= 0 && totalMinutes <= MAX_TASK_TRACKED_MINUTES) {
+    return totalMinutes
+  }
+
+  return undefined
+}
+
 export function formatTaskTrackedSeconds(totalSeconds: number) {
   const normalizedSeconds = Math.max(0, Math.round(totalSeconds))
   const hours = Math.floor(normalizedSeconds / 3600)

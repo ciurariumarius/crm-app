@@ -15,10 +15,11 @@ export default async function NotesPage({
     ? params.view as NotesView
     : "all"
   const startNewNote = params.new === "1"
+  const hasExplicitNote = Boolean(params.note)
   const bootstrap = await getNotesWorkspaceBootstrap({
     view: startNewNote ? "all" : requestedView,
     selectedNoteId: startNewNote ? null : params.note || null,
-    skipSelectedNote: startNewNote,
+    skipSelectedNote: startNewNote || !hasExplicitNote,
   })
 
   return (

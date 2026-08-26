@@ -44,6 +44,7 @@ import { SIDE_PANEL_DIALOG_HEADER_CLASS, sidePanelClass, sidePanelDialogContentC
 import { SidePanelChip, SidePanelDetailRow, SidePanelInfoCard, SidePanelSectionTitle, SidePanelTabs } from "@/components/ui/side-panel-primitives"
 import { TaskHistorySection, type TaskHistoryEntry } from "@/components/tasks/task-history-section"
 import { TaskActualTimeQuickEdit } from "@/components/tasks/task-actual-time-quick-edit"
+import { TaskSheetInfoSection } from "@/components/tasks/task-sheet-info-section"
 import { LmsIcon } from "@/components/lms/lms-icon"
 import { TaskFreelanceProjectField, TaskLmsFields, TaskTargetSelector, type TaskScopeValue } from "@/components/tasks/task-target-fields"
 import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
@@ -126,6 +127,7 @@ interface TaskDetailsProps {
     onOpenChange: (open: boolean) => void
     onOpenProject?: (project: TaskDetailsProject) => void
     onOpenSite?: (site: TaskDetailsSite) => void
+    onOpenPartner?: (partnerId: string) => void
     panelSize?: SidePanelSize
     panelStackLevel?: number
 }
@@ -158,11 +160,12 @@ export function TaskDetails({
     onOpenChange,
     onOpenProject,
     onOpenSite,
+    onOpenPartner,
     panelSize = "compact",
     panelStackLevel = 0,
 }: TaskDetailsProps) {
     const { timerState, startTimer: globalStartTimer, stopTimer: globalStopTimer, pauseTimer: globalPauseTimer, resumeTimer: globalResumeTimer } = useTimer()
-    const { requestCompletion, requestReopen, pendingTaskId, lmsOptions } = useTaskCompletion()
+    const { requestCompletion, requestReopen, pendingTaskId, lmsOptions, loadLmsOptions } = useTaskCompletion()
     const router = useRouter()
     const [loading, setLoading] = React.useState(false)
 
@@ -226,6 +229,13 @@ export function TaskDetails({
     React.useEffect(() => {
         setDisplayTrackedSeconds(taskLoggedSeconds)
     }, [task?.id, taskLoggedSeconds])
+
+    // Load LMS options when sheet opens
+    React.useEffect(() => {
+        if (open) {
+            void loadLmsOptions()
+        }
+    }, [open, loadLmsOptions])
 
     // Load initial data
     React.useEffect(() => {
@@ -842,53 +852,6 @@ export function TaskDetails({
                                 </div>
                             </div>
                         </SheetTitle>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    disabled={loading || isEditingDetails || pendingTaskId === task.id}
-                                    className={cn(
-                                        "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
-                                        status === "Active"
-                                            ? "border-[color:color-mix(in_srgb,var(--state-review)_25%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--state-review)_10%,var(--surface-lowest))] text-[var(--state-review)]"
-                                            : (status === "Pending" || status === "Paused")
-                                                ? "border-[color:color-mix(in_srgb,var(--state-warning)_25%,var(--line-subtle))] bg-[var(--state-warning-surface)] text-[var(--state-warning)]"
-                                                : "border-[color:color-mix(in_srgb,var(--state-success)_25%,var(--line-subtle))] bg-[var(--state-success-surface)] text-[var(--state-success)]"
-                                    )}
-                                >
-                                    {status === "Active" ? <Play className="h-3.5 w-3.5 fill-current" /> :
-                                     (status === "Pending" || status === "Paused") ? <Pause className="h-3.5 w-3.5 fill-current" /> :
-                                     <Check className="h-3.5 w-3.5" />}
-                                    {(status === "Completed" || status === "Done") ? "Done" : (status === "Pending" || status === "Paused") ? "Pending" : "Active"}
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-40 rounded-xl p-1.5">
-                                {([
-                                    { label: "Active", value: "Active" },
-                                    { label: "Pending", value: "Pending" },
-                                    { label: "Done", value: "Done" },
-                                ] as const).map((statusOption) => {
-                                    const isCurrent = (statusOption.value === "Done" && (status === "Completed" || status === "Done"))
-                                        || (statusOption.value === "Pending" && (status === "Pending" || status === "Paused"))
-                                        || (statusOption.value === "Active" && status === "Active")
-                                    return (
-                                        <DropdownMenuItem
-                                            key={statusOption.value}
-                                            onSelect={() => void handleStatusChange(statusOption.value)}
-                                            className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold"
-                                        >
-                                            <span className="flex items-center gap-2">
-                                                {statusOption.value === "Active" ? <Play className="h-3.5 w-3.5 fill-current text-[var(--primary)]" /> :
-                                                 statusOption.value === "Pending" ? <Pause className="h-3.5 w-3.5 fill-current text-[var(--state-warning)]" /> :
-                                                 <Check className="h-3.5 w-3.5 text-[var(--state-success)]" />}
-                                                {statusOption.label}
-                                            </span>
-                                            {isCurrent ? <Check className="ml-auto h-4 w-4 text-[var(--primary)]" /> : null}
-                                        </DropdownMenuItem>
-                                    )
-                                })}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
                     </div>
                 </SheetHeader>
 
@@ -916,42 +879,115 @@ export function TaskDetails({
                     >
                         {activeTab === "overview" ? (
                             <>
-                                <div className="flex items-center justify-between gap-4">
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Task details</h2>
-                                        <p className="mt-1 text-sm text-[var(--text-muted)]">The information needed to place and complete this task.</p>
-                                    </div>
-                                    {!isEditingDetails ? (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setIsEditingDetails(true)}
-                                            className="h-11 shrink-0 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4"
-                                        >
-                                            <Pencil className="mr-2 h-4 w-4" />
-                                            Edit details
-                                        </Button>
-                                    ) : null}
-                                </div>
-
                                 {!isEditingDetails ? (
-                                    <div className="rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-4 shadow-[var(--shadow-apple)]">
-                                        <SidePanelDetailRow label="Target" value={taskScope === "LMS" ? "LMS" : taskScope === "FREELANCE" ? "Freelance" : "Not assigned"} />
-                                        <SidePanelDetailRow label="Priority" value={urgency} />
-                                        <SidePanelDetailRow
-                                            label="Time"
-                                            value={(
-                                                <TaskActualTimeQuickEdit
-                                                    taskId={task.id}
-                                                    taskName={name}
-                                                    totalSeconds={loggedSeconds}
-                                                    onSaved={setDisplayTrackedSeconds}
-                                                />
-                                            )}
-                                        />
-                                    </div>
+                                    <TaskSheetInfoSection
+                                        taskId={task.id}
+                                        taskName={name || task.name || ""}
+                                        taskScope={taskScope}
+                                        status={status}
+                                        onStatusChange={(nextStatus) => void handleStatusChange(nextStatus)}
+                                        loading={loading}
+                                        pendingTaskId={pendingTaskId}
+                                        partnerName={task.project?.site?.partner?.name}
+                                        partnerId={task.project?.site?.partner?.id}
+                                        projectName={task.project?.name}
+                                        domainName={task.project?.site?.domainName}
+                                        externalSiteUrl={task.project?.site?.domainName ? normalizeExternalHttpUrl(task.project.site.domainName) : null}
+                                        lmsClientName={selectedLmsAllocationName || task.lmsAllocation?.client}
+                                        lmsAllocationId={lmsAllocationId}
+                                        lmsAllocations={lmsOptions.allocations}
+                                        onSelectLmsAllocation={(allocationId, clientName) => {
+                                            setLmsAllocationId(allocationId)
+                                            void updateTask(task.id, { lmsAllocationId: allocationId }).then((res) => {
+                                                if (res.success) {
+                                                    toast.success(`LMS Client updated to ${clientName}`)
+                                                    router.refresh()
+                                                } else {
+                                                    toast.error(res.error || "Failed to update LMS client")
+                                                }
+                                            })
+                                        }}
+                                        lmsTaskTypeName={selectedLmsTaskTypeName || task.lmsTaskType?.name}
+                                        lmsTaskTypeId={lmsTaskTypeId}
+                                        lmsWorkTasks={lmsOptions.workTasks}
+                                        onSelectLmsTaskType={(taskTypeId, taskTypeName) => {
+                                            setLmsTaskTypeId(taskTypeId)
+                                            void updateTask(task.id, { lmsTaskTypeId: taskTypeId }).then((res) => {
+                                                if (res.success) {
+                                                    toast.success(`Task Type updated to ${taskTypeName}`)
+                                                    router.refresh()
+                                                } else {
+                                                    toast.error(res.error || "Failed to update Task Type")
+                                                }
+                                            })
+                                        }}
+                                        urgency={urgency}
+                                        onUrgencyChange={(newUrgency) => {
+                                            setUrgency(newUrgency)
+                                            void updateTask(task.id, { urgency: newUrgency }).then((res) => {
+                                                if (res.success) {
+                                                    toast.success(`Priority updated to ${newUrgency}`)
+                                                    router.refresh()
+                                                } else {
+                                                    toast.error(res.error || "Failed to update priority")
+                                                }
+                                            })
+                                        }}
+                                        deadline={task.deadline}
+                                        createdAt={task.createdAt}
+                                        updatedAt={task.updatedAt}
+                                        estimatedMinutes={task.estimatedMinutes}
+                                        trackedSeconds={displayTrackedSeconds}
+                                        isActionsBlocked={projectActionsBlocked}
+                                        onTrackedTimeSaved={setDisplayTrackedSeconds}
+                                        onOpenPartner={
+                                            task.project?.site?.partner?.id && onOpenPartner
+                                                ? () => onOpenPartner(task.project!.site!.partner!.id)
+                                                : undefined
+                                        }
+                                        onOpenProject={
+                                            task.project && onOpenProject
+                                                ? () => onOpenProject(task.project!)
+                                                : undefined
+                                        }
+                                        onOpenSite={
+                                            task.project?.site && onOpenSite
+                                                ? () => onOpenSite(task.project!.site!)
+                                                : undefined
+                                        }
+                                        onEditDetails={() => setIsEditingDetails(true)}
+                                        onDeleteTask={() => void handleDelete()}
+                                    />
                                 ) : (
                                     <div className="space-y-5 rounded-[18px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 sm:p-5">
+                                        <div className="flex items-center justify-between gap-4 border-b border-[var(--line-subtle)] pb-4">
+                                            <div>
+                                                <h3 className="text-sm font-bold text-[var(--text-primary)]">Edit details</h3>
+                                                <p className="text-xs text-[var(--text-muted)]">Configure priority and assignment target.</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setIsEditingDetails(false)}
+                                                    className="h-8 rounded-xl px-3 text-xs font-semibold text-[var(--text-muted)]"
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={() => void handleUpdate()}
+                                                    disabled={loading}
+                                                    className="h-8 rounded-xl bg-[var(--brand-primary)] px-3 text-xs font-semibold text-white shadow-xs hover:bg-[color:color-mix(in_srgb,var(--brand-primary)_90%,black)]"
+                                                >
+                                                    {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
+                                                    Save changes
+                                                </Button>
+                                            </div>
+                                        </div>
+
                                         <div className="space-y-2">
                                             <Label className="text-xs font-semibold text-[var(--text-secondary)]">Priority</Label>
                                             <DropdownMenu>
@@ -1005,57 +1041,57 @@ export function TaskDetails({
                                                     {taskScope === "LMS" ? "Shared with LMS" : taskScope === "FREELANCE" ? "Freelance workflow" : "Choose a target"}
                                                 </span>
                                             </div>
-                            <TaskTargetSelector
-                                value={taskScope}
-                                disabled={loading || pendingTaskId === task.id || status === "Completed"}
-                                onValueChange={(value) => {
-                                    if (value !== "FREELANCE" && isActiveTimerThisTask) {
-                                        toast.error("Stop the active freelance timer before removing this task from its project")
-                                        return
-                                    }
-                                    if (value !== taskScope) bumpTargetRevision()
-                                    setTaskScope(value)
-                                }}
-                            />
-                            {taskScope === "FREELANCE" ? (
-                                <TaskFreelanceProjectField
-                                    projectId={projectId}
-                                    onProjectChange={(value) => {
-                                        if (isActiveTimerThisTask && value !== projectId) {
-                                            toast.error("Stop the active timer before moving this task to another project")
-                                            return
-                                        }
-                                        if (value !== projectId) bumpTargetRevision()
-                                        setProjectId(value)
-                                    }}
-                                    disabled={loading || pendingTaskId === task.id || status === "Completed"}
-                                />
-                            ) : taskScope === "LMS" ? (
-                                <TaskLmsFields
-                                    lmsAllocationId={lmsAllocationId}
-                                    lmsTaskTypeId={lmsTaskTypeId}
-                                    onAllocationChange={(value) => {
-                                        if (value !== lmsAllocationId) bumpTargetRevision()
-                                        setLmsAllocationId(value)
-                                    }}
-                                    onWorkTaskChange={(value) => {
-                                        if (value !== lmsTaskTypeId) bumpTargetRevision()
-                                        setLmsTaskTypeId(value)
-                                    }}
-                                    disabled={loading || pendingTaskId === task.id || status === "Completed"}
-                                    compact
-                                />
-                            ) : null}
-                            {targetDirty ? <p className="text-xs font-medium text-[var(--text-muted)]">Unsaved target change</p> : null}
-                            {taskScope === "GENERAL" ? (
-                                <p className="text-xs leading-5 text-[var(--state-urgent)]">This is a legacy no-project task. Choose Freelance or LMS; use your Personal freelance project for standalone work.</p>
-                            ) : null}
-                            {status === "Completed" ? (
-                                <p className="text-xs leading-5 text-[var(--text-muted)]">Reopen the task before changing its target or LMS links. Existing LMS work remains historical.</p>
-                            ) : taskScope === "LMS" ? (
-                                <p className="text-xs leading-5 text-[var(--text-muted)]">Both LMS fields can be completed later. They become required when the task is marked completed.</p>
-                            ) : null}
-                        </section>
+                                            <TaskTargetSelector
+                                                value={taskScope}
+                                                disabled={loading || pendingTaskId === task.id || status === "Completed"}
+                                                onValueChange={(value) => {
+                                                    if (value !== "FREELANCE" && isActiveTimerThisTask) {
+                                                        toast.error("Stop the active freelance timer before removing this task from its project")
+                                                        return
+                                                    }
+                                                    if (value !== taskScope) bumpTargetRevision()
+                                                    setTaskScope(value)
+                                                }}
+                                            />
+                                            {taskScope === "FREELANCE" ? (
+                                                <TaskFreelanceProjectField
+                                                    projectId={projectId}
+                                                    onProjectChange={(value) => {
+                                                        if (isActiveTimerThisTask && value !== projectId) {
+                                                            toast.error("Stop the active timer before moving this task to another project")
+                                                            return
+                                                        }
+                                                        if (value !== projectId) bumpTargetRevision()
+                                                        setProjectId(value)
+                                                    }}
+                                                    disabled={loading || pendingTaskId === task.id || status === "Completed"}
+                                                />
+                                            ) : taskScope === "LMS" ? (
+                                                <TaskLmsFields
+                                                    lmsAllocationId={lmsAllocationId}
+                                                    lmsTaskTypeId={lmsTaskTypeId}
+                                                    onAllocationChange={(value) => {
+                                                        if (value !== lmsAllocationId) bumpTargetRevision()
+                                                        setLmsAllocationId(value)
+                                                    }}
+                                                    onWorkTaskChange={(value) => {
+                                                        if (value !== lmsTaskTypeId) bumpTargetRevision()
+                                                        setLmsTaskTypeId(value)
+                                                    }}
+                                                    disabled={loading || pendingTaskId === task.id || status === "Completed"}
+                                                    compact
+                                                />
+                                            ) : null}
+                                            {targetDirty ? <p className="text-xs font-medium text-[var(--text-muted)]">Unsaved target change</p> : null}
+                                            {taskScope === "GENERAL" ? (
+                                                <p className="text-xs leading-5 text-[var(--state-urgent)]">This is a legacy no-project task. Choose Freelance or LMS; use your Personal freelance project for standalone work.</p>
+                                            ) : null}
+                                            {status === "Completed" ? (
+                                                <p className="text-xs leading-5 text-[var(--text-muted)]">Reopen the task before changing its target or LMS links. Existing LMS work remains historical.</p>
+                                            ) : taskScope === "LMS" ? (
+                                                <p className="text-xs leading-5 text-[var(--text-muted)]">Both LMS fields can be completed later. They become required when the task is marked completed.</p>
+                                            ) : null}
+                                        </section>
                                     </div>
                                 )}
                             </>
@@ -1198,98 +1234,6 @@ export function TaskDetails({
                             </div>
                         </section>
                     )) : null}
-
-                        {activeTab === "overview" ? <section className="space-y-3 border-t border-[var(--line-subtle)] pt-5">
-                            <SidePanelSectionTitle title="Linked information" icon={<Info className="h-3.5 w-3.5" />} />
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                {taskScope === "LMS" ? (
-                                    <>
-                                        <SidePanelInfoCard
-                                            title="LMS project"
-                                            subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">{lmsAllocationId ? selectedLmsAllocationName : "Not linked"}</p>}
-                                        />
-                                        <SidePanelInfoCard
-                                            title="Work category"
-                                            subtitle={<p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">{lmsTaskTypeId ? selectedLmsTaskTypeName : "Not linked"}</p>}
-                                        />
-                                    </>
-                                ) : taskScope === "GENERAL" ? (
-                                    <SidePanelInfoCard
-                                        title="Target"
-                                        subtitle={<p className="text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">Target required</p>}
-                                    />
-                                ) : <>
-                                <button
-                                    type="button"
-                                    onClick={openProjectDetails}
-                                    disabled={projectActionsBlocked || !savedProjectId}
-                                    className={cn(
-                                        "text-left",
-                                        !projectActionsBlocked && savedProjectId
-                                            ? "hover:border-[color:color-mix(in_srgb,var(--line-subtle)_70%,var(--text-muted)_30%)]"
-                                            : "cursor-not-allowed opacity-60"
-                                    )}
-                                >
-                                    <SidePanelInfoCard
-                                        title="Project"
-                                        subtitle={(
-                                            <p className="truncate text-base font-black leading-tight tracking-tight text-[var(--text-primary)] sm:text-lg">
-                                                {projectLabel}
-                                            </p>
-                                        )}
-                                        action={<FolderOpen className="h-4 w-4 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]" />}
-                                    >
-                                        <p className="truncate text-xs font-medium text-[var(--text-secondary)]">{projectPartnerLabel}</p>
-                                    </SidePanelInfoCard>
-                                </button>
-
-                                <SidePanelInfoCard
-                                    title="Domain"
-                                    subtitle={(
-                                        <button
-                                            type="button"
-                                            onClick={openSitePanel}
-                                            disabled={projectActionsBlocked || !savedProjectMatchesTaskProp || (!projectSitePanelHref && !onOpenSite)}
-                                            className={cn(
-                                                "truncate text-left text-base font-black leading-tight tracking-tight transition sm:text-lg",
-                                                !projectActionsBlocked && savedProjectMatchesTaskProp && (projectSitePanelHref || onOpenSite)
-                                                    ? "text-[var(--text-primary)] hover:text-[var(--primary)]"
-                                                    : "cursor-not-allowed text-[var(--text-muted)]"
-                                            )}
-                                            title="Open site panel"
-                                        >
-                                            {projectDomainLabel}
-                                        </button>
-                                    )}
-                                    action={
-                                        <span className="inline-flex items-center gap-1 text-[var(--text-muted)] transition group-hover:text-[var(--text-secondary)]">
-                                            <Globe className="h-4 w-4" />
-                                            <ArrowUpRight className="h-4 w-4" />
-                                        </span>
-                                    }
-                                >
-                                    <div className="flex items-center gap-2">
-                                        {projectDomainUrl ? (
-                                            <a href={projectDomainUrl} target="_blank" rel="noopener noreferrer">
-                                                <SidePanelChip
-                                                    tone="blue"
-                                                    label={(
-                                                        <>
-                                                            Open website
-                                                            <ArrowUpRight className="h-3.5 w-3.5" />
-                                                        </>
-                                                    )}
-                                                    className="rounded-lg px-2.5 py-1.5 text-xs"
-                                                />
-                                            </a>
-                                        ) : (
-                                            <SidePanelChip tone="slate" label="Open website" className="cursor-not-allowed rounded-lg px-2.5 py-1.5 text-xs opacity-70" />
-                                        )}
-                                    </div>
-                                </SidePanelInfoCard>
-                                </>}
-                            </div>
-                        </section> : null}
 
                     {activeTab === "activity" ? (
                         <div className="space-y-6">

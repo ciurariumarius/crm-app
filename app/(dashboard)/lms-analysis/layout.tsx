@@ -13,7 +13,6 @@ export default function LmsAnalysisLayout({ children }: { children: ReactNode })
         <AppPageHeader
           title="LMS Analysis"
           titleIcon={<LmsIcon className="h-8 w-8" />}
-          subtitle="Work logs, task distribution and project capacity."
           primaryAction={
             <Button asChild variant="outline" size="sm" className="h-9 gap-2">
               <Link href="/lms-analysis/data">

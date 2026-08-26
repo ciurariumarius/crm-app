@@ -138,6 +138,7 @@ export function calculateDashboardMetrics(
     activeProjects.forEach((project) => {
         if (project.paymentStatus === "Unpaid") {
             const fee = Number(project.currentFee) || 0
+            if (fee <= 0) return
             const partner = project.site?.partner
             if (partner) {
                 const existing = unpaidByPartnerMap.get(partner.id) || { id: partner.id, name: partner.name, total: 0, projects: [] }

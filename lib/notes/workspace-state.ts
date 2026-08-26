@@ -9,6 +9,37 @@ export type WorkspaceScopedNote = {
   sourceType?: "note" | "project" | "task"
 }
 
+export type CountedNoteFolder = {
+  id: string
+  count: number
+}
+
+export function applyFolderCountChange<T extends CountedNoteFolder>(
+  folders: T[],
+  previousFolderId: string | null | undefined,
+  nextFolderId: string | null | undefined
+) {
+  if (previousFolderId === nextFolderId) return folders
+  return folders.map((folder) => {
+    if (folder.id === previousFolderId) return { ...folder, count: Math.max(0, folder.count - 1) }
+    if (folder.id === nextFolderId) return { ...folder, count: folder.count + 1 }
+    return folder
+  })
+}
+
+export function shouldApplyNotesRequest(requestId: number, currentRequestId: number) {
+  return requestId === currentRequestId
+}
+
+export function resolveNotesUrlNoteId(input: {
+  isMobile: boolean
+  pane: "folders" | "list" | "editor"
+  selectedNoteId: string | null
+}) {
+  if (!input.selectedNoteId) return null
+  return !input.isMobile || input.pane === "editor" ? input.selectedNoteId : null
+}
+
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">
 
 type ProjectNoteDraft = {

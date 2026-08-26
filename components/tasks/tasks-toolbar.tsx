@@ -154,7 +154,7 @@ export function TasksStatusControls({
     : currentStatus || "Active"
 
   return (
-    <nav className="flex flex-1 items-center justify-around md:justify-center gap-1 sm:gap-4 md:gap-6 px-1 md:px-6 h-11 md:h-auto rounded-2xl border border-[var(--line-subtle)] md:border-none bg-[var(--surface-lowest)] md:bg-transparent md:shadow-none shadow-[var(--shadow-apple)]" aria-label="Task status">
+    <nav className="flex flex-1 items-center justify-around md:justify-center gap-1 sm:gap-2 md:gap-3 lg:gap-4 xl:gap-5 px-1 md:px-2 lg:px-3 h-11 md:h-auto rounded-2xl border border-[var(--line-subtle)] md:border-none bg-[var(--surface-lowest)] md:bg-transparent md:shadow-none shadow-[var(--shadow-apple)]" aria-label="Task status">
       {STATUS_OPTIONS.map((option) => {
         const isCurrent = displayedStatus === option.value
           || (option.value === "Active" && (displayedStatus === "All" && !searchContext?.searchTerm.trim()))
@@ -167,7 +167,7 @@ export function TasksStatusControls({
             onClick={() => searchContext?.setStatusRefined(true)}
             aria-current={isCurrent ? "page" : undefined}
             className={cn(
-              "group relative inline-flex items-center justify-center gap-1.5 h-full px-2 md:py-2 text-[14px] sm:text-[15px] md:text-base font-semibold tracking-[-0.01em] transition-colors",
+              "group relative inline-flex items-center justify-center gap-1.5 h-full px-2 sm:px-2.5 md:py-2 text-[14px] sm:text-[15px] font-semibold tracking-[-0.01em] transition-colors",
               isCurrent
                 ? "text-[var(--brand-primary)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"

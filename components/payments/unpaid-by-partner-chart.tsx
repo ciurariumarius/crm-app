@@ -26,15 +26,24 @@ type UnpaidByPartnerChartProps = {
     partners: UnpaidPartner[]
 }
 
+function sanitizeUnpaidPartners(list: UnpaidPartner[]): UnpaidPartner[] {
+    return (list || [])
+        .map((partner) => ({
+            ...partner,
+            unpaidProjects: (partner.unpaidProjects || []).filter((project) => project.amount > 0),
+        }))
+        .filter((partner) => partner.totalUnpaid > 0 && partner.unpaidProjects.length > 0)
+}
+
 export function UnpaidByPartnerChart({ partners }: UnpaidByPartnerChartProps) {
     const router = useRouter()
-    const [items, setItems] = React.useState<UnpaidPartner[]>(partners)
+    const [items, setItems] = React.useState<UnpaidPartner[]>(() => sanitizeUnpaidPartners(partners))
     const [expandedId, setExpandedId] = React.useState<string | null>(null)
     const [settlingId, setSettlingId] = React.useState<string | null>(null)
     const [settlingProjectId, setSettlingProjectId] = React.useState<string | null>(null)
 
     React.useEffect(() => {
-        setItems(partners)
+        setItems(sanitizeUnpaidPartners(partners))
     }, [partners])
 
     const handleMarkAllPaid = async (partnerId: string) => {

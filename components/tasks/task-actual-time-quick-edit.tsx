@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-const QUICK_TOTALS = [30, 60, 120, 240] as const
+const QUICK_TOTALS = [30, 60, 90, 120, 180, 240] as const
 
 type TaskActualTimeQuickEditProps = {
     taskId: string
@@ -170,7 +170,7 @@ export function TaskActualTimeQuickEdit({
                         ) : null}
                     </div>
 
-                    <div className="grid grid-cols-4 gap-1.5" aria-label="Quick total-time options">
+                    <div className="grid grid-cols-3 gap-1.5" aria-label="Quick total-time options">
                         {QUICK_TOTALS.map((minutes) => (
                             <button
                                 key={minutes}

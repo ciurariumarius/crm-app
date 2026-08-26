@@ -1,15 +1,18 @@
 import { describe, expect, it, vi } from "vitest"
 import {
   clearProjectNoteDraftIfContent,
+  applyFolderCountChange,
   enqueueSerializedNoteSave,
   isNoteDraftDirty,
   markProjectNoteDraftSaved,
   recordProjectNoteDraft,
   resolveNoteEditorDraft,
+  resolveNotesUrlNoteId,
   resolveProjectNoteDraftContent,
   resolveNotesScope,
   shouldAcceptNoteEditorChange,
   shouldDiscardNewNote,
+  shouldApplyNotesRequest,
 } from "@/lib/notes/workspace-state"
 import {
   hasCurrentNotesWriteProtocol,
@@ -19,7 +22,9 @@ import {
   hasMeaningfulRichTextContent,
   hasNoteContentStateChanged,
   normalizeRichTextContent,
+  normalizeRichTextLink,
 } from "@/lib/notes/content"
+import { createSignedProjectNoteUrl } from "@/lib/project-note-storage"
 
 const notes = [
   { id: "note-1", sourceType: "note" as const, archived: false, deletedAt: null },
@@ -31,6 +36,51 @@ const notes = [
 ]
 
 describe("Notes workspace state", () => {
+  it("updates folder counts without allowing negative totals", () => {
+    const folders = [{ id: "a", count: 1 }, { id: "b", count: 2 }]
+    expect(applyFolderCountChange(folders, "a", "b")).toEqual([
+      { id: "a", count: 0 },
+      { id: "b", count: 3 },
+    ])
+    expect(applyFolderCountChange([{ id: "a", count: 0 }], "a", null)).toEqual([
+      { id: "a", count: 0 },
+    ])
+  })
+
+  it("keeps note URLs aligned with the responsive pane", () => {
+    expect(resolveNotesUrlNoteId({ isMobile: true, pane: "list", selectedNoteId: "note-1" })).toBeNull()
+    expect(resolveNotesUrlNoteId({ isMobile: true, pane: "editor", selectedNoteId: "note-1" })).toBe("note-1")
+    expect(resolveNotesUrlNoteId({ isMobile: false, pane: "list", selectedNoteId: "note-1" })).toBe("note-1")
+  })
+
+  it("rejects stale async Notes responses", () => {
+    expect(shouldApplyNotesRequest(4, 4)).toBe(true)
+    expect(shouldApplyNotesRequest(3, 4)).toBe(false)
+  })
+
+  it("normalizes safe links and rejects executable protocols", () => {
+    expect(normalizeRichTextLink("pixelist.ro")).toBe("https://pixelist.ro")
+    expect(normalizeRichTextLink("mailto:hello@pixelist.ro")).toBe("mailto:hello@pixelist.ro")
+    expect(normalizeRichTextLink("/notes?note=1")).toBe("/notes?note=1")
+    expect(normalizeRichTextLink("javascript:alert(1)")).toBeNull()
+    expect(normalizeRichTextLink("data:text/html,test")).toBeNull()
+  })
+
+  it("creates durable asset URLs while retaining explicit expiring URLs", () => {
+    const previousSecret = process.env.PROJECT_NOTES_SIGNING_SECRET
+    process.env.PROJECT_NOTES_SIGNING_SECRET = "notes-test-signing-secret"
+    try {
+      const durable = createSignedProjectNoteUrl("note-1/image.png")
+      const expiring = createSignedProjectNoteUrl("note-1/image.png", { expiresAtUnix: 2_000_000_000 })
+      expect(durable).toContain("/api/project-notes/file?path=note-1%2Fimage.png&sig=")
+      expect(durable).not.toContain("&exp=")
+      expect(expiring).toContain("&exp=2000000000")
+    } finally {
+      if (previousSecret === undefined) delete process.env.PROJECT_NOTES_SIGNING_SECRET
+      else process.env.PROJECT_NOTES_SIGNING_SECRET = previousSecret
+    }
+  })
+
   it("canonicalizes empty rich-text documents", () => {
     expect(hasMeaningfulRichTextContent("<p></p>")).toBe(false)
     expect(hasMeaningfulRichTextContent("<p>&nbsp;</p>")).toBe(false)

@@ -115,7 +115,7 @@ export default async function VaultPage({
         )
 
         const unpaidProjects = allProjects
-            .filter((project) => project.paymentStatus === "Unpaid")
+            .filter((project) => project.paymentStatus === "Unpaid" && Number(project.currentFee || 0) > 0)
             .map((project) => ({
                 id: project.id,
                 name: formatProjectName({

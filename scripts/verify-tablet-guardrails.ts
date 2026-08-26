@@ -41,7 +41,7 @@ function run() {
 
   const projectsRows = read("components/projects/projects-board-rows.tsx")
   assert.match(projectsRows, /md:min-w-\[1240px\] xl:min-w-\[1320px\]/)
-  assert.match(projectsRows, /sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4/)
+  assert.match(projectsRows, /sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4/)
 
   const projectsHeader = read("components/projects/projects-header-controls.tsx")
   assert.match(projectsHeader, /PopoverContent align="end" sideOffset=\{8\} className="w-\[540px\]/)
@@ -55,6 +55,12 @@ function run() {
 
   const domainsTable = read("components/vault/sites-table.tsx")
   assert.match(domainsTable, /md:min-w-\[940px\] xl:min-w-\[1240px\]/)
+
+  const notesWorkspace = read("components/notes/notes-workspace.tsx")
+  assert.match(notesWorkspace, /md:grid-cols-\[230px_minmax\(0,1fr\)\]/)
+  assert.match(notesWorkspace, /md:hidden xl:flex/)
+  assert.match(notesWorkspace, /md:flex xl:hidden/)
+  assert.match(notesWorkspace, /xl:grid-cols-\[180px_230px_minmax\(0,1fr\)\]/)
 
 
   process.stdout.write("verify-tablet-guardrails: ok\n")

@@ -976,6 +976,7 @@ export function ProjectSheetContent({
             panelStackLevel={1}
             onOpenProject={() => undefined}
             onOpenSite={openTaskSiteFromTaskPanel}
+            onOpenPartner={onOpenPartner}
         >
             <div className="relative flex h-full flex-col overflow-hidden bg-[var(--bg-surface)]">
                 <div className="absolute right-5 top-5 z-30 flex items-center gap-2 sm:right-8 sm:top-7">

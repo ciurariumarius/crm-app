@@ -270,7 +270,7 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                 min={1}
                                 max={MAX_TASK_ESTIMATED_MINUTES}
                                 step={1}
-                                placeholder="60"
+                                placeholder="30"
                                 className={cn(
                                     "h-12 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/20",
                                     touched.minutes && minutesInvalid && "border-[var(--state-urgent)]"
@@ -282,6 +282,26 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                 aria-describedby={touched.minutes && minutesInvalid ? "new-task-minutes-error" : undefined}
                                 disabled={isLoading}
                             />
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                {[30, 60, 90, 120, 180, 240].map((mins) => (
+                                    <button
+                                        key={mins}
+                                        type="button"
+                                        onClick={() => {
+                                            setEstimatedMinutes(String(mins))
+                                            setTouched((current) => ({ ...current, minutes: true }))
+                                        }}
+                                        className={cn(
+                                            "rounded-lg border px-2.5 py-1 text-xs font-semibold transition active:scale-[0.97]",
+                                            estimatedMinutes === String(mins)
+                                                ? "border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--brand-primary)_12%,var(--surface-lowest))] text-[var(--brand-primary)] font-bold"
+                                                : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] hover:bg-[var(--surface-low)]"
+                                        )}
+                                    >
+                                        {mins}m
+                                    </button>
+                                ))}
+                            </div>
                             {touched.minutes && minutesInvalid ? (
                                 <p id="new-task-minutes-error" className="text-xs font-medium text-[var(--state-urgent)]">Use 1–{MAX_TASK_ESTIMATED_MINUTES} minutes, or leave it empty.</p>
                             ) : null}

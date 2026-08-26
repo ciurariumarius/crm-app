@@ -11,20 +11,27 @@ function read(filePath: string) {
 function run() {
   const shellFrame = read("components/layout/shell-frame.tsx")
   assert.match(shellFrame, /window\.scrollTo\(\{ top: 0, left: 0 \}\)/)
-  assert.match(shellFrame, /<div className="min-h-dvh bg-\[var\(--bg-canvas\)\]/)
+  assert.match(shellFrame, /isNotesPage \? "h-dvh overflow-hidden" : "min-h-dvh"/)
   assert.match(shellFrame, /md:min-h-\[calc\(100dvh-1rem\)\]/)
-  assert.match(shellFrame, /<main className="[^"]*min-h-full[^"]*flex-1[^"]*overflow-x-clip/)
+  assert.match(shellFrame, /isNotesPage[\s\S]*?"h-full min-h-0 overflow-hidden p-0"/)
+  assert.match(shellFrame, /"cockpit-page-enter max-w-full flex-1 overflow-x-clip"/)
+  assert.match(shellFrame, /"min-h-full px-4 pb-6 pt-4/)
   assert.doesNotMatch(shellFrame, /app-scroll-container/)
   assert.doesNotMatch(shellFrame, /overflow-y-auto/)
-  assert.doesNotMatch(shellFrame, /<main className="[^"]*overflow-hidden/)
 
   const sidebar = read("components/layout/sidebar.tsx")
   assert.match(sidebar, /fixed left-0 top-0[^"]*md:left-2 md:top-2[^"]*xl:left-4 xl:top-4/)
 
-  const mobileBottomNav = read("components/layout/mobile-bottom-nav.tsx")
-  assert.match(mobileBottomNav, /window\.addEventListener\("scroll", onWindowScroll/)
-  assert.match(mobileBottomNav, /inline-flex h-11 w-11[\s\S]*?aria-label="Quick actions"/)
-  assert.doesNotMatch(mobileBottomNav, /appScrollContainer/)
+  assert.doesNotMatch(shellFrame, /MobileBottomNav/)
+
+  const notesWorkspace = read("components/notes/notes-workspace.tsx")
+  const richTextEditor = read("components/ui/rich-text-editor.tsx")
+  assert.match(notesWorkspace, /flex h-full min-h-0 w-full flex-col overflow-hidden/)
+  assert.match(notesWorkspace, /md:grid-cols-\[230px_minmax\(0,1fr\)\]/)
+  assert.match(notesWorkspace, /xl:grid-cols-\[180px_230px_minmax\(0,1fr\)\]/)
+  assert.doesNotMatch(notesWorkspace, /calc\(5rem\+env\(safe-area-inset-bottom\)\)/)
+  assert.match(richTextEditor, /hidden[^\n]+md:flex/)
+  assert.match(richTextEditor, /pb-\[max\(1\.5rem,env\(safe-area-inset-bottom\)\)\]/)
 
   const tablePrimitive = read("components/ui/table.tsx")
   assert.match(tablePrimitive, /md:whitespace-nowrap/)
@@ -46,7 +53,7 @@ function run() {
   const taskDetails = read("components/tasks/task-details.tsx")
   assert.match(crmTasksCards, /data-slot="add-task-card"/)
   assert.match(crmTasksCards, /bg-transparent/)
-  assert.match(crmTasksCards, /grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4/)
+  assert.match(crmTasksCards, /grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4/)
   assert.doesNotMatch(crmTasksCards, /renderQuickComposer|QUICK_CAPTURE_LMS_TARGET/)
   assert.doesNotMatch(crmTasksCards, /Time \(min\)|quickEstimatedMinutes/)
   assert.match(taskGridCard, /TaskActualTimeQuickEdit/)
@@ -83,7 +90,7 @@ function run() {
   assert.match(projectsHeader, /ProjectsStatusControls/)
 
   const projectCards = read("components/projects/projects-board-rows.tsx")
-  assert.match(projectCards, /sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4/)
+  assert.match(projectCards, /sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4/)
   assert.match(projectCards, /Recurring projects/)
 
   const paymentBalances = read("components/payments/payment-balances-table.tsx")

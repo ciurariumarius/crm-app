@@ -550,9 +550,29 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
                     setDurationMinutes(event.target.value)
                   }}
                   disabled={Boolean(pendingTaskId)}
-                  placeholder={selectedWorkTask?.defaultDurationMinutes ? String(selectedWorkTask.defaultDurationMinutes) : "e.g. 60"}
+                  placeholder={selectedWorkTask?.defaultDurationMinutes ? String(selectedWorkTask.defaultDurationMinutes) : "30"}
                   className="h-11"
                 />
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  {[30, 60, 90, 120, 180, 240].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => {
+                        durationSourceRef.current = "manual"
+                        setDurationMinutes(String(mins))
+                      }}
+                      className={cn(
+                        "rounded-lg border px-2.5 py-1 text-xs font-semibold transition active:scale-[0.97]",
+                        durationMinutes === String(mins)
+                          ? "border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--brand-primary)_12%,var(--surface-lowest))] text-[var(--brand-primary)] font-bold"
+                          : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] hover:bg-[var(--surface-low)]"
+                      )}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
                 {formAttempted && !validDuration ? <p className="text-xs font-medium text-[var(--state-urgent)]">Enter a valid whole-minute total.</p> : null}
               </div>
               </>}

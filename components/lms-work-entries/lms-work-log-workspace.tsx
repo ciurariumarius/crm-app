@@ -26,6 +26,7 @@ import {
   Trash2,
   UserPlus,
   UserRound,
+  Users,
 } from "lucide-react"
 import { toast } from "sonner"
 import { reopenTask } from "@/lib/actions/tasks"
@@ -1032,8 +1033,8 @@ function FrequentWorkOptions({
       role="group"
       aria-label={ariaLabel}
       className={twoRows
-        ? "grid grid-cols-3 gap-1.5"
-        : "flex gap-1.5 overflow-x-auto pb-1"}
+        ? "grid grid-cols-3 gap-1.5 min-w-0"
+        : "flex gap-1.5 overflow-x-auto pb-1 min-w-0 max-w-full"}
     >
       {options.map((option) => (
         <Button
@@ -1279,7 +1280,12 @@ export function LmsWorkLogWorkspace({
     && activeTasks.length > 0
     && durationMinutes !== null
   )
-  const workCapacity = React.useMemo(() => getLmsWorkCapacity(data.from, data.to), [data.from, data.to])
+  const effectiveCapacityFrom = data.from || data.firstWorkDate
+  const effectiveCapacityTo = data.to || data.lastWorkDate
+  const workCapacity = React.useMemo(
+    () => getLmsWorkCapacity(effectiveCapacityFrom, effectiveCapacityTo),
+    [effectiveCapacityFrom, effectiveCapacityTo]
+  )
   const workUtilizationPercent = workCapacity
     ? getLmsWorkUtilizationPercent(data.totalMinutes, workCapacity.hours)
     : null
@@ -1602,8 +1608,8 @@ export function LmsWorkLogWorkspace({
               />
             </div>
 
-            <div className="grid content-start gap-5">
-              <div className="space-y-2.5">
+            <div className="grid content-start gap-5 min-w-0">
+              <div className="space-y-2.5 min-w-0">
                 <div className="flex items-center justify-between gap-3">
                   <Label className="flex items-center gap-2 text-sm font-semibold"><UserRound className="h-4 w-4 text-[var(--brand-primary)]" />Client</Label>
                   <Button
@@ -1634,7 +1640,7 @@ export function LmsWorkLogWorkspace({
                   <p className="text-xs font-medium text-red-600">Select a client.</p>
                 ) : null}
               </div>
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 min-w-0">
                 <Label className="flex items-center gap-2 text-sm font-semibold"><ListChecks className="h-4 w-4 text-[var(--brand-primary)]" />Task</Label>
                 <TaskCombobox
                   tasks={data.tasks}
@@ -1656,8 +1662,8 @@ export function LmsWorkLogWorkspace({
               </div>
             </div>
 
-            <div className="flex h-full flex-col gap-4 border-t border-[var(--line-subtle)] pt-4 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
-              <div className="space-y-2.5">
+            <div className="flex h-full flex-col gap-4 min-w-0 border-t border-[var(--line-subtle)] pt-4 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
+              <div className="space-y-2.5 min-w-0">
                 <Label className="flex items-center gap-2 text-sm font-semibold"><Clock3 className="h-4 w-4 text-[var(--brand-primary)]" />Minutes</Label>
                 <div
                   role="group"
@@ -2153,7 +2159,7 @@ export function LmsWorkLogWorkspace({
             </div>
           ) : null}
 
-          <div className="grid gap-3 border-t border-[var(--line-subtle)] pt-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 border-t border-[var(--line-subtle)] pt-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
             <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
               <ListChecks className="h-5 w-5 text-[var(--brand-primary)]" />
               <div><p className="text-xs text-[var(--text-muted)]">Tasks logged</p><p className="font-semibold text-[var(--text-primary)]">{data.totalEntries}</p></div>
@@ -2168,7 +2174,11 @@ export function LmsWorkLogWorkspace({
             </div>
             <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
               <CalendarDays className="h-5 w-5 text-[var(--brand-primary)]" />
-              <div><p className="text-xs text-[var(--text-muted)]">Capacity</p><p className="font-semibold text-[var(--text-primary)]">{workCapacity ? `${workCapacity.hours}h · ${workUtilizationPercent}%` : "Choose a date range"}</p></div>
+              <div><p className="text-xs text-[var(--text-muted)]">Capacity</p><p className="font-semibold text-[var(--text-primary)]">{workCapacity ? `${workCapacity.hours}h · ${workUtilizationPercent}%` : "—"}</p></div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
+              <Users className="h-5 w-5 text-[var(--brand-primary)]" />
+              <div><p className="text-xs text-[var(--text-muted)]">Unique clients</p><p className="font-semibold text-[var(--text-primary)]">{data.uniqueClientsCount}</p></div>
             </div>
             <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-soft)] px-3 py-2.5">
               <FileSpreadsheet className="h-5 w-5 text-[var(--brand-primary)]" />

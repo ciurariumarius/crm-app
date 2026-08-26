@@ -48,14 +48,18 @@ export default async function PaymentsPage({ searchParams }: {
 
     for (const project of projects) {
         if (project.paymentStatus !== "Unpaid") continue
+        const amount = Number(project.currentFee || 0)
+        if (amount <= 0) continue
         const partnerIdForProject = project.site.partnerId
         const existing = unpaidByPartnerMap.get(partnerIdForProject) ?? { id: partnerIdForProject, name: partnerNameById.get(partnerIdForProject) || "Unknown partner", totalUnpaid: 0, unpaidProjects: [] }
-        const amount = Number(project.currentFee || 0)
         existing.totalUnpaid += amount
         existing.unpaidProjects.push({ id: project.id, name: formatProjectName(project), amount })
         unpaidByPartnerMap.set(partnerIdForProject, existing)
     }
-    const unpaidByPartner = Array.from(unpaidByPartnerMap.values()).map((entry) => ({ ...entry, unpaidProjects: entry.unpaidProjects.sort((a, b) => b.amount - a.amount) })).sort((a, b) => b.totalUnpaid - a.totalUnpaid)
+    const unpaidByPartner = Array.from(unpaidByPartnerMap.values())
+        .filter((entry) => entry.totalUnpaid > 0 && entry.unpaidProjects.length > 0)
+        .map((entry) => ({ ...entry, unpaidProjects: entry.unpaidProjects.sort((a, b) => b.amount - a.amount) }))
+        .sort((a, b) => b.totalUnpaid - a.totalUnpaid)
 
     const now = new Date()
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)

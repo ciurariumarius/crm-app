@@ -3,6 +3,7 @@ import {
   buildTaskTimeTotalPlan,
   formatTaskTrackedSeconds,
   parseTaskTrackedMinutesInput,
+  parseFlexibleMinutes,
 } from "@/lib/tasks/tracked-time"
 
 describe("task tracked time", () => {
@@ -11,6 +12,17 @@ describe("task tracked time", () => {
     expect(parseTaskTrackedMinutesInput("0")).toBe(0)
     expect(parseTaskTrackedMinutesInput("1.5")).toBeUndefined()
     expect(parseTaskTrackedMinutesInput("-1")).toBeUndefined()
+  })
+
+  it("parses flexible minute and hour inputs", () => {
+    expect(parseFlexibleMinutes("100")).toBe(100)
+    expect(parseFlexibleMinutes("0")).toBe(0)
+    expect(parseFlexibleMinutes("30m")).toBe(30)
+    expect(parseFlexibleMinutes("1h")).toBe(60)
+    expect(parseFlexibleMinutes("1.5h")).toBe(90)
+    expect(parseFlexibleMinutes("1h 30m")).toBe(90)
+    expect(parseFlexibleMinutes("2h 15m")).toBe(135)
+    expect(parseFlexibleMinutes("invalid")).toBeUndefined()
   })
 
   it("formats compact hour and minute totals", () => {
