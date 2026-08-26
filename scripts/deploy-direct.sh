@@ -222,10 +222,11 @@ rollback() {
   fi
   rm -rf -- "$restore_dir"
   cd "$site_path"
-  if [[ -d "$previous_node_modules" ]]; then
+  if [[ -d "$previous_node_modules" && -x "$previous_node_modules/.bin/prisma" ]]; then
     rm -rf node_modules
     mv -- "$previous_node_modules" node_modules
   else
+    rm -rf node_modules
     npm ci --prefer-offline --no-audit
   fi
   npx prisma generate
@@ -237,16 +238,17 @@ rollback() {
 trap rollback ERR
 
 cd "$site_path"
+export PATH="$site_path/node_modules/.bin:$PATH"
 actual_source_checksum="$(node scripts/source-checksum.mjs)"
 [[ "$actual_source_checksum" = "$expected_source_checksum" ]]
 printf '%s  source\n' "$actual_source_checksum" > "$backup_dir/source-checksum.txt"
 
-if [[ -f "$backup_dir/package-lock.json" ]] && cmp -s "$backup_dir/package-lock.json" "$site_path/package-lock.json" && [[ -d node_modules && -d node_modules/@prisma ]]; then
-  echo "Dependencies unchanged; keeping existing node_modules"
+if [[ -f "$backup_dir/package-lock.json" ]] && cmp -s "$backup_dir/package-lock.json" "$site_path/package-lock.json" && [[ -x "$site_path/node_modules/.bin/prisma" && -x "$site_path/node_modules/.bin/tsx" ]]; then
+  echo "Dependencies unchanged and valid; keeping existing node_modules"
   rm -rf "$previous_node_modules"
   cp -a node_modules "$previous_node_modules" 2>/dev/null || true
 else
-  echo "Dependencies changed or missing; running npm ci"
+  echo "Dependencies changed, missing, or corrupt; running clean npm ci"
   rm -rf "$previous_node_modules"
   if [[ -d node_modules ]]; then
     mv -- node_modules "$previous_node_modules"
