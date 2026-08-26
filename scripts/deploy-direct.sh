@@ -241,10 +241,22 @@ cd "$site_path"
 actual_source_checksum="$(node scripts/source-checksum.mjs)"
 [[ "$actual_source_checksum" = "$expected_source_checksum" ]]
 printf '%s  source\n' "$actual_source_checksum" > "$backup_dir/source-checksum.txt"
-if [[ -d node_modules ]]; then
-  mv -- node_modules "$previous_node_modules"
+
+pkg_lock_checksum="$(sha256sum package-lock.json | awk '{print $1}')"
+prev_pkg_lock_checksum=""
+if [[ -f "$backup_dir/source.tgz" ]]; then
+  prev_pkg_lock_checksum="$(tar -xzOf "$backup_dir/source.tgz" package-lock.json 2>/dev/null | sha256sum | awk '{print $1}' || true)"
 fi
-npm ci
+
+if [[ -n "$prev_pkg_lock_checksum" && "$pkg_lock_checksum" = "$prev_pkg_lock_checksum" && -d node_modules ]]; then
+  echo "Dependencies unchanged; keeping existing node_modules"
+  cp -al node_modules "$previous_node_modules" 2>/dev/null || cp -a node_modules "$previous_node_modules"
+else
+  if [[ -d node_modules ]]; then
+    mv -- node_modules "$previous_node_modules"
+  fi
+  npm ci --prefer-offline --no-audit
+fi
 npx prisma generate
 npm run data:preflight-single-owner
 npm run data:migrate-project-note-storage:dry
