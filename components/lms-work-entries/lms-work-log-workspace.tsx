@@ -912,6 +912,7 @@ export function TaskCombobox({
   tasks,
   value,
   onValueChange,
+  currentTaskId,
   disabled,
   large,
   triggerRef,
@@ -919,13 +920,17 @@ export function TaskCombobox({
   tasks: LmsWorkTaskOption[]
   value: string
   onValueChange: (value: string) => void
+  currentTaskId?: string
   disabled?: boolean
   large?: boolean
   triggerRef?: React.Ref<HTMLButtonElement>
 }) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
-  const options = React.useMemo(() => tasks.filter((task) => task.isActive), [tasks])
+  const options = React.useMemo(
+    () => tasks.filter((task) => task.isActive || task.id === currentTaskId),
+    [tasks, currentTaskId]
+  )
   const selectedTask = options.find((task) => task.id === value)
   const listboxId = React.useId()
   const filteredTasks = React.useMemo(
@@ -1056,38 +1061,6 @@ function FrequentWorkOptions({
   )
 }
 
-function TaskSelect({
-  tasks,
-  value,
-  onValueChange,
-  currentTaskId,
-  disabled,
-  large,
-}: {
-  tasks: LmsWorkTaskOption[]
-  value: string
-  onValueChange: (value: string) => void
-  currentTaskId?: string
-  disabled?: boolean
-  large?: boolean
-}) {
-  const options = tasks.filter((task) => task.isActive || task.id === currentTaskId)
-  return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={cn("w-full", large && "h-12! px-4 text-sm")}>
-        <SelectValue placeholder={options.length ? "Select predefined task" : "Add a task first"} />
-      </SelectTrigger>
-      <SelectContent align="start" className="max-w-[min(92vw,520px)]">
-        {options.map((task) => (
-          <SelectItem key={task.id} value={task.id}>
-            {task.name}{task.isActive ? "" : " (inactive)"}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
 function EditEntryDialog({
   entry,
   clients,
@@ -1182,7 +1155,7 @@ function EditEntryDialog({
           </div>
           <div className="space-y-2">
             <Label>Task</Label>
-            <TaskSelect tasks={tasks} value={taskTypeId} onValueChange={setTaskTypeId} currentTaskId={entry?.taskTypeId || undefined} disabled={editLocked} />
+            <TaskCombobox tasks={tasks} value={taskTypeId} onValueChange={setTaskTypeId} currentTaskId={entry?.taskTypeId || undefined} disabled={editLocked} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-work-minutes">Minutes</Label>

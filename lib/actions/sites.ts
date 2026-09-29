@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/auth"
 import { ActionError, getActionErrorMessage } from "@/lib/action-errors"
 import { logSessionAuditEvent } from "@/lib/audit"
 import { normalizeExternalHttpUrl } from "@/lib/external-url"
-import { resolveDomainFaviconUrl } from "@/lib/favicon"
+import { resolveDomainFaviconImage } from "@/lib/favicon"
 import {
     DomainValidationError,
     parseAndValidateExternalUrl,
@@ -54,10 +54,19 @@ async function resolveNormalizedDomainAndFavicon(
     }
 
     let faviconUrl: string | null
+    let faviconData: Uint8Array<ArrayBuffer> | null = null
+    let faviconMimeType: string | null = null
+    let faviconHash: string | null = null
+    let faviconUpdatedAt: Date | null = null
     let warning: { code: string; message: string } | undefined
     try {
-        faviconUrl = await resolveDomainFaviconUrl(normalizedDomainName)
-        if (!faviconUrl) {
+        const favicon = await resolveDomainFaviconImage(normalizedDomainName)
+        faviconUrl = favicon?.sourceUrl || null
+        faviconData = favicon?.data || null
+        faviconMimeType = favicon?.mimeType || null
+        faviconHash = favicon?.hash || null
+        faviconUpdatedAt = favicon ? new Date() : null
+        if (!favicon) {
             warning = {
                 code: "FAVICON_UNAVAILABLE",
                 message: "Site saved, but no favicon could be detected.",
@@ -84,7 +93,15 @@ async function resolveNormalizedDomainAndFavicon(
         }
     }
 
-    return { normalizedDomainName, faviconUrl, warning }
+    return {
+        normalizedDomainName,
+        faviconUrl,
+        faviconData,
+        faviconMimeType,
+        faviconHash,
+        faviconUpdatedAt,
+        warning,
+    }
 }
 
 export async function createSite(partnerId: string, domainName: string) {
@@ -98,15 +115,19 @@ export async function createSite(partnerId: string, domainName: string) {
         if (!partner) {
             throw new ActionError("PARTNER_NOT_FOUND", "Partner not found")
         }
-        const { normalizedDomainName, faviconUrl, warning } = await resolveNormalizedDomainAndFavicon(
+        const faviconResult = await resolveNormalizedDomainAndFavicon(
             session,
             validated.domainName
         )
         const site = await prisma.site.create({
             data: {
                 partnerId: validated.partnerId,
-                domainName: normalizedDomainName,
-                faviconUrl,
+                domainName: faviconResult.normalizedDomainName,
+                faviconUrl: faviconResult.faviconUrl,
+                faviconData: faviconResult.faviconData,
+                faviconMimeType: faviconResult.faviconMimeType,
+                faviconHash: faviconResult.faviconHash,
+                faviconUpdatedAt: faviconResult.faviconUpdatedAt,
             }
         })
         await logSessionAuditEvent(session, {
@@ -117,7 +138,7 @@ export async function createSite(partnerId: string, domainName: string) {
         revalidatePath(`/vault/${validated.partnerId}`)
         revalidatePath("/domains")
         revalidatePath("/vault/sites")
-        return { success: true as const, site, warning }
+        return { success: true as const, site, warning: faviconResult.warning }
     } catch (error) {
         return {
             success: false as const,
@@ -137,18 +158,39 @@ export async function updateSiteDetails(siteId: string, data: {
     try {
         const session = await requireAuth()
         const validated = UpdateSiteSchema.parse({ siteId, ...data })
+        const site = await prisma.site.findFirst({
+            where: { id: validated.siteId },
+            select: { id: true, partnerId: true, domainName: true, faviconHash: true },
+        })
+        if (!site) {
+            await logSessionAuditEvent(session, {
+                action: "SITE_UPDATE_FAILED",
+                success: false,
+                details: `siteId=${validated.siteId}; reason=not_found`,
+            })
+            return { success: false, error: "Site not found" }
+        }
+
         const updateData: Prisma.SiteUpdateInput = { ...validated }
         let warning: { code: string; message: string } | undefined
+        let faviconHash = site.faviconHash
         delete (updateData as Record<string, unknown>).siteId
         if (updateData.name === "") updateData.name = null
         if (typeof validated.domainName === "string") {
-            const resolved = await resolveNormalizedDomainAndFavicon(
-                session,
-                validated.domainName
-            )
-            updateData.domainName = resolved.normalizedDomainName
-            updateData.faviconUrl = resolved.faviconUrl
-            warning = resolved.warning
+            const normalizedDomainName = parseAndValidateExternalUrl(validated.domainName).normalizedHost
+            if (normalizedDomainName !== site.domainName || !site.faviconHash) {
+                const resolved = await resolveNormalizedDomainAndFavicon(session, normalizedDomainName)
+                updateData.domainName = resolved.normalizedDomainName
+                updateData.faviconUrl = resolved.faviconUrl
+                updateData.faviconData = resolved.faviconData
+                updateData.faviconMimeType = resolved.faviconMimeType
+                updateData.faviconHash = resolved.faviconHash
+                updateData.faviconUpdatedAt = resolved.faviconUpdatedAt
+                faviconHash = resolved.faviconHash
+                warning = resolved.warning
+            } else {
+                updateData.domainName = normalizedDomainName
+            }
         }
         if (validated.driveLink !== undefined) {
             if (validated.driveLink === "") {
@@ -160,19 +202,6 @@ export async function updateSiteDetails(siteId: string, data: {
                 }
                 updateData.driveLink = normalizedDriveLink
             }
-        }
-
-        const site = await prisma.site.findFirst({
-            where: { id: validated.siteId },
-            select: { id: true, partnerId: true },
-        })
-        if (!site) {
-            await logSessionAuditEvent(session, {
-                action: "SITE_UPDATE_FAILED",
-                success: false,
-                details: `siteId=${validated.siteId}; reason=not_found`,
-            })
-            return { success: false, error: "Site not found" }
         }
 
         await prisma.site.update({
@@ -190,10 +219,45 @@ export async function updateSiteDetails(siteId: string, data: {
         revalidatePath("/domains")
         revalidatePath("/vault/sites")
         revalidatePath("/")
-        return { success: true, warning }
+        return { success: true, warning, faviconHash }
     } catch (error) {
         logger.error("site.update_failed", { siteId, error })
         return { success: false, error: getActionErrorMessage(error, "Failed to update site") }
+    }
+}
+
+export async function refreshSiteFavicon(siteId: string) {
+    try {
+        const session = await requireAuth()
+        const validatedSiteId = SiteIdSchema.parse(siteId)
+        const site = await prisma.site.findFirst({
+            where: { id: validatedSiteId },
+            select: { id: true, domainName: true },
+        })
+        if (!site) return { success: false as const, error: "Site not found" }
+
+        const resolved = await resolveNormalizedDomainAndFavicon(session, site.domainName)
+        await prisma.site.update({
+            where: { id: site.id },
+            data: {
+                faviconUrl: resolved.faviconUrl,
+                faviconData: resolved.faviconData,
+                faviconMimeType: resolved.faviconMimeType,
+                faviconHash: resolved.faviconHash,
+                faviconUpdatedAt: resolved.faviconUpdatedAt,
+            },
+        })
+        revalidatePath("/domains")
+        revalidatePath("/projects")
+        revalidatePath("/")
+        return {
+            success: true as const,
+            faviconHash: resolved.faviconHash,
+            warning: resolved.warning,
+        }
+    } catch (error) {
+        logger.error("site.favicon_refresh_failed", { siteId, error })
+        return { success: false as const, error: getActionErrorMessage(error, "Failed to refresh favicon") }
     }
 }
 

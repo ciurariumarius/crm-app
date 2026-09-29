@@ -206,7 +206,7 @@ const AddTaskSchema = z.object({
 const UpdateTaskSchema = z.object({
     taskId: z.string().uuid(),
     name: z.string().trim().min(1).max(255).optional(),
-    description: z.string().max(50000).optional(),
+    description: z.string().max(500_000, "Task notes are too large").optional(),
     status: TaskStatusSchema.optional(),
     urgency: TaskUrgencySchema.optional(),
     isCompleted: z.boolean().optional(),
@@ -940,17 +940,19 @@ export async function updateTask(taskId: string, data: {
             })
         }
 
-        if (formatAuditDateToken(nextDeadline) !== formatAuditDateToken(existingTask.deadline)) {
+        const nameChanged = editableFields.name !== undefined && editableFields.name !== existingTask.name
+        const urgencyChanged = editableFields.urgency !== undefined && nextPriority !== existingTask.urgency
+        const deadlineChanged = editableFields.deadline !== undefined && formatAuditDateToken(nextDeadline) !== formatAuditDateToken(existingTask.deadline)
+        const targetChanged = existingTask.projectId !== task.projectId || existingTask.taskScope !== task.taskScope
+        const descriptionOnly = editableFields.description !== undefined && !nameChanged && !urgencyChanged && !deadlineChanged && !targetChanged
+
+        if (!descriptionOnly) {
             await logSessionAuditEvent(session, {
-                action: "TASK_DEADLINE_CHANGED",
-                details: `taskId=${task.id}; projectId=${task.projectId}; from=${formatAuditDateToken(existingTask.deadline)}; to=${formatAuditDateToken(nextDeadline)}; source=update_task`,
+                action: "TASK_UPDATED",
+                details: `taskId=${task.id}; projectId=${task.projectId || "none"}`,
             })
         }
 
-        await logSessionAuditEvent(session, {
-            action: "TASK_UPDATED",
-            details: `taskId=${task.id}; projectId=${task.projectId || "none"}`,
-        })
         revalidateTaskPaths(task.projectId || undefined, task.project?.site?.partnerId, task.project?.siteId)
         if (existingTask.projectId && existingTask.projectId !== task.projectId) {
             revalidateTaskPaths(
@@ -959,7 +961,11 @@ export async function updateTask(taskId: string, data: {
                 existingTask.project?.siteId
             )
         }
-        void syncOutboundTaskUpdate(task.id)
+
+        // Only trigger outbound TickTick sync on status, title, urgency, deadline, or project target changes (never on routine notes auto-save)
+        if (nameChanged || urgencyChanged || deadlineChanged || targetChanged) {
+            void syncOutboundTaskUpdate(task.id)
+        }
 
         return { success: true }
     } catch (error) {
@@ -1039,16 +1045,22 @@ export async function updateTasksStatus(taskIds: string[], status: string) {
                 )
             }
             if (tasks.some((task) => normalizeStoredTaskScope(task.taskScope, task.projectId) === "LMS")) {
-                throw new ActionError(
-                    "LMS_BULK_STATUS_NOT_SUPPORTED",
-                    validatedStatus === "Completed"
-                        ? "Complete LMS tasks individually so the project, task type, work date, and duration can be recorded"
-                        : "Reopen LMS tasks individually so their LMS work-entry history is handled safely"
-                )
+                if (validatedStatus === "Completed") {
+                    throw new ActionError(
+                        "LMS_BULK_STATUS_NOT_SUPPORTED",
+                        "Complete LMS tasks individually so the project, task type, work date, and duration can be recorded"
+                    )
+                }
+                if (tasks.length > 1 && validatedStatus !== "Pending" && validatedStatus !== "Active") {
+                    throw new ActionError(
+                        "LMS_BULK_STATUS_NOT_SUPPORTED",
+                        "Reopen LMS tasks individually so their LMS work-entry history is handled safely"
+                    )
+                }
             }
 
             const result = await tx.task.updateMany({
-                where: { id: { in: uniqueTaskIds }, taskScope: { not: "LMS" } },
+                where: { id: { in: uniqueTaskIds } },
                 data: { status: validatedStatus },
             })
             if (result.count !== uniqueTaskIds.length) {

@@ -161,10 +161,8 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                                 onChange={(event) => setName(event.target.value)}
                                 onBlur={() => setTouched((current) => ({ ...current, name: true }))}
                                 aria-invalid={touched.name && nameInvalid}
-                                aria-describedby={touched.name && nameInvalid ? "new-task-name-error" : undefined}
                                 disabled={isLoading}
                             />
-                            {touched.name && nameInvalid ? <p id="new-task-name-error" className="text-xs font-medium text-[var(--state-urgent)]">Enter a task name.</p> : null}
                         </div>
 
                         <div className="space-y-2">
@@ -262,45 +260,62 @@ export function GlobalCreateTaskDialog({ open, onOpenChange, projects }: GlobalC
                         ) : null}
 
                         <div className="space-y-2">
-                            <Label htmlFor="new-task-estimated-minutes" className="text-xs font-semibold text-[var(--text-secondary)]">Time (min)</Label>
-                            <Input
-                                id="new-task-estimated-minutes"
-                                type="number"
-                                inputMode="numeric"
-                                min={1}
-                                max={MAX_TASK_ESTIMATED_MINUTES}
-                                step={1}
-                                placeholder="30"
-                                className={cn(
-                                    "h-12 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/20",
-                                    touched.minutes && minutesInvalid && "border-[var(--state-urgent)]"
-                                )}
-                                value={estimatedMinutes}
-                                onChange={(event) => setEstimatedMinutes(event.target.value)}
-                                onBlur={() => setTouched((current) => ({ ...current, minutes: true }))}
-                                aria-invalid={touched.minutes && minutesInvalid}
-                                aria-describedby={touched.minutes && minutesInvalid ? "new-task-minutes-error" : undefined}
-                                disabled={isLoading}
-                            />
-                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                {[30, 60, 90, 120, 180, 240].map((mins) => (
-                                    <button
-                                        key={mins}
-                                        type="button"
-                                        onClick={() => {
-                                            setEstimatedMinutes(String(mins))
-                                            setTouched((current) => ({ ...current, minutes: true }))
-                                        }}
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="new-task-estimated-minutes" className="text-xs font-semibold text-[var(--text-secondary)]">Time</Label>
+                                <span className="text-xs font-medium text-[var(--text-muted)]">
+                                    {estimatedMinutes ? `${estimatedMinutes} min` : "No estimate"}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                {[
+                                    { mins: 30, label: "30m" },
+                                    { mins: 60, label: "1h" },
+                                    { mins: 90, label: "1.5h" },
+                                    { mins: 120, label: "2h" },
+                                    { mins: 180, label: "3h" },
+                                    { mins: 240, label: "4h" },
+                                ].map(({ mins, label }) => {
+                                    const isSelected = estimatedMinutes === String(mins)
+                                    return (
+                                        <button
+                                            key={mins}
+                                            type="button"
+                                            onClick={() => {
+                                                setEstimatedMinutes(isSelected ? "" : String(mins))
+                                                setTouched((current) => ({ ...current, minutes: true }))
+                                            }}
+                                            className={cn(
+                                                "h-11 flex-1 min-w-0 rounded-xl border text-xs font-semibold transition-all duration-150 cursor-pointer active:scale-95",
+                                                isSelected
+                                                    ? "border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--brand-primary)_12%,var(--surface-lowest))] text-[var(--brand-primary)] font-bold shadow-xs"
+                                                    : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] hover:bg-[var(--surface-low)]"
+                                            )}
+                                        >
+                                            {label}
+                                        </button>
+                                    )
+                                })}
+                                <div className="relative w-20 shrink-0">
+                                    <Input
+                                        id="new-task-estimated-minutes"
+                                        type="number"
+                                        inputMode="numeric"
+                                        min={1}
+                                        max={MAX_TASK_ESTIMATED_MINUTES}
+                                        step={1}
+                                        placeholder="Min"
                                         className={cn(
-                                            "rounded-lg border px-2.5 py-1 text-xs font-semibold transition active:scale-[0.97]",
-                                            estimatedMinutes === String(mins)
-                                                ? "border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--brand-primary)_12%,var(--surface-lowest))] text-[var(--brand-primary)] font-bold"
-                                                : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] hover:bg-[var(--surface-low)]"
+                                            "h-11 rounded-xl border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 text-center text-xs font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-primary/20",
+                                            touched.minutes && minutesInvalid && "border-[var(--state-urgent)]",
+                                            estimatedMinutes && ![30, 60, 90, 120, 180, 240].includes(Number(estimatedMinutes)) && "border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold bg-[color:color-mix(in_srgb,var(--brand-primary)_8%,var(--surface-lowest))]"
                                         )}
-                                    >
-                                        {mins}m
-                                    </button>
-                                ))}
+                                        value={estimatedMinutes}
+                                        onChange={(event) => setEstimatedMinutes(event.target.value)}
+                                        onBlur={() => setTouched((current) => ({ ...current, minutes: true }))}
+                                        aria-invalid={touched.minutes && minutesInvalid}
+                                        disabled={isLoading}
+                                    />
+                                </div>
                             </div>
                             {touched.minutes && minutesInvalid ? (
                                 <p id="new-task-minutes-error" className="text-xs font-medium text-[var(--state-urgent)]">Use 1–{MAX_TASK_ESTIMATED_MINUTES} minutes, or leave it empty.</p>

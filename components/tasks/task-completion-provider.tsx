@@ -175,7 +175,7 @@ function CompletionCombobox({
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-[280px] p-0">
+      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-[280px] p-0 z-[70]">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList className="max-h-[300px]">
@@ -519,7 +519,7 @@ export function TaskCompletionProvider({ children }: { children: React.ReactNode
                 <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] bg-[var(--state-success-surface)] px-4 py-3 sm:col-span-2">
                   <p className="text-sm font-semibold text-[var(--text-primary)]">Existing time will be used</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    {formatTaskTrackedSeconds(parsedDuration * 60)} already recorded across this task&apos;s sessions.
+                    {`${formatTaskTrackedSeconds(parsedDuration * 60)} already recorded across this task's sessions.`}
                   </p>
                 </div>
               ) : <>

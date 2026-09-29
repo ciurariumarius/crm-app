@@ -6,9 +6,10 @@ export function buildContentSecurityPolicy(nonce: string, isDevelopment: boolean
     return [
         "default-src 'self'",
         "base-uri 'self'",
-        "frame-ancestors 'none'",
+        "frame-ancestors 'self'",
+        "frame-src 'self' blob: data:",
         "form-action 'self'",
-        "object-src 'none'",
+        "object-src 'self' blob: data:",
         `script-src ${scriptSrc}`,
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: blob: https:",

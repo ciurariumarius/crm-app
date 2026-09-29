@@ -29,14 +29,18 @@ model Partner {
 }
 
 model Site {
-  id          String  @id @default(uuid())
-  partnerId   String  @map("partner_id")
-  name        String? // Optional custom name override
-  domainName  String  @map("domain_name")
-  faviconUrl  String? @map("favicon_url")
-  gtmId       String? @map("gtm_id")
-  googleAdsId String? @map("google_ads_id")
-  driveLink   String? @map("drive_link")
+  id               String    @id @default(uuid())
+  partnerId        String    @map("partner_id")
+  name             String? // Optional custom name override
+  domainName       String    @map("domain_name")
+  faviconUrl       String?   @map("favicon_url")
+  faviconData      Bytes?    @map("favicon_data")
+  faviconMimeType  String?   @map("favicon_mime_type")
+  faviconHash      String?   @map("favicon_hash")
+  faviconUpdatedAt DateTime? @map("favicon_updated_at")
+  gtmId            String?   @map("gtm_id")
+  googleAdsId      String?   @map("google_ads_id")
+  driveLink        String?   @map("drive_link")
 
   // Marketing Vault stored as JSON
   // Structure: { headlines: string[], brandNotes: string, competitors: string[] }
@@ -50,6 +54,7 @@ model Site {
 
   @@unique([domainName])
   @@index([partnerId])
+  @@index([createdAt])
   @@map("sites")
 }
 
@@ -130,9 +135,9 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  project       Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  lmsAllocation LmsAllocation? @relation(fields: [lmsAllocationId], references: [id], onDelete: SetNull)
-  lmsTaskType   LmsWorkTask?   @relation(fields: [lmsTaskTypeId], references: [id], onDelete: SetNull)
+  project          Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lmsAllocation    LmsAllocation?    @relation(fields: [lmsAllocationId], references: [id], onDelete: SetNull)
+  lmsTaskType      LmsWorkTask?      @relation(fields: [lmsTaskTypeId], references: [id], onDelete: SetNull)
   lmsWorkEntry     LmsWorkEntry?
   timeLogs         TimeLog[]
   taskIntegrations TaskIntegration[]
@@ -489,7 +494,7 @@ model Integration {
 model TaskIntegration {
   id                String    @id @default(uuid())
   taskId            String    @map("task_id")
-  provider          String    // "ticktick"
+  provider          String // "ticktick"
   externalTaskId    String    @map("external_task_id")
   externalProjectId String?   @map("external_project_id")
   syncStatus        String    @default("synced") @map("sync_status") // "synced", "pending_create", "pending_complete", "error"

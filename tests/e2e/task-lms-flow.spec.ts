@@ -82,7 +82,7 @@ async function chooseLmsOption({
   await expect(search).toBeVisible()
   if (preferredLabel) await search.fill(preferredLabel)
 
-  const options = page.getByRole("option").filter({ hasNotText: /^Not linked yet$/i })
+  const options = page.getByRole("option").filter({ hasNotText: /^(?:Not linked yet|Search project|Search category|None)$/i })
   const option = preferredLabel
     ? options.filter({ hasText: preferredLabel }).first()
     : options.first()
@@ -196,9 +196,9 @@ test("creates, maps, and completes an LMS task without mixing manual work", asyn
     let lmsProjectLabel = ""
     if (preferredLmsProject) {
       await createDialog.getByRole("button", { name: "New project", exact: true }).click()
-      const addProjectDialog = page.getByRole("dialog", { name: "Add LMS project" })
+      const addProjectDialog = page.getByRole("dialog", { name: /Add (?:Limitless|LMS) project/i })
       await expect(addProjectDialog).toBeVisible()
-      await addProjectDialog.getByLabel("LMS project name or domain").fill(preferredLmsProject)
+      await addProjectDialog.getByLabel(/(?:Domain name|LMS project name or domain)/i).fill(preferredLmsProject)
       await addProjectDialog.getByRole("button", { name: "Add project", exact: true }).click()
       await expect(addProjectDialog).toBeHidden({ timeout: 20_000 })
       await expect(createDialog.getByRole("combobox", { name: "Select LMS project" })).toContainText(preferredLmsProject)

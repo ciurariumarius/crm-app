@@ -500,20 +500,10 @@ export function HomeRevenueDistributionChart({ sourceProjects, allServices, hour
     return (
         <section className="rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 shadow-[var(--shadow-apple)] sm:p-6 lg:p-8">
             <div className="mb-4 flex flex-col gap-3 sm:mb-5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-col gap-3">
+                <div>
                     <div className="flex items-center gap-2">
                         <div className="h-[22px] w-[5px] rounded-full bg-blue-600" />
                         <h3 className="text-[17px] font-bold text-[var(--text-primary)] tracking-tight">Revenue Analysis</h3>
-                    </div>
-                    <div className="hidden flex-wrap items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] sm:flex">
-                        <span className="rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5">
-                            {totalCount} visible {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`}
-                        </span>
-                    </div>
-                    <div className="sm:hidden">
-                        <span className="inline-flex rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
-                            {totalCount} {mode === "type" ? "segments" : mode === "project" ? "projects" : `${mode}s`} in view
-                        </span>
                     </div>
                 </div>
 

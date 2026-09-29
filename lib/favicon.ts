@@ -3,12 +3,15 @@ import {
     isSafePublicIconUrl,
     parseAndValidateExternalUrl,
 } from "@/lib/security/domain-validation"
+import { createHash } from "node:crypto"
+import sharp from "sharp"
 
 const ICON_REL_REGEX = /\b(icon|shortcut icon|apple-touch-icon|apple-touch-icon-precomposed)\b/i
 const LINK_TAG_REGEX = /<link\b[^>]*>/gi
 const ATTR_REGEX = /([a-zA-Z:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g
 
 const MAX_FAVICON_HTML_BYTES = 256 * 1024
+const MAX_FAVICON_IMAGE_BYTES = 256 * 1024
 const FAVICON_FETCH_TIMEOUT_MS = 2500
 const MAX_REDIRECTS = 2
 
@@ -139,6 +142,67 @@ async function fetchHomepageHtmlWithSafeRedirects(initialUrl: string) {
     return null
 }
 
+async function readBinaryBodyWithLimit(response: Response, maxBytes: number) {
+    if (!response.body) return Buffer.alloc(0)
+    const reader = response.body.getReader()
+    const chunks: Uint8Array[] = []
+    let size = 0
+
+    while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        if (!value) continue
+        size += value.byteLength
+        if (size > maxBytes) throw new Error("Favicon image exceeded size cap")
+        chunks.push(value)
+    }
+
+    return Buffer.concat(chunks)
+}
+
+async function fetchIconWithSafeRedirects(initialUrl: string) {
+    let currentUrl = initialUrl
+
+    for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+        const { normalizedHost } = parseAndValidateExternalUrl(currentUrl)
+        await assertPublicResolvableHost(normalizedHost)
+        const timeout = withTimeoutSignal(FAVICON_FETCH_TIMEOUT_MS)
+
+        try {
+            const response = await fetch(currentUrl, {
+                method: "GET",
+                redirect: "manual",
+                signal: timeout.signal,
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (compatible; PixelistBot/1.0)",
+                    Accept: "image/avif,image/webp,image/png,image/svg+xml,image/*,*/*;q=0.8",
+                },
+                cache: "no-store",
+            })
+
+            if (response.status >= 300 && response.status < 400) {
+                const location = response.headers.get("location")
+                if (!location) return null
+                currentUrl = new URL(location, currentUrl).toString()
+                continue
+            }
+
+            if (!response.ok) return null
+            const contentType = (response.headers.get("content-type") || "").toLowerCase()
+            if (contentType && !contentType.startsWith("image/") && !contentType.includes("octet-stream")) {
+                return null
+            }
+
+            const data = await readBinaryBodyWithLimit(response, MAX_FAVICON_IMAGE_BYTES)
+            return data.length > 0 ? data : null
+        } finally {
+            timeout.clear()
+        }
+    }
+
+    return null
+}
+
 export function normalizeDomainHost(input: string | null | undefined) {
     if (!input) return ""
 
@@ -165,4 +229,33 @@ export async function resolveDomainFaviconUrl(domain: string | null | undefined)
     if (discovered) return discovered
 
     return `https://${normalizedHost}/favicon.ico`
+}
+
+export async function resolveDomainFaviconImage(domain: string | null | undefined) {
+    if (!domain) return null
+    const { normalizedHost } = parseAndValidateExternalUrl(domain)
+    await assertPublicResolvableHost(normalizedHost)
+
+    let sourceUrl: string | null = null
+    try {
+        sourceUrl = await resolveDomainFaviconUrl(normalizedHost)
+    } catch {
+        // Large or malformed homepages can still expose a conventional favicon.
+    }
+    sourceUrl ||= `https://${normalizedHost}/favicon.ico`
+
+    const sourceData = await fetchIconWithSafeRedirects(sourceUrl)
+    if (!sourceData) return null
+
+    const png = await sharp(sourceData, { limitInputPixels: 1024 * 1024 })
+        .resize(64, 64, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .png({ compressionLevel: 9, palette: true })
+        .toBuffer()
+
+    return {
+        data: Uint8Array.from(png),
+        mimeType: "image/png",
+        hash: createHash("sha256").update(png).digest("hex").slice(0, 16),
+        sourceUrl,
+    }
 }

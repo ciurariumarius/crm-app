@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { format } from "date-fns"
+import { addMonths, format } from "date-fns"
 import {
     AlertCircle,
     ArrowRight,
@@ -909,6 +909,11 @@ export function ProjectSheetContent({
         }
     }, [hourlyRate, project.currentFee, totalTrackedSeconds])
     const isRecurringProject = project.services?.some((service) => service.isRecurring) ?? false
+    const nextMonthName = React.useMemo(() => {
+        const projectDate = project.createdAt ? new Date(project.createdAt) : new Date()
+        const baseDate = Number.isNaN(projectDate.getTime()) ? new Date() : projectDate
+        return format(addMonths(baseDate, 1), "MMMM")
+    }, [project.createdAt])
     const minimumReopenMonth = getMinimumRecurringMonth(project.createdAt)
     const reopenMonthLabel = formatMonthKeyLabel(reopenMonth)
     const activeProjectTasks = (project.tasks || []).filter((task) => task.status !== "Completed")
@@ -1075,7 +1080,7 @@ export function ProjectSheetContent({
                         >
 
                         {activeTab === "overview" ? <>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 items-start">
                             {/* 1. Status Dropdown */}
                             <div className="flex flex-col">
                                 <DropdownMenu>
@@ -1176,14 +1181,13 @@ export function ProjectSheetContent({
                                         RON
                                     </span>
                                 </div>
+                                {isRecurringProject ? (
+                                    <p className="mt-1.5 px-0.5 text-xs font-medium leading-normal text-[var(--text-muted)]">
+                                        Next month&apos;s amount ({nextMonthName}) is {Number(project.recurringBaseFee ?? project.currentFee ?? 0).toLocaleString("ro-RO")} RON.
+                                    </p>
+                                ) : null}
                             </div>
                         </div>
-
-                        {isRecurringProject ? (
-                            <p className="text-xs font-medium text-[var(--text-muted)]">
-                                Future months use {Number(project.recurringBaseFee ?? project.currentFee ?? 0).toLocaleString("ro-RO")} RON.
-                            </p>
-                        ) : null}
 
                         {project.status === "Closed" && (
                             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3 py-2">
@@ -1235,34 +1239,11 @@ export function ProjectSheetContent({
                         </section> : null}
 
                         {activeTab === "notes" ? <SidePanelNotesSection
-                            title="Project notes"
-                            icon={<FileText className="h-3.5 w-3.5" />}
-                            statusLabel={
-                                notesSaveState === "idle"
-                                    ? "Ready"
-                                    : notesSaveState === "typing"
-                                        ? "Typing"
-                                        : notesSaveState === "saving"
-                                            ? "Saving"
-                                            : notesSaveState === "saved"
-                                                ? "Saved"
-                                                : "Error"
-                            }
-                            statusTone={
-                                notesSaveState === "saving"
-                                    ? "blue"
-                                    : notesSaveState === "saved" || notesSaveState === "idle"
-                                        ? "emerald"
-                                        : notesSaveState === "typing"
-                                            ? "amber"
-                                            : "rose"
-                            }
-                            statusState={notesSaveState === "idle" ? "ready" : notesSaveState}
                             value={description}
                             onChange={handleDescriptionChange}
                             onBlur={flushDescriptionSave}
+                            updatedAt={project.updatedAt}
                             uploadProjectId={project.id}
-                            onAddTemplate={appendRequirementsTemplate}
                             onExpand={() => setIsNotesModalOpen(true)}
                             expandLabel="Open in modal"
                             extraToolbarActions={

@@ -24,6 +24,16 @@ const TimeLogFiltersSchema = z.object({
     projectId: z.string().uuid().optional().or(z.literal("all")),
     partnerId: z.string().uuid().optional().or(z.literal("all")),
     q: z.string().trim().max(200).optional(),
+    taskQ: z.string().trim().max(200).optional(),
+    descriptionQ: z.string().trim().max(200).optional(),
+    source: z.enum(["MANUAL", "TIMER"]).optional().or(z.literal("all")),
+    status: z.enum(["running", "completed"]).optional().or(z.literal("all")),
+    from: z.date().optional(),
+    to: z.date().optional(),
+    minDurationSeconds: z.number().int().min(0).optional(),
+    maxDurationSeconds: z.number().int().min(0).optional(),
+    sort: z.enum(["startTime", "partner", "project", "task", "description", "duration", "source", "status"]).optional(),
+    order: z.enum(["asc", "desc"]).optional(),
     take: z.number().int().min(1).max(200).optional(),
     skip: z.number().int().min(0).optional(),
 }).optional()
@@ -375,33 +385,96 @@ export async function setTaskTimeTotal(data: { taskId: string; totalMinutes: num
     }
 }
 
-export async function getTimeLogs(filters?: { projectId?: string, partnerId?: string, q?: string, take?: number, skip?: number }) {
+export async function getTimeLogs(filters?: {
+    projectId?: string
+    partnerId?: string
+    q?: string
+    taskQ?: string
+    descriptionQ?: string
+    source?: "all" | "MANUAL" | "TIMER"
+    status?: "all" | "running" | "completed"
+    from?: Date
+    to?: Date
+    minDurationSeconds?: number
+    maxDurationSeconds?: number
+    sort?: "startTime" | "partner" | "project" | "task" | "description" | "duration" | "source" | "status"
+    order?: "asc" | "desc"
+    take?: number
+    skip?: number
+}) {
     try {
         await requireAuth()
         const validatedFilters = TimeLogFiltersSchema.parse(filters)
         const where: Prisma.TimeLogWhereInput = { projectId: { not: null } }
 
         if (validatedFilters?.q) {
-            where.description = { contains: validatedFilters.q }
+            where.OR = [
+                { description: { contains: validatedFilters.q } },
+                { task: { name: { contains: validatedFilters.q } } },
+            ]
         }
+        if (validatedFilters?.descriptionQ) where.description = { contains: validatedFilters.descriptionQ }
+        if (validatedFilters?.taskQ) where.task = { name: { contains: validatedFilters.taskQ } }
 
         if (validatedFilters?.projectId && validatedFilters.projectId !== "all") {
             where.projectId = validatedFilters.projectId
-        } else if (validatedFilters?.partnerId && validatedFilters.partnerId !== "all") {
+        }
+        if (validatedFilters?.partnerId && validatedFilters.partnerId !== "all") {
             where.project = {
                 site: { partnerId: validatedFilters.partnerId }
             }
         }
 
-        const [logs, total] = await Promise.all([
+        if (validatedFilters?.source && validatedFilters.source !== "all") where.source = validatedFilters.source
+        if (validatedFilters?.status === "running") where.endTime = null
+        if (validatedFilters?.status === "completed") where.endTime = { not: null }
+        if (validatedFilters?.from || validatedFilters?.to) {
+            where.startTime = {
+                ...(validatedFilters.from ? { gte: validatedFilters.from } : {}),
+                ...(validatedFilters.to ? { lte: validatedFilters.to } : {}),
+            }
+        }
+        if (validatedFilters?.minDurationSeconds !== undefined || validatedFilters?.maxDurationSeconds !== undefined) {
+            where.durationSeconds = {
+                ...(validatedFilters.minDurationSeconds !== undefined ? { gte: validatedFilters.minDurationSeconds } : {}),
+                ...(validatedFilters.maxDurationSeconds !== undefined ? { lte: validatedFilters.maxDurationSeconds } : {}),
+            }
+        }
+
+        const order = validatedFilters?.order || "desc"
+        const sort = validatedFilters?.sort || "startTime"
+        const orderBy: Prisma.TimeLogOrderByWithRelationInput = sort === "partner"
+            ? { project: { site: { partner: { name: order } } } }
+            : sort === "project"
+              ? { project: { site: { domainName: order } } }
+              : sort === "task"
+                ? { task: { name: order } }
+                : sort === "duration"
+                  ? { durationSeconds: order }
+                  : sort === "status"
+                    ? { endTime: order }
+                    : { [sort]: order }
+
+        const [logs, total, duration] = await Promise.all([
             prisma.timeLog.findMany({
                 where,
-                include: {
+                select: {
+                    id: true,
+                    description: true,
+                    startTime: true,
+                    endTime: true,
+                    durationSeconds: true,
+                    isPaused: true,
+                    source: true,
                     project: {
-                        include: {
+                        select: {
+                            id: true,
+                            name: true,
+                            createdAt: true,
                             site: {
                                 select: {
-                                    domainName: true
+                                    domainName: true,
+                                    partner: { select: { id: true, name: true } },
                                 }
                             },
                             services: {
@@ -412,17 +485,16 @@ export async function getTimeLogs(filters?: { projectId?: string, partnerId?: st
                             }
                         }
                     },
-                    task: true
+                    task: { select: { id: true, name: true } },
                 },
-                orderBy: {
-                    startTime: 'desc'
-                },
+                orderBy: [orderBy, { id: "asc" }],
                 take: validatedFilters?.take || 100,
                 skip: validatedFilters?.skip || 0
             }),
             prisma.timeLog.count({ where }),
+            prisma.timeLog.aggregate({ where, _sum: { durationSeconds: true } }),
         ])
-        return { success: true, data: logs, total }
+        return { success: true, data: logs, total, totalDurationSeconds: Number(duration._sum.durationSeconds || 0) }
     } catch (error) {
         console.error("Get time logs failed:", error)
         return { success: false, error: getActionErrorMessage(error, "Failed to fetch time logs"), total: 0 }

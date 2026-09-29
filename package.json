@@ -18,6 +18,7 @@
     "test:task-lms-integration": "vitest run --config vitest.task-lms.config.ts",
     "test:payments-integration": "vitest run --config vitest.payments.config.ts",
     "test:data-queries": "tsx scripts/verify-data-query-optimizations.ts",
+    "backfill:favicons": "tsx scripts/backfill-site-favicons.ts",
     "verify:mobile": "tsx scripts/verify-mobile-guardrails.ts",
     "verify:tablet": "node --import tsx scripts/verify-tablet-guardrails.ts",
     "verify:design": "tsx scripts/verify-design-system.ts",

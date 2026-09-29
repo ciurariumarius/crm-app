@@ -17,6 +17,7 @@ import {
     Loader2,
     Pause,
     Play,
+    Plus,
     Trash2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -28,12 +29,28 @@ import {
 } from "@/lib/tasks/tracked-time"
 import { SidePanelDetailRow } from "@/components/ui/side-panel-primitives"
 import { LmsIcon } from "@/components/lms/lms-icon"
+import { Button } from "@/components/ui/button"
+import { AddLmsClientDialog } from "@/components/lms-work-entries/add-lms-client-dialog"
+import { useTaskCompletion } from "@/components/tasks/task-completion-provider"
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
 import { format, isPast, isToday, isTomorrow, differenceInDays } from "date-fns"
 
 const PRESET_TIME_MINUTES = [
@@ -374,6 +391,14 @@ export function TaskSheetInfoSection({
     const isDone = status === "Completed" || status === "Done"
     const isActive = !isPending && !isDone
 
+    const [lmsClientOpen, setLmsClientOpen] = React.useState(false)
+    const [lmsTaskTypeOpen, setLmsTaskTypeOpen] = React.useState(false)
+    const [lmsClientSearch, setLmsClientSearch] = React.useState("")
+    const [lmsTaskTypeSearch, setLmsTaskTypeSearch] = React.useState("")
+    const [addProjectOpen, setAddProjectOpen] = React.useState(false)
+    const [addProjectInitialName, setAddProjectInitialName] = React.useState("")
+    const { loadLmsOptions } = useTaskCompletion()
+
     return (
         <section className="space-y-4">
             {/* Top 3-Pill Controls Row: Status, Priority, Time on the same line */}
@@ -387,9 +412,9 @@ export function TaskSheetInfoSection({
                                 disabled={loading || pendingTaskId === taskId || !onStatusChange}
                                 className={cn(
                                     "group/status relative flex h-11 w-full items-center justify-between gap-2 overflow-hidden rounded-[14px] border px-3.5 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
-                                    isActive && "border-[color:color-mix(in_srgb,var(--brand-cyan)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--brand-cyan)_10%,var(--surface-lowest))] text-[var(--brand-primary)]",
-                                    isPending && "border-[color:color-mix(in_srgb,var(--state-warning)_35%,transparent)] bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
-                                    isDone && "border-[color:color-mix(in_srgb,var(--state-success)_35%,transparent)] bg-[var(--state-success-surface)] text-[var(--state-success)]"
+                                    isActive && "border-blue-200/80 bg-blue-50/90 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400",
+                                    isPending && "border-amber-200/80 bg-amber-50/90 text-amber-600 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400",
+                                    isDone && "border-emerald-200/80 bg-emerald-50/90 text-emerald-600 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400"
                                 )}
                                 aria-label="Task Status"
                             >
@@ -420,12 +445,12 @@ export function TaskSheetInfoSection({
                                         className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold"
                                     >
                                         <span className="flex items-center gap-2">
-                                            {statusOption.value === "Active" ? <Play className="h-3.5 w-3.5 fill-current text-[var(--primary)]" /> :
-                                             statusOption.value === "Pending" ? <Pause className="h-3.5 w-3.5 fill-current text-[var(--state-warning)]" /> :
-                                             <Check className="h-3.5 w-3.5 text-[var(--state-success)]" />}
+                                            {statusOption.value === "Active" ? <Play className="h-3.5 w-3.5 fill-current text-blue-600 dark:text-blue-400" /> :
+                                             statusOption.value === "Pending" ? <Pause className="h-3.5 w-3.5 fill-current text-amber-600 dark:text-amber-400" /> :
+                                             <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
                                             {statusOption.label}
                                         </span>
-                                        {isCurrent ? <Check className="ml-auto h-4 w-4 text-[var(--brand-primary)]" /> : null}
+                                        {isCurrent ? <Check className="ml-auto h-4 w-4 text-[var(--text-primary)]" /> : null}
                                     </DropdownMenuItem>
                                 )
                             })}
@@ -562,14 +587,21 @@ export function TaskSheetInfoSection({
                 </div>
             ) : null}
 
-            {/* LMS Context Cards (2 columns, separated just like Partner & Domain, with reselect option) */}
+            {/* LMS Context Cards (2 columns, separated just like Partner & Domain, with searchable combobox & new project creation) */}
             {showLmsCard ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {/* Card 1: LMS Client */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                    <Popover
+                        open={lmsClientOpen}
+                        onOpenChange={(open) => {
+                            setLmsClientOpen(open)
+                            if (!open) setLmsClientSearch("")
+                        }}
+                    >
+                        <PopoverTrigger asChild>
                             <button
                                 type="button"
+                                aria-label="Select LMS Client"
                                 disabled={isActionsBlocked}
                                 className="group flex h-[68px] w-full items-center justify-between rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 text-left shadow-xs transition-all duration-200 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_60%,var(--brand-cyan)_40%)] active:scale-[0.99] cursor-pointer"
                             >
@@ -586,36 +618,111 @@ export function TaskSheetInfoSection({
                                 </div>
                                 <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)] opacity-60 transition group-hover:opacity-100" />
                             </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-64 max-h-72 overflow-y-auto rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
-                            <div className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                                Select LMS Client
-                            </div>
-                            {lmsAllocations && lmsAllocations.length > 0 ? (
-                                lmsAllocations.map((alloc) => {
-                                    const isCurrent = alloc.id === lmsAllocationId || alloc.client === lmsClientName
-                                    return (
-                                        <DropdownMenuItem
-                                            key={alloc.id}
-                                            onSelect={() => onSelectLmsAllocation?.(alloc.id, alloc.client)}
-                                            className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold"
-                                        >
-                                            <span className="truncate flex-1">{alloc.client}</span>
-                                            {isCurrent && <Check className="ml-auto h-4 w-4 text-[var(--brand-primary)] shrink-0" />}
-                                        </DropdownMenuItem>
-                                    )
-                                })
-                            ) : (
-                                <div className="px-2.5 py-2 text-xs text-[var(--text-muted)]">No LMS allocations found</div>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                        </PopoverTrigger>
+                        <PopoverContent
+                            align="start"
+                            className="w-72 p-0 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-xl z-[70]"
+                        >
+                            <Command className="flex min-h-0 flex-col">
+                                <CommandInput
+                                    placeholder="Search LMS client…"
+                                    value={lmsClientSearch}
+                                    onValueChange={setLmsClientSearch}
+                                />
+                                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line-subtle)] bg-[var(--surface-low)]/40 px-3 py-1.5">
+                                    <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Projects</span>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs font-semibold text-[var(--brand-primary)] hover:bg-[color:color-mix(in_srgb,var(--brand-primary)_10%,transparent)] cursor-pointer"
+                                        onClick={() => {
+                                            setAddProjectInitialName(lmsClientSearch.trim())
+                                            setLmsClientOpen(false)
+                                            setAddProjectOpen(true)
+                                        }}
+                                    >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        New project
+                                    </Button>
+                                </div>
+                                <CommandList className="max-h-[280px] touch-pan-y overflow-y-auto overscroll-contain">
+                                    <CommandEmpty>
+                                        <div className="py-2 text-center text-xs text-[var(--text-muted)]">
+                                            <p className="mb-2">No LMS project found.</p>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-xs font-semibold text-[var(--brand-primary)]"
+                                                onClick={() => {
+                                                    setAddProjectInitialName(lmsClientSearch.trim())
+                                                    setLmsClientOpen(false)
+                                                    setAddProjectOpen(true)
+                                                }}
+                                            >
+                                                <Plus className="h-3 w-3 mr-1" />
+                                                Create {lmsClientSearch.trim() ? `“${lmsClientSearch.trim()}”` : "project"}
+                                            </Button>
+                                        </div>
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                        {lmsAllocations && lmsAllocations.length > 0 ? (
+                                            lmsAllocations.map((alloc) => {
+                                                const isCurrent = alloc.id === lmsAllocationId || alloc.client === lmsClientName
+                                                return (
+                                                    <CommandItem
+                                                        key={alloc.id}
+                                                        value={`${alloc.client} ${alloc.id}`}
+                                                        onSelect={() => {
+                                                            onSelectLmsAllocation?.(alloc.id, alloc.client)
+                                                            setLmsClientOpen(false)
+                                                        }}
+                                                        className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold"
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4 shrink-0", isCurrent ? "opacity-100 text-[var(--brand-primary)]" : "opacity-0")} />
+                                                        <span className="truncate flex-1">{alloc.client}</span>
+                                                    </CommandItem>
+                                                )
+                                            })
+                                        ) : (
+                                            <div className="px-2.5 py-2 text-xs text-[var(--text-muted)]">No LMS allocations found</div>
+                                        )}
+                                        {lmsClientSearch.trim() ? (
+                                            <CommandItem
+                                                value={`create project ${lmsClientSearch}`}
+                                                onSelect={() => {
+                                                    const suggested = lmsClientSearch.trim()
+                                                    setAddProjectInitialName(suggested)
+                                                    setLmsClientOpen(false)
+                                                    setAddProjectOpen(true)
+                                                }}
+                                                className="border-t border-[var(--line-subtle)] text-[var(--brand-primary)] cursor-pointer py-2 font-semibold"
+                                            >
+                                                <Plus className="mr-2 h-4 w-4 shrink-0" />
+                                                <span className="truncate">
+                                                    Create LMS project “{lmsClientSearch.trim()}”
+                                                </span>
+                                            </CommandItem>
+                                        ) : null}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
 
                     {/* Card 2: LMS Task Type */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                    <Popover
+                        open={lmsTaskTypeOpen}
+                        onOpenChange={(open) => {
+                            setLmsTaskTypeOpen(open)
+                            if (!open) setLmsTaskTypeSearch("")
+                        }}
+                    >
+                        <PopoverTrigger asChild>
                             <button
                                 type="button"
+                                aria-label="Select Task Type"
                                 disabled={isActionsBlocked}
                                 className="group flex h-[68px] w-full items-center justify-between rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3.5 text-left shadow-xs transition-all duration-200 hover:border-[color:color-mix(in_srgb,var(--line-subtle)_60%,var(--brand-cyan)_40%)] active:scale-[0.99] cursor-pointer"
                             >
@@ -632,30 +739,46 @@ export function TaskSheetInfoSection({
                                 </div>
                                 <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)] opacity-60 transition group-hover:opacity-100" />
                             </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-64 max-h-72 overflow-y-auto rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-xl">
-                            <div className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                                Select Task Type
-                            </div>
-                            {lmsWorkTasks && lmsWorkTasks.length > 0 ? (
-                                lmsWorkTasks.map((taskType) => {
-                                    const isCurrent = taskType.id === lmsTaskTypeId || taskType.name === lmsTaskTypeName
-                                    return (
-                                        <DropdownMenuItem
-                                            key={taskType.id}
-                                            onSelect={() => onSelectLmsTaskType?.(taskType.id, taskType.name)}
-                                            className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold"
-                                        >
-                                            <span className="truncate flex-1">{taskType.name}</span>
-                                            {isCurrent && <Check className="ml-auto h-4 w-4 text-[var(--brand-primary)] shrink-0" />}
-                                        </DropdownMenuItem>
-                                    )
-                                })
-                            ) : (
-                                <div className="px-2.5 py-2 text-xs text-[var(--text-muted)]">No Task Types found</div>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                        </PopoverTrigger>
+                        <PopoverContent
+                            align="start"
+                            className="w-72 p-0 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-xl z-[70]"
+                        >
+                            <Command className="flex min-h-0 flex-col">
+                                <CommandInput
+                                    placeholder="Search work category / task type…"
+                                    value={lmsTaskTypeSearch}
+                                    onValueChange={setLmsTaskTypeSearch}
+                                />
+                                <CommandList className="max-h-[280px] touch-pan-y overflow-y-auto overscroll-contain">
+                                    <CommandEmpty>No task type found.</CommandEmpty>
+                                    <CommandGroup>
+                                        {lmsWorkTasks && lmsWorkTasks.length > 0 ? (
+                                            lmsWorkTasks.map((taskType) => {
+                                                const isCurrent = taskType.id === lmsTaskTypeId || taskType.name === lmsTaskTypeName
+                                                return (
+                                                    <CommandItem
+                                                        key={taskType.id}
+                                                        value={`${taskType.name} ${taskType.id}`}
+                                                        onSelect={() => {
+                                                            onSelectLmsTaskType?.(taskType.id, taskType.name)
+                                                            setLmsTaskTypeOpen(false)
+                                                        }}
+                                                        className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold"
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4 shrink-0", isCurrent ? "opacity-100 text-[var(--brand-primary)]" : "opacity-0")} />
+                                                        <span className="truncate flex-1">{taskType.name}</span>
+                                                    </CommandItem>
+                                                )
+                                            })
+                                        ) : (
+                                            <div className="px-2.5 py-2 text-xs text-[var(--text-muted)]">No Task Types found</div>
+                                        )}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             ) : null}
 
@@ -732,6 +855,17 @@ export function TaskSheetInfoSection({
                     </button>
                 </div>
             ) : null}
+
+            <AddLmsClientDialog
+                open={addProjectOpen}
+                onOpenChange={setAddProjectOpen}
+                initialName={addProjectInitialName}
+                wording="project"
+                onCreated={(client) => {
+                    onSelectLmsAllocation?.(client.id, client.client)
+                    void loadLmsOptions?.(true)
+                }}
+            />
         </section>
     )
 }

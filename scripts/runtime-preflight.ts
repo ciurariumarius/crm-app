@@ -21,7 +21,7 @@ async function main() {
     const migrationStatus = spawnSync(
         process.platform === "win32" ? "npx.cmd" : "npx",
         ["prisma", "migrate", "status"],
-        { cwd: process.cwd(), encoding: "utf8" }
+        { cwd: process.cwd(), encoding: "utf8", env: process.env }
     )
     if (migrationStatus.status !== 0) {
         throw new Error(migrationStatus.stderr || migrationStatus.stdout || "Prisma migration status failed")

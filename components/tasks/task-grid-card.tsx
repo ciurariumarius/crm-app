@@ -13,6 +13,8 @@ import {
     Clock,
     Play,
     Pause,
+    RefreshCcw,
+    Zap,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useTimer } from "@/components/providers/timer-provider"
@@ -115,7 +117,7 @@ function getStatusPill(status: string | null | undefined) {
     }
     return {
         label: "Active",
-        className: "border border-emerald-200/80 bg-emerald-50/90 text-emerald-600 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400",
+        className: "border border-blue-200/80 bg-blue-50/90 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400",
         icon: <CircleDot className="h-3.5 w-3.5 stroke-[2.5]" />,
     }
 }
@@ -321,8 +323,17 @@ export function TaskGridCard({
             <div>
                 {/* TOP ROW: Scope on Left, Priority & Status Dropdown Icon on Right */}
                 <div className="flex items-center justify-between gap-1.5 sm:gap-2 min-w-0">
-                    <span className="inline-flex h-6 min-w-0 max-w-[48%] shrink items-center gap-1.5 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]">
-                        {isLmsTask ? <LmsIcon className="h-3.5 w-3.5 shrink-0" /> : null}
+                    <span
+                        className="inline-flex h-6 min-w-0 max-w-[48%] shrink items-center gap-1.5 rounded-full border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_72%,transparent)] px-2.5 text-xs font-semibold text-[var(--text-secondary)]"
+                        title={isLmsTask ? "LMS Task" : isRecurring ? "Recurring Project Task" : "One-time Task"}
+                    >
+                        {isLmsTask ? (
+                            <LmsIcon className="h-3.5 w-3.5 shrink-0" />
+                        ) : isRecurring ? (
+                            <RefreshCcw className="h-3 w-3 shrink-0 stroke-[2.2] text-[var(--brand-primary)]" />
+                        ) : (
+                            <Zap className="h-3 w-3 shrink-0 stroke-[2.2] text-amber-500" />
+                        )}
                         <span className="truncate">{scopeLabel}</span>
                     </span>
 

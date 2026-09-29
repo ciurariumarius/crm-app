@@ -55,7 +55,14 @@ export function TaskTargetSelector({
   compact?: boolean
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Task target">
+    <div
+      role="radiogroup"
+      aria-label="Task target"
+      className={cn(
+        "relative flex w-full items-center rounded-[16px] border border-[var(--line-subtle)] bg-[var(--surface-low)] select-none shadow-xs",
+        compact ? "p-1" : "p-1.5"
+      )}
+    >
       {TARGET_OPTIONS.map((option) => {
         const Icon = option.icon
         const selected = value === option.value
@@ -70,21 +77,15 @@ export function TaskTargetSelector({
             title={unavailable ? "This task is not linked to a freelance project" : undefined}
             onClick={() => onValueChange(option.value)}
             className={cn(
-              "flex rounded-xl border transition",
-              compact
-                ? "h-11 items-center justify-center gap-2 px-3 text-center"
-                : "min-h-[76px] flex-col items-start justify-center px-3 py-2.5 text-left",
+              "relative flex flex-1 items-center justify-center gap-2 rounded-[12px] text-center font-semibold transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+              compact ? "h-10 px-3 text-sm" : "h-12 px-4 text-sm",
               selected
-                ? "border-[color:color-mix(in_srgb,var(--primary)_54%,var(--line-subtle))] bg-[color:color-mix(in_srgb,var(--primary-container)_14%,var(--surface-lowest))] text-[var(--text-primary)] shadow-sm"
-                : "border-[var(--line-subtle)] bg-[var(--surface-lowest)] text-[var(--text-secondary)] hover:bg-[var(--surface-low)]",
-              (disabled || unavailable) && "cursor-not-allowed opacity-50"
+                ? "bg-[var(--surface-lowest)] text-[var(--text-primary)] shadow-sm font-bold border border-[var(--line-subtle)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-lowest)]/50 border border-transparent"
             )}
           >
-            <span className="flex items-center gap-2 text-sm font-semibold leading-tight">
-              <Icon className={cn("h-4 w-4 shrink-0", selected && "text-[var(--primary)]")} />
-              {compact && option.value === "FREELANCE" ? "Freelance" : option.label}
-            </span>
-            {!compact ? <span className="mt-0.5 pl-6 text-xs text-[var(--text-muted)]">{option.description}</span> : null}
+            <Icon className={cn("h-4 w-4 shrink-0 transition-colors", selected ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]")} />
+            <span className="truncate">{compact && option.value === "FREELANCE" ? "Freelance" : option.label}</span>
           </button>
         )
       })}
@@ -97,6 +98,7 @@ function LmsOptionCombobox({
   placeholder,
   searchPlaceholder,
   emptyLabel,
+  emptyOptionLabel,
   options,
   value,
   onValueChange,
@@ -109,6 +111,7 @@ function LmsOptionCombobox({
   placeholder: string
   searchPlaceholder: string
   emptyLabel: string
+  emptyOptionLabel?: string
   options: Array<{ id: string; label: string }>
   value: string
   onValueChange: (value: string) => void
@@ -163,14 +166,14 @@ function LmsOptionCombobox({
             <CommandEmpty>{emptyLabel}</CommandEmpty>
             <CommandGroup>
               <CommandItem
-                value="not linked"
+                value="clear unlinked none"
                 onSelect={() => {
                   onValueChange("")
                   setOpen(false)
                 }}
               >
                 <Check className={cn("mr-2 h-4 w-4", value ? "opacity-0" : "opacity-100")} />
-                Not linked yet
+                {emptyOptionLabel || "None"}
               </CommandItem>
               {options.map((option) => (
                 <CommandItem
@@ -239,7 +242,7 @@ export function TaskLmsFields({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <Label className="text-xs font-semibold text-[var(--text-secondary)]">
-            LMS project{required ? " *" : " (optional)"}
+            LMS Project{required ? " *" : ""}
           </Label>
           <Button
             type="button"
@@ -258,9 +261,10 @@ export function TaskLmsFields({
         </div>
         <LmsOptionCombobox
           label="Select LMS project"
-          placeholder={lmsOptionsLoading ? "Loading LMS projects…" : "Not linked yet"}
-          searchPlaceholder="Search LMS project…"
+          placeholder={lmsOptionsLoading ? "Loading LMS projects…" : "Search project"}
+          searchPlaceholder="Search project…"
           emptyLabel="No LMS project found."
+          emptyOptionLabel="Search project"
           options={lmsOptions.allocations.map((option) => ({ id: option.id, label: option.client }))}
           value={lmsAllocationId}
           onValueChange={onAllocationChange}
@@ -274,13 +278,14 @@ export function TaskLmsFields({
       </div>
       <div className="space-y-2">
         <Label className="text-xs font-semibold text-[var(--text-secondary)]">
-          Work category{required ? " *" : " (optional)"}
+          Category{required ? " *" : ""}
         </Label>
         <LmsOptionCombobox
-          label="Select LMS work category"
-          placeholder={lmsOptionsLoading ? "Loading categories…" : "Not linked yet"}
-          searchPlaceholder="Search work category…"
-          emptyLabel="No active work category found."
+          label="Select category"
+          placeholder={lmsOptionsLoading ? "Loading categories…" : "Search category"}
+          searchPlaceholder="Search category…"
+          emptyLabel="No category found."
+          emptyOptionLabel="Search category"
           options={lmsOptions.workTasks.map((option) => ({ id: option.id, label: option.name }))}
           value={lmsTaskTypeId}
           onValueChange={onWorkTaskChange}

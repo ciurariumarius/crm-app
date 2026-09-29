@@ -504,11 +504,15 @@ export function TaskDetails({
                 onCompleted: () => {
                     setStatus(nextStatus === "Pending" ? "Pending" : "Active")
                     setHasLoadedTaskHistory(false)
+                    router.refresh()
                 },
             })
             if (success && nextStatus === "Pending") {
-                await updateTasksStatus([task.id], "Pending")
-                setStatus("Pending")
+                const res = await updateTasksStatus([task.id], "Pending")
+                if (res.success) {
+                    setStatus("Pending")
+                    router.refresh()
+                }
             }
             return
         }
@@ -518,8 +522,11 @@ export function TaskDetails({
             setStatus(nextStatus)
             toast.success(`Task marked ${nextStatus}`)
             setHasLoadedTaskHistory(false)
+            router.refresh()
+        } else {
+            toast.error(res.error || `Failed to mark task ${nextStatus}`)
         }
-    }, [handleUpdate, lmsAllocationId, lmsTaskTypeId, loading, pendingTaskId, projectId, requestCompletion, requestReopen, status, targetDirty, task, taskScope])
+    }, [handleUpdate, lmsAllocationId, lmsTaskTypeId, loading, pendingTaskId, projectId, requestCompletion, requestReopen, router, status, targetDirty, task, taskScope])
 
     const handleDelete = async () => {
         if (!task) return
@@ -1098,17 +1105,12 @@ export function TaskDetails({
                         ) : null}
 
                         {activeTab === "notes" ? <SidePanelNotesSection
-                            title="Task notes"
-                            icon={<FileText className="h-3.5 w-3.5" />}
-                            statusLabel={notesSaveState === "typing" ? "Typing" : notesSaveState === "saving" ? "Saving" : "Ready"}
-                            statusTone={notesSaveState === "saving" ? "blue" : notesSaveState === "typing" ? "amber" : "emerald"}
-                            statusState={notesSaveState}
                             value={description}
                             onChange={handleTaskDescriptionChange}
                             onBlur={flushTaskNotesSave}
+                            updatedAt={task.updatedAt}
                             uploadProjectId={savedProjectId || task.id}
                             imageUploadsDisabled={projectActionsBlocked}
-                            onAddTemplate={appendTaskNotesTemplate}
                             onExpand={() => setIsNotesModalOpen(true)}
                             expandLabel="Open notes in full view"
                             className="border-t-0 pt-0"
@@ -1296,31 +1298,34 @@ export function TaskDetails({
                                 </DialogClose>
                             </div>
                         </DialogHeader>
-                        <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-[var(--surface-lowest)] px-8 pb-8 pt-6">
+                        <div className="flex h-[calc(92vh-81px)] flex-col overflow-hidden bg-[var(--surface-lowest)] px-3 sm:px-6 pb-6 pt-2">
                             <RichTextEditor
                                 value={description}
                                 onChange={handleTaskDescriptionChange}
-                                placeholder=""
+                                placeholder="Title"
                                 variant="plain"
                                 mode="document"
-                                className="h-full"
-                                minHeightClassName="min-h-0"
+                                panelStyle="borderless"
+                                documentLayout="left"
+                                documentWidth="full"
+                                documentPadding="compact"
+                                toolbarVisibility="always"
+                                toolbarPreset="minimal"
+                                toolbarTone="quiet"
+                                toolbarPinned
+                                notesMode
+                                notesAppearance="apple"
+                                documentHeader={
+                                    task.updatedAt ? (
+                                        <p className="pb-0.5 text-xs font-normal text-[var(--text-muted)]">
+                                            {format(new Date(task.updatedAt), "d MMMM yyyy 'at' HH:mm")}
+                                        </p>
+                                    ) : undefined
+                                }
+                                className="h-full min-h-0"
+                                minHeightClassName="min-h-full overscroll-y-contain"
                                 uploadProjectId={savedProjectId || task.id}
                                 imageUploadsDisabled={projectActionsBlocked}
-                                toolbarVisibility="always"
-                                toolbarActions={
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={appendTaskNotesTemplate}
-                                        className="h-8 w-8 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
-                                        aria-label="Add template"
-                                        title="Add template"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
-                                }
                             />
                         </div>
                     </DialogContent>

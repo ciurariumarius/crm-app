@@ -5,22 +5,45 @@ import { SitesTable } from "@/components/vault/sites-table"
 import Link from "next/link"
 import { AppPageHeader } from "@/components/layout/app-page-header"
 import { requireAuth } from "@/lib/auth"
-import { DomainsFilters } from "@/components/vault/domains-filters"
 import type { Prisma } from "@prisma/client"
 import { buttonLinkClassName } from "@/components/ui/button-link"
 
 export const dynamic = "force-dynamic"
 
 const PAGE_SIZE = 50
+const SORT_FIELDS = ["domainName", "partner", "projects", "createdAt"] as const
+type DomainSort = (typeof SORT_FIELDS)[number]
+
+function parseDateFilter(value: string | undefined, endOfDay = false) {
+    if (!value) return undefined
+    const date = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00"}`)
+    return Number.isNaN(date.getTime()) ? undefined : date
+}
 
 export default async function SitesPage({
     searchParams
 }: {
-    searchParams: Promise<{ q?: string; partnerId?: string; page?: string; sort?: string; order?: "asc" | "desc" }>
+    searchParams: Promise<{
+        q?: string
+        partnerId?: string
+        projects?: "with" | "without"
+        createdFrom?: string
+        createdTo?: string
+        page?: string
+        sort?: string
+        order?: "asc" | "desc"
+    }>
 }) {
     await requireAuth()
-    const { q, partnerId, page: pageStr, sort = "domainName", order = "asc" } = await searchParams
-    const page = parseInt(pageStr || "1")
+    const params = await searchParams
+    const q = params.q?.trim() || ""
+    const partnerId = params.partnerId || "all"
+    const projectsFilter = params.projects === "with" || params.projects === "without" ? params.projects : "all"
+    const createdFrom = params.createdFrom || ""
+    const createdTo = params.createdTo || ""
+    const sort: DomainSort = SORT_FIELDS.includes(params.sort as DomainSort) ? params.sort as DomainSort : "domainName"
+    const order: "asc" | "desc" = params.order === "desc" ? "desc" : "asc"
+    const page = Math.max(1, Number.parseInt(params.page || "1", 10) || 1)
     const skip = (page - 1) * PAGE_SIZE
 
     const where: Prisma.SiteWhereInput = {}
@@ -35,19 +58,43 @@ export default async function SitesPage({
     if (partnerId && partnerId !== "all") {
         where.partnerId = partnerId
     }
+    if (projectsFilter === "with") where.projects = { some: {} }
+    if (projectsFilter === "without") where.projects = { none: {} }
+
+    const fromDate = parseDateFilter(createdFrom)
+    const toDate = parseDateFilter(createdTo, true)
+    if (fromDate || toDate) {
+        where.createdAt = {
+            ...(fromDate ? { gte: fromDate } : {}),
+            ...(toDate ? { lte: toDate } : {}),
+        }
+    }
+
+    const orderBy: Prisma.SiteOrderByWithRelationInput = sort === "partner"
+        ? { partner: { name: order } }
+        : sort === "projects"
+          ? { projects: { _count: order } }
+          : { [sort]: order }
 
     // Fetch sites with pagination
     const sitesPromise = prisma.site.findMany({
         where,
         skip,
         take: PAGE_SIZE,
-        include: {
-            partner: true,
+        select: {
+            id: true,
+            partnerId: true,
+            name: true,
+            domainName: true,
+            faviconHash: true,
+            createdAt: true,
+            updatedAt: true,
+            partner: { select: { id: true, name: true } },
             _count: {
                 select: { projects: true }
             }
         },
-        orderBy: { [sort]: order }
+        orderBy,
     })
 
     const totalSitesPromise = prisma.site.count({ where })
@@ -70,6 +117,9 @@ export default async function SitesPage({
         const next = new URLSearchParams()
         if (q) next.set("q", q)
         if (partnerId && partnerId !== "all") next.set("partnerId", partnerId)
+        if (projectsFilter !== "all") next.set("projects", projectsFilter)
+        if (createdFrom) next.set("createdFrom", createdFrom)
+        if (createdTo) next.set("createdTo", createdTo)
         if (sort !== "domainName") next.set("sort", sort)
         if (order !== "asc") next.set("order", order)
         next.set("page", String(targetPage))
@@ -91,16 +141,14 @@ export default async function SitesPage({
                     }
                 />
 
-            <DomainsFilters 
-                partners={partners} 
-                totalLogs={totalSites} 
-            />
-
             <div className="space-y-6">
                 <SitesTable 
-                    sites={sitesRaw} 
+                    sites={sitesRaw}
+                    partners={partners}
+                    totalSites={totalSites}
                     currentSort={sort}
                     currentOrder={order}
+                    filters={{ q, partnerId, projects: projectsFilter, createdFrom, createdTo }}
                 />
                 
                 {/* Pagination Footer */}

@@ -13,9 +13,9 @@ import {
 
 export const runtime = "nodejs"
 
-const MAX_FILE_SIZE_BYTES = 12 * 1024 * 1024
-const MAX_TOTAL_SIZE_BYTES = 32 * 1024 * 1024
-const MAX_FILES_PER_REQUEST = 8
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
+const MAX_TOTAL_SIZE_BYTES = 64 * 1024 * 1024
+const MAX_FILES_PER_REQUEST = 10
 
 type AllowedImageExtension = "png" | "jpg" | "webp" | "gif"
 
@@ -52,6 +52,35 @@ function detectImageExtensionFromMagicBytes(buffer: Buffer): AllowedImageExtensi
     return null
 }
 
+const BLOCKED_EXTENSIONS = new Set([
+    "exe", "bat", "cmd", "sh", "php", "py", "js", "html", "htm", "vbs", "jar", "cgi", "pl", "scr", "msi", "com", "pif"
+])
+
+function resolveExtension(fileName: string, mimeType: string, buffer: Buffer): string {
+    const magicImage = detectImageExtensionFromMagicBytes(buffer)
+    if (magicImage) return magicImage
+
+    if (buffer.length >= 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+        return "pdf"
+    }
+
+    const rawExt = path.extname(fileName || "").replace(".", "").toLowerCase().trim()
+    const sanitized = rawExt.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10)
+    if (sanitized && !BLOCKED_EXTENSIONS.has(sanitized)) {
+        return sanitized
+    }
+
+    if (mimeType === "application/pdf") return "pdf"
+    if (mimeType.includes("word") || mimeType.includes("document")) return "docx"
+    if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) return "xlsx"
+    if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "pptx"
+    if (mimeType === "text/plain") return "txt"
+    if (mimeType === "text/csv") return "csv"
+    if (mimeType === "application/zip") return "zip"
+
+    return "bin"
+}
+
 export async function POST(request: Request) {
     try {
         await requireAuth()
@@ -65,7 +94,7 @@ export async function POST(request: Request) {
 
         if (!files.length) {
             return NextResponse.json(
-                { success: false, error: "No image provided." },
+                { success: false, error: "No files provided." },
                 { status: 400 }
             )
         }
@@ -74,7 +103,7 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: `Too many files. Maximum ${MAX_FILES_PER_REQUEST} images per upload.`,
+                    error: `Too many files. Maximum ${MAX_FILES_PER_REQUEST} files per upload.`,
                 },
                 { status: 400 }
             )
@@ -83,49 +112,60 @@ export async function POST(request: Request) {
         const totalSize = files.reduce((sum, file) => sum + file.size, 0)
         if (totalSize > MAX_TOTAL_SIZE_BYTES) {
             return NextResponse.json(
-                { success: false, error: "Upload exceeds the 32MB total request limit." },
+                { success: false, error: "Upload exceeds the total request limit (64MB)." },
                 { status: 400 }
             )
         }
 
-        const prepared: Array<{ buffer: Buffer; relativePath: string; absoluteFilePath: string }> = []
-        for (const file of files) {
-            if (!file.type.startsWith("image/")) {
-                return NextResponse.json(
-                    { success: false, error: "Only image files are allowed." },
-                    { status: 400 }
-                )
-            }
+        const prepared: Array<{
+            buffer: Buffer
+            relativePath: string
+            absoluteFilePath: string
+            originalName: string
+            size: number
+            extension: string
+            mimeType: string
+            isImage: boolean
+        }> = []
 
+        for (const file of files) {
             if (file.size > MAX_FILE_SIZE_BYTES) {
                 return NextResponse.json(
                     {
                         success: false,
-                        error: `File "${file.name}" exceeds 12MB size limit.`,
+                        error: `File "${file.name}" exceeds 25MB size limit.`,
                     },
                     { status: 400 }
                 )
             }
 
             const buffer = Buffer.from(await file.arrayBuffer())
-            const extension = detectImageExtensionFromMagicBytes(buffer)
-            if (!extension) {
+            const extension = resolveExtension(file.name, file.type, buffer)
+            if (BLOCKED_EXTENSIONS.has(extension)) {
                 return NextResponse.json(
                     {
                         success: false,
-                        error: `File \"${file.name}\" is not a supported image format.`,
+                        error: `File extension ".${extension}" is not allowed for security reasons.`,
                     },
                     { status: 400 }
                 )
             }
 
+            const isImage = ["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(extension)
             const filename = `${Date.now()}-${randomUUID()}.${extension}`
-            const relativePath = buildProjectNoteRelativePath(
-                projectId,
-                filename
-            )
+            const relativePath = buildProjectNoteRelativePath(projectId, filename)
             const absoluteFilePath = resolveProjectNoteAbsolutePath(relativePath)
-            prepared.push({ buffer, relativePath, absoluteFilePath })
+
+            prepared.push({
+                buffer,
+                relativePath,
+                absoluteFilePath,
+                originalName: file.name || `file.${extension}`,
+                size: file.size,
+                extension,
+                mimeType: file.type || "application/octet-stream",
+                isImage,
+            })
         }
 
         const projectDirectory = resolveProjectNoteAbsolutePath(
@@ -144,8 +184,19 @@ export async function POST(request: Request) {
             throw error
         }
 
-        const urls = prepared.map((file) => createSignedProjectNoteUrl(file.relativePath))
-        return NextResponse.json({ success: true, urls })
+        const uploadedFiles = prepared.map((file) => ({
+            url: createSignedProjectNoteUrl(file.relativePath),
+            name: file.originalName,
+            size: file.size,
+            isImage: file.isImage,
+            extension: file.extension,
+        }))
+
+        return NextResponse.json({
+            success: true,
+            urls: uploadedFiles.map((f) => f.url),
+            files: uploadedFiles,
+        })
     } catch (error) {
         return apiRouteError(error, {
             unauthorizedMessage: "Unauthorized",

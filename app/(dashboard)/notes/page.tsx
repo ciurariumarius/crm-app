@@ -11,9 +11,12 @@ export default async function NotesPage({
 }) {
   await requireAuth()
   const params = (await searchParams) || {}
-  const requestedView: NotesView = params.view?.startsWith("folder:")
-    ? params.view as NotesView
-    : "all"
+  const requestedView: NotesView =
+    params.view === "tasks-and-projects"
+      ? "tasks-and-projects"
+      : params.view?.startsWith("folder:")
+      ? params.view as NotesView
+      : "all"
   const startNewNote = params.new === "1"
   const hasExplicitNote = Boolean(params.note)
   const bootstrap = await getNotesWorkspaceBootstrap({
@@ -31,6 +34,7 @@ export default async function NotesPage({
       initialNextCursor={bootstrap.nextCursor}
       initialTotalCount={bootstrap.totalCount}
       initialAllCount={bootstrap.allCount}
+      initialTasksAndProjectsCount={bootstrap.tasksAndProjectsCount}
       requestedNoteId={params.note || null}
       startNewNote={startNewNote}
     />

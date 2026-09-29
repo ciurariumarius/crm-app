@@ -6,7 +6,9 @@ import { differenceInCalendarDays, format, isToday, isYesterday } from "date-fns
 import {
   ChevronDown,
   ChevronLeft,
+  ExternalLink,
   Folder,
+  FolderKanban,
   Loader2,
   MoreHorizontal,
   NotebookPen,
@@ -115,6 +117,7 @@ type NotesWorkspaceProps = {
   initialNextCursor: string | null
   initialTotalCount: number
   initialAllCount: number
+  initialTasksAndProjectsCount?: number
   requestedNoteId?: string | null
   startNewNote?: boolean
 }
@@ -172,6 +175,10 @@ function rowFromDetail(note: NoteDetail): NoteListRow {
     preview: note.contentText.slice(0, 180),
     createdAt: note.createdAt,
     updatedAt: note.updatedAt,
+    sourceType: note.sourceType,
+    sourceId: note.sourceId,
+    sourceLabel: note.sourceLabel,
+    sourceBadge: note.sourceBadge,
   }
 }
 
@@ -548,16 +555,22 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
           <DropdownMenuItem onSelect={() => void shareNote()}>
             <Share2 className="mr-2 h-4 w-4" /> Share note
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={onMoveToFolder}>
-            <Folder className="mr-2 h-4 w-4" /> Move to folder
-          </DropdownMenuItem>
+          {!note.sourceType ? (
+            <DropdownMenuItem onSelect={onMoveToFolder}>
+              <Folder className="mr-2 h-4 w-4" /> Move to folder
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onSelect={onDuplicate}>
             <SquarePen className="mr-2 h-4 w-4" /> Duplicate note
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={onDelete} className="text-red-600 focus:text-red-600">
-            <Trash2 className="mr-2 h-4 w-4" /> Delete note
-          </DropdownMenuItem>
+          {!note.sourceType ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onDelete} className="text-red-600 focus:text-red-600">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete note
+              </DropdownMenuItem>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
     </>
@@ -565,6 +578,41 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent" aria-label="Note editor">
+      {note.sourceType ? (
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--line-subtle)] bg-[var(--surface-low)] px-4 py-2 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className={cn(
+                "shrink-0 rounded-md px-2 py-0.5 font-semibold uppercase tracking-wider text-xs",
+                note.sourceType === "task"
+                  ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                  : "bg-purple-500/10 text-purple-600 border border-purple-500/20"
+              )}
+            >
+              {note.sourceBadge || (note.sourceType === "task" ? "Task" : "Project")}
+            </span>
+            <span className="font-semibold text-[var(--text-primary)] truncate">
+              {note.title}
+            </span>
+            {note.sourceLabel ? (
+              <span className="hidden sm:inline text-[var(--text-muted)] truncate">
+                • {note.sourceLabel}
+              </span>
+            ) : null}
+          </div>
+          {note.sourceId ? (
+            <a
+              href={note.sourceType === "task" ? `/tasks?task=${note.sourceId}` : `/projects`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-semibold text-[var(--brand-primary)] hover:underline shrink-0 ml-2 text-xs"
+            >
+              <span>Open {note.sourceType === "task" ? "task" : "project"}</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex min-h-12 shrink-0 items-center justify-between border-b border-[var(--line-subtle)] px-2 md:hidden">
         <button
           type="button"
@@ -626,7 +674,7 @@ const NoteEditorSession = React.memo(React.forwardRef<NoteEditorSessionHandle, {
           uploadProjectId={`note-${note.id}`}
           imageUploadFallback="error"
           showImageGallery={false}
-          folderOptions={folderOptions}
+          folderOptions={note.sourceType ? [] : folderOptions}
           onFolderMentionChange={flushFolderChange}
           externalUpdateToken={externalUpdateToken}
           className="h-full min-h-0"
@@ -719,6 +767,7 @@ export function NotesWorkspace({
   initialNextCursor,
   initialTotalCount,
   initialAllCount,
+  initialTasksAndProjectsCount = 0,
   requestedNoteId = null,
   startNewNote = false,
 }: NotesWorkspaceProps) {
@@ -734,6 +783,7 @@ export function NotesWorkspace({
   const [nextCursor, setNextCursor] = React.useState(initialNextCursor)
   const [totalCount, setTotalCount] = React.useState(initialTotalCount)
   const [allCount, setAllCount] = React.useState(initialAllCount)
+  const [tasksAndProjectsCount, setTasksAndProjectsCount] = React.useState(initialTasksAndProjectsCount)
   const [loadingList, setLoadingList] = React.useState(false)
   const [loadingDetail, setLoadingDetail] = React.useState(false)
   const [focusToken, setFocusToken] = React.useState<number | undefined>(undefined)
@@ -1090,6 +1140,9 @@ export function NotesWorkspace({
     discardBlankLocalNote(selectedId)
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
+    if (view === "tasks-and-projects") {
+      setView("all")
+    }
     const selectedFolderId = folderIdFromView(view)
     const detail: ClientNoteDetail = {
       id,
@@ -1191,6 +1244,7 @@ export function NotesWorkspace({
       setNextCursor(result.data.nextCursor)
       setTotalCount(result.data.totalCount)
       if (!query && nextView === "all") setAllCount(result.data.totalCount)
+      if (!query && nextView === "tasks-and-projects") setTasksAndProjectsCount(result.data.totalCount)
       const first = result.data.rows[0]
       if (first && !result.data.rows.some((row) => row.id === selectedIdRef.current)) {
         void selectNote(first.id, false)
@@ -1216,7 +1270,8 @@ export function NotesWorkspace({
     const targetFolderId = folderIdFromView(nextView)
     // Instantly filter out notes from other folders so no old notes flash under the new folder
     commitRows((current) => {
-      if (nextView === "all") return current
+      if (nextView === "all") return current.filter((row) => !row.sourceType)
+      if (nextView === "tasks-and-projects") return current.filter((row) => row.sourceType === "task" || row.sourceType === "project")
       if (!targetFolderId) return []
       return current.filter((row) => row.folderId === targetFolderId)
     })
@@ -1507,9 +1562,20 @@ export function NotesWorkspace({
     () => new Map(folders.map((folder) => [folder.id, folder.name])),
     [folders]
   )
-  const visibleCount = search ? totalCount : view === "all" ? allCount : folders.find((folder) => folder.id === activeFolderId)?.count ?? totalCount
+  const visibleCount = search
+    ? totalCount
+    : view === "all"
+    ? allCount
+    : view === "tasks-and-projects"
+    ? tasksAndProjectsCount
+    : folders.find((folder) => folder.id === activeFolderId)?.count ?? totalCount
   const noteGroups = React.useMemo(() => groupNotesByDate(rows, pinnedIds, sortBy), [rows, pinnedIds, sortBy])
-  const activeFolderName = activeFolderId ? folderNameById.get(activeFolderId) ?? "All Notes" : "All Notes"
+  const activeFolderName =
+    view === "tasks-and-projects"
+      ? "Tasks & Projects"
+      : activeFolderId
+      ? folderNameById.get(activeFolderId) ?? "All Notes"
+      : "All Notes"
   const shouldRenderEditor = mobilePane === "editor" || (responsiveReady && !isMobile)
 
   const toggleMobileSearch = React.useCallback(() => {
@@ -1618,7 +1684,7 @@ export function NotesWorkspace({
               <Plus className="h-4 w-4" />
             </button>
           </div>
-          <nav className="min-h-0 flex-1 overscroll-y-contain overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 space-y-0.5 flex flex-col notes-thin-scrollbar xl:pb-1" aria-label="Note folders">
+          <nav className="min-h-0 flex-1 overscroll-y-contain overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 space-y-1 flex flex-col notes-thin-scrollbar xl:pb-1" aria-label="Note folders">
             <button
               type="button"
               onClick={() => switchView("all")}
@@ -1634,6 +1700,19 @@ export function NotesWorkspace({
               <span className="min-w-0 flex-1 truncate text-left">All Notes</span>
               <span className={cn("shrink-0 text-xs tabular-nums", view === "all" ? "text-[var(--primary)] font-semibold" : "text-[var(--text-muted)]")}>{allCount}</span>
             </button>
+
+            <div className="flex min-h-8 shrink-0 items-center justify-between px-1 pt-2 pb-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">MY FOLDERS</span>
+              <button
+                type="button"
+                onClick={() => { setFolderDialog({ mode: "create" }); setFolderName("") }}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                aria-label="Add folder"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
             {folders.map((folder) => {
               const isActive = activeFolderId === folder.id
               return (
@@ -1677,7 +1756,44 @@ export function NotesWorkspace({
                 </div>
               )
             })}
-            
+
+            {/* Divider above Tasks & Projects */}
+            <div className="my-2 border-t border-[var(--line-subtle)]" />
+
+            {/* Last Folder: Tasks & Projects */}
+            <button
+              type="button"
+              onClick={() => switchView("tasks-and-projects")}
+              aria-current={view === "tasks-and-projects" ? "page" : undefined}
+              className={cn(
+                "group relative flex min-h-11 w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all md:min-h-8.5 md:rounded-lg",
+                view === "tasks-and-projects"
+                  ? "bg-[color:color-mix(in_srgb,var(--brand-primary)_14%,transparent)] text-[var(--brand-primary)] font-semibold shadow-2xs border border-[color:color-mix(in_srgb,var(--brand-primary)_25%,transparent)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] border border-transparent font-medium"
+              )}
+            >
+              <div
+                className={cn(
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors",
+                  view === "tasks-and-projects"
+                    ? "bg-[var(--brand-primary)] text-white shadow-2xs"
+                    : "bg-[var(--surface-low)] text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] group-hover:bg-[color:color-mix(in_srgb,var(--brand-primary)_12%,transparent)]"
+                )}
+              >
+                <FolderKanban className="h-3.5 w-3.5" />
+              </div>
+              <span className="min-w-0 flex-1 truncate text-left">Tasks & Projects</span>
+              <span
+                className={cn(
+                  "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums transition-colors",
+                  view === "tasks-and-projects"
+                    ? "bg-[color:color-mix(in_srgb,var(--brand-primary)_20%,transparent)] text-[var(--brand-primary)]"
+                    : "bg-[var(--surface-low)] text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]"
+                )}
+              >
+                {tasksAndProjectsCount}
+              </span>
+            </button>
           </nav>
 
           {/* Folders Resize Handle (Desktop only) */}
@@ -1777,6 +1893,11 @@ export function NotesWorkspace({
                     <DropdownMenuItem key={f.id} onSelect={() => switchView(folderView(f.id))}>{f.name}</DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => switchView("tasks-and-projects")} className="font-medium">
+                    <FolderKanban className="mr-2 h-4 w-4 text-[var(--brand-primary)]" />
+                    Tasks & Projects
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <div className="px-2 py-1 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Sort by</div>
                   <DropdownMenuItem onSelect={() => setSortBy("updatedAt")} className={cn(sortBy === "updatedAt" && "text-[var(--primary)] font-semibold")}>
                     Last edited {sortBy === "updatedAt" ? "✓" : ""}
@@ -1833,10 +1954,32 @@ export function NotesWorkspace({
                                 : "hover:bg-[var(--surface-low)]"
                             )}
                           >
-                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                              {row.title || "New note"}
-                            </p>
+                            <div className="flex items-center justify-between gap-2 min-w-0">
+                              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                                {row.title || "New note"}
+                              </p>
+                              {row.sourceType === "task" ? (
+                                <span
+                                  className="inline-flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-blue-500/10 text-xs font-bold text-blue-600 border border-blue-500/20"
+                                  title={row.sourceLabel ? `Task: ${row.sourceLabel}` : "Task Note"}
+                                >
+                                  T
+                                </span>
+                              ) : row.sourceType === "project" ? (
+                                <span
+                                  className="inline-flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-purple-500/10 text-xs font-bold text-purple-600 border border-purple-500/20"
+                                  title={row.sourceLabel ? `Project: ${row.sourceLabel}` : "Project Note"}
+                                >
+                                  P
+                                </span>
+                              ) : null}
+                            </div>
                             <p className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">
+                              {row.sourceLabel ? (
+                                <span className="text-[var(--text-muted)] mr-1">
+                                  {row.sourceLabel} •
+                                </span>
+                              ) : null}
                               {row.preview || "No additional text"}
                             </p>
                           </button>
@@ -1848,9 +1991,25 @@ export function NotesWorkspace({
               </div>
             ) : (
               <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">
-                <NotebookPen className="mb-3 h-8 w-8 text-[var(--text-muted)]" />
-                <p className="font-semibold text-[var(--text-primary)]">{search ? "No matching notes" : "No notes yet"}</p>
-                {!search ? <Button type="button" variant="ghost" className="mt-2 text-xs" onClick={beginNewNote}>Create a note</Button> : null}
+                {view === "tasks-and-projects" ? (
+                  <FolderKanban className="mb-3 h-8 w-8 text-[var(--text-muted)]" />
+                ) : (
+                  <NotebookPen className="mb-3 h-8 w-8 text-[var(--text-muted)]" />
+                )}
+                <p className="font-semibold text-[var(--text-primary)]">
+                  {search
+                    ? "No matching notes"
+                    : view === "tasks-and-projects"
+                    ? "No task or project notes yet"
+                    : "No notes yet"}
+                </p>
+                {view === "tasks-and-projects" ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)] max-w-xs">
+                    Notes added to tasks and projects will automatically appear here.
+                  </p>
+                ) : !search ? (
+                  <Button type="button" variant="ghost" className="mt-2 text-xs" onClick={beginNewNote}>Create a note</Button>
+                ) : null}
               </div>
             )}
             <div ref={loadMoreRef} className="h-1" />
@@ -1952,6 +2111,7 @@ export function NotesWorkspace({
                 <span className="min-w-0 flex-1 truncate">All Notes</span>
                 <span className="text-xs tabular-nums opacity-70">{allCount}</span>
               </button>
+
               {folders.map((folder) => {
                 const isActive = activeFolderId === folder.id
                 return (
@@ -1985,6 +2145,32 @@ export function NotesWorkspace({
                   </div>
                 )
               })}
+
+              <div className="my-2 border-t border-[var(--line-subtle)]" />
+
+              <button
+                type="button"
+                onClick={() => { setMobileListOptionsOpen(false); switchView("tasks-and-projects") }}
+                className={cn(
+                  "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors",
+                  view === "tasks-and-projects"
+                    ? "bg-[color:color-mix(in_srgb,var(--brand-primary)_14%,transparent)] font-semibold text-[var(--brand-primary)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-low)]"
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xs",
+                    view === "tasks-and-projects"
+                      ? "bg-[var(--brand-primary)] text-white"
+                      : "bg-[var(--surface-low)] text-[var(--text-muted)]"
+                  )}
+                >
+                  <FolderKanban className="h-3.5 w-3.5" />
+                </div>
+                <span className="min-w-0 flex-1 truncate">Tasks & Projects</span>
+                <span className="text-xs tabular-nums opacity-70">{tasksAndProjectsCount}</span>
+              </button>
             </div>
 
             <p className="mt-5 px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Sort by</p>

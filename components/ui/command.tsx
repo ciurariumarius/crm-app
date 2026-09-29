@@ -25,18 +25,19 @@ Command.displayName = CommandPrimitive.displayName
 interface CommandDialogProps extends React.ComponentPropsWithoutRef<typeof CommandPrimitive> {
     open?: boolean
     onOpenChange?: (open: boolean) => void
+    dialogClassName?: string
 }
 
-const CommandDialog = ({ children, open, onOpenChange, ...props }: CommandDialogProps) => {
+const CommandDialog = ({ children, open, onOpenChange, dialogClassName, ...props }: CommandDialogProps) => {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="overflow-hidden p-0 shadow-lg">
+            <DialogContent className={cn("overflow-hidden p-0 shadow-2xl sm:max-w-2xl md:max-w-3xl lg:max-w-4xl", dialogClassName)}>
                 <DialogTitle className="sr-only">Search</DialogTitle>
                 <DialogDescription className="sr-only">
-                    Search for projects, tasks, and partners across the application.
+                    Search for projects, tasks, notes, and partners across the application.
                 </DialogDescription>
                 <Command
-                    className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5"
+                    className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-[var(--text-muted)] [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-1 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-13 [&_[cmdk-item]]:px-3.5 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5"
                     {...props}
                 >
                     {children}

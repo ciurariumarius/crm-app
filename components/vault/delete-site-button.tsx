@@ -18,7 +18,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-export function DeleteSiteButton({ siteId, partnerId }: { siteId: string, partnerId: string }) {
+export function DeleteSiteButton({ siteId, onDeleted, iconOnly = false }: { siteId: string; onDeleted?: () => void; iconOnly?: boolean }) {
     const [isDeleting, setIsDeleting] = useState(false)
     const router = useRouter()
 
@@ -27,8 +27,8 @@ export function DeleteSiteButton({ siteId, partnerId }: { siteId: string, partne
         try {
             const result = await deleteSite(siteId)
             if (result.success) {
-                toast.success("Site deleted")
-                router.push(`/partners/${partnerId}`)
+                toast.success("Domain deleted")
+                onDeleted?.()
                 router.refresh()
             } else {
                 toast.error(result.error || "Failed to delete site")
@@ -45,11 +45,13 @@ export function DeleteSiteButton({ siteId, partnerId }: { siteId: string, partne
             <AlertDialogTrigger asChild>
                 <Button
                     variant="ghost"
-                    size="sm"
-                    className="w-full text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                    size={iconOnly ? "icon" : "sm"}
+                    className={iconOnly ? "h-9 w-9 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600" : "w-full text-rose-500 hover:bg-rose-50 hover:text-rose-600"}
+                    aria-label="Delete domain"
+                    title={iconOnly ? "Delete domain" : undefined}
                 >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Site
+                    <Trash2 className={iconOnly ? "h-4 w-4" : "mr-2 h-4 w-4"} />
+                    {iconOnly ? null : "Delete domain"}
                 </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>

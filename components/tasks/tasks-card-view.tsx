@@ -240,9 +240,9 @@ export function TasksCardView({
     )
 
     const getStatusStyle = (status: string) => {
-        if (status === "Active") return "bg-[var(--sidebar-accent)] text-[var(--primary)] border border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))] dark:bg-[var(--sidebar-accent)] dark:text-[var(--primary)] dark:border-[color:color-mix(in_srgb,var(--primary)_28%,var(--line-subtle))]"
-        if (status === "Pending" || status === "Paused") return "bg-[color:color-mix(in_srgb,var(--state-warning)_14%,transparent)] text-[var(--state-warning)] border border-[color:color-mix(in_srgb,var(--state-warning)_34%,transparent)]"
-        if (status === "Completed" || status === "Done") return "bg-[var(--state-success-surface)] text-[var(--state-success)] border border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))] dark:bg-[var(--state-success-surface)] dark:text-[var(--state-success)] dark:border-[color:color-mix(in_srgb,var(--state-success)_28%,var(--line-subtle))]"
+        if (status === "Active") return "bg-blue-50/90 text-blue-600 border border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/50"
+        if (status === "Pending" || status === "Paused") return "bg-amber-50/90 text-amber-600 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/50"
+        if (status === "Completed" || status === "Done") return "bg-emerald-50/90 text-emerald-600 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/50"
         return "bg-muted text-muted-foreground border border-border"
     }
 
@@ -598,12 +598,12 @@ export function TasksCardView({
                                                         className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold"
                                                     >
                                                         <span className="flex items-center gap-2">
-                                                            {statusOption === "Active" ? <Play className="h-3 w-3 fill-current text-[var(--primary)]" /> :
-                                                             statusOption === "Pending" ? <Pause className="h-3 w-3 fill-current text-[var(--state-warning)]" /> :
-                                                             <Check className="h-3 w-3 text-[var(--state-success)]" />}
+                                                            {statusOption === "Active" ? <Play className="h-3 w-3 fill-current text-blue-600 dark:text-blue-400" /> :
+                                                             statusOption === "Pending" ? <Pause className="h-3 w-3 fill-current text-amber-600 dark:text-amber-400" /> :
+                                                             <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />}
                                                             {statusOption}
                                                         </span>
-                                                        {isCurrent ? <Check className="ml-auto h-3.5 w-3.5 text-[var(--primary)]" /> : null}
+                                                        {isCurrent ? <Check className="ml-auto h-3.5 w-3.5 text-[var(--text-primary)]" /> : null}
                                                     </DropdownMenuItem>
                                                 )
                                             })}

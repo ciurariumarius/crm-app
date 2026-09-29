@@ -69,14 +69,14 @@ export function AddLmsClientDialog({
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isProject ? "Add LMS project" : "Add client"}</DialogTitle>
-          <DialogDescription>
-            Enter the LMS {isProject ? "project" : "client"} name or domain. If it already exists, it will be selected instead of duplicated.
+          <DialogTitle>{isProject ? "Add Limitless Project" : "Add client"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Enter the domain name. If it already exists, it will be selected instead of duplicated.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="new-lms-client">{isProject ? "LMS project" : "Client"} name or domain</Label>
+            <Label htmlFor="new-lms-client">{isProject ? "Domain name" : "Client name"}</Label>
             <Input
               id="new-lms-client"
               autoFocus

@@ -1,20 +1,20 @@
 "use client"
 
 import * as React from "react"
-import { CheckCircle2, Expand, Loader2, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { format } from "date-fns"
+import { Expand } from "lucide-react"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { SidePanelChip, SidePanelSectionTitle } from "@/components/ui/side-panel-primitives"
 import { cn } from "@/lib/utils"
 
 type SidePanelNotesSectionProps = {
-    title: string
-    statusLabel: string
-    statusTone: "blue" | "emerald" | "amber" | "rose" | "slate"
+    title?: string
+    statusLabel?: string
+    statusTone?: "blue" | "emerald" | "amber" | "rose" | "slate"
     statusState?: "saving" | "ready" | "typing" | "saved" | "error"
     value: string
     onChange: (value: string) => void
     onBlur?: () => void
+    updatedAt?: Date | string | null
     uploadProjectId?: string
     imageUploadsDisabled?: boolean
     onAddTemplate?: () => void
@@ -27,24 +27,13 @@ type SidePanelNotesSectionProps = {
     minHeightClassName?: string
 }
 
-function buildStatusIcon(state?: SidePanelNotesSectionProps["statusState"]) {
-    if (state === "saving") return <Loader2 className="h-3.5 w-3.5 animate-spin" />
-    if (state === "ready" || state === "saved") return <CheckCircle2 className="h-3.5 w-3.5" />
-    return undefined
-}
-
 export function SidePanelNotesSection({
-    title,
-    icon,
-    statusLabel,
-    statusTone,
-    statusState,
     value,
     onChange,
     onBlur,
+    updatedAt,
     uploadProjectId,
     imageUploadsDisabled,
-    onAddTemplate,
     onExpand,
     expandLabel = "Open notes in full view",
     extraToolbarActions,
@@ -52,60 +41,63 @@ export function SidePanelNotesSection({
     editorClassName = "rounded-[16px] bg-[var(--surface-lowest)]",
     minHeightClassName = "h-[360px]",
 }: SidePanelNotesSectionProps) {
-    return (
-        <section className={cn("space-y-3 border-t border-[var(--line-subtle)] pt-3", className)}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-                <SidePanelSectionTitle title={title} icon={icon} />
-                <SidePanelChip
-                    tone={statusTone}
-                    icon={buildStatusIcon(statusState)}
-                    label={statusLabel}
-                />
-            </div>
+    const formattedDate = React.useMemo(() => {
+        if (!updatedAt) return null
+        try {
+            const dateObj = typeof updatedAt === "string" ? new Date(updatedAt) : updatedAt
+            if (Number.isNaN(dateObj.getTime())) return null
+            return format(dateObj, "d MMMM yyyy 'at' HH:mm")
+        } catch {
+            return null
+        }
+    }, [updatedAt])
 
+    return (
+        <section className={cn("pt-0", className)}>
             <RichTextEditor
                 value={value}
                 onChange={onChange}
                 onBlur={onBlur}
-                placeholder=""
+                placeholder="Title"
                 variant="plain"
                 mode="document"
+                panelStyle="borderless"
+                documentLayout="left"
+                documentWidth="full"
+                documentPadding="compact"
+                toolbarVisibility="always"
+                toolbarPreset="minimal"
+                toolbarTone="quiet"
+                toolbarPinned
                 notesMode
-                className={editorClassName}
+                notesAppearance="apple"
+                documentHeader={
+                    <div className="flex min-w-0 items-center justify-between gap-2 pb-0.5 pt-0">
+                        {formattedDate ? (
+                            <p className="min-w-0 truncate text-xs font-normal text-[var(--text-muted)]">
+                                {formattedDate}
+                            </p>
+                        ) : <div />}
+                        <div className="flex shrink-0 items-center gap-1.5">
+                            {extraToolbarActions}
+                            {onExpand ? (
+                                <button
+                                    type="button"
+                                    onClick={onExpand}
+                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                    aria-label={expandLabel}
+                                    title={expandLabel}
+                                >
+                                    <Expand className="h-4 w-4" />
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
+                }
+                className={cn("h-full min-h-0", editorClassName)}
                 minHeightClassName={minHeightClassName}
                 uploadProjectId={uploadProjectId}
                 imageUploadsDisabled={imageUploadsDisabled}
-                toolbarActions={
-                    <>
-                        {onAddTemplate ? (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={onAddTemplate}
-                                className="h-11 w-11 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] lg:h-8 lg:w-8"
-                                aria-label="Add template"
-                                title="Add template"
-                            >
-                                <Plus className="h-5 w-5 lg:h-4 lg:w-4" />
-                            </Button>
-                        ) : null}
-                        {extraToolbarActions}
-                        {onExpand ? (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={onExpand}
-                                className="h-11 w-11 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] lg:h-8 lg:w-8"
-                                aria-label={expandLabel}
-                                title={expandLabel}
-                            >
-                                <Expand className="h-5 w-5 lg:h-4 lg:w-4" />
-                            </Button>
-                        ) : null}
-                    </>
-                }
             />
         </section>
     )

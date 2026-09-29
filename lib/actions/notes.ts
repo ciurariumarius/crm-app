@@ -30,7 +30,7 @@ export type {
   NotesView,
 }
 
-const NoteIdSchema = z.string().uuid("Invalid note")
+const NoteIdSchema = z.string().min(1).max(128)
 const FolderIdSchema = z.string().uuid("Invalid folder")
 const FolderIdInputSchema = FolderIdSchema.nullable()
 const ContentSchema = z.string().max(500_000, "Note is too large")
@@ -164,6 +164,31 @@ export async function saveNoteContent(input: {
     await requireAuth()
     const noteId = NoteIdSchema.parse(input.noteId)
     const content = ContentSchema.parse(input.content)
+
+    if (noteId.startsWith("task:")) {
+      const taskId = noteId.slice("task:".length)
+      await prisma.task.update({
+        where: { id: taskId },
+        data: { description: content },
+      })
+      const detail = await getPersonalNoteDetail(noteId)
+      return detail
+        ? { success: true as const, data: detail }
+        : { success: false as const, error: "Task not found" }
+    }
+
+    if (noteId.startsWith("project:")) {
+      const projectId = noteId.slice("project:".length)
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { description: content },
+      })
+      const detail = await getPersonalNoteDetail(noteId)
+      return detail
+        ? { success: true as const, data: detail }
+        : { success: false as const, error: "Project not found" }
+    }
+
     const expectedRevision = z.number().int().min(0).parse(input.expectedRevision)
     const folderWasProvided = Object.prototype.hasOwnProperty.call(input, "folderId")
     const folderId = folderWasProvided

@@ -30,6 +30,8 @@ import { ProjectBoardSummaryCards } from "@/components/projects/project-board-su
 import { StatusChip, statusToneFromLabel } from "@/components/ui/status-chip"
 import { CloseProjectDialog } from "@/components/projects/close-project-dialog"
 import type { SearchPaginationState } from "@/types/search-pagination"
+import { DomainFavicon } from "@/components/domains/domain-favicon"
+import { ProjectGridCard, PROJECT_CARD_SHELL_CLASS } from "@/components/projects/project-grid-card"
 
 const currencyFormatter = new Intl.NumberFormat("ro-RO", {
     minimumFractionDigits: 0,
@@ -71,80 +73,6 @@ function toDateInputValue(value: Date | string | null | undefined) {
     const month = `${parsed.getMonth() + 1}`.padStart(2, "0")
     const day = `${parsed.getDate()}`.padStart(2, "0")
     return `${year}-${month}-${day}`
-}
-
-function normalizeDomain(domain: string | null | undefined) {
-    return (domain || "").trim().replace(/^https?:\/\//, "").split("/")[0]
-}
-
-function getFaviconCandidates(domain: string | null | undefined, storedFaviconUrl?: string | null) {
-    const normalized = normalizeDomain(domain)
-    if (!normalized) return storedFaviconUrl ? [storedFaviconUrl] : []
-    return [
-        ...(storedFaviconUrl ? [storedFaviconUrl] : []),
-        `https://${normalized}/favicon.ico`,
-    ]
-}
-
-function getDomainInitials(domain: string | null | undefined) {
-    const normalized = normalizeDomain(domain)
-    if (!normalized) return "??"
-    const token = normalized.split(".")[0] || normalized
-    return token.slice(0, 2).toUpperCase()
-}
-
-
-function DomainFaviconTile({
-    domain,
-    faviconUrl,
-}: {
-    domain: string | null | undefined
-    faviconUrl?: string | null
-}) {
-    const [failed, setFailed] = React.useState(false)
-    const [candidateIndex, setCandidateIndex] = React.useState(0)
-    const candidates = React.useMemo(() => getFaviconCandidates(domain, faviconUrl), [domain, faviconUrl])
-    const activeFaviconUrl = candidates[candidateIndex] || null
-    const fallback = getDomainInitials(domain)
-
-    React.useEffect(() => {
-        setFailed(false)
-        setCandidateIndex(0)
-    }, [domain])
-
-    return (
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line-subtle)] bg-[color:color-mix(in_srgb,var(--surface-low)_84%,transparent)]">
-            {!failed && activeFaviconUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                    src={activeFaviconUrl}
-                    alt=""
-                    className="h-7 w-7 rounded-md object-contain"
-                    loading="lazy"
-                    onLoad={(event) => {
-                        const { naturalWidth, naturalHeight } = event.currentTarget
-                        // Avoid blurry placeholders from low-res/default favicons.
-                        if (naturalWidth < 24 || naturalHeight < 24) {
-                            if (candidateIndex < candidates.length - 1) {
-                                setCandidateIndex((prev) => prev + 1)
-                                return
-                            }
-                            setFailed(true)
-                        }
-                    }}
-                    onError={() => {
-                        if (candidateIndex < candidates.length - 1) {
-                            setCandidateIndex((prev) => prev + 1)
-                            return
-                        }
-                        setFailed(true)
-                    }}
-                />
-            ) : (
-                <span className="text-xs font-extrabold tracking-wide text-[var(--text-secondary)]">{fallback}</span>
-            )}
-        </span>
-    )
 }
 
 function DateTimeCell({ value }: { value: Date | string | null | undefined }) {
@@ -193,19 +121,24 @@ function ProjectsGridSkeleton() {
             {Array.from({ length: 6 }).map((_, index) => (
                 <div
                     key={`project-grid-skeleton-${index}`}
-                    className="min-h-[176px] rounded-[20px] border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-4 shadow-[var(--shadow-apple)] sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
+                    className={cn(PROJECT_CARD_SHELL_CLASS, "p-4 sm:p-5")}
                 >
-                    <div className="animate-pulse space-y-3">
-                        <div className="flex items-start gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-[var(--surface-low)]" />
-                            <div className="min-w-0 flex-1 space-y-2">
-                                <div className="h-4 w-3/4 rounded bg-[var(--surface-low)]" />
-                                <div className="h-3 w-1/2 rounded bg-[var(--surface-low)]" />
+                    <div className="animate-pulse space-y-3 w-full">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="h-6 w-24 rounded-full bg-[var(--surface-low)]" />
+                            <div className="flex gap-1.5">
+                                <div className="h-6 w-14 rounded-full bg-[var(--surface-low)]" />
+                                <div className="h-6 w-16 rounded-full bg-[var(--surface-low)]" />
                             </div>
-                            <div className="h-6 w-20 rounded-full bg-[var(--surface-low)]" />
                         </div>
-                        <div className="h-8 w-full rounded-full bg-[var(--surface-low)]" />
-                        <div className="h-8 w-4/5 rounded-full bg-[var(--surface-low)]" />
+                        <div className="pt-2 space-y-2">
+                            <div className="h-5 w-3/4 rounded bg-[var(--surface-low)]" />
+                            <div className="h-4 w-1/2 rounded bg-[var(--surface-low)]" />
+                        </div>
+                        <div className="pt-4 border-t border-[var(--line-subtle)] flex items-center justify-between">
+                            <div className="h-4 w-20 rounded bg-[var(--surface-low)]" />
+                            <div className="h-4 w-12 rounded bg-[var(--surface-low)]" />
+                        </div>
                     </div>
                 </div>
             ))}
@@ -260,8 +193,9 @@ type BoardProject = {
     isRecurring: boolean
     serviceLabel: string
     site: {
+        id: string
         domainName: string
-        faviconUrl?: string | null
+        faviconHash?: string | null
         partner: {
             name: string
         }
@@ -805,46 +739,18 @@ export function ProjectsBoardRows({
                         <span className="text-xs font-semibold text-[var(--text-muted)]">{entries.length}</span>
                     </div>
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 2xl:gap-6">
-                        {entries.map((project) => {
-                            const projectStatus = getDisplayStatus(project)
-                            const projectPayment = getDisplayPayment(project)
-                            const cardSubtitle = getProjectCardSubtitle(project)
-
-                            return (
-                                <button
-                                    key={project.id}
-                                    type="button"
-                                    onClick={() => openDetails(project)}
-                                    className={cn(
-                                        "group flex min-h-[176px] min-w-0 flex-col rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_90%,transparent)] bg-[var(--surface-lowest)] p-4 text-left shadow-[var(--shadow-apple)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_22%,var(--line-subtle))] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:min-h-[195px] sm:p-5 xl:min-h-[210px]",
-                                        getProjectToneClass(projectStatus)
-                                    )}
-                                >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
-                                        <div className="flex flex-wrap justify-end gap-1.5">
-                                            <StatusChip tone={statusToneFromLabel(projectStatus)} size="xs">{projectStatus}</StatusChip>
-                                            <StatusChip tone={projectPayment === "Paid" ? "paid" : "unpaid"} size="xs">{projectPayment}</StatusChip>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-4 min-w-0">
-                                        <h3 className={cn("line-clamp-2 text-[19px] font-bold leading-[1.18] tracking-[-0.02em] transition-colors group-hover:text-[var(--brand-primary)] sm:text-xl", getProjectTitleClass(projectStatus))}>
-                                            {project.site.domainName || project.name || "Untitled project"}
-                                        </h3>
-                                        <p className={cn("mt-3 line-clamp-2 text-[15px] font-bold", getProjectMetaClass(projectStatus))}>{cardSubtitle}</p>
-                                    </div>
-
-                                    <div className="mt-auto flex items-end justify-between gap-3 border-t border-[var(--line-subtle)] pt-4">
-                                        <div>
-                                            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">Amount</p>
-                                            <p className="mt-1 font-mono text-sm font-bold text-[var(--text-primary)]">{currencyFormatter.format(getDisplayAmount(project))} RON</p>
-                                        </div>
-                                        <span className="text-xs font-semibold text-[var(--text-muted)]">{project.isRecurring ? "Recurring" : "One-time"}</span>
-                                    </div>
-                                </button>
-                            )
-                        })}
+                        {entries.map((project) => (
+                            <ProjectGridCard
+                                key={project.id}
+                                project={project}
+                                onOpen={() => openDetails(project)}
+                                onStatusChange={(p, nextStatus) => setProjectStatus(p as BoardProject, nextStatus)}
+                                onPaymentChange={(p, nextPayment) => setProjectPayment(p as BoardProject, nextPayment)}
+                                displayStatus={getDisplayStatus(project)}
+                                displayPayment={getDisplayPayment(project)}
+                                displayAmount={getDisplayAmount(project)}
+                            />
+                        ))}
                         {showAddCard && (
                             <button
                                 type="button"
@@ -852,7 +758,7 @@ export function ProjectsBoardRows({
                                 aria-label="Add project"
                                 title="Add project"
                                 onClick={() => setCreateProjectOpen(true)}
-                                className="group flex min-h-[176px] min-w-0 items-center justify-center rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_24%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 sm:aspect-[4/3] sm:min-h-[190px] sm:p-5 xl:min-h-[205px]"
+                                className="group flex min-h-[185px] min-w-0 items-center justify-center rounded-[20px] border border-dashed border-[color:color-mix(in_srgb,var(--line-subtle)_80%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_35%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--brand-primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:min-h-[200px] sm:p-5 xl:min-h-[210px]"
                             >
                                 <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
                                     <Plus className="h-6 w-6" strokeWidth={1.8} />
@@ -881,7 +787,7 @@ export function ProjectsBoardRows({
                                 aria-label="Add project"
                                 title="Add project"
                                 onClick={() => setCreateProjectOpen(true)}
-                                className="group flex min-h-[176px] min-w-0 items-center justify-center rounded-[20px] border border-[color:color-mix(in_srgb,var(--line-subtle)_72%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--primary)_24%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 sm:min-h-[195px] sm:p-5 xl:min-h-[210px]"
+                                className="group flex min-h-[185px] min-w-0 items-center justify-center rounded-[20px] border border-dashed border-[color:color-mix(in_srgb,var(--line-subtle)_80%,transparent)] bg-transparent text-[var(--text-muted)] shadow-[0_2px_10px_rgba(15,23,42,0.025)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--brand-primary)_35%,var(--line-subtle))] hover:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] hover:text-[var(--brand-primary)] hover:shadow-[0_6px_18px_rgba(15,23,42,0.055)] focus-visible:bg-[color:color-mix(in_srgb,var(--surface-lowest)_48%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 sm:min-h-[200px] sm:p-5 xl:min-h-[210px]"
                             >
                                 <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--line-subtle)] bg-[var(--surface-lowest)] shadow-[var(--shadow-apple)] transition-transform duration-200 group-hover:scale-105">
                                     <Plus className="h-6 w-6" strokeWidth={1.8} />
@@ -950,7 +856,7 @@ export function ProjectsBoardRows({
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
                                                 <div className="flex items-center gap-2.5">
-                                                    <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
+                                                    <DomainFavicon siteId={project.site.id} domain={project.site.domainName} faviconHash={project.site.faviconHash} />
                                                     <div className="min-w-0">
                                                         <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
                                                             <span>{project.site.domainName}</span>
@@ -993,7 +899,7 @@ export function ProjectsBoardRows({
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
-                                                <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
+                                                <DomainFavicon siteId={project.site.id} domain={project.site.domainName} faviconHash={project.site.faviconHash} />
                                                 <div className="min-w-0">
                                                     <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
                                                         <span>{project.site.domainName}</span>
@@ -1201,7 +1107,7 @@ export function ProjectsBoardRows({
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0 pr-2">
                                                 <div className="flex items-center gap-2.5">
-                                                    <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
+                                                    <DomainFavicon siteId={project.site.id} domain={project.site.domainName} faviconHash={project.site.faviconHash} />
                                                     <div className="min-w-0">
                                                         <p className={cn("break-words font-bold leading-tight tracking-tight", getProjectTitleClass(projectStatus))}>
                                                             <span>{project.site.domainName}</span>
@@ -1247,7 +1153,7 @@ export function ProjectsBoardRows({
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2.5">
-                                                <DomainFaviconTile domain={project.site.domainName} faviconUrl={project.site.faviconUrl} />
+                                                <DomainFavicon siteId={project.site.id} domain={project.site.domainName} faviconHash={project.site.faviconHash} />
                                                 <div className="min-w-0">
                                                     <p className={cn("font-bold tracking-tight whitespace-nowrap overflow-x-auto hidescrollbar", getProjectTitleClass(projectStatus))}>
                                                         <span>{project.site.domainName}</span>

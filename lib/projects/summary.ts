@@ -19,8 +19,9 @@ export type ProjectSummary = {
     isRecurring: boolean
     serviceLabel: string
     site: {
+        id: string
         domainName: string
-        faviconUrl: string | null
+        faviconHash: string | null
         partner: {
             name: string
         }
@@ -52,10 +53,11 @@ const summarySelect = {
     updatedAt: true,
     closedAt: true,
     isHeavyRevenueMonth: true,
-    site: {
-        select: {
-            domainName: true,
-            faviconUrl: true,
+        site: {
+            select: {
+                id: true,
+                domainName: true,
+                faviconHash: true,
             partner: { select: { name: true } },
         },
     },

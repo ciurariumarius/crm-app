@@ -14,6 +14,9 @@ import { TableRow } from "@tiptap/extension-table-row"
 import { TableCell } from "@tiptap/extension-table-cell"
 import { TableHeader } from "@tiptap/extension-table-header"
 import {
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
     ArrowLeft,
     ArrowRight,
     Bold,
@@ -21,20 +24,26 @@ import {
     Code2,
     Copy,
     Download,
+    ExternalLink,
+    Eye,
+    FileText,
     ImagePlus,
     Italic,
     Link2,
     List,
     ListChecks,
+    Maximize2,
     Table as TableIcon,
     Minus,
     MoreHorizontal,
+    Paperclip,
     Plus,
     Trash2,
+    UploadCloud,
     X,
 } from "lucide-react"
 import { Toggle } from "@/components/ui/toggle"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,7 +54,178 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { normalizeRichTextLink } from "@/lib/notes/content"
 
-const MAX_UPLOAD_FILE_BYTES = 12 * 1024 * 1024
+const MAX_UPLOAD_FILE_BYTES = 25 * 1024 * 1024
+
+function formatFileSize(bytes: number) {
+    if (!bytes || Number.isNaN(bytes)) return ""
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function cleanAttachmentTitle(name: string | null | undefined): string {
+    if (!name) return "Attachment"
+    return (
+        name
+            .replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uD800-\uDFFF\uFFFD\u25A0-\u25FF\u2300-\u23FF📄📝📊📎📦📁]+\s*/gu, "")
+            .replace(/^[📄📝📊📎📦📁\uFFFD\u25A1\u25A0\u2388\u2327\u232B\u25AF\u25AE\uFFFE\u{1F4C4}\u{1F4DD}\u{1F4CA}\u{1F4CE}]+\s*/giu, "")
+            .replace(/\s*\(\s*\d+(?:\.\d+)?\s*(?:B|KB|MB|GB)\s*\)$/i, "")
+            .trim() || "Attachment"
+    )
+}
+
+const FILE_ICONS_SVG_DATA: Record<string, string> = {
+    pdf: `data:image/svg+xml;utf8,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h2a1.5 1.5 0 0 0 0-3H9v6"/></svg>'
+    )}`,
+    doc: `data:image/svg+xml;utf8,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>'
+    )}`,
+    sheet: `data:image/svg+xml;utf8,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="12" y1="9" x2="12" y2="21"/></svg>'
+    )}`,
+    image: `data:image/svg+xml;utf8,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>'
+    )}`,
+    zip: `data:image/svg+xml;utf8,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>'
+    )}`,
+    file: `data:image/svg+xml;utf8,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    )}`,
+}
+
+function renderFileIconSpec(extension: string) {
+    const ext = String(extension || "file").toLowerCase()
+    if (ext === "pdf") {
+        return [
+            "div",
+            {
+                class:
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 shadow-2xs pointer-events-none select-none",
+            },
+            [
+                "img",
+                {
+                    src: FILE_ICONS_SVG_DATA.pdf,
+                    class: "h-5 w-5 pointer-events-none select-none",
+                    alt: "PDF",
+                    draggable: "false",
+                },
+            ],
+        ]
+    }
+    if (["doc", "docx", "txt", "rtf", "md"].includes(ext)) {
+        return [
+            "div",
+            {
+                class:
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 shadow-2xs pointer-events-none select-none",
+            },
+            [
+                "img",
+                {
+                    src: FILE_ICONS_SVG_DATA.doc,
+                    class: "h-5 w-5 pointer-events-none select-none",
+                    alt: "Document",
+                    draggable: "false",
+                },
+            ],
+        ]
+    }
+    if (["xls", "xlsx", "csv"].includes(ext)) {
+        return [
+            "div",
+            {
+                class:
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 shadow-2xs pointer-events-none select-none",
+            },
+            [
+                "img",
+                {
+                    src: FILE_ICONS_SVG_DATA.sheet,
+                    class: "h-5 w-5 pointer-events-none select-none",
+                    alt: "Spreadsheet",
+                    draggable: "false",
+                },
+            ],
+        ]
+    }
+    if (["jpg", "jpeg", "png", "webp", "gif", "svg", "bmp"].includes(ext)) {
+        return [
+            "div",
+            {
+                class:
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 shadow-2xs pointer-events-none select-none",
+            },
+            [
+                "img",
+                {
+                    src: FILE_ICONS_SVG_DATA.image,
+                    class: "h-5 w-5 pointer-events-none select-none",
+                    alt: "Image",
+                    draggable: "false",
+                },
+            ],
+        ]
+    }
+    if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) {
+        return [
+            "div",
+            {
+                class:
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 shadow-2xs pointer-events-none select-none",
+            },
+            [
+                "img",
+                {
+                    src: FILE_ICONS_SVG_DATA.zip,
+                    class: "h-5 w-5 pointer-events-none select-none",
+                    alt: "Archive",
+                    draggable: "false",
+                },
+            ],
+        ]
+    }
+    return [
+        "div",
+        {
+            class:
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-low)] border border-[var(--line-subtle)] text-[var(--text-secondary)] shadow-2xs pointer-events-none select-none",
+        },
+        [
+            "img",
+            {
+                src: FILE_ICONS_SVG_DATA.file,
+                class: "h-5 w-5 pointer-events-none select-none",
+                alt: "File",
+                draggable: "false",
+            },
+        ],
+    ]
+}
+
+function upgradeLegacyAttachmentLinks(html: string): string {
+    if (!html) return ""
+    if (
+        !html.includes("/api/project-notes/file") &&
+        !html.includes(".pdf") &&
+        !html.includes(".doc") &&
+        !html.includes(".xls") &&
+        !html.includes(".zip")
+    ) {
+        return html
+    }
+    return html.replace(
+        /<p[^>]*>(?:\s*<strong[^>]*>)?\s*<a\s+[^>]*href=["']([^"']*(?:\/api\/project-notes\/file|\.pdf|\.docx?|\.xlsx?|\.zip)[^"']*)["'][^>]*>(?:<strong[^>]*>)?(?:[^\w\s<]*\s*)?([^<]+?)(?:\s*\(([^)]+)\))?(?:<\/strong>)?<\/a>\s*(?:<\/strong>)?\s*<\/p>/gi,
+        (_, href, name, size) => {
+            const cleanName = cleanAttachmentTitle(name)
+            const ext = cleanName.split(".").pop()?.toLowerCase() || "file"
+            const sizeFormatted = (size || "").trim()
+            return `<div data-type="file-attachment" data-src="${href}" data-name="${cleanName}" data-size="${sizeFormatted}" data-extension="${ext}"></div>`
+        }
+    )
+}
 
 const ScreenshotImage = Node.create({
     name: "image",
@@ -58,17 +238,216 @@ const ScreenshotImage = Node.create({
             src: { default: null },
             alt: { default: null },
             title: { default: null },
+            width: {
+                default: null,
+                parseHTML: (element) => element.getAttribute("width") || element.style.width || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.width) return {}
+                    return {
+                        width: attributes.width,
+                        style: `width: ${attributes.width}; max-width: 100%;`,
+                    }
+                },
+            },
+            alignment: {
+                default: "left",
+                parseHTML: (element) =>
+                    element.getAttribute("data-alignment") ||
+                    (element.style.marginLeft === "auto" && element.style.marginRight === "auto"
+                        ? "center"
+                        : element.style.marginLeft === "auto"
+                        ? "right"
+                        : "left"),
+                renderHTML: (attributes) => {
+                    if (!attributes.alignment || attributes.alignment === "left") return {}
+                    return {
+                        "data-alignment": attributes.alignment,
+                    }
+                },
+            },
         }
     },
     parseHTML() {
         return [{ tag: "img[src]" }]
     },
     renderHTML({ HTMLAttributes }) {
+        const alignment = HTMLAttributes["data-alignment"] || "left"
+        const alignClass =
+            alignment === "center"
+                ? "mx-auto block"
+                : alignment === "right"
+                ? "ml-auto block"
+                : "mr-auto block"
         return [
             "img",
             mergeAttributes(HTMLAttributes, {
-                class: "max-w-full h-auto rounded-lg border border-[var(--line-subtle)] shadow-sm my-3 cursor-zoom-in",
+                class: cn(
+                    "h-auto rounded-lg border border-[var(--line-subtle)] shadow-sm my-3 cursor-pointer transition-all",
+                    alignClass
+                ),
             }),
+        ]
+    },
+})
+
+const FileAttachment = Node.create({
+    name: "fileAttachment",
+    group: "block",
+    draggable: true,
+    selectable: true,
+    atom: true,
+    addAttributes() {
+        return {
+            src: { default: "" },
+            name: { default: "Attachment" },
+            size: { default: "" },
+            extension: { default: "file" },
+            mimeType: { default: "" },
+        }
+    },
+    parseHTML() {
+        return [
+            {
+                tag: 'div[data-type="file-attachment"]',
+                getAttrs: (element) => {
+                    const el = element as HTMLElement
+                    const rawName = el.getAttribute("data-name") || "Attachment"
+                    const cleanName = cleanAttachmentTitle(rawName)
+                    const ext = (
+                        el.getAttribute("data-extension") ||
+                        cleanName.split(".").pop() ||
+                        ""
+                    ).toLowerCase()
+                    return {
+                        src: el.getAttribute("data-src") || el.getAttribute("href") || "",
+                        name: cleanName,
+                        size: el.getAttribute("data-size") || "",
+                        extension: ext,
+                        mimeType: el.getAttribute("data-mime") || "",
+                    }
+                },
+            },
+            {
+                tag: 'a[href*="/api/project-notes/file"]',
+                getAttrs: (element) => {
+                    const el = element as HTMLElement
+                    const href = el.getAttribute("href") || ""
+                    const text = el.textContent || ""
+                    const sizeMatch = text.match(/\(([^)]+)\)$/)
+                    const size = sizeMatch ? sizeMatch[1] : ""
+                    const cleanName = cleanAttachmentTitle(text)
+                    const ext = cleanName.split(".").pop()?.toLowerCase() || "file"
+                    return {
+                        src: href,
+                        name: cleanName,
+                        size: size || "",
+                        extension: ext,
+                        mimeType: "",
+                    }
+                },
+            },
+        ]
+    },
+    renderHTML({ HTMLAttributes }) {
+        const cleanName = cleanAttachmentTitle(HTMLAttributes.name)
+        const ext = String(
+            HTMLAttributes.extension || cleanName.split(".").pop() || "file"
+        ).toLowerCase()
+        const isPdf = ext === "pdf"
+        const isImage = ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "avif"].includes(ext)
+        const isDoc = ["doc", "docx", "txt", "rtf", "md"].includes(ext)
+        const isSheet = ["xls", "xlsx", "csv"].includes(ext)
+        const isZip = ["zip", "rar", "7z", "tar", "gz"].includes(ext)
+        const typeLabel = isPdf
+            ? "PDF Document"
+            : isImage
+            ? "Image"
+            : isDoc
+            ? "Document"
+            : isSheet
+            ? "Spreadsheet"
+            : isZip
+            ? "Archive"
+            : "File"
+
+        return [
+            "div",
+            mergeAttributes(HTMLAttributes, {
+                "data-type": "file-attachment",
+                "data-src": HTMLAttributes.src,
+                "data-name": cleanName,
+                "data-size": HTMLAttributes.size,
+                "data-extension": ext,
+                "data-mime": HTMLAttributes.mimeType || "",
+                class:
+                    "note-file-card not-prose my-3 flex items-center justify-between gap-3 rounded-2xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-3 shadow-2xs transition-all hover:bg-[var(--surface-low)] hover:border-[var(--line-strong)] max-w-md select-none group cursor-pointer no-underline",
+            }),
+            [
+                "div",
+                { class: "flex items-center gap-3 min-w-0 flex-1 pointer-events-none" },
+                renderFileIconSpec(ext),
+                [
+                    "div",
+                    { class: "min-w-0 flex-1" },
+                    [
+                        "div",
+                        {
+                            class:
+                                "truncate text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors",
+                            title: cleanName,
+                        },
+                        cleanName,
+                    ],
+                    [
+                        "div",
+                        { class: "flex items-center gap-1.5 text-xs text-[var(--text-muted)] mt-0.5" },
+                        `${typeLabel}${HTMLAttributes.size ? ` • ${HTMLAttributes.size}` : ""}`,
+                    ],
+                ],
+            ],
+            [
+                "div",
+                { class: "flex items-center gap-1 shrink-0" },
+                isPdf || isImage
+                    ? [
+                          "button",
+                          {
+                              type: "button",
+                              "data-preview-file": "true",
+                              "data-file-src": HTMLAttributes.src,
+                              "data-file-name": HTMLAttributes.name,
+                              "data-file-size": HTMLAttributes.size,
+                              "data-file-type": isImage ? "image" : "pdf",
+                              class:
+                                  "inline-flex h-8 px-2.5 items-center justify-center gap-1 rounded-lg text-xs font-semibold bg-[var(--surface-low)] text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] hover:text-[var(--text-primary)] border border-[var(--line-subtle)] transition-colors no-underline cursor-pointer",
+                              title: isImage ? "Preview Image" : "Preview PDF",
+                          },
+                          "Preview",
+                      ]
+                    : [
+                          "a",
+                          {
+                              href: HTMLAttributes.src,
+                              target: "_blank",
+                              rel: "noopener noreferrer nofollow",
+                              class:
+                                  "inline-flex h-8 px-2.5 items-center justify-center gap-1 rounded-lg text-xs font-semibold bg-[var(--surface-low)] text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] hover:text-[var(--text-primary)] border border-[var(--line-subtle)] transition-colors no-underline",
+                              title: "Open file",
+                          },
+                          "Open",
+                      ],
+                [
+                    "a",
+                    {
+                        href: HTMLAttributes.src,
+                        download: HTMLAttributes.name,
+                        class:
+                            "inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-lowest)] hover:text-[var(--text-primary)] border border-[var(--line-subtle)] transition-colors no-underline",
+                        title: "Download",
+                    },
+                    "↓",
+                ],
+            ],
         ]
     },
 })
@@ -136,6 +515,7 @@ interface RichTextEditorProps {
     panelStyle?: "default" | "borderless"
     documentLayout?: "center" | "left"
     documentWidth?: "full" | "reading"
+    documentPadding?: "default" | "compact" | "none"
     readOnly?: boolean
     imageUploadFallback?: "data-url" | "error"
     imageUploadsDisabled?: boolean
@@ -180,6 +560,14 @@ function extractImageSources(editor: TiptapEditor): string[] {
     editor.state.doc.descendants((node) => {
         if (node.type.name === "image" && node.attrs?.src) {
             sources.push(String(node.attrs.src))
+        } else if (node.type.name === "fileAttachment" && node.attrs?.src) {
+            const ext = String(node.attrs.extension || "").toLowerCase()
+            const isImg =
+                ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "avif"].includes(ext) ||
+                String(node.attrs.src).startsWith("data:image/")
+            if (isImg) {
+                sources.push(String(node.attrs.src))
+            }
         }
         return true
     })
@@ -217,6 +605,7 @@ export function RichTextEditor({
     panelStyle = "default",
     documentLayout = "center",
     documentWidth = "full",
+    documentPadding = "default",
     readOnly = false,
     imageUploadFallback = "data-url",
     imageUploadsDisabled = false,
@@ -229,12 +618,19 @@ export function RichTextEditor({
     const [isFocused, setIsFocused] = React.useState(false)
     const [uploadState, setUploadState] = React.useState<UploadState | null>(null)
     const [viewer, setViewer] = React.useState<ImageViewerState>(INITIAL_VIEWER_STATE)
+    const [pdfPreviewState, setPdfPreviewState] = React.useState<{
+        src: string
+        name: string
+        size?: string
+    } | null>(null)
     const [imageSources, setImageSources] = React.useState<string[]>([])
     const [codeCopyState, setCodeCopyState] = React.useState<"idle" | "copied" | "error">("idle")
     const [folderSuggestion, setFolderSuggestion] = React.useState<FolderSuggestionState | null>(null)
+    const [isDraggingOver, setIsDraggingOver] = React.useState(false)
+    const dragDepthRef = React.useRef(0)
     const editorRef = React.useRef<TiptapEditor | null>(null)
     const editorViewportRef = React.useRef<HTMLDivElement | null>(null)
-    const imageInputRef = React.useRef<HTMLInputElement | null>(null)
+    const fileInputRef = React.useRef<HTMLInputElement | null>(null)
     const lastEditorHtmlRef = React.useRef(value)
     const [codeCopyAnchor, setCodeCopyAnchor] = React.useState<{ top: number; left: number } | null>(null)
     const [activeCodeBlockElement, setActiveCodeBlockElement] = React.useState<HTMLElement | null>(null)
@@ -280,6 +676,66 @@ export function RichTextEditor({
         if (showImageGallery) syncImageSources(extractImageSources(editor))
     }, [showImageGallery, syncImageSources])
 
+    const insertFileAttachment = React.useCallback(
+        (item: { url: string; name: string; size?: number; isImage?: boolean }) => {
+            const editor = editorRef.current
+            if (!editor || !item.url) return
+
+            const cleanName = cleanAttachmentTitle(item.name)
+            const sizeFormatted = item.size ? formatFileSize(item.size) : ""
+            const ext = cleanName.split(".").pop()?.toLowerCase() || "file"
+            const isImage =
+                item.isImage ||
+                ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "avif"].includes(ext) ||
+                item.url.startsWith("data:image/")
+
+            if (isImage) {
+                editor
+                    .chain()
+                    .focus()
+                    .insertContent([
+                        {
+                            type: "image",
+                            attrs: {
+                                src: item.url,
+                                alt: cleanName || "Image",
+                                title: cleanName,
+                                width: "100%",
+                                alignment: "left",
+                            },
+                        },
+                        {
+                            type: "paragraph",
+                        },
+                    ])
+                    .run()
+                syncImageSources(extractImageSources(editor))
+                return
+            }
+
+            editor
+                .chain()
+                .focus()
+                .insertContent([
+                    {
+                        type: "fileAttachment",
+                        attrs: {
+                            src: item.url,
+                            name: cleanName,
+                            size: sizeFormatted,
+                            extension: ext,
+                            mimeType: "",
+                        },
+                    },
+                    {
+                        type: "paragraph",
+                    },
+                ])
+                .run()
+        },
+        [syncImageSources]
+    )
+
     const removeImageByIndex = React.useCallback((targetIndex: number) => {
         const editor = editorRef.current
         if (!editor) return
@@ -306,10 +762,10 @@ export function RichTextEditor({
         }
     }, [syncImageSources])
 
-    const uploadImageFile = React.useCallback(
-        async (file: File) => {
+    const uploadFile = React.useCallback(
+        async (file: File): Promise<{ url: string; name: string; size: number; isImage: boolean }> => {
             if (file.size > MAX_UPLOAD_FILE_BYTES) {
-                throw new Error(`Image ${file.name || "file"} is too large (max 12MB).`)
+                throw new Error(`File "${file.name || "item"}" exceeds 25MB limit.`)
             }
 
             try {
@@ -325,12 +781,27 @@ export function RichTextEditor({
                 })
 
                 if (!response.ok) {
-                    throw new Error("Upload failed")
+                    const errPayload = await response.json().catch(() => null)
+                    throw new Error(errPayload?.error || "Upload failed")
                 }
 
-                const payload = (await response.json()) as { success?: boolean; urls?: string[] }
-                if (payload.success && payload.urls?.[0]) {
-                    return payload.urls[0]
+                const payload = (await response.json()) as {
+                    success?: boolean
+                    urls?: string[]
+                    files?: Array<{ url: string; name: string; size: number; isImage: boolean }>
+                }
+                if (payload.success) {
+                    if (payload.files?.[0]) {
+                        return payload.files[0]
+                    }
+                    if (payload.urls?.[0]) {
+                        return {
+                            url: payload.urls[0],
+                            name: file.name || "Attachment",
+                            size: file.size,
+                            isImage: file.type.startsWith("image/"),
+                        }
+                    }
                 }
             } catch (error) {
                 if (imageUploadFallback === "error") {
@@ -341,43 +812,64 @@ export function RichTextEditor({
             if (imageUploadFallback === "error") {
                 throw new Error("Upload failed")
             }
-            return await fileToDataUrl(file)
+
+            const isImg = file.type.startsWith("image/")
+            if (isImg) {
+                const dataUrl = await fileToDataUrl(file)
+                return {
+                    url: dataUrl,
+                    name: file.name || "Screenshot",
+                    size: file.size,
+                    isImage: true,
+                }
+            }
+
+            throw new Error("Upload failed")
         },
         [imageUploadFallback, uploadProjectId]
     )
 
     const uploadAndInsertFiles = React.useCallback(
         async (files: File[]) => {
-            if (imageUploadsDisabled) return
-            const imageFiles = files.filter((file) => file.type.startsWith("image/"))
-            if (!imageFiles.length) return
+            if (imageUploadsDisabled || !files.length) return
+            const editor = editorRef.current
+            if (editor) {
+                const docText = editor.getText().trim()
+                const hasExistingContent = docText.length > 0 || editor.state.doc.childCount > 1
+                if (hasExistingContent) {
+                    const lastChild = editor.state.doc.lastChild
+                    if (lastChild && lastChild.type.name !== "horizontalRule") {
+                        editor.chain().focus().setHorizontalRule().run()
+                    }
+                }
+            }
 
-            setUploadState({ completed: 0, total: imageFiles.length })
+            setUploadState({ completed: 0, total: files.length })
 
             try {
-                for (let index = 0; index < imageFiles.length; index += 1) {
-                    const file = imageFiles[index]
-                    const src = await uploadImageFile(file)
-                    insertImageSource(src, file.name || "Screenshot")
-                    setUploadState({ completed: index + 1, total: imageFiles.length })
+                for (let index = 0; index < files.length; index += 1) {
+                    const file = files[index]
+                    const uploaded = await uploadFile(file)
+                    insertFileAttachment(uploaded)
+                    setUploadState({ completed: index + 1, total: files.length })
                 }
 
                 setTimeout(() => setUploadState(null), 900)
             } catch (error) {
                 setUploadState({
                     completed: 0,
-                    total: imageFiles.length,
-                    error: error instanceof Error ? error.message : "Failed to paste screenshot",
+                    total: files.length,
+                    error: error instanceof Error ? error.message : "Failed to upload file",
                 })
-                setTimeout(() => setUploadState(null), 2200)
+                setTimeout(() => setUploadState(null), 2500)
             }
         },
-        [imageUploadsDisabled, insertImageSource, uploadImageFile]
+        [imageUploadsDisabled, insertFileAttachment, uploadFile]
     )
 
-    const handleToolbarImageUpload = React.useCallback(
+    const handleToolbarFileUpload = React.useCallback(
         (event: React.ChangeEvent<HTMLInputElement>) => {
-            const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"))
+            const files = Array.from(event.target.files || [])
             if (files.length > 0) {
                 void uploadAndInsertFiles(files)
             }
@@ -389,11 +881,15 @@ export function RichTextEditor({
     const openImageViewer = React.useCallback(
         (src: string) => {
             const sources = refreshImageSources()
-            if (!sources.length) return
-            const clickedIndex = sources.findIndex((item) => item === src)
+            const list = sources.includes(src)
+                ? sources
+                : sources.length > 0
+                ? [...sources, src]
+                : [src]
+            const clickedIndex = list.findIndex((item) => item === src)
             setViewer({
                 open: true,
-                sources,
+                sources: list,
                 index: clickedIndex >= 0 ? clickedIndex : 0,
                 zoom: 1,
             })
@@ -685,6 +1181,7 @@ export function RichTextEditor({
             TableHeader,
             TableCell,
             ScreenshotImage,
+            FileAttachment,
             FolderMention,
             Placeholder.configure({
                 placeholder: placeholder !== undefined ? placeholder : (notesMode ? "" : "Start writing..."),
@@ -693,20 +1190,20 @@ export function RichTextEditor({
             }),
         ],
         editable: !readOnly,
-        content: value,
+        content: upgradeLegacyAttachmentLinks(value),
         editorProps: {
             attributes: {
                 role: "textbox",
                 "aria-label": "Note content",
                 "aria-multiline": "true",
                 inputmode: "text",
-                autocorrect: "on",
+                autocorrect: "off",
                 autocapitalize: "sentences",
-                spellcheck: "true",
+                spellcheck: "false",
                 autocomplete: "off",
                 enterkeyhint: "enter",
                 class: cn(
-                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_img]:max-w-full md:[&_img]:max-w-[70%] [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-[var(--line-subtle)] [&_pre]:bg-[var(--surface-low)] [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_70%,transparent)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-xs [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-[var(--surface-low)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_code]:text-[var(--text-secondary)] [&_.tableWrapper]:max-w-full [&_.tableWrapper]:overflow-x-auto [&_table]:min-w-[520px] [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
+                    "prose prose-sm focus:outline-none min-h-[150px] max-w-none [&_a]:no-underline [&_hr]:my-4 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-[var(--line-subtle)] [&_.note-file-card]:no-underline [&_.note-file-card_*]:no-underline [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[var(--line-subtle)] [&_img]:shadow-sm [&_img]:my-3 [&_img.ProseMirror-selectednode]:ring-2 [&_img.ProseMirror-selectednode]:ring-[var(--brand-primary)] [&_img.ProseMirror-selectednode]:ring-offset-2 [&_h1]:text-[1.5rem] [&_h1]:font-bold [&_h1]:tracking-[-0.02em] [&_h1]:leading-tight [&_h1]:mt-5 [&_h1]:mb-2 [&_h2]:text-[1.2rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:leading-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_pre]:relative [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-[var(--line-subtle)] [&_pre]:bg-[var(--surface-low)] [&_pre]:px-4 [&_pre]:py-3 [&_pre]:text-[var(--text-primary)] [&_pre]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--surface-lowest)_70%,transparent)] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-mono [&_pre_code]:text-xs [&_pre_code]:leading-6 [&_code]:rounded [&_code]:bg-[var(--surface-low)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_code]:text-[var(--text-secondary)] [&_.tableWrapper]:max-w-full [&_.tableWrapper]:overflow-x-auto [&_table]:min-w-[520px] [&_table]:border-collapse [&_table]:border [&_table]:border-[var(--line-subtle)] [&_table]:rounded-lg [&_th]:border [&_th]:border-[var(--line-subtle)] [&_th]:bg-[var(--surface-low)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_td]:border [&_td]:border-[var(--line-subtle)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm",
                     "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li>label]:mt-1 [&_ul[data-type=taskList]_li>div]:min-w-0 [&_ul[data-type=taskList]_input]:accent-[var(--brand-primary)]",
                     mode === "document" && "min-h-full",
                     notesMode && "text-[17px] leading-[1.65] [&_p]:my-[0.7em]",
@@ -763,19 +1260,17 @@ export function RichTextEditor({
             },
             handlePaste(_, event) {
                 if (readOnly || imageUploadsDisabled) return false
-                const files = Array.from(event.clipboardData?.files || []).filter((file) =>
-                    file.type.startsWith("image/")
-                )
+                const files = Array.from(event.clipboardData?.files || [])
                 if (!files.length) return false
                 void uploadAndInsertFiles(files)
                 event.preventDefault()
                 return true
             },
             handleDrop(view, event) {
+                dragDepthRef.current = 0
+                setIsDraggingOver(false)
                 if (readOnly || imageUploadsDisabled) return false
-                const files = Array.from(event.dataTransfer?.files || []).filter((file) =>
-                    file.type.startsWith("image/")
-                )
+                const files = Array.from(event.dataTransfer?.files || [])
                 if (!files.length) return false
 
                 const dropPosition = view.posAtCoords({
@@ -790,13 +1285,177 @@ export function RichTextEditor({
                 event.preventDefault()
                 return true
             },
+            handleDoubleClick(_, __, event) {
+                const target = event.target as HTMLElement
+                if (target?.tagName === "IMG") {
+                    const src = (target as HTMLImageElement).src
+                    if (src) {
+                        openImageViewer(src)
+                        return true
+                    }
+                }
+                return false
+            },
+            handleDOMEvents: {
+                click(_, event) {
+                    const target = event.target as HTMLElement | null
+                    const previewBtn = target?.closest('[data-preview-file="true"]') as HTMLElement | null
+                    if (previewBtn) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        const src =
+                            previewBtn.getAttribute("data-file-src") || previewBtn.getAttribute("href") || ""
+                        const name = cleanAttachmentTitle(
+                            previewBtn.getAttribute("data-file-name") || "Document.pdf"
+                        )
+                        const size = previewBtn.getAttribute("data-file-size") || ""
+                        const fileType = previewBtn.getAttribute("data-file-type") || ""
+                        const ext = (name.split(".").pop() || "").toLowerCase()
+                        const isImg =
+                            fileType === "image" ||
+                            ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "avif"].includes(ext) ||
+                            src.startsWith("data:image/")
+
+                        if (src) {
+                            if (isImg) {
+                                openImageViewer(src)
+                            } else {
+                                setPdfPreviewState({ src, name, size })
+                            }
+                            return true
+                        }
+                    }
+                    const fileCard = target?.closest('[data-type="file-attachment"]') as HTMLElement | null
+                    if (fileCard && !target?.closest("a[download], [data-download-file]")) {
+                        const src = fileCard.getAttribute("data-src") || ""
+                        const name = cleanAttachmentTitle(
+                            fileCard.getAttribute("data-name") || "Document"
+                        )
+                        const size = fileCard.getAttribute("data-size") || ""
+                        const ext = (
+                            fileCard.getAttribute("data-extension") ||
+                            name.split(".").pop() ||
+                            ""
+                        ).toLowerCase()
+                        const isImg =
+                            ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "avif"].includes(ext) ||
+                            src.startsWith("data:image/")
+
+                        if (isImg && src) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            openImageViewer(src)
+                            return true
+                        }
+                        if ((ext === "pdf" || src.includes(".pdf")) && src) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            setPdfPreviewState({ src, name, size })
+                            return true
+                        }
+                    }
+                    const legacyPdfLink = target?.closest(
+                        'a[href*=".pdf"], a[href*="/api/project-notes/file"]'
+                    ) as HTMLAnchorElement | null
+                    if (legacyPdfLink && !legacyPdfLink.hasAttribute("download")) {
+                        const href = legacyPdfLink.getAttribute("href") || ""
+                        const isPdf =
+                            href.toLowerCase().includes(".pdf") ||
+                            legacyPdfLink.textContent?.toLowerCase().includes(".pdf")
+                        if (isPdf) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            setPdfPreviewState({
+                                src: href,
+                                name: cleanAttachmentTitle(legacyPdfLink.textContent || "PDF Document"),
+                                size: "",
+                            })
+                            return true
+                        }
+                    }
+                    return false
+                },
+            },
             handleClick(_, __, event) {
                 const target = event.target as HTMLElement
-                if (target?.tagName !== "IMG") return false
-                const src = (target as HTMLImageElement).src
-                if (!src) return false
-                openImageViewer(src)
-                return true
+                if (target?.tagName === "IMG") {
+                    return false
+                }
+                const previewBtn = target?.closest('[data-preview-file="true"]') as HTMLElement | null
+                if (previewBtn) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    const src =
+                        previewBtn.getAttribute("data-file-src") || previewBtn.getAttribute("href") || ""
+                    const name = cleanAttachmentTitle(
+                        previewBtn.getAttribute("data-file-name") || "Document.pdf"
+                    )
+                    const size = previewBtn.getAttribute("data-file-size") || ""
+                    const fileType = previewBtn.getAttribute("data-file-type") || ""
+                    const ext = (name.split(".").pop() || "").toLowerCase()
+                    const isImg =
+                        fileType === "image" ||
+                        ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "avif"].includes(ext) ||
+                        src.startsWith("data:image/")
+
+                    if (src) {
+                        if (isImg) {
+                            openImageViewer(src)
+                        } else {
+                            setPdfPreviewState({ src, name, size })
+                        }
+                        return true
+                    }
+                }
+                const fileCard = target?.closest('[data-type="file-attachment"]') as HTMLElement | null
+                if (fileCard && !target.closest("a[download], [data-download-file]")) {
+                    const src = fileCard.getAttribute("data-src") || ""
+                    const name = cleanAttachmentTitle(
+                        fileCard.getAttribute("data-name") || "Document"
+                    )
+                    const size = fileCard.getAttribute("data-size") || ""
+                    const ext = (
+                        fileCard.getAttribute("data-extension") ||
+                        name.split(".").pop() ||
+                        ""
+                    ).toLowerCase()
+                    const isImg =
+                        ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "avif"].includes(ext) ||
+                        src.startsWith("data:image/")
+
+                    if (isImg && src) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        openImageViewer(src)
+                        return true
+                    }
+                    if ((ext === "pdf" || src.includes(".pdf")) && src) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setPdfPreviewState({ src, name, size })
+                        return true
+                    }
+                }
+                const legacyPdfLink = target?.closest(
+                    'a[href*=".pdf"], a[href*="/api/project-notes/file"]'
+                ) as HTMLAnchorElement | null
+                if (legacyPdfLink && !legacyPdfLink.hasAttribute("download")) {
+                    const href = legacyPdfLink.getAttribute("href") || ""
+                    const isPdf =
+                        href.toLowerCase().includes(".pdf") ||
+                        legacyPdfLink.textContent?.toLowerCase().includes(".pdf")
+                    if (isPdf) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setPdfPreviewState({
+                            src: href,
+                            name: cleanAttachmentTitle(legacyPdfLink.textContent || "PDF Document"),
+                            size: "",
+                        })
+                        return true
+                    }
+                }
+                return false
             },
         },
         onUpdate: ({ editor: currentEditor }) => {
@@ -1159,17 +1818,17 @@ export function RichTextEditor({
                         </Toggle>
                         <button
                             type="button"
-                            onClick={() => imageInputRef.current?.click()}
+                            onClick={() => fileInputRef.current?.click()}
                             disabled={imageUploadsDisabled}
                             className={cn(
                                 "inline-flex items-center justify-center rounded-md border border-transparent text-[var(--text-secondary)] transition hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
                                 compactControlClass,
                                 notesMode && "rounded-full"
                             )}
-                            aria-label="Upload image"
-                            title={imageUploadsDisabled ? "Wait for the task target to finish saving" : "Upload image"}
+                            aria-label="Add file"
+                            title={imageUploadsDisabled ? "Wait for the task target to finish saving" : "Add file (PDF, images, docs)"}
                         >
-                            <ImagePlus className={compactIconClass} />
+                            <Paperclip className={compactIconClass} />
                         </button>
                         {!isMinimalToolbar ? (
                             <>
@@ -1200,14 +1859,268 @@ export function RichTextEditor({
                     </div>
                 )}
                 <input
-                    ref={imageInputRef}
+                    ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="*/*"
                     multiple
                     disabled={imageUploadsDisabled}
                     className="hidden"
-                    onChange={handleToolbarImageUpload}
+                    onChange={handleToolbarFileUpload}
                 />
+
+                {editor && (
+                    <BubbleMenu
+                        editor={editor}
+                        shouldShow={({ editor: currentEditor }: { editor: TiptapEditor }) =>
+                            currentEditor.isActive("image") &&
+                            !readOnly &&
+                            !Boolean(resolveActiveCodeBlockElement(currentEditor))
+                        }
+                    >
+                        <div className="flex flex-wrap items-center gap-1 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-lg backdrop-blur-md animate-in fade-in-50 zoom-in-95 duration-150">
+                            <span className="px-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                                Size
+                            </span>
+                            {[
+                                { label: "25%", value: "25%" },
+                                { label: "50%", value: "50%" },
+                                { label: "75%", value: "75%" },
+                                { label: "100%", value: "100%" },
+                            ].map((preset) => {
+                                const currentWidth = editor.getAttributes("image")?.width
+                                const isActive =
+                                    currentWidth === preset.value || (!currentWidth && preset.value === "100%")
+                                return (
+                                    <button
+                                        key={preset.value}
+                                        type="button"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => {
+                                            editor
+                                                .chain()
+                                                .focus()
+                                                .updateAttributes("image", { width: preset.value })
+                                                .run()
+                                        }}
+                                        className={cn(
+                                            "inline-flex h-7 items-center justify-center rounded-md px-2 text-xs font-semibold transition-colors",
+                                            isActive
+                                                ? "bg-[var(--surface-low)] text-[var(--text-primary)] font-bold shadow-2xs"
+                                                : "text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                        )}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                )
+                            })}
+
+                            <div className="mx-1 h-4 w-px bg-[var(--line-subtle)]" />
+
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    const currentWidth = editor.getAttributes("image")?.width || "100%"
+                                    const num = Number.parseInt(currentWidth.replace("%", ""), 10) || 100
+                                    const next = Math.max(15, num - 10)
+                                    editor
+                                        .chain()
+                                        .focus()
+                                        .updateAttributes("image", { width: `${next}%` })
+                                        .run()
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                title="Shrink width"
+                                aria-label="Shrink width"
+                            >
+                                <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    const currentWidth = editor.getAttributes("image")?.width || "100%"
+                                    const num = Number.parseInt(currentWidth.replace("%", ""), 10) || 100
+                                    const next = Math.min(100, num + 10)
+                                    editor
+                                        .chain()
+                                        .focus()
+                                        .updateAttributes("image", { width: `${next}%` })
+                                        .run()
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                title="Enlarge width"
+                                aria-label="Enlarge width"
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                            </button>
+
+                            <div className="mx-1 h-4 w-px bg-[var(--line-subtle)]" />
+
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() =>
+                                    editor
+                                        .chain()
+                                        .focus()
+                                        .updateAttributes("image", { alignment: "left" })
+                                        .run()
+                                }
+                                className={cn(
+                                    "inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
+                                    (editor.getAttributes("image")?.alignment === "left" ||
+                                        !editor.getAttributes("image")?.alignment) &&
+                                        "bg-[var(--surface-low)] text-[var(--text-primary)] font-bold"
+                                )}
+                                title="Align left"
+                                aria-label="Align left"
+                            >
+                                <AlignLeft className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() =>
+                                    editor
+                                        .chain()
+                                        .focus()
+                                        .updateAttributes("image", { alignment: "center" })
+                                        .run()
+                                }
+                                className={cn(
+                                    "inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
+                                    editor.getAttributes("image")?.alignment === "center" &&
+                                        "bg-[var(--surface-low)] text-[var(--text-primary)] font-bold"
+                                )}
+                                title="Align center"
+                                aria-label="Align center"
+                            >
+                                <AlignCenter className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() =>
+                                    editor
+                                        .chain()
+                                        .focus()
+                                        .updateAttributes("image", { alignment: "right" })
+                                        .run()
+                                }
+                                className={cn(
+                                    "inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]",
+                                    editor.getAttributes("image")?.alignment === "right" &&
+                                        "bg-[var(--surface-low)] text-[var(--text-primary)] font-bold"
+                                )}
+                                title="Align right"
+                                aria-label="Align right"
+                            >
+                                <AlignRight className="h-3.5 w-3.5" />
+                            </button>
+
+                            <div className="mx-1 h-4 w-px bg-[var(--line-subtle)]" />
+
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    const src = editor.getAttributes("image")?.src
+                                    if (src) openImageViewer(src)
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                title="Preview full size"
+                                aria-label="Preview full size"
+                            >
+                                <Maximize2 className="h-3.5 w-3.5" />
+                            </button>
+
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    editor.chain().focus().deleteSelection().run()
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--state-urgent)] transition-colors hover:bg-[var(--state-danger-surface)]"
+                                title="Delete image"
+                                aria-label="Delete image"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    </BubbleMenu>
+                )}
+
+                {editor && (
+                    <BubbleMenu
+                        editor={editor}
+                        shouldShow={({ editor: currentEditor }: { editor: TiptapEditor }) =>
+                            currentEditor.isActive("fileAttachment") &&
+                            !readOnly &&
+                            !Boolean(resolveActiveCodeBlockElement(currentEditor))
+                        }
+                    >
+                        <div className="flex items-center gap-1 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-1.5 shadow-lg backdrop-blur-md animate-in fade-in-50 zoom-in-95 duration-150">
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    const attrs = editor.getAttributes("fileAttachment")
+                                    if (attrs?.src) {
+                                        const ext = (
+                                            attrs.extension ||
+                                            attrs.name?.split(".").pop() ||
+                                            ""
+                                        ).toLowerCase()
+                                        if (ext === "pdf" || attrs.src.includes(".pdf")) {
+                                            setPdfPreviewState({
+                                                src: attrs.src,
+                                                name: attrs.name,
+                                                size: attrs.size,
+                                            })
+                                        } else {
+                                            window.open(attrs.src, "_blank", "noopener,noreferrer")
+                                        }
+                                    }
+                                }}
+                                className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                            >
+                                <Eye className="h-3.5 w-3.5" />
+                                Preview
+                            </button>
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    const attrs = editor.getAttributes("fileAttachment")
+                                    if (attrs?.src) {
+                                        const a = document.createElement("a")
+                                        a.href = attrs.src
+                                        a.download = attrs.name || "download"
+                                        a.click()
+                                    }
+                                }}
+                                className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                            >
+                                <Download className="h-3.5 w-3.5" />
+                                Download
+                            </button>
+                            <div className="mx-1 h-4 w-px bg-[var(--line-subtle)]" />
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    editor.chain().focus().deleteSelection().run()
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--state-urgent)] transition-colors hover:bg-[var(--state-danger-surface)]"
+                                title="Delete attachment"
+                                aria-label="Delete attachment"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    </BubbleMenu>
+                )}
 
                 {editor && (
                     <BubbleMenu
@@ -1311,7 +2224,7 @@ export function RichTextEditor({
                         <span>
                             {uploadState.error
                                 ? uploadState.error
-                                : `Uploading screenshots ${uploadState.completed}/${uploadState.total}`}
+                                : `Uploading files ${uploadState.completed}/${uploadState.total}`}
                         </span>
                         {!uploadState.error && <span>{Math.round((uploadState.completed / uploadState.total) * 100)}%</span>}
                     </div>
@@ -1320,8 +2233,33 @@ export function RichTextEditor({
                 <div
                     ref={editorViewportRef}
                     onMouseDown={handleEditorViewportMouseDown}
+                    onDragEnter={(e) => {
+                        if (readOnly || imageUploadsDisabled) return
+                        if (e.dataTransfer?.types?.includes("Files")) {
+                            dragDepthRef.current += 1
+                            setIsDraggingOver(true)
+                        }
+                    }}
+                    onDragLeave={(e) => {
+                        if (readOnly || imageUploadsDisabled) return
+                        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+                        if (dragDepthRef.current === 0) {
+                            setIsDraggingOver(false)
+                        }
+                    }}
+                    onDragOver={(e) => {
+                        if (readOnly || imageUploadsDisabled) return
+                        if (e.dataTransfer?.types?.includes("Files")) {
+                            e.preventDefault()
+                        }
+                    }}
+                    onDrop={() => {
+                        dragDepthRef.current = 0
+                        setIsDraggingOver(false)
+                    }}
                     className={cn(
-                        "relative min-h-0 h-full flex-1 overflow-y-auto",
+                        "relative min-h-0 h-full flex-1 overflow-y-auto transition-colors",
+                        isDraggingOver && "bg-[color-mix(in_srgb,var(--brand-primary)_4%,transparent)]",
                         isTopRightToolbar && "pt-2",
                         variant === "plain" &&
                             mode === "panel" &&
@@ -1332,20 +2270,32 @@ export function RichTextEditor({
                         minHeightClassName
                     )}
                 >
+                    {isDraggingOver ? (
+                        <div className="pointer-events-none absolute inset-x-3 top-3 z-20 flex items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-[var(--brand-primary)] bg-[var(--surface-lowest)]/95 px-4 py-5 text-sm font-semibold text-[var(--brand-primary)] shadow-md backdrop-blur-xs">
+                            <UploadCloud className="h-5 w-5 animate-bounce" />
+                            <span>Drop files here (PDF, images, docs)</span>
+                        </div>
+                    ) : null}
                     <div
                         className={cn(
                             mode === "document" &&
                                 (isDocumentLeft
                                     ? cn(
                                           "min-h-full w-full",
-                                          isAppleNotesAppearance ? "px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 md:px-8 md:pb-12" : "px-3 pb-7",
+                                          documentPadding === "none"
+                                              ? "px-0 pt-0 pb-4"
+                                              : documentPadding === "compact"
+                                              ? "px-0.5 pt-0 pb-6 sm:px-1"
+                                              : (isAppleNotesAppearance
+                                                    ? "px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 md:px-8 md:pb-12"
+                                                    : "px-3 pb-7"),
                                           isReadingWidth && "max-w-[760px]"
                                       )
                                     : "mx-auto w-full max-w-4xl px-6 pb-8")
                         )}
                     >
                         {mode === "document" && documentHeader ? (
-                            <div className="pb-1">{documentHeader}</div>
+                            <div className="pb-0.5">{documentHeader}</div>
                         ) : null}
                         {isAppleNotesAppearance && showToolbar ? (
                             <div
@@ -1355,7 +2305,7 @@ export function RichTextEditor({
                                     if (target.closest("input, select, textarea")) return
                                     event.preventDefault()
                                 }}
-                                className="mb-6 mt-1 hidden w-fit max-w-full items-center gap-3.5 overflow-x-auto rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-3.5 py-1.5 shadow-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex"
+                                className="mb-2 mt-0.5 flex w-fit max-w-full items-center gap-1.5 sm:gap-2.5 overflow-x-auto rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2 sm:px-3 py-1 shadow-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             >
                                 <Toggle
                                     size="sm"
@@ -1442,6 +2392,16 @@ export function RichTextEditor({
                                 >
                                     <Link2 className="h-4 w-4" />
                                 </button>
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={imageUploadsDisabled}
+                                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)] md:h-7 md:w-7"
+                                    aria-label="Add file"
+                                    title="Add file (PDF, images, docs)"
+                                >
+                                    <Paperclip className="h-4 w-4" />
+                                </button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
@@ -1459,7 +2419,10 @@ export function RichTextEditor({
                                         <DropdownMenuItem onSelect={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
                                             <TableIcon className="mr-2 h-4 w-4" /> Insert Table
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => imageInputRef.current?.click()} disabled={imageUploadsDisabled}>
+                                        <DropdownMenuItem onSelect={() => fileInputRef.current?.click()} disabled={imageUploadsDisabled}>
+                                            <Paperclip className="mr-2 h-4 w-4" /> Add file / document
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => fileInputRef.current?.click()} disabled={imageUploadsDisabled}>
                                             <ImagePlus className="mr-2 h-4 w-4" /> Upload Image
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => editor.chain().focus().setHorizontalRule().run()}>
@@ -1467,6 +2430,14 @@ export function RichTextEditor({
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
+                                {toolbarActions ? (
+                                    <>
+                                        <div className="h-4 w-px bg-[var(--line-subtle)] shrink-0" />
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            {toolbarActions}
+                                        </div>
+                                    </>
+                                ) : null}
                             </div>
                         ) : null}
                         <EditorContent editor={editor} />
@@ -1693,6 +2664,80 @@ export function RichTextEditor({
                                 )}
                             </div>
                         </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* PDF Viewer Dialog */}
+            <Dialog
+                open={Boolean(pdfPreviewState)}
+                onOpenChange={(open) => {
+                    if (!open) setPdfPreviewState(null)
+                }}
+            >
+                <DialogContent className="h-[92vh] w-[95vw] min-w-[85vw] max-w-6xl overflow-hidden border-[var(--line-subtle)] bg-[var(--surface-lowest)] p-0 shadow-2xl flex flex-col">
+                    <DialogHeader className="flex flex-row items-center justify-between border-b border-[var(--line-subtle)] px-4 py-3 bg-[var(--surface-low)]">
+                        <div className="flex items-center gap-2.5 min-w-0 pr-4">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 border border-rose-500/20 shadow-2xs">
+                                <img
+                                    src={FILE_ICONS_SVG_DATA.pdf}
+                                    className="h-4.5 w-4.5 pointer-events-none select-none"
+                                    alt="PDF"
+                                />
+                            </span>
+                            <div className="min-w-0">
+                                <DialogTitle className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                                    {pdfPreviewState?.name || "PDF Document"}
+                                </DialogTitle>
+                                {pdfPreviewState?.size ? (
+                                    <p className="text-xs text-[var(--text-muted)]">
+                                        {pdfPreviewState.size}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <a
+                                href={pdfPreviewState?.src || "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                            >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">New tab</span>
+                            </a>
+                            <a
+                                href={pdfPreviewState?.src || "#"}
+                                download={pdfPreviewState?.name || "document.pdf"}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-lowest)] px-2.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                            >
+                                <Download className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Download</span>
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setPdfPreviewState(null)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]"
+                                aria-label="Close PDF preview"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </DialogHeader>
+                    <div className="relative flex-1 w-full bg-slate-900/5 overflow-hidden">
+                        {pdfPreviewState?.src ? (
+                            <object
+                                data={pdfPreviewState.src}
+                                type="application/pdf"
+                                className="h-full w-full"
+                            >
+                                <iframe
+                                    src={pdfPreviewState.src}
+                                    title={pdfPreviewState.name || "PDF Preview"}
+                                    className="h-full w-full border-0 bg-[var(--surface-lowest)]"
+                                />
+                            </object>
+                        ) : null}
                     </div>
                 </DialogContent>
             </Dialog>
