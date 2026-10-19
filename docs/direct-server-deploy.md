@@ -37,8 +37,7 @@ The deployment:
    installs production dependencies, runs Prisma preflights/migrations and
    promotes `.next` only after the artifact is complete;
 6. starts PM2, checks `/api/health`, `/login` and the LMS cron dry-run;
-7. verifies the exact source checksum, runs the Notes retention cron in dry-run
-   mode and installs its authenticated daily schedule at 03:17;
+7. installs a user-level reboot hook that restores the saved PM2 process list;
 8. enables PM2 log rotation at 10 MB, 14 retained files and compression.
 
 If any remote step fails, the script restores the private backup and restarts
@@ -58,6 +57,8 @@ directory.
   private crontab contains exactly one `pixelist-notes-retention` entry.
 - PM2 stays online and new logs contain no `ChunkLoadError` or missing
   `.next/server/chunks` errors.
+- The private user crontab contains exactly one
+  `pixelist-crm-pm2-resurrect` reboot entry.
 - The direct origin remains public by design. App-level validation and
   account-based throttling reduce proxy-header spoofing risk but cannot fully
   establish proxy authenticity without an origin firewall or shared secret.

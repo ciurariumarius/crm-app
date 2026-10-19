@@ -279,6 +279,18 @@ npx pm2 delete pixelist-crm >/dev/null 2>&1 || true
 npx pm2 start npm --name pixelist-crm -- start -- -p 3000
 npx pm2 save >/dev/null
 
+# The application user cannot install a system-level PM2 startup unit. Ensure
+# the saved process list is restored after a server reboot without duplicating
+# the app when PM2 is already running.
+mkdir -p "$HOME/logs"
+pm2_startup_marker="pixelist-crm-pm2-resurrect"
+pm2_startup_entry='@reboot /bin/bash -lc '\''export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; pm2 describe pixelist-crm >/dev/null 2>&1 || pm2 resurrect >> "$HOME/logs/pm2-resurrect.log" 2>&1'\'' # pixelist-crm-pm2-resurrect'
+current_crontab="$(crontab -l 2>/dev/null || true)"
+{
+  printf '%s\n' "$current_crontab" | grep -v "$pm2_startup_marker" | sed '/^[[:space:]]*$/d' || true
+  printf '%s\n' "$pm2_startup_entry"
+} | crontab -
+
 ready=0
 for _attempt in $(seq 1 30); do
   if curl --fail --silent --show-error http://127.0.0.1:3000/api/health | grep -q '"status":"ok"'; then
