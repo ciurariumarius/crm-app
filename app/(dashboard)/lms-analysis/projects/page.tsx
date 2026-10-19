@@ -849,10 +849,10 @@ export default function LmsAnalysisProjectsPage() {
               {pagedRows.map((row) => (
                 <article key={`mobile-${row.clientKey}`} className="rounded-xl border border-[var(--line-subtle)] bg-[var(--bg-surface)] p-3">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">{row.client}</p>
+                    <p className="min-w-0 flex-1 break-words text-sm font-semibold text-[var(--text-primary)]">{row.client}</p>
                     <Badge
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em]",
+                        "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-[0.08em]",
                         row.workVolumeStatus === "No Work" && "border-[var(--line-subtle)] bg-[var(--surface-low)] text-[var(--text-secondary)]",
                         row.workVolumeStatus === "Low" && "border-amber-300 bg-amber-50 text-amber-700",
                         row.workVolumeStatus === "Good" && "border-emerald-300 bg-emerald-50 text-emerald-700",
@@ -933,60 +933,60 @@ export default function LmsAnalysisProjectsPage() {
           ) : null}
 
           <div className={cn(mobileOptimized && "hidden md:block")}>
-          <Table className="w-full table-fixed">
+          <Table className="w-full min-w-[1440px] table-auto">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[13%]">
+                <TableHead className="w-[220px] min-w-[220px]">
                   <button type="button" onClick={() => handleProjectsSort("client")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <Workflow className="h-4 w-4" />Client {getSortIcon("client")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[10%]">
+                <TableHead className="w-[140px] min-w-[140px]">
                   <button type="button" onClick={() => handleProjectsSort("services")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <Waves className="h-4 w-4" />Services {getSortIcon("services")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[12%]">
+                <TableHead className="w-[160px] min-w-[160px]">
                   <button type="button" onClick={() => handleProjectsSort("team")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <Users className="h-4 w-4" />Team {getSortIcon("team")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[7%]">
+                <TableHead className="w-[125px] min-w-[125px]">
                   <button type="button" onClick={() => handleProjectsSort("delegatedPerson")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     Delegated {getSortIcon("delegatedPerson")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[6%]">
+                <TableHead className="w-[120px] min-w-[120px]">
                   <button type="button" onClick={() => handleProjectsSort("firstTaskDate")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <CalendarDays className="h-4 w-4" />1st {getSortIcon("firstTaskDate")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[6%]">
+                <TableHead className="w-[120px] min-w-[120px]">
                   <button type="button" onClick={() => handleProjectsSort("lastTaskDate")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <CalendarDays className="h-4 w-4" />Last {getSortIcon("lastTaskDate")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[10%]">
+                <TableHead className="w-[100px] min-w-[100px]">
                   <button type="button" onClick={() => handleProjectsSort("myMinutes")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     <Clock3 className="h-4 w-4" />My Hrs {getSortIcon("myMinutes")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[10%]">
+                <TableHead className="w-[105px] min-w-[105px]">
                   <button type="button" onClick={() => handleProjectsSort("teamMinutes")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     Team Hrs {getSortIcon("teamMinutes")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[6%]">
+                <TableHead className="w-[95px] min-w-[95px]">
                   <button type="button" onClick={() => handleProjectsSort("myTasks")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     My Tasks {getSortIcon("myTasks")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[6%]">
+                <TableHead className="w-[110px] min-w-[110px]">
                   <button type="button" onClick={() => handleProjectsSort("avgMonthlyMinutes")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     Avg Vol {getSortIcon("avgMonthlyMinutes")}
                   </button>
                 </TableHead>
-                <TableHead className="w-[10%]">
+                <TableHead className="w-[105px] min-w-[105px]">
                   <button type="button" onClick={() => handleProjectsSort("workVolumeStatus")} className="inline-flex items-center gap-1 whitespace-nowrap text-left">
                     Volume {getSortIcon("workVolumeStatus")}
                   </button>
@@ -996,7 +996,9 @@ export default function LmsAnalysisProjectsPage() {
             <TableBody>
               {pagedRows.map((row) => (
                 <TableRow key={row.clientKey}>
-                  <TableCell className="truncate text-sm font-semibold" title={row.client}>{row.client}</TableCell>
+                  <TableCell className="min-w-[220px] whitespace-normal break-words text-sm font-semibold md:whitespace-normal" title={row.client}>
+                    {row.client}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <span
